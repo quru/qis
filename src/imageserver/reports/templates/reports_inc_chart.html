@@ -1,0 +1,46 @@
+{#
+  A generic HTML fragment that can be included to embed a chart.
+  
+  Requires scripts:
+    chart.js
+  
+  Template variables:
+    chart_data_url - the base URL to the chart data feed
+    chart_opts - a tuple with format (chart_id, enableZoom, showWeekends, xAxisType, yAxisType)
+                 where chart_id is any unique ID value to use for the chart element on the 
+                 page, and the other options are as described for initChart() in chart.js
+    timezone - the server's time zone code
+    timezone_seconds - the offset required to convert the time zone to UTC
+  
+  This template creates the "chartOptions" JavaScript object
+  that can be used to invoke initChart() and refreshChart() in chart.js.
+#}
+
+<div class="chartcontainer border">
+	<div id="{{ chart_opts.0 }}" class="chart">
+	</div>
+</div>
+<div class="charttext">
+	{% if chart_opts.1 %}
+		<span class="smalltext">
+			Click and drag on the chart to zoom in 
+			(<a href="#" onclick="return resetChart('{{ chart_opts.0 }}')">reset</a>).
+		</span>
+	{% endif %}
+	{% if chart_opts.3 == 'time' or chart_opts.4 == 'time' %}
+		{% include "inc_timezone.html" %}
+	{% endif %}
+</div>
+
+<script type="text/javascript">
+	var chartOptions = {
+		container: "{{ chart_opts.0 }}",
+		dataURL: "{{ chart_data_url }}",
+		initialHTML: "<span><img src=\"{{ url_for('static', filename='images/icon-wait.gif') }}\" /> &nbsp; Loading chart data...</span>",
+		enableZoom: {{ chart_opts.1|lower }},
+		showWeekends: {{ chart_opts.2|lower }},
+		xAxisType: "{{ chart_opts.3 }}",
+		yAxisType: "{{ chart_opts.4 }}",
+		tzSeconds: {{ timezone_seconds }}
+	};
+</script>

@@ -1,0 +1,24 @@
+{% extends "base_help.html" %}
+
+{% block copyright %}
+<!-- 
+	Document:      gallery_view_help.html
+	Date started:  28 Apr 2015
+	By:            Matt Fozard
+	Purpose:       Quru Image Server gallery_view API help
+	Requires:      
+	Copyright:     Quru Ltd (www.quru.com)
+	
+	Last Changed:  $Date$ $Rev$ by $Author$
+	
+	Notable modifications:
+	Date       By    Details
+	=========  ====  ============================================================
+-->
+{% endblock %}
+
+{% block title %}Gallery API guide{% endblock %}
+
+{% block body %}
+	{% include_markdown "js_gallery_help.md", subs %}
+{% endblock %}

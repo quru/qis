@@ -1,0 +1,49 @@
+/*
+	Document:      list.css
+	Date started:  30 Jun 2011
+	By:            Matt Fozard
+	Purpose:       Quru Image Server file browsing CSS
+	Requires:      base.css
+	Copyright:     Quru Ltd (www.quru.com)
+	Licence:
+
+	This program is free software: you can redistribute it and/or modify
+	it under the terms of the GNU Affero General Public License as published
+	by the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
+
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU Affero General Public License for more details.
+
+	You should have received a copy of the GNU Affero General Public License
+	along with this program.  If not, see http://www.gnu.org/licenses/
+	
+	Last Changed:  $Date$ $Rev$ by $Author$
+*/
+
+td.icon {
+	width: 20px;
+}
+td.user {
+	width: 1em;
+}
+td.filesize {
+	width: 7em;
+	text-align: right;
+}
+td.filetime {
+	width: 10em;
+	text-align: right;
+}
+
+td.rank {
+	width: 4em;
+	text-align: center;
+	padding-right: 2em;
+}
+td.count {
+	text-align: right;
+	padding-right: 2em;
+}

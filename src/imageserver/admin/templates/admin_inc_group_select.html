@@ -1,0 +1,18 @@
+{#
+  A generic HTML fragment that can be included to embed a group selector.
+  
+  Template variables:
+    group_list - the full list of group objects
+    group - an optional current group (to select by default)
+    select_message - an optional "Select a group" message
+#}
+
+<select id="select_group_id">
+{% if select_message %}
+	<option value="0">{{ select_message }}</option>
+{% endif %}
+{% for g in group_list %}
+	{% set sel = 'selected="selected"' if group and group.id == g.id else '' %}
+	<option value="{{ g.id }}" {{ sel|safe }} title="{{ g.description }}">{{ g.name }}</option>
+{% endfor %}
+</select>

@@ -1,0 +1,105 @@
+{% extends "admin_base.html" %}
+
+{% block copyright %}
+<!-- 
+	Document:      maintenance.html
+	Date started:  29 Jan 2013
+	By:            Matt Fozard
+	Purpose:       Quru Image Server data maintenance admin page
+	Requires:      
+	Copyright:     Quru Ltd (www.quru.com)
+	
+	Last Changed:  $Date$ $Rev$ by $Author$
+	
+	Notable modifications:
+	Date       By    Details
+	=========  ====  ============================================================
+-->
+{% endblock %}
+
+{% block extra_head %}
+	{{ super() }}
+	
+	<link rel="stylesheet" href="{{ url_for('static', filename='styles/lib/picker.css') }}" type="text/css" />
+	
+	{% if settings.DEBUG %}
+	<script src="{{ url_for('static', filename='js/lib/picker.js') }}" type="text/javascript"></script>
+	{% else %}
+	<script src="{{ url_for('static', filename='js/lib/picker_yc.js') }}" type="text/javascript"></script>
+	{% endif %}
+	
+{% endblock %}
+
+{% set body_id = 'data_maintenance' %}
+{% set page_heading = 'Data maintenance' %}
+
+{% block body %}
+	{{ super() }}
+	
+	{% macro auto_purge_message() -%}
+		<img src="{{ url_for('static', filename='images/icon-info.png') }}" alt="Info"/>
+		{% if settings.STATS_KEEP_DAYS > 0 %}
+		Statistics are being purged automatically after {{ settings.STATS_KEEP_DAYS }}
+		{% if settings.STATS_KEEP_DAYS == 1%} day. {% else %} days. {% endif %}
+		{% else %}
+		Statistics are not being automatically purged.
+		{% endif %}
+	{%- endmacro %}
+	<p>
+		<h3>Purge image statistics</h3>
+		<form id="purge_istats_form" method="post" action="{{ url_for('api.admin.task', function_name='purge_image_stats') }}">
+			Erase image statistics older than
+			&nbsp;
+			<input id="purge_istats_text" type="text" size="9" maxlength="10" value="{{ purge_to|dateformat(False, 'dmy') }}"/>
+			<input id="purge_istats_date" name="date_to" type="hidden" value="" />
+			&nbsp;
+			<input type="submit" value="Purge now" />
+			<div class="tall">
+				{{ auto_purge_message() }}
+			</div>
+			<div class="tall highlight">
+				Image usage charts will show as blank before this date.<br/>
+				The top images report may be affected.
+			</div>
+		</form>
+	</p>
+
+	<p>
+		<h3>Purge system statistics</h3>
+		<form id="purge_sstats_form" method="post" action="{{ url_for('api.admin.task', function_name='purge_system_stats') }}">
+			Erase system statistics older than
+			&nbsp;
+			<input id="purge_sstats_text" type="text" size="9" maxlength="10" value="{{ purge_to|dateformat(False, 'dmy') }}"/>
+			<input id="purge_sstats_date" name="date_to" type="hidden" value="" />
+			&nbsp;
+			<input type="submit" value="Purge now" />
+			<div class="tall">
+				{{ auto_purge_message() }}
+			</div>
+			<div class="tall highlight">
+				System usage charts will show as blank before this date.
+			</div>
+		</form>
+	</p>
+
+	<p>
+		<h3>Purge deleted image data</h3>
+		<form id="purge_data_form" method="post" action="{{ url_for('api.admin.task', function_name='purge_deleted_folder_data') }}">
+			Erase the retained image data for deleted images in
+			<div class="tall">
+				<span  id="purge_folder_text">all folders</span> and sub-folders
+				<input id="purge_folder_path" name="path" type="hidden" value="" />
+				&nbsp;
+				<input id="folder_select_button" type="button" value="Change folder" />
+				<input id="folder_browse_url" type="hidden" value="{{ url_for('folder_browse', path='', embed=1, msg='Select a folder:') }}" />
+				&nbsp;
+				<input type="submit" value="Purge now" />
+			</div>
+			<div class="tall highlight">
+				Titles, descriptions, statistics, and the former history of
+				deleted images will no longer be available.
+			</div>
+		</form>
+	</p>
+	
+{% endblock %}

@@ -1,0 +1,24 @@
+{% extends "base_help.html" %}
+
+{% block copyright %}
+<!-- 
+	Document:      canvas_view_help.html
+	Date started:  28 Apr 2015
+	By:            Matt Fozard
+	Purpose:       Quru Image Server canvas_view API help
+	Requires:      
+	Copyright:     Quru Ltd (www.quru.com)
+	
+	Last Changed:  $Date$ $Rev$ by $Author$
+	
+	Notable modifications:
+	Date       By    Details
+	=========  ====  ============================================================
+-->
+{% endblock %}
+
+{% block title %}HTML5 canvas viewer API guide{% endblock %}
+
+{% block body %}
+	{% include_markdown "js_canvasview_help.md", subs %}
+{% endblock %}

@@ -1,0 +1,19 @@
+{# Copies the value of a <select> with ID "publish_field_FOO_choices"
+   into the form element with ID "publish_field_FOO" #}
+
+<script type="text/javascript">
+	(function() {
+		var helper = document.getElementById('publish_field_{{ key }}_choices'),
+		    input = document.getElementById('publish_field_{{ key }}');
+		helper.onchange = function() {
+			input.value = helper.options[helper.selectedIndex].value;
+			if (document.createEvent) {
+				var event = document.createEvent('HTMLEvents');
+				event.initEvent('change', true, false);
+				input.dispatchEvent(event);
+			} else {
+				input.fireEvent('onchange');
+			}
+		};
+	})();
+</script>

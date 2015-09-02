@@ -1,0 +1,25 @@
+{% extends "base_help.html" %}
+
+{% block copyright %}
+<!-- 
+	Document:      help.html
+	Date started:  20 Jun 2011
+	By:            Matt Fozard
+	Purpose:       Quru Image Server user's guide
+	Requires:      
+	Copyright:     Quru Ltd (www.quru.com)
+	
+	Last Changed:  $Date$ $Rev$ by $Author$
+	
+	Notable modifications:
+	Date       By    Details
+	=========  ====  ============================================================
+	14Apr2015  Matt  Converted to markdown
+-->
+{% endblock %}
+
+{% block title %}Imaging user's guide{% endblock %}
+
+{% block body %}
+	{% include_markdown "image_help.md", subs %}
+{% endblock %}

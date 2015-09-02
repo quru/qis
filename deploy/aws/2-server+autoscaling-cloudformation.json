@@ -1,0 +1,735 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Parameters" : {
+	"AmiID" : {
+	  "Type" : "String",
+	  "Default" : "ami-88cd85ff",
+	  "Description" : "The AmiID for the database and app server"
+	},
+	"EC2KeyPair" : {
+	  "Description" : "Name of an existing EC2 KeyPair to enable SSH access to the App Server",
+	  "Type" : "String",
+	  "MinLength" : "1",
+	  "MaxLength" : "64",
+	  "Default" : "lewisatquru-ec2key",
+	  "AllowedPattern" : "[-_ a-zA-Z0-9]*",
+	  "ConstraintDescription" : "can only contain alphanumeric characters, spaces, dashes and underscores."
+	},
+	"AppServerInstanceType" : {
+	  "Description" : "Type of instance to be used for the application server",
+	  "Type" : "String",
+	  "Default" : "t2.micro"
+	},
+	"DatabaseInstanceType" : {
+	  "Description" : "Type of instance to be used for the database",
+	  "Type" : "String",
+	  "Default" : "t2.micro"
+	},
+	"AutoScalingInstanceType" : {
+      "Description" : "WebServer EC2 instance type",
+      "Type" : "String",
+      "Default" : "t2.micro"
+    },
+    "OperatorEMail": {
+      "Description": "EMail address to notify if there are any scaling operations",
+      "Type": "String",
+      "AllowedPattern": "([a-zA-Z0-9_\\-\\.]+)@((\\[[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.)|(([a-zA-Z0-9\\-]+\\.)+))([a-zA-Z]{2,4}|[0-9]{1,3})(\\]?)",
+      "ConstraintDescription": "must be a valid email address."
+    }
+  },
+  "Resources": {
+    "qisVpc": {
+      "Type": "AWS::EC2::VPC",
+      "Properties": {
+        "CidrBlock": "192.168.0.0/16",
+        "InstanceTenancy": "default",
+        "EnableDnsSupport": "true",
+        "EnableDnsHostnames": "false",
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "qis-vpc"
+          }
+        ]
+      }
+    },
+	"NotificationTopic": {
+      "Type": "AWS::SNS::Topic",
+      "Properties": {
+        "Subscription": [ { "Endpoint": { "Ref": "OperatorEMail" }, "Protocol": "email" } ]
+      }
+    },
+    "WebServerGroup" : {
+      "Type" : "AWS::AutoScaling::AutoScalingGroup",
+      "Properties" : {
+        "LaunchConfigurationName" : { "Ref" : "LaunchConfig" },
+		"AvailabilityZones": ["eu-west-1a"],
+        "MinSize" : "0",
+        "MaxSize" : "3",
+        "LoadBalancerNames" : [ { "Ref" : "ElasticLoadBalancer" } ],
+        "NotificationConfigurations" : [{
+          "TopicARN" : { "Ref" : "NotificationTopic" },
+          "NotificationTypes" : [ "autoscaling:EC2_INSTANCE_LAUNCH",
+                                  "autoscaling:EC2_INSTANCE_LAUNCH_ERROR",
+                                  "autoscaling:EC2_INSTANCE_TERMINATE",
+                                  "autoscaling:EC2_INSTANCE_TERMINATE_ERROR"]
+        }],
+		"VPCZoneIdentifier" : [{ "Ref" : "ApplicationSubnet" }]
+      }
+    },
+    "LaunchConfig" : {
+      "Type" : "AWS::AutoScaling::LaunchConfiguration",
+      "Properties" : {
+		"AssociatePublicIpAddress" : "true",
+        "KeyName" : { "Ref" : "EC2KeyPair" },
+        "ImageId" : { "Ref" : "AmiID" },
+        "SecurityGroups" : [ { "Ref" : "AppSecurityGroup" } ],
+        "InstanceType" : { "Ref" : "AutoScalingInstanceType" },
+        "UserData"       : { "Fn::Base64" : { "Fn::Join" : ["", [
+             "#!/bin/bash -xe\n",
+             "/opt/qis/deploy/aws/configure.sh web-server ",
+			 { "Fn::GetAtt" : ["DatabaseEC2", "PrivateIp"] }, " ",
+			 { "Fn::GetAtt" : ["ApplicationEC2", "PrivateIp"] }, "\n",
+			 "mkdir /opt/qis/images/mount\n",
+		     "mount -t nfs 192.168.2.163:/opt/qis/images /opt/qis/images/mount"
+        ]]}}
+      }
+    },
+    "WebServerScaleUpPolicy" : {
+      "Type" : "AWS::AutoScaling::ScalingPolicy",
+      "Properties" : {
+        "AdjustmentType" : "ChangeInCapacity",
+        "AutoScalingGroupName" : { "Ref" : "WebServerGroup" },
+        "Cooldown" : "60",
+        "ScalingAdjustment" : "1"
+      }
+    },
+    "WebServerScaleDownPolicy" : {
+      "Type" : "AWS::AutoScaling::ScalingPolicy",
+      "Properties" : {
+        "AdjustmentType" : "ChangeInCapacity",
+        "AutoScalingGroupName" : { "Ref" : "WebServerGroup" },
+        "Cooldown" : "60",
+        "ScalingAdjustment" : "-1"
+      }
+    },
+    "CPUAlarmHigh": {
+     "Type": "AWS::CloudWatch::Alarm",
+     "Properties": {
+        "AlarmDescription": "Scale-up if CPU > 80% for 5 minutes",
+        "MetricName": "CPUUtilization",
+        "Namespace": "AWS/EC2",
+        "Statistic": "Average",
+        "Period": "300",
+        "EvaluationPeriods": "1",
+        "Threshold": "80",
+        "AlarmActions": [ { "Ref": "WebServerScaleUpPolicy" } ],
+        "Dimensions": [
+          {
+            "Name": "InstanceId",
+            "Value": { "Ref": "ApplicationEC2" }
+          }
+        ],
+        "ComparisonOperator": "GreaterThanThreshold"
+      }
+    },
+    "CPUAlarmLow": {
+     "Type": "AWS::CloudWatch::Alarm",
+     "Properties": {
+        "AlarmDescription": "Scale-down if CPU < 50% for 5 minutes",
+        "MetricName": "CPUUtilization",
+        "Namespace": "AWS/EC2",
+        "Statistic": "Average",
+        "Period": "300",
+        "EvaluationPeriods": "1",
+        "Threshold": "50",
+        "AlarmActions": [ { "Ref": "WebServerScaleDownPolicy" } ],
+        "Dimensions": [
+          {
+            "Name": "InstanceId",
+            "Value": { "Ref": "ApplicationEC2" }
+          }
+        ],
+        "ComparisonOperator": "LessThanThreshold"
+      }
+    },
+    "LoadBalancerSubnet": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "CidrBlock": "192.168.3.0/24",
+        "AvailabilityZone": "eu-west-1a",
+        "VpcId": {
+          "Ref": "qisVpc"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "qis-elb-subnet"
+          }
+        ]
+      }
+    },
+    "DatabaseSubnet": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "CidrBlock": "192.168.2.0/24",
+        "AvailabilityZone": "eu-west-1a",
+        "VpcId": {
+          "Ref": "qisVpc"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "qis-db-subnet"
+          }
+        ]
+      }
+    },
+    "ApplicationSubnet": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "CidrBlock": "192.168.1.0/24",
+        "AvailabilityZone": "eu-west-1a",
+        "VpcId": {
+          "Ref": "qisVpc"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "qis-app-subnet"
+          }
+        ]
+      }
+    },
+    "InternetGateway": {
+      "Type": "AWS::EC2::InternetGateway",
+      "Properties": {
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "qis-igw"
+          }
+        ]
+      }
+    },
+    "NetworkAcl": {
+      "Type": "AWS::EC2::NetworkAcl",
+      "Properties": {
+        "VpcId": {
+          "Ref": "qisVpc"
+        }
+      }
+    },
+    "ApplicationRouteTable": {
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+        "VpcId": {
+          "Ref": "qisVpc"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "qis-app-rt"
+          }
+        ]
+      }
+    },
+    "MainRouteTable": {
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+        "VpcId": {
+          "Ref": "qisVpc"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "qis-main-rt"
+          }
+        ]
+      }
+    },
+    "DatabaseRouteTable": {
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+        "VpcId": {
+          "Ref": "qisVpc"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "qis-db-rt"
+          }
+        ]
+      }
+    },
+    "ElbRouteTable": {
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+        "VpcId": {
+          "Ref": "qisVpc"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "qis-elb-rt"
+          }
+        ]
+      }
+    },
+    "ElasticLoadBalancer": {
+      "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+      "Properties": {
+        "Policies": [
+          {
+            "PolicyName": "AWSConsole-SSLNegotiationPolicy-qis-elb-1435751119558",
+            "PolicyType": "SSLNegotiationPolicyType",
+            "Attributes": [
+              {
+                "Name": "Reference-Security-Policy",
+                "Value": "ELBSecurityPolicy-2015-05"
+              }
+            ]
+          }
+        ],
+        "Subnets": [
+          {
+            "Ref": "LoadBalancerSubnet"
+          }
+        ],
+        "HealthCheck": {
+          "HealthyThreshold": "3",
+          "Interval": "30",
+          "Target": "HTTP:80/",
+          "Timeout": "5",
+          "UnhealthyThreshold": "5"
+        },
+        "ConnectionDrainingPolicy": {
+          "Enabled": "true",
+          "Timeout": "300"
+        },
+        "ConnectionSettings": {
+          "IdleTimeout": "60"
+        },
+        "CrossZone": "true",
+        "Instances": [
+          {
+            "Ref": "ApplicationEC2"
+          }
+        ],
+        "SecurityGroups": [
+          {
+            "Ref": "ElbSecurityGroup"
+          }
+        ],
+        "Listeners": [
+          {
+            "InstancePort": "80",
+            "LoadBalancerPort": "80",
+            "Protocol": "HTTP",
+            "InstanceProtocol": "HTTP"
+          },
+          {
+            "InstancePort": "443",
+            "LoadBalancerPort": "443",
+            "Protocol": "HTTPS",
+            "InstanceProtocol": "HTTPS",
+            "SSLCertificateId": "arn:aws:iam::888217251830:server-certificate/my-certificate",
+            "PolicyNames": [
+              "AWSConsole-SSLNegotiationPolicy-qis-elb-1435751119558"
+            ]
+          }
+        ]
+      }
+    },
+    "ApplicationEC2": {
+      "Type": "AWS::EC2::Instance",
+	  "DependsOn" : "DatabaseEC2",
+      "Properties": {
+        "DisableApiTermination": "false",
+        "InstanceInitiatedShutdownBehavior": "stop",
+        "ImageId": { "Ref" : "AmiID" },
+        "InstanceType": { "Ref" : "AppServerInstanceType" },
+        "KeyName": { "Ref" : "EC2KeyPair" },
+		"UserData" : {"Fn::Base64" : {"Fn::Join" : ["", [
+		  "#!/bin/bash -ex\n",
+		  "/opt/qis/deploy/aws/configure.sh app-with-cache ",
+		  {"Fn::GetAtt" : ["DatabaseEC2", "PrivateIp"]}, "\n",
+		  "sleep 300\n",
+		  "service httpd restart\n",
+		  "mkdir /opt/qis/images/mount\n",
+		  "mount -t nfs 192.168.2.163:/opt/qis/images /opt/qis/images/mount"
+		]]}},	
+        "Monitoring": "false",
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "qis-app-ec2"
+          }
+        ],
+        "NetworkInterfaces": [
+          {
+            "DeleteOnTermination": "true",
+            "Description": "Primary network interface",
+            "DeviceIndex": 0,
+            "SubnetId": {
+              "Ref": "ApplicationSubnet"
+            },
+            "PrivateIpAddresses": [
+              {
+                "PrivateIpAddress": "192.168.1.117",
+                "Primary": "true"
+              }
+            ],
+            "GroupSet": [
+              {
+                "Ref": "AppSecurityGroup"
+              }
+            ],
+            "AssociatePublicIpAddress": "true"
+          }
+        ]
+      }
+    },
+    "DatabaseEC2": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "DisableApiTermination": "false",
+        "InstanceInitiatedShutdownBehavior": "stop",
+        "ImageId": { "Ref" : "AmiID" },
+        "InstanceType": { "Ref" : "DatabaseInstanceType" },
+        "KeyName": { "Ref" : "EC2KeyPair" },
+		"UserData" : {"Fn::Base64" : {"Fn::Join" : ["", [
+		  "#!/bin/bash\n",
+		  "sudo /opt/qis/deploy/aws/configure.sh database\n",
+		  "echo '/opt/qis/images 192.168.1.0/24(rw,sync,no_root_squash)' >> /etc/exports\n",
+		  "service nfs restart"
+		]]}},		
+        "Monitoring": "false",
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "qis-db-ec2"
+          }
+        ],
+        "NetworkInterfaces": [
+          {
+            "DeleteOnTermination": "true",
+            "Description": "Primary network interface",
+            "DeviceIndex": 0,
+            "SubnetId": {
+              "Ref": "DatabaseSubnet"
+            },
+            "PrivateIpAddresses": [
+              {
+                "PrivateIpAddress": "192.168.2.163",
+                "Primary": "true"
+              }
+            ],
+            "GroupSet": [
+              {
+                "Ref": "DbSecurityGroup"
+              }
+            ],
+			"AssociatePublicIpAddress": "true"
+          }
+        ]
+      }
+    },
+    "AppSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Security group for app server",
+        "VpcId": {
+          "Ref": "qisVpc"
+        },
+		"SecurityGroupIngress" : [ {
+		  "IpProtocol": "tcp",
+          "FromPort": "22",
+          "ToPort": "22",
+          "CidrIp": "0.0.0.0/0"
+		},
+		{
+		  "IpProtocol": "tcp",
+          "FromPort": "80",
+          "ToPort": "80",
+          "CidrIp": "192.168.3.0/24"
+		},
+		{
+		  "IpProtocol": "tcp",
+          "FromPort": "443",
+          "ToPort": "443",
+          "CidrIp": "192.168.3.0/24"
+		},
+		{
+		  "IpProtocol": "tcp",
+		  "FromPort": "11211",
+		  "ToPort": "11211",
+		  "CidrIp": "192.168.1.0/24"
+		}]
+      }
+    },
+	"WebServerSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Enable SSH access and HTTP from the load balancer only",
+		"VpcId": {
+		  "Ref": "qisVpc"
+		},
+        "SecurityGroupIngress" : [ {
+          "IpProtocol" : "tcp",
+          "FromPort" : "22",
+          "ToPort" : "22",
+          "CidrIp" : "0.0.0.0/0"
+        },
+        {
+          "IpProtocol" : "tcp",
+          "FromPort" : "80",
+          "ToPort" : "80",
+          "CidrIp" : "192.168.3.0/24"
+        },
+		{
+		  "IpProtocol" : "tcp",
+          "FromPort" : "443",
+          "ToPort" : "443",
+          "CidrIp" : "192.168.3.0/24"
+		} ]
+      }
+    },
+    "ElbSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Security group for load balancer",
+        "VpcId": {
+          "Ref": "qisVpc"
+        },
+		"SecurityGroupIngress" : [ {
+		  "IpProtocol": "tcp",
+          "FromPort": "80",
+          "ToPort": "80",
+          "CidrIp": "0.0.0.0/0"
+		},
+		{
+		  "IpProtocol": "tcp",
+          "FromPort": "443",
+          "ToPort": "443",
+          "CidrIp": "0.0.0.0/0"
+		}]
+      }
+    },
+    "DbSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Security group for database",
+        "VpcId": {
+          "Ref": "qisVpc"
+        },
+		"SecurityGroupIngress" : [ {
+		  "IpProtocol": "tcp",
+          "FromPort": "5432",
+          "ToPort": "5432",
+          "CidrIp": "192.168.1.0/24"
+		},
+		{
+		  "IpProtocol": "tcp",
+          "FromPort": "22",
+          "ToPort": "22",
+          "CidrIp": "192.168.1.0/24"
+		},
+		{
+		  "IpProtocol": "tcp",
+          "FromPort": "111",
+          "ToPort": "111",
+          "CidrIp": "192.168.1.0/24"
+		},
+		{
+		  "IpProtocol": "udp",
+          "FromPort": "111",
+          "ToPort": "111",
+          "CidrIp": "192.168.1.0/24"
+		},
+		{
+		  "IpProtocol": "tcp",
+          "FromPort": "2049",
+          "ToPort": "2049",
+          "CidrIp": "192.168.1.0/24"
+		},
+		{
+		  "IpProtocol": "udp",
+          "FromPort": "2049",
+          "ToPort": "2049",
+          "CidrIp": "192.168.1.0/24"
+		}]
+      }
+    },
+    "acl1": {
+      "Type": "AWS::EC2::NetworkAclEntry",
+      "Properties": {
+        "CidrBlock": "0.0.0.0/0",
+        "Egress": "true",
+        "Protocol": "-1",
+        "RuleAction": "allow",
+        "RuleNumber": "100",
+        "NetworkAclId": {
+          "Ref": "NetworkAcl"
+        }
+      }
+    },
+    "acl2": {
+      "Type": "AWS::EC2::NetworkAclEntry",
+      "Properties": {
+        "CidrBlock": "0.0.0.0/0",
+        "Protocol": "-1",
+        "RuleAction": "allow",
+        "RuleNumber": "100",
+        "NetworkAclId": {
+          "Ref": "NetworkAcl"
+        }
+      }
+    },
+    "subnetacl2": {
+      "Type": "AWS::EC2::SubnetNetworkAclAssociation",
+      "Properties": {
+        "NetworkAclId": {
+          "Ref": "NetworkAcl"
+        },
+        "SubnetId": {
+          "Ref": "LoadBalancerSubnet"
+        }
+      }
+    },
+    "subnetacl3": {
+      "Type": "AWS::EC2::SubnetNetworkAclAssociation",
+      "Properties": {
+        "NetworkAclId": {
+          "Ref": "NetworkAcl"
+        },
+        "SubnetId": {
+          "Ref": "DatabaseSubnet"
+        }
+      }
+    },
+    "subnetacl4": {
+      "Type": "AWS::EC2::SubnetNetworkAclAssociation",
+      "Properties": {
+        "NetworkAclId": {
+          "Ref": "NetworkAcl"
+        },
+        "SubnetId": {
+          "Ref": "ApplicationSubnet"
+        }
+      }
+    },
+    "gw1": {
+      "Type": "AWS::EC2::VPCGatewayAttachment",
+      "Properties": {
+        "VpcId": {
+          "Ref": "qisVpc"
+        },
+        "InternetGatewayId": {
+          "Ref": "InternetGateway"
+        }
+      }
+    },
+    "subnetroute1": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "ApplicationRouteTable"
+        },
+        "SubnetId": {
+          "Ref": "ApplicationSubnet"
+        }
+      }
+    },
+    "subnetroute3": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "DatabaseRouteTable"
+        },
+        "SubnetId": {
+          "Ref": "DatabaseSubnet"
+        }
+      }
+    },
+    "subnetroute5": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "ElbRouteTable"
+        },
+        "SubnetId": {
+          "Ref": "LoadBalancerSubnet"
+        }
+      }
+    },
+    "route1": {
+      "Type": "AWS::EC2::Route",
+      "Properties": {
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "RouteTableId": {
+          "Ref": "MainRouteTable"
+        },
+        "GatewayId": {
+          "Ref": "InternetGateway"
+        }
+      },
+      "DependsOn": "gw1"
+    },
+    "route2": {
+      "Type": "AWS::EC2::Route",
+      "Properties": {
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "RouteTableId": {
+          "Ref": "ElbRouteTable"
+        },
+        "GatewayId": {
+          "Ref": "InternetGateway"
+        }
+      },
+      "DependsOn": "gw1"
+    },
+	"route3": {
+	  "Type": "AWS::EC2::Route",
+	  "Properties": {
+	    "DestinationCidrBlock": "0.0.0.0/0",
+		"RouteTableId": {
+		  "Ref": "ApplicationRouteTable"
+		},
+		"GatewayId": {
+		  "Ref": "InternetGateway"
+		}
+	  },
+	  "DependsOn": "gw1"
+	},
+	"route4": {
+	  "Type": "AWS::EC2::Route",
+	  "Properties": {
+	    "DestinationCidrBlock": "0.0.0.0/0",
+		"RouteTableId": {
+		  "Ref": "DatabaseRouteTable"
+		},
+		"GatewayId": {
+		  "Ref": "InternetGateway"
+		}
+	  },
+	  "DependsOn": "gw1"
+	},
+    "dchpassoc1": {
+      "Type": "AWS::EC2::VPCDHCPOptionsAssociation",
+      "Properties": {
+        "VpcId": {
+          "Ref": "qisVpc"
+        },
+        "DhcpOptionsId": "dopt-2e5e8045"
+      }
+    }
+  },
+  "Outputs" : {
+    "URL" : {
+      "Description" : "The URL of the website",
+      "Value" :  { "Fn::Join" : [ "", [ "http://", { "Fn::GetAtt" : [ "ElasticLoadBalancer", "DNSName" ]}]]}
+    }
+  },
+  "Description": "qis-cloudformation-template"
+}

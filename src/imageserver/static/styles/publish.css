@@ -1,0 +1,159 @@
+/*
+	Document:      publish.css
+	Date started:  30 Oct 2014
+	By:            Matt Fozard
+	Purpose:       Quru Image Server image publish wizard CSS
+	Requires:      base.css
+	Copyright:     Quru Ltd (www.quru.com)
+	Licence:
+
+	This program is free software: you can redistribute it and/or modify
+	it under the terms of the GNU Affero General Public License as published
+	by the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
+
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU Affero General Public License for more details.
+
+	You should have received a copy of the GNU Affero General Public License
+	along with this program.  If not, see http://www.gnu.org/licenses/
+	
+	Last Changed:  $Date$ $Rev$ by $Author$
+*/
+
+h3 {
+	margin-bottom: 0.5em;
+}
+
+img.help {
+	margin-left: 0.5em;
+	margin-right: 0.5em;
+}
+
+.column {
+	float: left;
+	width: 49.9%;
+	min-width: 400px;
+}
+.column fieldset {
+	margin-right: 20px;
+}
+.publisher img {
+	max-width: 100%;
+}
+
+/* Crop controls */
+
+.crop_container,
+.preview_container {
+	margin-top: 10px;
+}
+
+/* Image preview */
+
+.preview_container {
+	position: relative;
+	float: left;
+}
+#preview_mask {
+	background-color: black;
+	z-index: 1;
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	opacity: 0.6;
+	text-align: center;
+	display: none;
+}
+#preview_mask img {
+	position: relative;
+	top: 50%;
+	transform: translateY(-50%);
+}
+#preview_error {
+	width: 20em;
+	height: 15em;
+	line-height: 15em;
+	text-align: center;
+	vertical-align: middle;
+	border: 1px dashed gray;
+	display: none;
+}
+#preview_image {
+	border: 1px dashed gray;
+}
+
+/* Template viewer */
+
+#template_fields {
+	margin-left: 12.2em;
+	margin-bottom: 0;
+	font-size: 85%;
+}
+#template_fields > div {
+	margin: 0;
+}
+
+/* Form fields */
+
+input[type="number"] {
+	width: 10ex;
+}
+input[type="color"] {
+	vertical-align: top;
+}
+
+.field_default {
+	font-size: 85%;
+	color: gray;
+}
+
+.warning {
+	font-size: 90%;
+	margin-left: 11.5em;
+}
+.warning img {
+	margin-right: 0.5em;
+	vertical-align: middle;
+}
+
+/* Pop-up help (these override base.css) */
+
+img.help {
+	vertical-align: middle;
+}
+#preview_popup,
+#preview_popup_left,
+#preview_popup_right {
+	height: 400px;
+}
+#preview_popup_left {
+	z-index: 202;
+}
+#preview_popup_right {
+	width: 650px;
+	z-index: 201;
+}
+#preview_popup iframe {
+	width: 96%;
+	height: 100%;
+	margin-left: auto;
+	margin-right: auto;
+	border: none;
+}
+
+/* Output */
+
+.output_templates {
+	position: absolute;
+	display: none;
+}
+
+.hljs {
+	background-color: white;
+	padding: 0;
+}

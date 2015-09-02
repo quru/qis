@@ -1,0 +1,668 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" xml:lang="en">
+
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+	<title>Lasso.Crop Image Cropping Tool | nwhite.net</title>
+
+	<link rel="stylesheet" type="text/css" href="http://www.nwhite.net/blog/wp-content/themes/stardust/style.css" media="screen" />
+    
+	<link rel="alternate" type="application/rss+xml" title="RSS 2.0" href="http://www.nwhite.net/feed" />
+	<link rel="alternate" type="text/xml" title="RSS .92" href="http://www.nwhite.net/feed/rss" />
+	<link rel="alternate" type="application/atom+xml" title="Atom 0.3" href="http://www.nwhite.net/feed/atom" />
+	<link rel="shortcut icon" href="http://www.nwhite.net/blog/wp-content/themes/stardust/favicon.ico" />
+	<link rel="pingback" href="http://www.nwhite.net/blog/xmlrpc.php" />
+		<link rel='archives' title='April 2009' href='http://www.nwhite.net/2009/04' />
+	<link rel='archives' title='March 2009' href='http://www.nwhite.net/2009/03' />
+	<link rel='archives' title='February 2009' href='http://www.nwhite.net/2009/02' />
+	<link rel='archives' title='December 2008' href='http://www.nwhite.net/2008/12' />
+	<link rel='archives' title='October 2008' href='http://www.nwhite.net/2008/10' />
+	<link rel='archives' title='September 2008' href='http://www.nwhite.net/2008/09' />
+		
+        	<script type="text/javascript" src="/js/mootools.js"></script>
+	<script type="text/javascript" src="/js/common.js"></script>
+        	
+<!-- all in one seo pack 1.4.6.14 [247,291] -->
+<meta name="description" content="Using a lasso select crop images with lots of advance features like min and max width, ratios and default previews." />
+<meta name="keywords" content="image cropping, ratio constraints, min, max, javascript,lasso,moocroop,mootools" />
+<!-- /all in one seo pack -->
+<link rel="stylesheet" href="/css/api.css" type="text/css" media="all" />
+<script type="text/javascript" src="/js/Lasso.js"></script>
+<script type="text/javascript" src="/js/Lasso.Crop.js"></script>
+<script type="text/javascript" src="/js/crop_test.js"></script>
+
+<link rel="stylesheet" href="http://www.nwhite.net/blog/wp-content/plugins/wp-syntax/wp-syntax.css" type="text/css" media="screen" />
+</head>
+
+<body>
+<div id="container">
+
+    <div id="header">
+    <h1 id="title"><a href="http://www.nwhite.net/">nwhite.net</a></h1>
+ <!--   <p class="payoff">Nathan White [ Web Developer ]</p>  -->
+   
+   <form id="searchform" method="get" action="http://www.nwhite.net">
+	<div>
+                <label for="s">Search</label>
+		<input type="text" name="s" id="s" size="15" value="search..." onblur="if(this.value=='') this.value='search...';" onfocus="if(this.value=='search...') this.value='';"/>
+		<button type="submit"><img src="http://www.nwhite.net/blog/wp-content/themes/stardust/images/cerca.jpg" alt="search" /></button>
+	</div>
+   </form>
+        <div id="menu1">
+        <ul>
+        <li class="page_item"><a href="http://www.nwhite.net/" title="Homepage">Home</a></li>
+		<li class="page_item page-item-2"><a href="http://www.nwhite.net/about" title="About">About</a></li>
+        </ul>
+        </div>
+    </div><!-- end header -->
+
+<div id="redbar">&nbsp;</div>
+
+<div id="wrapper">
+<div id="content">
+<div class="post" id="post-328">
+    <div class="post-nav">
+		<div class="date" title="25-02-2009">
+          <p>
+           <span class="mese">Feb</span>
+           <span class="giorno">25</span>
+           <span class="anno">2009</span>
+	  </p>
+	</div>
+	<p class="comments"><a href="#comments">14</a></p>
+	<h2 class="storytitle"><a href="http://www.nwhite.net/2009/02/25/lassocrop-preview" rel="bookmark">Lasso.Crop Preview</a></h2>
+	<div class="meta">
+		<span class="tags">Category: <a href="http://www.nwhite.net/category/mootools/image-manipulation" title="View all posts in Image Manipulation" rel="category tag">Image Manipulation</a>, <a href="http://www.nwhite.net/category/mootools" title="View all posts in Mootools" rel="category tag">Mootools</a></span> &#8212;
+		<span class="tags">Tags: <a href="http://www.nwhite.net/tag/lasso" rel="tag">lasso</a>, <a href="http://www.nwhite.net/tag/moocroop" rel="tag">moocroop</a>, <a href="http://www.nwhite.net/tag/mootools" rel="tag">Mootools</a></span>
+<script type="text/javascript" src="http://w.sharethis.com/button/sharethis.js#tabs=web%2Cpost%2Cemail&amp;charset=utf-8&amp;style=default&amp;publisher=ffd24876-82a8-4683-813f-ed5cf9c48621"></script>
+	</div>
+     </div>
+     <div class="storycontent">
+	<p>After releasing the &#8220;magnetic poetry&#8221; demo I have been working hard trying to make the code more reusable for all. In the process there has been a name change from Rubberband to Lasso. The original Rubberband code has been a great source of inspiration, but not much is left of it. I have completely gutted it reworking a lot of the internal logic.</p>
+
+<p>First, the eye candy <img src='http://www.nwhite.net/blog/wp-includes/images/smilies/icon_wink.gif' alt=';-)' class='wp-smiley' /> </p>
+<span id="more-328"></span>
+<style type="text/css">
+	#cropdemo {
+/*		float: left;
+		width: 700px; */
+	}
+	
+	#controls {
+		font-family: verdana;
+		font-size: 10px;
+		margin-left: 10px;
+		padding-left: 10px;
+	}
+
+       #controls .c {
+           width: 100px;
+           margin: 8px 10px;
+           float: left;
+          border: 1px dotted #999;
+       }
+	
+	#controls label{
+		font-size: 12px;
+		background: #ddd;
+                display: block;
+		border-bottom: 1px solid #999;
+		color: #333;
+		padding: 1px 2px 1px 2px;
+		margin: 1px 0;
+	}
+	
+	#controls input {
+		font-size: 10px;
+		width: 25px;
+		height: 12px;
+	}	
+	
+	#controls span {
+		font-size: 9px;
+		font-style: italic;
+		padding-left: 4px;
+	}
+	
+	#location {
+               width: 550px;
+		padding: 4px;
+		text-align: center;
+		font-size: 14px;
+		color: #666;
+		margin-bottom: 10px;
+	}
+	
+	#location span {
+		margin: 0 8px;
+		display :  inline-block;
+		width: 35px;
+		padding: 2px;
+		border: 1px solid #999;
+	}
+	
+	#notes {
+		font-size: 14px;
+		color: #333;
+	}
+
+</style>
+<h4>Lasso.Crop</h4>
+<div id="cropdemo" style="overflow:auto;clear:both;">
+<img src="/images/bee.jpg" id="bee" />
+    <div id="location">
+	 x:<span id="locx"></span> 
+	 y:<span id="locy"></span> 
+	 w:<span id="locw"></span>
+	 h:<span id="loch"></span>
+	</div>
+</div>
+<div id="controls">
+      <div class="c">
+	<label>Ratio</label>
+		<select id="control-ratio" name="ratio">
+			<option value="false" SELECTED>off</option>
+			<option value="16:9">16:9</option>
+			<option value="4:3">4:3</option>
+			<option value="1:1">1:1</option>
+		</select>
+        </div>
+        <div class="c">
+	<label>Preset</label>
+		<select id="control-default" name="default">
+			<option value="false">off</option>
+			<option value="0" SELECTED>default 1</option>
+			<option value="1">default 2</option>
+		</select>
+         </div>
+         <div class="c">
+	<label>Min W &amp; H</label>
+		x: <input type="text" name="minx" id="control-minx" value="50" />
+		&nbsp;y: <input type="text" name="miny" id="control-miny" value="50" />
+        </div>
+        <div class="c">
+	<label>Max W &amp; H</label>
+		x: <input type="text" name="maxx" id="control-maxx" value="" />
+		&nbsp;y: <input type="text" name="maxy" id="control-maxy" value="" />
+        </div>
+        <div class="c" style="clear:left;">
+	<label>Handle Size</label>
+		<select id="control-handleSize" name="handleSize">
+			<option value="6">6</option>
+			<option value="8" SELECTED>8</option>
+			<option value="10">10</option>
+		</select>
+        </div>
+        <div class="c">
+	<label>Mask Color</label>
+		<select id="control-maskColor" name="color">
+			<option value="#7389AE" SELECTED>Default</option>
+			<option value="#000">Black</option>
+			<option value="#FFF">White</option>
+		</select>
+        </div>
+        <div class="c">
+	<label>Mask Opacity</label>
+		<select id="control-opacity" name="opacity">
+			<option value=".1">10%</option>
+			<option value=".2">20%</option>
+			<option value=".3">30%</option>
+			<option value=".4">40%</option>
+			<option value=".5">50%</option>
+			<option value=".6" SELECTED>60%</option>
+			<option value=".7">70%</option>
+			<option value=".8">80%</option>
+			<option value=".9">90%</option>
+		</select>
+        </div>
+        <div class="c">
+	<label>Marching Ants</label>
+		<select id="control-ants" name="ants">
+			<option value="/images/crop.gif" SELECTED>animated</option>
+			<option value="#000">black (static)</option>
+			<option value="#F00">red (static)</option>
+		</select>
+         </div>
+</div>
+<div id="notes"></div>
+<div style="clear:both;height:10px;">&nbsp;</div>
+
+<p>So far I have tested this in FF, Safari, Opera, IE6 &#038; 7 and things look good. It doesn&#8217;t require anything but Core!</p>
+
+<b>Things to note:</b>
+
+
+<ul>
+<li>you can click anywhere outside of the crop area to start a new crop</li>
+<li>if the handlers disappear then the crop is invalid (too small)</li>
+<li>if min and max are the same the handlers are removed</li>
+<li>N,S,E,W handlers are removed for ratio constraints</li>
+<li>Marching ants requires a single 8&#215;8 image. Default is &#8216;1px dashed #999&#8242;</li>
+<li>Preset option was added to help with usability, visual clue to communicate that you can crop</li>
+</ul>
+
+
+<h2><a onclick="javascript:pageTracker._trackPageview('/downloads/js/Lasso.js');"  href="/js/Lasso.js">Download Lasso.js</a></h2>
+<h2><a onclick="javascript:pageTracker._trackPageview('/downloads/js/Lasso.Crop.js');"  href="/js/Lasso.Crop.js">Download Lasso.Crop.js</a></h2>
+
+<h1 style="font-size:24px;">Lasso.Crop</h1>
+<h3>Example</h3>
+<div class="content">
+<p>HTML</p>
+
+
+<div class="wp_syntax"><div class="code"><pre class="html" style="font-family:monospace;">&lt;script type=&quot;text/javascript&quot; src=&quot;mootools.js&quot;&gt;&lt;/script&gt;
+&lt;script type=&quot;text/javascript&quot; src=&quot;Lasso.js&quot;&gt;&lt;/script&gt;
+&lt;script type=&quot;text/javascript&quot; src=&quot;Lasso.Crop.js&quot;&gt;&lt;/script&gt;</pre></div></div>
+
+
+
+
+
+<div class="wp_syntax"><div class="code"><pre class="html" style="font-family:monospace;">&lt;img src=&quot;/images/bee.jpg&quot; id=&quot;bee&quot; /&gt;</pre></div></div>
+
+
+
+<p>Javascript</p>
+
+
+<div class="wp_syntax"><div class="code"><pre class="javascript javascript" style="font-family:monospace;"><span style="color: #003366; font-weight: bold;">new</span> Lasso.<span style="color: #660066;">Crop</span><span style="color: #009900;">&#40;</span><span style="color: #3366CC;">'bee'</span><span style="color: #339933;">,</span><span style="color: #009900;">&#123;</span>
+	ratio <span style="color: #339933;">:</span> <span style="color: #003366; font-weight: bold;">false</span><span style="color: #339933;">,</span>
+	preset <span style="color: #339933;">:</span> <span style="color: #009900;">&#91;</span><span style="color: #CC0000;">235</span><span style="color: #339933;">,</span><span style="color: #CC0000;">140</span><span style="color: #339933;">,</span><span style="color: #CC0000;">505</span><span style="color: #339933;">,</span><span style="color: #CC0000;">340</span><span style="color: #009900;">&#93;</span><span style="color: #339933;">,</span>
+	min <span style="color: #339933;">:</span> <span style="color: #009900;">&#91;</span><span style="color: #CC0000;">50</span><span style="color: #339933;">,</span><span style="color: #CC0000;">50</span><span style="color: #009900;">&#93;</span><span style="color: #339933;">,</span>
+	handleSize <span style="color: #339933;">:</span> <span style="color: #CC0000;">8</span><span style="color: #339933;">,</span>
+	opacity <span style="color: #339933;">:</span> .6<span style="color: #339933;">,</span>
+	color <span style="color: #339933;">:</span> <span style="color: #3366CC;">'#7389AE'</span><span style="color: #339933;">,</span>
+	border <span style="color: #339933;">:</span> <span style="color: #3366CC;">'/images/crop.gif'</span><span style="color: #339933;">,</span>
+	<span style="color: #000066;">onResize</span> <span style="color: #339933;">:</span> updateCoords
+<span style="color: #009900;">&#125;</span><span style="color: #009900;">&#41;</span>;</pre></div></div>
+
+
+
+</div>
+<h3>Documentation</h3>
+<div class="content">
+<p class="header">Arguments</p>
+<p class="entry"><small>options</small> an object. see options below.</p>
+<p class="header">Options</p>
+<p class="entry"><small>min</small> [w,h]/false sets the min width and height defaults to false</p>
+<p class="entry"><small>max</small> [w,h]/false sets the max width and height defaults to false</p>
+<p class="entry"><small>ratio</small> [16,9]/false sets the ratio constraints defaults false</p>
+<p class="entry"><small>contain</small> element/false if set lasso will be contained within element, default false</p>
+<p class="entry"><small>border</small> hex color or image path, sets the border of the lasso. Default &#8216;#999&#8242;</p>
+<p class="entry"><small>color</small> masking color default &#8216;#7389AE&#8217;</p>
+<p class="entry"><small>opacity</small> opacity of mask default .3</p>
+<p class="entry"><small>zindex</small> used to make sure lasso is above all elements default 10000</p>
+<p class="header">Methods</p>
+<p class="entry"><small>attach</small>Attaches listeners</p>
+<p class="entry"><small>detach</small>Detaches all listeners</p>
+<p class="header">Events</p>
+<p class="entry"><small>start</small>Event fired when lasso begins</p>
+<p class="entry"><small>resize</small>Event fired during every mousemove while lasso active returns { x, y, w, h } if &#8216;contain&#8217; is set, positions are relative to container</p>
+<p class="entry"><small>complete</small>Event fired on mouseup. returns { x, y, w, h} if &#8216;contain&#8217; is set, positions are relative to container</p>
+</div>
+
+	                <p class="meta">Tags: <a href="http://www.nwhite.net/tag/lasso" rel="tag">lasso</a>, <a href="http://www.nwhite.net/tag/moocroop" rel="tag">moocroop</a>, <a href="http://www.nwhite.net/tag/mootools" rel="tag">Mootools</a></p>
+	      </div>
+      <div class="feedback">
+	      </div>
+</div>
+
+
+<!-- You can start editing here. -->
+
+	<h3 id="comments">14 Responses to &#8220;Lasso.Crop Preview&#8221;</h3>
+
+	<ol class="commentlist">
+			<li class="alt" id="comment-366">
+		<img alt='' src='http://www.gravatar.com/avatar/d289df6f043a9842c005011b81f3405d?s=32&amp;d=http%3A%2F%2Fwww.gravatar.com%2Favatar%2Fad516503a11cd5ca435acc9bb6523536%3Fs%3D32&amp;r=PG' class='avatar avatar-32' height='32' width='32' />			<cite><a onclick="javascript:pageTracker._trackPageview('/outgoing/meiocodigo.com');"  href='http://meiocodigo.com' rel='external nofollow'>fabio m. costa</a></cite> says:
+						<br />
+			<small class="commentmetadata"><a href="#comment-366" title="">February 25th, 2009 at 3:00 pm</a> </small>
+			<div class="commentbody">
+            	<div>
+				<p>Nice nathan, nice!<br />
+Haven&#8217;t see the code but the demo is really good!</p>
+            	</div>
+            </div>
+		</li>
+				<li id="comment-367">
+		<img alt='' src='http://www.gravatar.com/avatar/d47594dd186080575292a4ea1f821056?s=32&amp;d=http%3A%2F%2Fwww.gravatar.com%2Favatar%2Fad516503a11cd5ca435acc9bb6523536%3Fs%3D32&amp;r=PG' class='avatar avatar-32' height='32' width='32' />			<cite><a href='http:/www.nwhite.net' rel='external nofollow'>nwhite</a></cite> says:
+						<br />
+			<small class="commentmetadata"><a href="#comment-367" title="">February 25th, 2009 at 3:06 pm</a> </small>
+			<div class="commentbody">
+            	<div>
+				<p>You can look anytime, no minification on it. It will be changing! There are still a few things to clean up. Overall I&#8217;m very happy about the code. All other croppers out there are at least 2x more code and have more dependencies.</p>
+            	</div>
+            </div>
+		</li>
+				<li class="alt" id="comment-374">
+		<img alt='' src='http://www.gravatar.com/avatar/da15a91944733a52721315ce166affca?s=32&amp;d=http%3A%2F%2Fwww.gravatar.com%2Favatar%2Fad516503a11cd5ca435acc9bb6523536%3Fs%3D32&amp;r=PG' class='avatar avatar-32' height='32' width='32' />			<cite><a onclick="javascript:pageTracker._trackPageview('/outgoing/nouincolor.com');"  href='http://nouincolor.com' rel='external nofollow'>Oskar Krawczyk</a></cite> says:
+						<br />
+			<small class="commentmetadata"><a href="#comment-374" title="">February 26th, 2009 at 4:08 am</a> </small>
+			<div class="commentbody">
+            	<div>
+				<p>Howdy Nathan. As usual this is a really great piece of coding! How about extending it a bit so that constrained proportions are kept while holding the SHIFT button? My second idea would be to re-position the crop area by pressing the arrow keys– that would be super-sweet!</p>
+            	</div>
+            </div>
+		</li>
+				<li id="comment-375">
+		<img alt='' src='http://www.gravatar.com/avatar/d47594dd186080575292a4ea1f821056?s=32&amp;d=http%3A%2F%2Fwww.gravatar.com%2Favatar%2Fad516503a11cd5ca435acc9bb6523536%3Fs%3D32&amp;r=PG' class='avatar avatar-32' height='32' width='32' />			<cite><a href='http:/www.nwhite.net' rel='external nofollow'>nwhite</a></cite> says:
+						<br />
+			<small class="commentmetadata"><a href="#comment-375" title="">February 26th, 2009 at 7:30 am</a> </small>
+			<div class="commentbody">
+            	<div>
+				<p>@Oskar - keys are coming! arrows move 1px, shift+arrow 10px. Shift constrain, didn&#8217;t think of that. Good idea.</p>
+            	</div>
+            </div>
+		</li>
+				<li class="alt" id="comment-387">
+		<img alt='' src='http://www.gravatar.com/avatar/93b006978312545f4e70ebc883775fc8?s=32&amp;d=http%3A%2F%2Fwww.gravatar.com%2Favatar%2Fad516503a11cd5ca435acc9bb6523536%3Fs%3D32&amp;r=PG' class='avatar avatar-32' height='32' width='32' />			<cite><a onclick="javascript:pageTracker._trackPageview('/outgoing/www.MiniSiteGallery.com');"  href='http://www.MiniSiteGallery.com' rel='external nofollow'>Kidino</a></cite> says:
+						<br />
+			<small class="commentmetadata"><a href="#comment-387" title="">March 1st, 2009 at 8:40 am</a> </small>
+			<div class="commentbody">
+            	<div>
+				<p>This is really awesome. I got it working. If somebody can show me/point me the right direction on how to make multiple croppers work simultaneously on the same image, that&#8217;ll be great.</p>
+            	</div>
+            </div>
+		</li>
+				<li id="comment-388">
+		<img alt='' src='http://www.gravatar.com/avatar/d47594dd186080575292a4ea1f821056?s=32&amp;d=http%3A%2F%2Fwww.gravatar.com%2Favatar%2Fad516503a11cd5ca435acc9bb6523536%3Fs%3D32&amp;r=PG' class='avatar avatar-32' height='32' width='32' />			<cite><a href='http:/www.nwhite.net' rel='external nofollow'>nwhite</a></cite> says:
+						<br />
+			<small class="commentmetadata"><a href="#comment-388" title="">March 1st, 2009 at 9:46 am</a> </small>
+			<div class="commentbody">
+            	<div>
+				<p>@Kidino - I&#8217;m am not sure why you would want to have multiple croppers on the same image. From a technical standpoint there are quite a few hurdles, I don&#8217;t think its worth it.</p>
+            	</div>
+            </div>
+		</li>
+				<li class="alt" id="comment-409">
+		<img alt='' src='http://www.gravatar.com/avatar/5671110dbbd9d644b08f608f67381fce?s=32&amp;d=http%3A%2F%2Fwww.gravatar.com%2Favatar%2Fad516503a11cd5ca435acc9bb6523536%3Fs%3D32&amp;r=PG' class='avatar avatar-32' height='32' width='32' />			<cite>Subhashini</cite> says:
+						<br />
+			<small class="commentmetadata"><a href="#comment-409" title="">March 4th, 2009 at 9:32 am</a> </small>
+			<div class="commentbody">
+            	<div>
+				<p>Hi ,</p>
+<p>I like the script very much it is easy for implementation but i need to save the image after cropping on to the server is there any option to do this Please help it is very important for our web application.</p>
+            	</div>
+            </div>
+		</li>
+				<li id="comment-410">
+		<img alt='' src='http://www.gravatar.com/avatar/d47594dd186080575292a4ea1f821056?s=32&amp;d=http%3A%2F%2Fwww.gravatar.com%2Favatar%2Fad516503a11cd5ca435acc9bb6523536%3Fs%3D32&amp;r=PG' class='avatar avatar-32' height='32' width='32' />			<cite><a href='http:/www.nwhite.net' rel='external nofollow'>nwhite</a></cite> says:
+						<br />
+			<small class="commentmetadata"><a href="#comment-410" title="">March 4th, 2009 at 9:40 am</a> </small>
+			<div class="commentbody">
+            	<div>
+				<p>Did you notice that the post says preview? I am not sure it is wise to use this in a production environment quite yet. The events should give you everything you need to crop the image. If you want finer control you can play around with getRelativeCoords() on the Lasso.Crop object. This will return the same thing the events return. As far as cropping on the server side you need to pass the coords to the server and do the processing yourself. If you search my blog under Image Manipulation you should find a php script to do just that.</p>
+            	</div>
+            </div>
+		</li>
+				<li class="alt" id="comment-493">
+		<img alt='' src='http://www.gravatar.com/avatar/1960845f7dac07e2da816c515d1c0828?s=32&amp;d=http%3A%2F%2Fwww.gravatar.com%2Favatar%2Fad516503a11cd5ca435acc9bb6523536%3Fs%3D32&amp;r=PG' class='avatar avatar-32' height='32' width='32' />			<cite><a onclick="javascript:pageTracker._trackPageview('/outgoing/www.tatai.es');"  href='http://www.tatai.es' rel='external nofollow'>Tatai</a></cite> says:
+						<br />
+			<small class="commentmetadata"><a href="#comment-493" title="">March 8th, 2009 at 12:14 pm</a> </small>
+			<div class="commentbody">
+            	<div>
+				<p>Awesome Nathan! Clear, smooth and fast. We are waiting for a stable version!</p>
+            	</div>
+            </div>
+		</li>
+				<li id="comment-17273">
+		<img alt='' src='http://www.gravatar.com/avatar/1eb74ff8a32ed9c32c99b59c41d82bee?s=32&amp;d=http%3A%2F%2Fwww.gravatar.com%2Favatar%2Fad516503a11cd5ca435acc9bb6523536%3Fs%3D32&amp;r=PG' class='avatar avatar-32' height='32' width='32' />			<cite><a onclick="javascript:pageTracker._trackPageview('/outgoing/github.com/fabiomcosta');"  href='http://github.com/fabiomcosta' rel='external nofollow'>Fábio Miranda Costa</a></cite> says:
+						<br />
+			<small class="commentmetadata"><a href="#comment-17273" title="">July 29th, 2011 at 4:13 pm</a> </small>
+			<div class="commentbody">
+            	<div>
+				<p>Any plans on putting this at github? <img src='http://www.nwhite.net/blog/wp-includes/images/smilies/icon_smile.gif' alt=':)' class='wp-smiley' /> </p>
+            	</div>
+            </div>
+		</li>
+				<li class="alt" id="comment-18723">
+		<img alt='' src='http://www.gravatar.com/avatar/33b72e821a3e4089394c0a8c2884f57c?s=32&amp;d=http%3A%2F%2Fwww.gravatar.com%2Favatar%2Fad516503a11cd5ca435acc9bb6523536%3Fs%3D32&amp;r=PG' class='avatar avatar-32' height='32' width='32' />			<cite>David</cite> says:
+						<br />
+			<small class="commentmetadata"><a href="#comment-18723" title="">March 30th, 2012 at 12:55 pm</a> </small>
+			<div class="commentbody">
+            	<div>
+				<p>I love this thing, but it&#8217;s getting a bit out-of-date.  Any chance this will get a re-work for MTv1.4.5 ?  I tried to update it myself but got stuck trying to translate bindWithEvent.  Thanks for a great plugin.</p>
+            	</div>
+            </div>
+		</li>
+				<li id="comment-19342">
+		<img alt='' src='http://www.gravatar.com/avatar/a8f5722001b77d81334a22a6031a9059?s=32&amp;d=http%3A%2F%2Fwww.gravatar.com%2Favatar%2Fad516503a11cd5ca435acc9bb6523536%3Fs%3D32&amp;r=PG' class='avatar avatar-32' height='32' width='32' />			<cite>Kunal</cite> says:
+						<br />
+			<small class="commentmetadata"><a href="#comment-19342" title="">May 22nd, 2012 at 11:34 am</a> </small>
+			<div class="commentbody">
+            	<div>
+				<p>Can not figure out that how can i specify the ratio 1 : 1</p>
+<p>I tried following</p>
+<p>new Lasso.Crop(&#8217;crop&#8217;,{<br />
+	ratio : &#8220;1:1&#8243;,<br />
+	//preset : [235,140,505,340],<br />
+	min : [50,50],<br />
+	handleSize : 8,<br />
+	opacity : .6,<br />
+	color : &#8216;#7389AE&#8217;,<br />
+	onResize : updateCoords<br />
+}</p>
+<p>Please reply.!!</p>
+<p>thanks in advance..!</p>
+            	</div>
+            </div>
+		</li>
+				<li class="alt" id="comment-19557">
+		<img alt='' src='http://www.gravatar.com/avatar/f698584e8d4eddbd5c5557750d4f2e65?s=32&amp;d=http%3A%2F%2Fwww.gravatar.com%2Favatar%2Fad516503a11cd5ca435acc9bb6523536%3Fs%3D32&amp;r=PG' class='avatar avatar-32' height='32' width='32' />			<cite>Jay</cite> says:
+						<br />
+			<small class="commentmetadata"><a href="#comment-19557" title="">June 4th, 2012 at 2:33 pm</a> </small>
+			<div class="commentbody">
+            	<div>
+				<p>Thanks a million for this! Awesome job!</p>
+            	</div>
+            </div>
+		</li>
+				<li id="comment-20218">
+		<img alt='' src='http://www.gravatar.com/avatar/a96e5858f170214a5cac55636f21590d?s=32&amp;d=http%3A%2F%2Fwww.gravatar.com%2Favatar%2Fad516503a11cd5ca435acc9bb6523536%3Fs%3D32&amp;r=PG' class='avatar avatar-32' height='32' width='32' />			<cite><a onclick="javascript:pageTracker._trackPageview('/outgoing/www.hyperlinked.com');"  href='http://www.hyperlinked.com' rel='external nofollow'>Sheldon Chang</a></cite> says:
+						<br />
+			<small class="commentmetadata"><a href="#comment-20218" title="">November 3rd, 2012 at 3:49 pm</a> </small>
+			<div class="commentbody">
+            	<div>
+				<p>If you&#8217;re trying to get LassoCrop or MooCrop to work on a mobile device, you&#8217;ll need to do two things. First, you need to map all of the mouse events to touch events. You can either modify the source code to do this or you can install something like the Mouse2Touch.js adapter to translate touch events into their equivalent mouse events.</p>
+<p>Second, the &#8220;refresh&#8221; method&#8217;s event object will need to be modified in the source file to translate touch coordinates to mouse coordinates. In my case, I added the following to the beginning of the &#8220;refresh&#8221; method:</p>
+<p>        if (Browser.isMobile) {<br />
+        	event.clientX = event.touches.item(0).clientX;<br />
+        	event.clientY = event.touches.item(0).clientY;<br />
+        }</p>
+            	</div>
+            </div>
+		</li>
+			</ol>
+
+ 
+
+
+<h3 id="respond">Leave a Reply</h3>
+
+<form action="http://www.nwhite.net/blog/wp-comments-post.php" method="post" id="commentform">
+
+<p><input type="text" name="author" id="author" value="" size="22" tabindex="1" />
+<label for="author"><small>Name (required)</small></label></p>
+<p><input type="text" name="email" id="email" value="" size="22" tabindex="2" />
+<label for="email"><small>Mail (will not be published) (required)</small></label></p>
+<p><input type="text" name="url" id="url" value="" size="22" tabindex="3" />
+<label for="url"><small>Website</small></label></p>
+
+
+<p><textarea name="comment" id="comment" cols="100%" rows="5" tabindex="4"></textarea></p>
+
+<p><input name="submit" type="submit" id="submit" tabindex="5" value="Submit Comment" />
+<input type="hidden" name="comment_post_ID" value="328" />
+		
+		<!-- JS AntiSpam Plugin for WordPress by Frank Bueltge | bueltge.de -->
+		<noscript><p><label for="nojsanswer">Enter spam protection word: <strong>ra<span style="display:none;">+</span>ndom</strong></label> <input type="text" name="nojsanswer" id="nojsanswer" /><input type="hidden" name="select_answer0" id="select_answer0" value="ra" /><input type="hidden" name="select_answer1" id="select_answer1" value="ndom" /></p></noscript>
+		<script type="text/javascript">/* <![CDATA[ */ document.write('<p><input type="hidden" name="nojsanswer" value="ra' + 'ndom" \/><input type="hidden" name="select_answer0" value="ra" \/><input type="hidden" name="select_answer1" value="ndom" \/><\/p>'); /* ]]> */</script>
+		
+		</p>
+</form>
+
+
+
+
+
+<!-- begin footer -->
+</div><!-- end content -->
+</div><!-- end wrapper -->
+
+<hr />
+
+<!-- begin sidebar -->
+<div id="menu">
+
+<ul>
+	
+       <li class="twitter">
+          <h3>Twitter</h3>
+          <ul id="twitter_update_list" style="padding-top:0;margin-top:0;font-size:13px;">
+
+          </ul>
+<script type="text/javascript" src="http://twitter.com/javascripts/blogger.js"></script>
+<script type="text/javascript" src="http://twitter.com/statuses/user_timeline/_nw_.json?callback=twitterCallback2&amp;count=1"></script>
+       </li>
+	
+ 	<li class="recent-posts">
+		<h3>Recent Posts</h3>
+		<ul>
+							<li>
+					<span class="postdate">Apr 1st</span>
+					<a href="http://www.nwhite.net/2009/04/01/javascript-obfuscation">Javascript Obfuscation</a>
+				</li>
+							<li>
+					<span class="postdate">Mar 5th</span>
+					<a href="http://www.nwhite.net/2009/03/05/moodocs-textmate-command">MooDocs TextMate Command</a>
+				</li>
+							<li>
+					<span class="postdate">Feb 25th</span>
+					<a href="http://www.nwhite.net/2009/02/25/lassocrop-preview">Lasso.Crop Preview</a>
+				</li>
+							<li>
+					<span class="postdate">Feb 17th</span>
+					<a href="http://www.nwhite.net/2009/02/17/writing-mootool-classes">Writing Mootool Classes. Things I&#8217;ve learned.</a>
+				</li>
+							<li>
+					<span class="postdate">Feb 13th</span>
+					<a href="http://www.nwhite.net/2009/02/13/visual-sorting-explained">Visual Sorting Explained</a>
+				</li>
+					</ul>
+	</li>		
+		
+	<li class="categories"><h3>Categories</h3><ul>	<li class="cat-item cat-item-3"><a href="http://www.nwhite.net/category/general" title="View all posts filed under General">General</a> (2)
+</li>
+	<li class="cat-item cat-item-4"><a href="http://www.nwhite.net/category/javascript" title="View all posts filed under Javascript">Javascript</a> (8)
+</li>
+	<li class="cat-item cat-item-5"><a href="http://www.nwhite.net/category/mootools" title="View all posts filed under Mootools">Mootools</a> (21)
+<ul class='children'>
+	<li class="cat-item cat-item-13"><a href="http://www.nwhite.net/category/mootools/image-manipulation" title="View all posts filed under Image Manipulation">Image Manipulation</a> (3)
+</li>
+	<li class="cat-item cat-item-17"><a href="http://www.nwhite.net/category/mootools/mutator" title="View all posts filed under Mutator">Mutator</a> (2)
+</li>
+	<li class="cat-item cat-item-15"><a href="http://www.nwhite.net/category/mootools/text-effects" title="View all posts filed under Text Effects">Text Effects</a> (1)
+</li>
+	<li class="cat-item cat-item-16"><a href="http://www.nwhite.net/category/mootools/utilities" title="View all posts filed under Utilities">Utilities</a> (7)
+</li>
+</ul>
+</li>
+	<li class="cat-item cat-item-19"><a href="http://www.nwhite.net/category/php" title="View all posts filed under PHP">PHP</a> (1)
+</li>
+	<li class="cat-item cat-item-9"><a href="http://www.nwhite.net/category/wordpress" title="View all posts filed under Wordpress">Wordpress</a> (1)
+</li>
+</ul></li>    
+ <li class="archives"><h3>Archives</h3>
+	<ul>
+	 	<li><a href='http://www.nwhite.net/2009/04' title='April 2009'>April 2009</a></li>
+	<li><a href='http://www.nwhite.net/2009/03' title='March 2009'>March 2009</a></li>
+	<li><a href='http://www.nwhite.net/2009/02' title='February 2009'>February 2009</a></li>
+	<li><a href='http://www.nwhite.net/2008/12' title='December 2008'>December 2008</a></li>
+	<li><a href='http://www.nwhite.net/2008/10' title='October 2008'>October 2008</a></li>
+	<li><a href='http://www.nwhite.net/2008/09' title='September 2008'>September 2008</a></li>
+	</ul>
+ </li>
+ 
+ 
+ 	<!-- tag cloud -->
+	<li class="tag-cloud">
+		<h3>Tag Cloud</h3>
+		<a href='http://www.nwhite.net/tag/compression' class='tag-link-22' title='1 topic' rel="tag" style='font-size: 8pt;'>compression</a>
+<a href='http://www.nwhite.net/tag/design-pattern' class='tag-link-10' title='1 topic' rel="tag" style='font-size: 8pt;'>design pattern</a>
+<a href='http://www.nwhite.net/tag/drag-n-drop' class='tag-link-24' title='1 topic' rel="tag" style='font-size: 8pt;'>Drag n Drop</a>
+<a href='http://www.nwhite.net/tag/flash-replacement' class='tag-link-6' title='3 topics' rel="tag" style='font-size: 8.8pt;'>flash replacement</a>
+<a href='http://www.nwhite.net/tag/hacking' class='tag-link-11' title='1 topic' rel="tag" style='font-size: 8pt;'>Hacking</a>
+<a href='http://www.nwhite.net/tag/image-transition' class='tag-link-12' title='1 topic' rel="tag" style='font-size: 8pt;'>Image Transition</a>
+<a href='http://www.nwhite.net/tag/javascript' class='tag-link-4' title='13 topics' rel="tag" style='font-size: 12.8pt;'>Javascript</a>
+<a href='http://www.nwhite.net/tag/jquery' class='tag-link-23' title='1 topic' rel="tag" style='font-size: 8pt;'>jquery</a>
+<a href='http://www.nwhite.net/tag/json' class='tag-link-21' title='1 topic' rel="tag" style='font-size: 8pt;'>JSON</a>
+<a href='http://www.nwhite.net/tag/lasso' class='tag-link-28' title='1 topic' rel="tag" style='font-size: 8pt;'>lasso</a>
+<a href='http://www.nwhite.net/tag/markdown' class='tag-link-30' title='1 topic' rel="tag" style='font-size: 8pt;'>Markdown</a>
+<a href='http://www.nwhite.net/tag/moocroop' class='tag-link-27' title='1 topic' rel="tag" style='font-size: 8pt;'>moocroop</a>
+<a href='http://www.nwhite.net/tag/moocrop' class='tag-link-14' title='1 topic' rel="tag" style='font-size: 8pt;'>MooCrop</a>
+<a href='http://www.nwhite.net/tag/mootools' class='tag-link-5' title='21 topics' rel="tag" style='font-size: 16pt;'>Mootools</a>
+<a href='http://www.nwhite.net/tag/mutator' class='tag-link-17' title='1 topic' rel="tag" style='font-size: 8pt;'>Mutator</a>
+<a href='http://www.nwhite.net/tag/php' class='tag-link-19' title='1 topic' rel="tag" style='font-size: 8pt;'>PHP</a>
+<a href='http://www.nwhite.net/tag/registry' class='tag-link-18' title='1 topic' rel="tag" style='font-size: 8pt;'>registry</a>
+<a href='http://www.nwhite.net/tag/rss' class='tag-link-20' title='1 topic' rel="tag" style='font-size: 8pt;'>rss</a>
+<a href='http://www.nwhite.net/tag/rubberband' class='tag-link-8' title='2 topics' rel="tag" style='font-size: 8.4pt;'>rubberband</a>
+<a href='http://www.nwhite.net/tag/sorting' class='tag-link-26' title='2 topics' rel="tag" style='font-size: 8.4pt;'>sorting</a>
+<a href='http://www.nwhite.net/tag/text-effect' class='tag-link-7' title='1 topic' rel="tag" style='font-size: 8pt;'>text effect</a>
+<a href='http://www.nwhite.net/tag/textmate' class='tag-link-29' title='1 topic' rel="tag" style='font-size: 8pt;'>TextMate</a>
+<a href='http://www.nwhite.net/tag/ui' class='tag-link-25' title='3 topics' rel="tag" style='font-size: 8.8pt;'>UI</a>
+<a href='http://www.nwhite.net/tag/wordpress' class='tag-link-9' title='1 topic' rel="tag" style='font-size: 8pt;'>Wordpress</a>	</li>
+ <!--
+ 	<li class="pagenav"><h3>Pages</h3><ul><li class="page_item page-item-2"><a href="http://www.nwhite.net/about" title="About">About</a></li>
+</ul></li>	<li id="linkcat-" class="linkcat"><h2><h3>Blogroll</h3></h2>
+	<ul class='xoxo blogroll'>
+<li><a href="http://www.daringfireball.net/">Daring Fireball</a></li>
+<li><a href="http://www.quirksmode.org" title="QuirksMode - for all your browser quirks">QuirksMode</a></li>
+<li><a href="http://danielmiller.wordpress.com" rel="friend met colleague">Dan Miller</a></li>
+<li><a href="http://www.mootools.net/">Mootools</a></li>
+
+	</ul>
+</li>
+ -->
+ 
+       <li class="recent-comments">
+              <h3>Recent Comments</h3>
+              <ul><li><div><span class="postdate">Nov 3rd</span><a href="http://www.nwhite.net/2009/02/25/lassocrop-preview#comment-20218">Sheldon Chang</a> on <a href="http://www.nwhite.net/2009/02/25/lassocrop-preview">Lasso.Crop Preview</a></div><span class="snippet">If you're trying to get LassoCrop or MooCrop to work on a mobile device, you'll need to do two things. First, you need to map all of the mouse events to touch events. You can either modify the source </span></li>
+
+<li><div><span class="postdate">Sep 13th</span><a href="http://www.nwhite.net/2008/10/06/mouse-ghost#comment-19962">Lucy Stone</a> on <a href="http://www.nwhite.net/2008/10/06/mouse-ghost">Mouse Ghost</a></div><span class="snippet">just awesome!</span></li>
+
+<li><div><span class="postdate">Jun 4th</span><a href="http://www.nwhite.net/2009/02/25/lassocrop-preview#comment-19557">Jay</a> on <a href="http://www.nwhite.net/2009/02/25/lassocrop-preview">Lasso.Crop Preview</a></div><span class="snippet">Thanks a million for this! Awesome job!</span></li>
+
+<li><div><span class="postdate">May 22nd</span><a href="http://www.nwhite.net/2009/02/25/lassocrop-preview#comment-19342">Kunal</a> on <a href="http://www.nwhite.net/2009/02/25/lassocrop-preview">Lasso.Crop Preview</a></div><span class="snippet">Can not figure out that how can i specify the ratio 1 : 1 I tried following new Lasso.Crop('crop',{ ratio : "1:1", //preset : [235,140,505,340], min : [50,50], handleSize : 8, opacity : .6, color : '#</span></li>
+
+<li><div><span class="postdate">Apr 5th</span><a href="http://www.nwhite.net/2008/09/29/transitions-for-mootools#comment-18781">Mr. Philliphuc</a> on <a href="http://www.nwhite.net/2008/09/29/transitions-for-mootools">Transitions for Mootools</a></div><span class="snippet">Well, the amazing mootools effect. I'm finding the effct which change the small part of larger image contain it. Thanks for your sharing!</span></li>
+</ul><!-- Recent Comments took 9.273 ms -->       </li>
+
+
+</ul>
+
+</div>
+<!-- end sidebar -->
+
+<hr />
+
+    <div id="footer">
+    <p class="up"><a href="#header" title="Jump to the top of the page">top</a></p>
+        <p class="credit"><!--27 queries. 0.232 seconds. --> Powered by <a href='http://wordpress.org/' title='Powered by WordPress'><strong>WordPress</strong></a></p>
+    
+<!-- tracker added by Ultimate Google Analytics plugin v1.6.0: http://www.oratransplant.nl/uga -->
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+var pageTracker = _gat._getTracker("UA-2851791-1");
+pageTracker._initData();
+pageTracker._trackPageview();
+</script>
+    </div>
+
+</div><!-- end container -->
+</body>
+</html>

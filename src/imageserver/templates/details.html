@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+
+{% block copyright %}
+<!-- 
+	Document:      details.html
+	Date started:  21 Jul 2011
+	By:            Matt Fozard
+	Purpose:       Quru Image Server file details
+	Requires:      
+	Copyright:     Quru Ltd (www.quru.com)
+	
+	Last Changed:  $Date$ $Rev$ by $Author$
+	
+	Notable modifications:
+	Date       By    Details
+	=========  ====  ============================================================
+	13Dec2012  Matt  Handle deleted images (show available info, stats)
+	16Jan2013  Matt  Add permissions checking for menu items
+-->
+{% endblock %}
+
+{% block title %}{{ src }}{% endblock %}
+
+{% block extra_head %}
+    {% include "canvas_view_js.html" %}
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/details.css') }}" type="text/css" />
+    {% if settings.DEBUG %}
+    <script src="{{ url_for('static', filename='js/details.js') }}" type="text/javascript"></script>
+    {% else %}
+    <script src="{{ url_for('static', filename='js/details_yc.js') }}" type="text/javascript"></script>
+    {% endif%}
+
+    {% if geo_info %}
+    <script src="http://maps.googleapis.com/maps/api/js?sensor=false" type="text/javascript"></script>
+    {% endif %}
+{% endblock %}
+
+{% set disabled_attrs='class="disabled" title="You do not have permission to use this function"'|safe %}
+
+{% block body %}
+	{% if file_info and db_info and db_info.status == STATUS_ACTIVE %}
+		<div class="float">
+			<div id="viewport" class="imageviewer border shadow">
+			</div>
+		</div>
+	{% else %}
+		<div class="float">
+			<div id="viewport_empty" class="imageviewer border shadow">
+				No image to display
+			</div>
+		</div>
+	{% endif %}
+
+	<!-- File info -->
+	<div class="float">
+		<h2>Image details <span>(<a href="{{ url_for('browse', path=path) }}">back to image folder</a>)</span></h2>
+		
+		{% if err_msg %}
+			<br/>
+			<div class="error">{{ err_msg|newlines }}</div>
+		{% else %}
+			{% if db_info and db_info.status == STATUS_ACTIVE %}
+				<img src="{{ url_for('static', filename='images/icon-action.png') }}"
+				      class="action_menu_owner" 
+				      id="image_action_menu_owner" />
+				
+				<div id="image_actions_container">
+					<div id="image_action_menu" class="action_menu border shadow">
+						<ul>
+							{% if is_folder_permitted(db_info.folder, FolderPermission.ACCESS_DOWNLOAD) %}
+							<li><a href="{{ url_for('original', src=src, attach=1)|safe }}">Download original</a></li>
+							<li><a id="file_publish" href="{{ url_for('publish', src=src)|safe }}">Publish image</a></li>
+							{% else %}
+							<li {{ disabled_attrs }}>Download original</li>
+							<li {{ disabled_attrs }}>Publish image</li>
+							{% endif %}
+							<li class="spacer">&nbsp;</li>
+							{% if is_folder_permitted(db_info.folder, FolderPermission.ACCESS_UPLOAD) %}
+							<li><a id="file_reset" href="{{ url_for('details', src=src, reset=1)|safe }}">Reset</a></li>
+							<li><a id="file_rename" href="#">Rename file</a></li>
+							{% else %}
+							<li {{ disabled_attrs }}>Reset</li>
+							<li {{ disabled_attrs }}>Rename file</li>
+							{% endif %}
+							{% if is_folder_permitted(db_info.folder, FolderPermission.ACCESS_DELETE) %}
+							<li><a id="file_move" href="#">Move file</a></li>
+							<li class="spacer">&nbsp;</li>
+							<li><a id="file_delete" href="#">Delete file</a></li>
+							{% else %}
+							<li {{ disabled_attrs }}>Move file</li>
+							<li class="spacer">&nbsp;</li>
+							<li {{ disabled_attrs }}>Delete file</li>
+							{% endif %}
+						</ul>
+					</div>
+				</div>
+			{% endif %}
+		
+			<h3>File</h3>
+			<table class="datatable" summary="File details for {{ src }}">
+				{% if not file_info %}
+					{% if not db_info %}
+					<tr class="odd"><td>This file does not exist.</td></tr>
+					{% else %}
+					<tr class="odd"><td>This file no longer exists.</td></tr>
+					{% endif %}
+				{% else %}
+					<tr class="odd"><td class="label">File path</td><td>{{ file_info.path }}</td></tr>
+					<tr class="even"><td class="label">File size</td><td>{{ file_info.size|filesizeformat }}</td></tr>
+					<tr class="odd"><td class="label">File date</td><td>{{ file_info.modified|datetimeformat(True) }} {{ timezone }}</td></tr>
+					{% if image_info %}
+						<tr class="even"><td class="label">Image width</td><td>{{ image_info.width }}</td></tr>
+						<tr class="odd"><td class="label">Image height</td><td>{{ image_info.height }}</td></tr>
+					{% endif %}
+				{% endif %}
+			</table>
+		{% endif %}
+	</div>
+
+	<!-- Database fields -->
+	<div class="float">
+		<h3>Attributes
+			{% if db_info and db_info.status == STATUS_ACTIVE %}
+				{% if is_folder_permitted(db_info.folder, FolderPermission.ACCESS_EDIT) %}
+				<span>(<a id="edit_attrs" href="{{ url_for('edit', src=src, embed=1) }}">change</a>)</span>
+				{% else %}
+				<span {{ disabled_attrs }}>(change)</span>
+				{% endif %}
+			{% endif %}
+		</h3>
+		<table class="datatable" summary="Attributes for {{ src }}">
+			{% if not db_info  %}
+				<tr class="odd"><td>None</td></tr>
+			{% else %}
+				<tr class="odd"><td class="label">Title</td><td>{{ db_info.title|default('-', True) }}</td></tr>
+				<tr class="even"><td class="label">Description</td><td>{{ db_info.description|default('-', True) }}</td></tr>
+			{% endif %}
+		</table>
+	</div>
+
+	<!-- Stats info -->
+	<div class="float">
+		<h3>Statistics
+			{% if db_stats %}
+				{% if is_permitted(SystemPermission.PERMIT_REPORTS) %}
+				<span>(<a id="view_stats" href="{{ url_for('reports.image_stats', id=db_info.id, embed=1) }}">chart</a>)</span>
+				{% else %}
+				<span {{ disabled_attrs }}>(chart)</span>
+				{% endif %}
+			{% endif %}
+		</h3>
+		<table class="datatable" summary="Statistics for {{ src }}">
+			{% if not db_stats %}
+				<tr class="odd"><td>No statistics are available.</td></tr>
+			{% else %}
+				<tr class="odd">
+					<td class="label">Requests in 24 hours</td>
+					<td>{{ db_stats.day.requests }}</td>
+				</tr>
+				<tr class="odd">
+					<td class="label">Images served in 24 hours</td>
+					<td>{{ db_stats.day.views + db_stats.day.downloads }}</td>
+				</tr>
+				<tr class="odd">
+					<td class="label">Bandwidth in 24 hours</td>
+					<td>{{ db_stats.day.bytes|filesizeformat }}</td>
+				</tr>
+				<tr class="even">
+					<td class="label">Requests in last 30 days</td>
+					<td>{{ db_stats.month.requests }}</td>
+				</tr>
+				<tr class="even">
+					<td class="label">Images served in last 30 days</td>
+					<td>{{ db_stats.month.views + db_stats.month.downloads }}</td>
+				</tr>
+				<tr class="even">
+					<td class="label">Bandwidth in last 30 days</td>
+					<td>{{ db_stats.month.bytes|filesizeformat }}</td>
+				</tr>
+			{% endif %}
+		</table>
+	{% if db_stats %}
+		<br/>
+		<div class="smalltext">Statistics are updated once a minute</div>
+	{% endif %}
+	</div>
+
+	{% if db_info and db_stats %}
+	<div class="clear"></div>
+	{% endif %}
+	
+	<!-- Image info -->
+	{% if image_info %}
+		{% for profile in image_info %}
+			{% if profile not in ['width', 'height'] %}
+			<div class="float">
+				<h3>{{ profile }}</h3>
+				<table class="datatable" summary="{{ profile }} data for {{ src }}">
+					{% for tags in image_info.get(profile) %}
+					<tr class="{{ loop.cycle('odd', 'even') }}">
+						<td class="label">{{ tags.0|decamelcase }}</td>
+						<td>{{ tags.1|truncate(140) }}</td>
+					</tr>
+					{% endfor %}
+				</table>
+			</div>
+			{% endif %}
+		{% endfor %}
+	{% endif %}
+	
+	<!-- Geo info -->
+	{% if geo_info %}
+		<div class="float">
+			<h3>Location</h3>
+			<div id="map" class="map"></div>
+			<script type="text/javascript">
+				function init_map() {
+					var centrePos = new google.maps.LatLng({{ geo_info.latitude }}, {{ geo_info.longitude }});
+					var map = new google.maps.Map($('map'), {
+						zoom: 14,
+						center: centrePos,
+						mapTypeId: google.maps.MapTypeId.ROADMAP
+					});
+					var marker = new google.maps.Marker({
+						position: centrePos,
+						map: map,
+						title: 'Position: {{ geo_info.latitude }}, {{ geo_info.longitude }}'
+					});
+				}
+			</script>
+		</div>
+	{% endif %}
+	
+	<!-- History -->
+	<div class="float">
+		<h3>Change history</h3>
+		<table class="datatable" summary="History for {{ src }}">
+			{% if not db_history %}
+				<tr class="odd"><td>No history is available.</td></tr>
+			{% else %}
+				{% for history in db_history %}
+				<tr class="{{ loop.cycle('odd', 'even') }}">
+					<td width="30%">
+						{% if history.action == ACTION_DELETED %}
+							Deleted
+						{% elif history.action == ACTION_CREATED %}
+							{% if history.user %}
+								Uploaded
+							{% else %}
+								Created
+							{% endif %}
+						{% elif history.action == ACTION_REPLACED %}
+							Replaced
+						{% elif history.action == ACTION_EDITED %}
+							Edited
+						{% elif history.action == ACTION_MOVED %}
+							Moved
+						{% else %}
+							Action {{ history.action }}
+						{% endif %}
+						by
+						{% if history.user %}
+							<span title="Username {{ history.user.username }}">{{ history.user }}</span>
+						{% else %}
+							System
+						{% endif %}
+					</td>
+					<td>{{ history.action_info }}</td>
+					<td align="right" class="nowrap">
+						{% if loop.index0 == 0 %}{{ timezone }}<br/>{% endif %}
+						{{ history.action_time|datetimeformat(True) }}
+					</td>
+				</tr>
+				{% endfor %}
+			{% endif %}
+		</table>
+	</div>
+		
+	<div class="clear"></div>
+	
+	<input type="hidden" id="image_url" value="{{ url_for('image', src=src) }}" />
+	<input type="hidden" id="folder_url" value="{{ url_for('browse', path=path) }}" />
+	<input type="hidden" id="folder_browse_url" value="{{ url_for('folder_browse', path=path, embed=1, msg='Select the folder to move the image to:') }}" />
+	<input type="hidden" id="image_file_name" value="{{ filename }}" />
+	<input type="hidden" id="image_folder_path" value="{{ path }}" />
+	<input type="hidden" id="path_sep" value="{{ pathsep }}" />
+	{% if db_info %}
+	<input type="hidden" id="image_admin_url" value="{{ url_for('api.admin.file.image', image_id=db_info.id) }}" />
+	{% endif %}
+{% endblock %}

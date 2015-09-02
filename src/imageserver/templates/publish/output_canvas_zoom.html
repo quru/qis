@@ -1,0 +1,20 @@
+{# This is a publisher output template.
+   Escape HTML so that it doesn't run when embedded in the host page.
+   Use {varname} for variable substitution.
+#}
+<!-- These lines need to go into your HTML &lt;head&gt; section -->
+&lt;link type="text/css" rel="stylesheet" href="{static_url}styles/canvas_view.css"&gt;
+&lt;script type="text/javascript" src="{static_url}js/mootools_yc.js"&gt;&lt;/script&gt;
+&lt;script type="text/javascript" src="{static_url}js/canvas_view_yc.js"&gt;&lt;/script&gt;
+
+<!-- This line defines a container for the zooming image and can go anywhere in your HTML &lt;body&gt; section.
+     The container requires a size to be defined, either with a style attribute or with a CSS class. -->
+&lt;div id="image-zoom-1" class="imageviewer" style="width: 400px; height: 400px;"&gt;
+	Loading zoomable image...
+&lt;/div&gt;
+
+<!-- This script should go at the end of your HTML file -->
+&lt;script type="text/javascript"&gt;
+	/* Create an image zoomer inside element 'image-zoom-1'. See the API documentation for further options. */
+	canvas_view_init('image-zoom-1', '{image_url}');
+&lt;/script&gt;

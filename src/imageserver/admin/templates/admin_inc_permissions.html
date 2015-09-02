@@ -1,0 +1,32 @@
+{#
+  A template that defines helper macros for the display of permissions levels.
+#}
+
+{% macro access_level_name(access_level) -%}
+	{%- if access_level == FolderPermission.ACCESS_NONE %}no access
+	{%- elif access_level == FolderPermission.ACCESS_VIEW %}view only
+	{%- elif access_level == FolderPermission.ACCESS_DOWNLOAD %}view and download
+	{%- elif access_level == FolderPermission.ACCESS_EDIT %}edit image properties
+	{%- elif access_level == FolderPermission.ACCESS_UPLOAD %}upload images
+	{%- elif access_level == FolderPermission.ACCESS_DELETE %}delete images
+	{%- elif access_level == FolderPermission.ACCESS_CREATE_FOLDER %}create folders
+	{%- elif access_level == FolderPermission.ACCESS_DELETE_FOLDER %}delete folders (full access)
+	{%- else %}unknown
+	{%- endif %}
+{%- endmacro %}
+
+{% macro access_level_bullets(access_level) -%}
+	<ul>
+	{% if access_level == FolderPermission.ACCESS_NONE %}
+		<li>No access</li>
+	{% else %}
+		{% if access_level >= FolderPermission.ACCESS_VIEW %}<li>View images</li>{% endif %}
+		{% if access_level >= FolderPermission.ACCESS_DOWNLOAD %}<li>Download images</li>{% endif %}
+		{% if access_level >= FolderPermission.ACCESS_EDIT %}<li>Edit image properties</li>{% endif %}
+		{% if access_level >= FolderPermission.ACCESS_UPLOAD %}<li>Upload new images</li>{% endif %}
+		{% if access_level >= FolderPermission.ACCESS_DELETE %}<li>Delete images</li>{% endif %}
+		{% if access_level >= FolderPermission.ACCESS_CREATE_FOLDER %}<li>Create new sub-folders</li>{% endif %}
+		{% if access_level >= FolderPermission.ACCESS_DELETE_FOLDER %}<li>Delete sub-folders (full access)</li>{% endif %}
+	{% endif %}
+	</ul>
+{%- endmacro %}

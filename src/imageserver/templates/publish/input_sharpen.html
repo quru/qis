@@ -1,0 +1,15 @@
+<select name="{{ web_name }}_choices" id="publish_field_{{ key }}_choices" autocomplete="off">
+	<option value="-500">Blur +5</option>
+	<option value="-300">Blur +4</option>
+	<option value="-200">Blur +3</option>
+	<option value="-100">Blur +2</option>
+	<option value="-50">Blur +1</option>
+	<option value="" selected>None</option>
+	<option value="50">Sharpen +1</option>
+	<option value="100">Sharpen +2</option>
+	<option value="200">Sharpen +3</option>
+	<option value="300">Sharpen +4</option>
+	<option value="500">Sharpen +5</option>
+</select>
+{% include "publish/input_RangeValidator.html" %}
+{% include "publish/input_helper_js.html" %}

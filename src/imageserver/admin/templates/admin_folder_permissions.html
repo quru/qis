@@ -1,0 +1,166 @@
+{% extends "admin_base.html" %}
+
+{% block copyright %}
+<!-- 
+	Document:      admin_folder_permissions.html
+	Date started:  13 Feb 2013
+	By:            Matt Fozard
+	Purpose:       Quru Image Server Administration - folder permissions admin
+	Requires:      
+	Copyright:     Quru Ltd (www.quru.com)
+	
+	Last Changed:  $Date$ $Rev$ by $Author$
+	
+	Notable modifications:
+	Date       By    Details
+	=========  ====  ============================================================
+-->
+{% endblock %}
+
+{% set body_id = 'folder_permissions' %}
+{% set page_heading = 'Folder permissions' %}
+
+{% block body %}
+	{{ super() }}
+
+	{% if err_msg %}
+		<br/>
+		<div class="error">{{ err_msg|newlines }}</div>
+	{% else %}
+		{% set old_access = current_permissions.access if current_permissions
+		                                               else FolderPermission.ACCESS_NONE %}
+		
+		{# It is checked for here, but note that this page does not expect to
+		   receive current_permissions where the group ID is different.
+		   The UI may in fact fall back to the Public group if there are no
+		   permissions defined for group Foo, however this would make the admin
+		   here too confusing. In this scenario we instead expect current_permissions
+		   to be None, and we will display "no permissions have been defined for group Foo".
+		#}
+		{% set permissions_inherited = current_permissions and
+		       (current_permissions.folder.id != folder.id or
+		        current_permissions.group.id != group.id) %}
+		
+		<div>
+			Folder permissions are controlled using groups, though you can
+			<a id="trace_permissions" href="{{ url_for('admin.trace_permissions', path=folder.path, embed=1) }}">view the resulting permissions for a particular user</a>.
+			
+			<p class="tall">
+				You are viewing permissions for:<br/>
+				
+				{{ 'The root folder' if folder_is_root else 'Folder '+folder.path }}
+				<input id="folder_select_button" type="button" value="Change folder" />
+				and group
+				{% include "admin_inc_group_select.html" %}
+			</p>
+		</div>
+		
+		<div id="permissions_current_container">
+			<p>
+				<h3>Current permissions <span>(<a id="edit_perms" href="#">change</a>)</span></h3>
+				{% if current_permissions %}
+					The "{{ group.name }}" group has the following permissions
+					{% if folder_is_root %}
+					for the root folder:
+					{% else %}
+					for folder {{ folder.path }}:
+					{% endif %}
+					
+					{% from "admin_inc_permissions.html" import access_level_bullets with context %}
+					{{ access_level_bullets(old_access) }}
+					
+					<span id="current_info">
+						<img src="{{ url_for('static', filename='images/icon-info.png') }}" alt="Info"/>
+						{% if permissions_inherited %}
+							This permission is inherited from
+							<a href="{{ url_for('admin.folder_permissions',
+							                    path=current_permissions.folder.path,
+							                    group=current_permissions.group.id) }}">
+								{% if current_permissions.folder.id == 1 %}
+								the root folder
+								{% else %}
+								{{ current_permissions.folder.path }}
+								{% endif %}
+							</a>.
+						{% else %}
+							{% if folder_is_root %}
+								This also serves as the default permission for all other folders.
+							{% else %}
+								This permission is specific to this folder and its sub-folders.
+							{% endif %}
+						{% endif %}
+					</span>
+				{% else %}
+					<span id="current_info">
+						<img src="{{ url_for('static', filename='images/icon-info.png') }}" alt="Info"/>
+						No folder permissions have been defined for the "{{ group.name }}" group.
+					</span>
+				{% endif %}
+			</p>
+		</div>
+		
+		<div id="permissions_edit_container">
+			<p>
+				<h3>Change permissions</h3>
+				<div class="tall">
+					For this folder and all its sub-folders (unless overridden),
+					allow the "{{ group.name }}" group to:<br/>
+					
+					{% set create = (not current_permissions) or permissions_inherited %}
+					{% set form_method = 'post' if create else 'put' %}
+					{% set form_action = url_for('api.admin.folderpermission') if create else 
+					                     url_for('api.admin.folderpermission', permission_id=current_permissions.id) %}
+					<form id="editform" _method="{{ form_method }}" action="{{ form_action }}">
+						<input type="hidden" name="folder_id" value="{{ folder.id }}" />
+						<input type="hidden" name="group_id" value="{{ group.id }}" />
+						<select name="access" id="access">
+							{% set selected = 'selected="selected"' %}
+							
+							{% set sel = selected if old_access == FolderPermission.ACCESS_NONE else '' %}
+							<option value="{{ FolderPermission.ACCESS_NONE }}" {{ sel|safe }}>No access</option>
+							{% set sel = selected if old_access == FolderPermission.ACCESS_VIEW else '' %}
+							<option value="{{ FolderPermission.ACCESS_VIEW }}" {{ sel|safe }}>View images only</option>
+							{% set sel = selected if old_access == FolderPermission.ACCESS_DOWNLOAD else '' %}
+							<option value="{{ FolderPermission.ACCESS_DOWNLOAD }}" {{ sel|safe }}>View and download images</option>
+							{% set sel = selected if old_access == FolderPermission.ACCESS_EDIT else '' %}
+							<option value="{{ FolderPermission.ACCESS_EDIT }}" {{ sel|safe }}>Edit image properties</option>
+							{% set sel = selected if old_access == FolderPermission.ACCESS_UPLOAD else '' %}
+							<option value="{{ FolderPermission.ACCESS_UPLOAD }}" {{ sel|safe }}>Upload new images</option>
+							{% set sel = selected if old_access == FolderPermission.ACCESS_DELETE else '' %}
+							<option value="{{ FolderPermission.ACCESS_DELETE }}" {{ sel|safe }}>Delete images</option>
+							{% set sel = selected if old_access == FolderPermission.ACCESS_CREATE_FOLDER else '' %}
+							<option value="{{ FolderPermission.ACCESS_CREATE_FOLDER }}" {{ sel|safe }}>Create new sub-folders</option>
+							{% set sel = selected if old_access == FolderPermission.ACCESS_DELETE_FOLDER else '' %}
+							<option value="{{ FolderPermission.ACCESS_DELETE_FOLDER }}" {{ sel|safe }}>Delete sub-folders (full access)</option>
+						</select>
+						&nbsp;<input type="submit" value="&nbsp;Apply&nbsp;" />
+					</form>
+				</div>
+			</p>
+			
+			{# Allow delete of the permissions record if it's not inherited and
+			   is not a root folder entry for the Public or Normal Users system groups #}
+			
+			{% if current_permissions and
+			      (not permissions_inherited) and
+			      ((folder_is_root == false) or (group.id != GROUP_ID_PUBLIC and group.id != GROUP_ID_EVERYONE)) %}
+			<p>
+				<h3>Reset permissions</h3>
+				<div class="tall">
+					Clear the override on this folder so that it reverts to default permissions.<br/>
+					<form id="deleteform" _method="delete" action="{{ url_for('api.admin.folderpermission', permission_id=current_permissions.id) }}">
+						<input type="submit" value="&nbsp;Reset&nbsp;" />
+					</form>
+				</div>
+			</p>
+			{% endif %}
+		</div>
+		
+		<input type="hidden" id="old_access" value="{{ old_access }}" />
+		<input type="hidden" id="view_permission_id" value="{{ current_permissions.id }}" />
+		<input type="hidden" id="view_folder_path" value="{{ folder.path }}" />
+		<input type="hidden" id="view_group_id" value="{{ group.id }}" />
+		<input type="hidden" id="permissions_url" value="{{ url_for('admin.folder_permissions') }}" />
+		<input type="hidden" id="folder_browse_url" value="{{ url_for('folder_browse', path=folder.path, embed=1, msg='Select a folder:') }}" />
+	{% endif %}
+{% endblock %}

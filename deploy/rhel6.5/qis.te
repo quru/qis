@@ -1,0 +1,22 @@
+
+module qis 1.0;
+
+require {
+	type httpd_t;
+	type unreserved_port_t;
+	type memcache_port_t;
+	type postgresql_port_t;
+	class tcp_socket { name_bind name_connect };
+}
+
+#============= httpd_t ==============
+
+#!!!! This avc is allowed in the current policy
+allow httpd_t memcache_port_t:tcp_socket name_connect;
+
+#!!!! This avc can be allowed using one of the these booleans:
+#     httpd_can_network_connect, httpd_can_network_connect_db
+allow httpd_t postgresql_port_t:tcp_socket name_connect;
+
+#!!!! This avc can be allowed using the boolean 'nis_enabled'
+allow httpd_t unreserved_port_t:tcp_socket { name_bind name_connect };

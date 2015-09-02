@@ -1,0 +1,97 @@
+{% extends "base_blank_js.html" %}
+{% block header %}
+	<div id="header">
+		{% if logged_in %}
+			<div class="menu_group">
+				<span id="user_action_menu_owner" class="action_menu_owner">{{ user }}</span>
+				<div id="user_action_menu" class="action_menu border shadow fix_right">
+					<ul>
+						<li><a id="account_menu" href="{{ url_for('account', embed=1) }}">Edit account</a></li>
+						<li><a href="{{ url_for('logout') }}">Sign out</a></li>
+					</ul>
+				</div>
+			</div>
+			<div class="menu_group">
+				<span id="help_action_menu_owner" class="action_menu_owner">Help</span>
+				&nbsp;|&nbsp;&nbsp;
+				<div id="help_action_menu" class="action_menu border shadow fix_right">
+					<ul>
+						<li><a href="{{ url_for('image_help') }}">Imaging user's guide</a></li>
+						<li><a href="{{ url_for('api.api_help') }}">REST API user's guide</a></li>
+						<li class="spacer">&nbsp;</li>
+						<!-- Javascript APIs -->
+						<li><a href="{{ url_for('simple_view_help') }}">JavaScript - simple viewer</a> (<a href="{{ url_for('simple_view_index') }}">demo</a>)</li>
+						<li><a href="{{ url_for('canvas_view_help') }}">JavaScript - HTML5 viewer</a> (<a href="{{ url_for('canvas_view_index') }}">demo</a>)</li>
+						<li><a href="{{ url_for('gallery_view_help') }}">JavaScript - gallery viewer</a> (<a href="{{ url_for('gallery_view_index') }}">demo</a>)</li>
+						<li><a href="{{ url_for('slideshow_view_help') }}">JavaScript - image slideshow</a> (<a href="{{ url_for('slideshow_view_index') }}">demo</a>)</li>
+						<!-- Administration -->
+						<!-- Permissions -->
+					</ul>
+				</div>
+			</div>
+			{% if is_permitted('admin_any') %}
+			<div class="menu_group">
+				<span id="admin_action_menu_owner" class="action_menu_owner">Administration</span>
+				&nbsp;|&nbsp;&nbsp;
+				<div id="admin_action_menu" class="action_menu border shadow">
+					<ul>
+						{% set spacer=false %}
+						{% if is_permitted(SystemPermission.PERMIT_ADMIN_USERS) %}
+						<li><a href="{{ url_for('admin.user_list') }}">Users</a></li>
+						<li><a href="{{ url_for('admin.group_list') }}">Groups</a></li>
+						{% set spacer=true %}
+						{% endif %}
+						{% if is_permitted(SystemPermission.PERMIT_ADMIN_PERMISSIONS) %}
+						{% if spacer %}
+						<li class="spacer">&nbsp;</li>
+						{% endif %}
+						<li><a href="{{ url_for('admin.folder_permissions') }}">Folder permissions</a></li>
+						{% endif %}
+						{% if is_permitted(SystemPermission.PERMIT_SUPER_USER) %}
+						<li class="spacer">&nbsp;</li>
+						<li><a href="{{ url_for('admin.maintenance') }}">Data maintenance</a></li>
+						{% endif %}
+					</ul>
+				</div>
+			</div>
+			{% endif %}
+			{% if is_permitted(SystemPermission.PERMIT_REPORTS) %}
+			<div class="menu_group">
+				<span id="reports_action_menu_owner" class="action_menu_owner">Reports</span>
+				&nbsp;|&nbsp;&nbsp;
+				<div id="reports_action_menu" class="action_menu border shadow">
+					<ul>
+						<li><a href="{{ url_for('reports.topten') }}">Top images</a></li>
+						<li><a href="{{ url_for('reports.system_stats') }}">System statistics</a></li>
+					</ul>
+				</div>
+			</div>
+			{% endif %}
+			<div class="menu_group">
+				<span id="images_action_menu_owner" class="action_menu_owner">Images</span>
+				&nbsp;|&nbsp;&nbsp;
+				<div id="images_action_menu" class="action_menu border shadow">
+					<ul>
+						{% if session.last_browse_path %}
+						<li><a href="{{ url_for('browse', path=session.last_browse_path) }}">Browse</a></li>
+						<li><a href="{{ url_for('upload_form', path=session.last_browse_path) }}">Upload</a></li>
+						{% else %}
+						<li><a href="{{ url_for('browse') }}">Browse</a></li>
+						<li><a href="{{ url_for('upload_form') }}">Upload</a></li>
+						{% endif %}
+					</ul>
+				</div>
+			</div>
+		{% endif %}
+		<div class="logo">
+			<a href="{{ url_for('browse') }}">
+			{% if settings.LOGO_IMAGE_PATH %}
+				<img height="50" src="{{ url_for('image', src=settings.LOGO_IMAGE_PATH, format='png', height=50, stats=0) }}" />
+			{% else %}
+				<img height="50" src="{{ url_for('static', filename='images/quru110.png') }}" />
+			{% endif %}
+			</a>
+		</div>
+		<div class="clear"></div>	
+	</div>
+{% endblock %}

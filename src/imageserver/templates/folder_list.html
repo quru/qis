@@ -1,0 +1,170 @@
+{% if embed %}{% extends "base_blank_js.html" %}{% else %}{% extends "base.html" %}{% endif %}
+
+{% block copyright %}
+<!-- 
+	Document:      folder_list.html
+	Date started:  16 Jan 2013
+	By:            Matt Fozard
+	Purpose:       Quru Image Server file & folder selection
+	Requires:      
+	Copyright:     Quru Ltd (www.quru.com)
+	
+	Last Changed:  $Date$ $Rev$ by $Author$
+	
+	Notable modifications:
+	Date       By    Details
+	=========  ====  ============================================================
+	13Mar2013  Matt  Applied folder permissions
+	02Dec2014  Matt  Convert to select either files or folders
+-->
+{% endblock %}
+
+{% block title %}Listing of {{ path }}{% endblock %}
+ 
+{% block extra_head %}
+	<link rel="stylesheet" href="{{ url_for('static', filename='styles/list.css') }}" type="text/css" />
+	
+	{% if settings.DEBUG %}
+	<script src="{{ url_for('static', filename='js/list.js') }}" type="text/javascript"></script>
+	{% else %}
+	<script src="{{ url_for('static', filename='js/list_yc.js') }}" type="text/javascript"></script>
+	{% endif %}
+{% endblock %}
+
+{% set  disabled_attrs='class="disabled" title="You do not have permission to use this function"'|safe %}
+{% set vdisabled_attrs='class="disabled" title="You do not have permission to view this folder"'|safe %}
+
+{% block body %}
+
+	{% if embed %}
+		<div class="rfloat">
+			<a id="close" href="#">Close</a>
+		</div>
+	{% endif %}
+	
+	{% if msg %}
+		<div class="center">{{ msg }}</div>
+	{% endif %}
+
+	<h2>Listing of {{ path }}</h2>
+	{% if err_msg %}
+		<br/>
+		<div class="error">{{ err_msg|newlines }}</div>
+	{% else %}
+		{% if db_info and db_info.status == STATUS_ACTIVE %}
+			<img src="{{ url_for('static', filename='images/icon-action.png') }}"
+			     class="action_menu_owner" 
+			     id="folder_action_menu_owner" />
+
+			<div id="folder_action_menu" class="action_menu border shadow">
+				<ul>
+					{% if is_folder_permitted(db_info, FolderPermission.ACCESS_CREATE_FOLDER) %}
+						<li><a id="folder_create" href="#">Create new folder</a></li>
+					{% else %}
+						<li {{ disabled_attrs }}>Create new folder</li>
+					{% endif %}
+				</ul>
+			</div>
+		{% endif %}
+		{% if not show_files %}
+		&nbsp;
+		<span class="smalltext">
+			(<a href="#" class="select_folder" data-path="{{ path }}">select this folder</a>)
+		</span>
+		{% endif %}
+		
+		<table width="100%" 
+		       summary="Listing of the {{ path }} folder">
+		
+			{# Dummy row to vpad and set the column spacings #}
+			<tr class="even">
+				<td class="icon">&nbsp;</td>
+				<td>&nbsp;</td>
+				<td>&nbsp;</td>
+			</tr>
+
+		{% set row_class = cycler('odd', 'even') %}
+
+		{# Offer a Back link if this isn't the root directory #}
+		{% if not parent_path is none %}
+			<tr class="{{ row_class.next() }}">
+				{% set back_url = url_for('folder_browse', path=parent_path, embed=embed, msg=msg, show_files=show_files) %}
+				<td>
+					<a href="{{ back_url }}">
+						<img src="{{ url_for('static', filename='images/icon-back.png') }}" alt="Back"/>
+					</a>
+				</td>
+				<td>(<a class="action" href="{{ back_url }}">back to parent folder</a>)</td>
+				<td>&nbsp;</td>
+			</tr>
+		{% endif %}
+
+		{% for entry in folder_list if show_files or entry.is_directory %}
+			<tr class="{{ row_class.next() }}">
+				{% if entry.is_directory %}
+					{% set sep = pathsep if path != pathsep else '' %}
+					{% set sub_folder_path = path + sep + entry.filename %}
+					{% set view_url = url_for('folder_browse', path=sub_folder_path, embed=embed, msg=msg, show_files=show_files) %}
+					{% set view_permitted = is_folder_permitted(sub_folder_path, FolderPermission.ACCESS_VIEW) %}
+
+					<td>
+						{% if view_permitted %}
+						<a href="{{ view_url }}">
+						<img src="{{ url_for('static', filename='images/icon-folder.png') }}" alt="Folder"/>
+						</a>
+						{% else %}
+						<img {{ vdisabled_attrs }} src="{{ url_for('static', filename='images/icon-folder.png') }}" />
+						{% endif %}
+					</td>
+					<td>
+						{% if view_permitted %}
+						<a href="{{ view_url }}">{{ entry.filename }}</a>
+						{% else %}
+						<span {{ vdisabled_attrs }}>{{ entry.filename }}</span>
+						{% endif %}
+					</td>
+					<td>
+						{% if view_permitted and not show_files %}
+						(<a href="#" class="select_folder action" data-path="{{ sub_folder_path }}">select this</a>)
+						{% else %}
+						&nbsp;
+						{% endif %}
+					</td>
+				{% else %}
+					{% set sep = pathsep if path != pathsep else '' %}
+					{% set file_path = path + sep + entry.filename %}
+					{# Note view_permitted = True for current folder for this page to load #}
+					{% set can_view = entry.filename|fileextension in formats %}
+
+					<td>
+						{% if can_view %}
+						<img src="{{ url_for('static', filename='images/icon-image.png') }}" alt="Image"/>
+						{% else %}
+						<img src="{{ url_for('static', filename='images/icon-file.png') }}" alt="File"/>
+						{% endif %}
+					</td>
+					<td>
+						{{ entry.filename }}
+					</td>
+					<td>
+						(<a href="#" class="select_file action" data-path="{{ file_path }}">select this</a>)
+					</td>
+				{% endif %}
+			</tr>
+		{% else %}
+			<tr class="{{ row_class.next() }}">
+				<td colspan="3">This folder contains no {% if show_files %}files{% else %}sub-folders{% endif %}.</td>
+			</tr>
+		{% endfor %}
+		</table>
+
+		{% if db_info %}
+		<input type="hidden" id="folder_name" value="{{ name }}" />
+		<input type="hidden" id="folder_path" value="{{ path }}" />
+		<input type="hidden" id="parent_folder_path" value="{{ parent_path }}" />
+		<input type="hidden" id="path_sep" value="{{ pathsep }}" />
+		<input type="hidden" id="folder_admin_create_url" value="{{ url_for('api.admin.file.folder') }}" />
+		<input type="hidden" id="folder_admin_url" value="{{ url_for('api.admin.file.folder', folder_id=db_info.id) }}" />
+		{% endif %}
+	{% endif %}
+{% endblock %}

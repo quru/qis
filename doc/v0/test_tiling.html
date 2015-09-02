@@ -1,0 +1,82 @@
+<html>
+<head>
+	<script>
+		function toggle_grid(eid) {
+			var tgrid = document.getElementById(eid);
+			tgrid.className = (tgrid.className == 'grid') ? '' : 'grid'; 
+		}
+	</script>
+	<style>
+		body {
+			padding: 10px;
+			margin: 0px;
+		}
+		#tgrid2 {
+			position: absolute;
+			top: 10px;
+			left: 440px;
+		}
+		.grid td {
+			border-right: 1px solid white; 
+			border-bottom: 1px solid white;
+		}
+	</style>
+</head>
+<body>
+	<table cellpadding="0" cellspacing="0" border="0" id="tgrid1" class="grid">
+		<tr>
+			<td><img src="http://matt.quru:5000/image?src=test_images/cathedral.jpg&width=400&left=0.24&right=0.8&tile=1:16"/></td>
+			<td><img src="http://matt.quru:5000/image?src=test_images/cathedral.jpg&width=400&left=0.24&right=0.8&tile=2:16"/></td>
+			<td><img src="http://matt.quru:5000/image?src=test_images/cathedral.jpg&width=400&left=0.24&right=0.8&tile=3:16"/></td>
+			<td><img src="http://matt.quru:5000/image?src=test_images/cathedral.jpg&width=400&left=0.24&right=0.8&tile=4:16"/></td>
+		</tr>
+		<tr>
+			<td><img src="http://matt.quru:5000/image?src=test_images/cathedral.jpg&width=400&left=0.24&right=0.8&tile=5:16"/></td>
+			<td><img src="http://matt.quru:5000/image?src=test_images/cathedral.jpg&width=400&left=0.24&right=0.8&tile=6:16"/></td>
+			<td><img src="http://matt.quru:5000/image?src=test_images/cathedral.jpg&width=400&left=0.24&right=0.8&tile=7:16"/></td>
+			<td><img src="http://matt.quru:5000/image?src=test_images/cathedral.jpg&width=400&left=0.24&right=0.8&tile=8:16"/></td>
+		</tr>
+		<tr>
+			<td><img src="http://matt.quru:5000/image?src=test_images/cathedral.jpg&width=400&left=0.24&right=0.8&tile=9:16"/></td>
+			<td><img src="http://matt.quru:5000/image?src=test_images/cathedral.jpg&width=400&left=0.24&right=0.8&tile=10:16"/></td>
+			<td><img src="http://matt.quru:5000/image?src=test_images/cathedral.jpg&width=400&left=0.24&right=0.8&tile=11:16"/></td>
+			<td><img src="http://matt.quru:5000/image?src=test_images/cathedral.jpg&width=400&left=0.24&right=0.8&tile=12:16"/></td>
+		</tr>
+		<tr>
+			<td><img src="http://matt.quru:5000/image?src=test_images/cathedral.jpg&width=400&left=0.24&right=0.8&tile=13:16"/></td>
+			<td><img src="http://matt.quru:5000/image?src=test_images/cathedral.jpg&width=400&left=0.24&right=0.8&tile=14:16"/></td>
+			<td><img src="http://matt.quru:5000/image?src=test_images/cathedral.jpg&width=400&left=0.24&right=0.8&tile=15:16"/></td>
+			<td><img src="http://matt.quru:5000/image?src=test_images/cathedral.jpg&width=400&left=0.24&right=0.8&tile=16:16"/></td>
+		</tr>
+	</table>
+	<table cellpadding="0" cellspacing="0" border="0" id="tgrid2" class="grid">
+		<tr>
+			<td><img src="http://matt.quru:5000/image?src=test_images/dorset.jpg&width=400&rotate=-90&tile=1:16"/></td>
+			<td><img src="http://matt.quru:5000/image?src=test_images/dorset.jpg&width=400&rotate=-90&tile=2:16"/></td>
+			<td><img src="http://matt.quru:5000/image?src=test_images/dorset.jpg&width=400&rotate=-90&tile=3:16"/></td>
+			<td><img src="http://matt.quru:5000/image?src=test_images/dorset.jpg&width=400&rotate=-90&tile=4:16"/></td>
+		</tr>
+		<tr>
+			<td><img src="http://matt.quru:5000/image?src=test_images/dorset.jpg&width=400&rotate=-90&tile=5:16"/></td>
+			<td><img src="http://matt.quru:5000/image?src=test_images/dorset.jpg&width=400&rotate=-90&tile=6:16"/></td>
+			<td><img src="http://matt.quru:5000/image?src=test_images/dorset.jpg&width=400&rotate=-90&tile=7:16"/></td>
+			<td><img src="http://matt.quru:5000/image?src=test_images/dorset.jpg&width=400&rotate=-90&tile=8:16"/></td>
+		</tr>
+		<tr>
+			<td><img src="http://matt.quru:5000/image?src=test_images/dorset.jpg&width=400&rotate=-90&tile=9:16"/></td>
+			<td><img src="http://matt.quru:5000/image?src=test_images/dorset.jpg&width=400&rotate=-90&tile=10:16"/></td>
+			<td><img src="http://matt.quru:5000/image?src=test_images/dorset.jpg&width=400&rotate=-90&tile=11:16"/></td>
+			<td><img src="http://matt.quru:5000/image?src=test_images/dorset.jpg&width=400&rotate=-90&tile=12:16"/></td>
+		</tr>
+		<tr>
+			<td><img src="http://matt.quru:5000/image?src=test_images/dorset.jpg&width=400&rotate=-90&tile=13:16"/></td>
+			<td><img src="http://matt.quru:5000/image?src=test_images/dorset.jpg&width=400&rotate=-90&tile=14:16"/></td>
+			<td><img src="http://matt.quru:5000/image?src=test_images/dorset.jpg&width=400&rotate=-90&tile=15:16"/></td>
+			<td><img src="http://matt.quru:5000/image?src=test_images/dorset.jpg&width=400&rotate=-90&tile=16:16"/></td>
+		</tr>
+	</table>
+	<div style="clear:both"></div>
+	<br/>
+	<input type="button" value="Toggle grid lines" onclick="toggle_grid('tgrid1'); toggle_grid('tgrid2');"/>
+</body>
+</html>

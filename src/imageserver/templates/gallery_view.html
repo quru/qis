@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block copyright %}
+<!-- 
+	Document:      gallery_view.html
+	Date started:  26 Jul 2013
+	By:            Matt Fozard
+	Purpose:       Quru Image Server gallery viewer example
+	Requires:      
+	Copyright:     Quru Ltd (www.quru.com)
+	
+	Last Changed:  $Date$ $Rev$ by $Author$
+	
+	Notable modifications:
+	Date       By    Details
+	=========  ====  ============================================================
+	29Apr2015  Matt  Revamp, simplify to be called from help page
+-->
+{% endblock %}
+
+{% block title %}Gallery API demo{% endblock %}
+
+{% block extra_head %}
+
+	<link rel="stylesheet" href="{{ url_for('static', filename='styles/canvas_view.css') }}" type="text/css" />
+	<link rel="stylesheet" href="{{ url_for('static', filename='styles/gallery_view.css') }}" type="text/css" />
+	{% if settings.DEBUG %}
+	<!--[if lte IE 8]>
+	<script src="{{ url_for('static', filename='js/excanvas.js') }}" type="text/javascript"></script>
+	<![endif]-->
+	<script src="{{ url_for('static', filename='js/canvas_view.js') }}" type="text/javascript"></script>
+	<script src="{{ url_for('static', filename='js/gallery_view.js') }}" type="text/javascript"></script>
+	{% else %}
+	<!--[if lte IE 8]>
+	<script src="{{ url_for('static', filename='js/excanvas_yc.js') }}" type="text/javascript"></script>
+	<![endif]-->
+	<script src="{{ url_for('static', filename='js/canvas_view_yc.js') }}" type="text/javascript"></script>
+	<script src="{{ url_for('static', filename='js/gallery_view_yc.js') }}" type="text/javascript"></script>
+	{% endif %}
+	
+	<script type="text/javascript">
+		window.addEvent('domready', function() {
+			gallery_view_init('gallery1', {
+				server: '{{ url_for('index') }}',
+				images: [
+					{ src: '{{ image_srcs.0 }}' },
+					{ src: '{{ image_srcs.1 }}' },
+					{ src: '{{ image_srcs.2 }}' },
+					{ src: '{{ image_srcs.0 }}', flip: 'v' },
+					{ src: '{{ image_srcs.1 }}', flip: 'v' },
+					{ src: '{{ image_srcs.2 }}', flip: 'v' },
+					{ src: '{{ image_srcs.0 }}', colorspace: 'gray' },
+					{ src: '{{ image_srcs.1 }}', colorspace: 'gray' },
+					{ src: '{{ image_srcs.2 }}', colorspace: 'gray' }
+				],
+				viewer: {
+					showcontrols: 'yes'
+				}
+			});
+			gallery_view_init_all_fullscreen('auto-gallery', {
+				viewer: {
+					showcontrols: 'yes'
+				}
+			});
+		});
+		
+		window.addEvent('resize', function() {
+			gallery_view_resize('gallery1');
+		});
+	</script>
+{% endblock %}
+
+{% block body %}
+	<h1>Gallery API demo</h1>
+
+	<h2>Embedded gallery</h2>
+	<div id="gallery1" style="width:100%; height:600px">
+		Loading gallery...
+	</div>
+
+	<br>
+	<h2>Full-screen pop-up gallery</h2>
+	Click on a thumbnail to launch an automatic gallery of these images.
+	<p>
+		<img class="clickable border auto-gallery" src="{{ url_for('image', src=image_srcs.0, width=200, height=200) }}"
+		     alt="Image 1">
+		&nbsp;
+		<img class="clickable border auto-gallery" src="{{ url_for('image', src=image_srcs.1, width=200, height=200) }}"
+		     alt="Image 2">
+		&nbsp;
+		<img class="clickable border auto-gallery" src="{{ url_for('image', src=image_srcs.2, width=200, height=200) }}"
+		     alt="Image 3">
+	</p>
+{% endblock %}

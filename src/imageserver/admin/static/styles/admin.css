@@ -1,0 +1,76 @@
+/*
+	Document:      admin.css
+	Date started:  31 Oct 2012
+	By:            Matt Fozard
+	Purpose:       Quru Image Server admin area CSS
+	Requires:      base.css
+	Copyright:     Quru Ltd (www.quru.com)
+	Licence:
+
+	This program is free software: you can redistribute it and/or modify
+	it under the terms of the GNU Affero General Public License as published
+	by the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
+
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU Affero General Public License for more details.
+
+	You should have received a copy of the GNU Affero General Public License
+	along with this program.  If not, see http://www.gnu.org/licenses/
+
+	Last Changed:  $Date$ $Rev$ by $Author$
+*/
+
+.draggable {
+	cursor: pointer;
+	cursor: -webkit-grab;
+	cursor: -moz-grab;
+	cursor: grab;
+	cursor: pointer\9;  /* IE <9 */
+}
+
+#group_edit .members.left {
+	width: 35%;
+	float: left;
+}
+#group_edit .members.center {
+	width: 27%;
+	float: left;
+	margin: 0 auto 0 auto;
+	padding: 0 1% 0 1%;
+	text-align: center;
+}
+#group_edit .members.right {
+	width: 35%;
+	float: right;
+}
+#group_edit .members .list {
+	margin-top: 7px;
+	height: 350px;
+	border: 1px dotted gray;
+	overflow: auto;
+}
+#group_edit .members.center .list {
+	border: none;
+	padding-top: 20px;
+}
+#group_edit .member {
+	margin: 2px 2px 3px 2px;
+	padding: 3px;
+	border: 1px solid #aaaaaa;
+	background-color: #dddddd;
+	white-space: nowrap;
+	overflow: hidden;
+}
+
+#folder_permissions #current_info {
+	line-height: 18px;
+}
+#folder_permissions #permissions_current_container {
+	margin-top: 2em;
+}
+#folder_permissions #permissions_edit_container {
+	visibility: hidden;
+}

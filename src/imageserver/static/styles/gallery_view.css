@@ -1,0 +1,119 @@
+/*
+	Document:      gallery_view.css
+	Date started:  26 Jul 2013
+	By:            Matt Fozard
+	Purpose:       Quru Image Server gallery CSS
+	Requires:      
+	Copyright:     Quru Ltd (www.quru.com)
+	Licence:
+
+	This program is free software: you can redistribute it and/or modify
+	it under the terms of the GNU Affero General Public License as published
+	by the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
+
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU Affero General Public License for more details.
+
+	You should have received a copy of the GNU Affero General Public License
+	along with this program.  If not, see http://www.gnu.org/licenses/
+	
+	Last Changed:  $Date$ $Rev$ by $Author$
+*/
+
+.gallery {
+	color: #dddddd;
+	background-color: #333333;
+	padding: 1.5em;
+}
+.gallery div { display: block; }
+.gallery span { display: inline; }
+.gallery img,
+.gallery a {
+	border: none;
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	-o-user-select: none;
+	user-select: none;
+	-webkit-user-drag: none;
+	-moz-user-drag: none;
+	-o-user-drag: none;
+	user-drag: none;
+	-webkit-tap-highlight-color: rgba(0,0,0,0);
+	-webkit-touch-callout: 'none';
+}
+
+.gallery .main_view {
+	/* Enable this for an opaque panel behind the main image
+	
+	   background-color: #555555;
+	*/
+}
+
+.gallery .thumbnails {
+	/* Enable this for an opaque panel behind the thumbnails
+	
+	   background-color: #555555;
+	*/
+	margin-top: 35px;           /* space for the viewer control panel */
+}
+
+.gallery .scroll_button {
+	color: #dddddd;
+	background-color: #555555;
+	font-size: 120%;
+	padding-left: 0.4em;
+	padding-right: 0.4em;
+	cursor: pointer;
+}
+.gallery .scroll_button:active,
+.gallery .scroll_button:hover {
+	color: #dddddd;
+	background-color: #696969;
+}
+.gallery .scroll_button.disabled {
+	color: #333333;
+	cursor: default;
+}
+.gallery .scroll_button.disabled:active,
+.gallery .scroll_button.disabled:hover {
+	color: #333333;
+	background-color: #555555;
+}
+
+.gallery .thumbnails img {
+    vertical-align: middle;
+	margin-left: 5px;
+	margin-right: 5px;
+	border: 1px solid #696969;
+	cursor: pointer;
+	/* Disable this for transparent thumbnail image surrounds
+	*/
+	background-color: #333333;
+}
+.gallery .thumbnails img.selected {
+	margin-left: 3px;
+	margin-right: 3px;
+	border: 3px solid #ffffff;
+}
+.gallery .thumbnails img:first-child {
+	margin-left: 10px;
+}
+.gallery .thumbnails img.selected:first-child {
+	margin-left: 8px;
+}
+.gallery .thumbnails img:last-child {
+	margin-right: 10px;
+}
+.gallery .thumbnails img.selected:last-child {
+	margin-right: 8px;
+}
+
+/* full screen mode */
+
+.fullscreen .gallery {
+	background-color: transparent;
+	padding: 0;
+}

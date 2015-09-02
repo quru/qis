@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+	{% block copyright %}
+	{% endblock %}
+
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+	<meta http-equiv="Cache-Control" content="no-cache" />
+	<meta http-equiv="Pragma" content="no-cache" />
+	<meta http-equiv="Expires" content="-1" />
+	
+	<meta name="description" content="Quru Image Server - dynamic imaging for web and print"/>
+	<meta name="viewport" content="width = device-width"/>
+	<meta name="csrf-token" content="{{ csrf_token() }}">
+	
+	<link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}" />
+	<link rel="stylesheet" href="{{ url_for('static', filename='styles/base.css') }}" type="text/css" />
+	<title>{{ about.__title__ }} :: {% block title %}{% endblock %}</title>
+
+	{% block base_head %}{% endblock %}
+	{% block extra_head %}{% endblock %}
+</head>
+<body id="{{ body_id }}">
+	{% block header %}
+	{% endblock %}
+	{% block body %}
+	{% endblock %}
+	{% block footer %}
+	{% endblock %}
+	{% block after_footer %}
+	{% endblock %}
+</body>
+</html>

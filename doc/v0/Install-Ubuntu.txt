@@ -1,0 +1,121 @@
+QIS install process on Ubuntu 14.04.2 LTS
+Based on the Fedora Dockerfile
+
+
+sudo apt-get update
+sudo apt-get upgrade
+
+sudo apt-get install git curl wget libldap-2.4-2 libldap2-dev imagemagick libmagick++-dev \
+                     python python-pip python-virtualenv python-dev python2.7-dev \
+                     memcached postgresql-9.3 postgresql-server-dev-9.3 ghostscript \
+                     libsasl2-dev pwgen apache2 libapache2-mod-wsgi 
+
+sudo useradd --comment "QIS Build User" --home-dir /home/qis/ --create-home --shell /bin/bash qis
+
+sudo su - qis
+
+cd /home/qis
+
+[build qismagick.so]
+
+git clone https://github.com/quru/qis
+
+cd qis
+
+./package_deps.sh python2.7
+
+. build/venv/bin/activate
+
+python setup.py sdist
+
+sudo sed -i 's/-m .*/-m 512/g' /etc/memcached.conf
+
+sudo update-rc.d memcached defaults
+
+sudo service memcached restart
+
+export PGUSER=qis
+export PGPASS=qispass
+
+echo "listen_addresses = '*'" >> /etc/postgresql/9.3/main/postgresql.conf
+echo "host all all 0.0.0.0/0 md5" >> /etc/postgresql/9.3/main/pg_hba.conf
+
+<Change local and host (localhost) entries in pg_hba.conf from peer to trust>
+
+psql -h localhost -U postgres -d postgres -c "CREATE ROLE $PGUSER WITH LOGIN PASSWORD '$PGPASS'"
+
+createdb -h localhost -U postgres --owner $PGUSER qis-cache
+createdb -h localhost -U postgres --owner $PGUSER qis-mgmt
+
+sudo update-rc.d postgresql defaults
+sudo service postgresql restart
+
+cd ~qis
+
+mkdir -p lib/python2.7
+cd lib/python2.7
+tar -xzf ~/qis/dist/dependencies.tar.gz
+
+cd ../..
+
+tar --strip-components=1 -xvf ~/qis/dist/Quru\ Image\ Server-1.25.0.tar.gz
+
+sudo cp ~qis/deploy/fedora20/wsgi.conf /etc/apache2/conf-available/
+sudo cp ~qis/deploy/fedora20/httpd.conf.sample /etc/apache2/sites-available/qis.conf
+sudo cp ~qis/deploy/fedora20/httpd-ssl.conf.sample /etc/apache2/sites-available/qis-ssl.conf
+
+sudo a2enconf wsgi
+sudo a2ensite qis
+sudo a2ensite qis-ssl
+sudo a2enmod expires
+sudo a2enmod ssl
+
+<in qis-ssl.conf change SSLCertificateFile to reference the default self-signed cert created on Ubuntu: /etc/ssl/certs/ssl-cert-snakeoil.pem>
+<ditto Key file to reference /etc/ssl/private/ssl-cert-snakeoil.key>
+<change custom log directory in qis.conf and qis-ssl.conf from /var/log/httpd to /var/log/apache2>
+<change WSGISocketPrefix to /var/run/apache2/wsgi in wsgi.conf>
+
+sudo gpasswd -a qis www-data
+
+sudo service apache2 restart
+
+sudo mkdir -p /opt/qis
+sudo cp -a ~qis/conf /opt/qis
+sudo cp -a ~qis/icc /opt/qis
+sudo cp -a ~qis/images /opt/qis
+sudo cp -a ~qis/lib /opt/qis
+sudo cp -a ~qis/licences /opt/qis
+sudo cp -a ~qis/logs /opt/qis
+sudo cp -a ~qis/src /opt/qis
+sudo cp -a ~qis/templates /opt/qis
+
+export SETTINGS_FILE=/opt/qis/conf/local_settings.py
+echo "" > $SETTINGS_FILE
+echo "PDF_BURST_TO_PNG = False" >> $SETTINGS_FILE
+echo "IMAGE_UPLOADED_TEMPLATE = \"SmallJpeg\"" >> $SETTINGS_FILE
+sudo chown qis:www-data $SETTINGS_FILE
+
+export HTTP_HOSTNAME=quru-qis-01.cloudapp.net
+export HTTP_PROCESSES=2
+export HTTP_THREADS=20
+export HTTPS_PROCESSES=2
+export HTTPS_THREADS=20
+
+sudo sed -i -e 's/.*ServerName.*/ ServerName '$HTTP_HOSTNAME'/g' /etc/apache2/sites-available/qis.conf
+sudo sed -i -e 's/.*WSGIDaemonProcess.*/ WSGIDaemonProcess qis user=qis group=www-data processes='$HTTP_PROCESSES' threads='$HTTP_THREADS' python-path=\/opt\/qis\/src:\/opt\/qis\/lib\/python2.7\/site-packages/g' /etc/apache2/sites-available/qis.conf
+sudo sed -i -e 's/.*ServerName.*/ ServerName '$HTTP_HOSTNAME'/g' /etc/apache2/sites-available/qis-ssl.conf
+sudo sed -i -e 's/.*WSGIDaemonProcess.*/ WSGIDaemonProcess qis-ssl user=qis group=www-data processes='$HTTPS_PROCESSES' threads='$HTTPS_THREADS' python-path=\/opt\/qis\/src:\/opt\/qis\/lib\/python2.7\/site-packages/g' /etc/apache2/sites-available/qis-ssl.conf
+
+export SETTINGS_FILE=/opt/qis/conf/local_settings.py
+export SECRET_KEY=$(pwgen -s 32 1)
+export DB_POOL_SIZE=$(expr $HTTP_THREADS / 2)
+
+echo "" >> $SETTINGS_FILE
+
+echo "PUBLIC_HOST_NAME = \"$HTTP_HOSTNAME\"" >> $SETTINGS_FILE
+echo "SECRET_KEY = \"$SECRET_KEY\"" >> $SETTINGS_FILE
+#echo "MEMCACHED_SERVERS = [\"cache:$CACHE_PORT_11211_TCP_PORT\"]" >> $SETTINGS_FILE
+#echo "MGMT_DATABASE_CONNECTION = \"postgresql+psycopg2://$DB_ENV_PGUSER:$DB_ENV_PGPASS@db:$DB_PORT_5432_TCP_PORT/qis-mgmt\"" >> $SETTINGS_FILE
+#echo "MGMT_DATABASE_POOL_SIZE = $DB_POOL_SIZE" >> $SETTINGS_FILE
+#echo "CACHE_DATABASE_CONNECTION = \"postgresql+psycopg2://$DB_ENV_PGUSER:$DB_ENV_PGPASS@db:$DB_PORT_5432_TCP_PORT/qis-cache\"" >> $SETTINGS_FILE
+#echo "CACHE_DATABASE_POOL_SIZE = $DB_POOL_SIZE" >> $SETTINGS_FILE

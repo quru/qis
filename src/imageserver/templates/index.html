@@ -1,0 +1,48 @@
+{% extends "base_blank.html" %}
+
+{% block copyright %}
+<!-- 
+	Document:      index.html
+	Date started:  04 Apr 2011
+	By:            Matt Fozard
+	Purpose:       Quru Image Server About page
+	Requires:      
+	Copyright:     Quru Ltd (www.quru.com)
+	
+	Last Changed:  $Date$ $Rev$ by $Author$
+	
+	Notable modifications:
+	Date       By    Details
+	=========  ====  ============================================================
+-->
+{% endblock %}
+
+{% block title %}About{% endblock %}
+
+{% block body %}
+	<div class="center">
+		<h1>
+			<img src="{{ url_for('static', filename='images/logo.gif') }}" />
+			{{ about.__title__ }} v{{ about.__version__ }}
+		</h1>
+	</div>
+
+	{% if settings.DEBUG %}
+	<p class="tall center">
+	  * DEBUG MODE ENABLED *
+	</p>
+	{% endif %}
+
+	<p class="tall center">
+		{% if logged_in %}
+		<a href="{{ url_for('browse') }}">Browse images</a><br />
+		{% else %}
+		<a href="{{ url_for('login') }}">Sign in</a><br />
+		{% endif %}
+		<a href="{{ about.__uri__ }}">About {{ about.__tag__ }}</a>
+	</p>
+
+	<p class="center">
+		{{ about.__copyright__ }}
+	</p>
+{% endblock %}

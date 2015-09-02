@@ -1,0 +1,71 @@
+/*!
+	Document:      simple_view.js
+	Date started:  13 May 2011
+	By:            Matt Fozard
+	Purpose:       Quru Image Server simple viewer client
+	Requires:      MooTools Core 1.3 (no compat)
+	               MooTools More 1.3 - Element.Measure, String.QueryString
+	Copyright:     Quru Ltd (www.quru.com)
+	Licence:
+
+	This program is free software: you can redistribute it and/or modify
+	it under the terms of the GNU Affero General Public License as published
+	by the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
+
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU Affero General Public License for more details.
+
+	You should have received a copy of the GNU Affero General Public License
+	along with this program.  If not, see http://www.gnu.org/licenses/
+
+	Last Changed:  $Date$ $Rev$ by $Author$
+	
+	Notable modifications:
+	Date       By    Details
+	=========  ====  ============================================================
+	09Jun2011  Matt  Allow simple_view_init to be called multiple times to 
+	                 change the image
+	12Jul2011  Matt  Bug fix to handle + escaped URLs
+	14Jul2011  Matt  Add interface to zoom-enable an existing image element
+	24Jan2012  Matt  Do not zoom images smaller than the viewport
+*/
+function ImgSimpleView(a,d,c){this.containerEl=document.id(a);
+this.containerSize=this.containerEl.getComputedSize();if((this.containerSize.width==0)&&(this.containerSize.height==0)){this.containerSize={width:this.containerEl.clientWidth,height:this.containerEl.clientHeight};
+}if(d&&(c==null)){c=d.src;}c=c.cleanQueryString().replace(/\+/g," ");var b=c.indexOf("?");this.baseURL=c.substring(0,b);
+this.imageAttrs=c.substring(b+1).parseQueryString();this.imageAttrs.width=this.containerSize.width;this.imageAttrs.height=this.containerSize.height;
+this.imageAttrs.top=(this.imageAttrs.top==undefined)?0:this.imageAttrs.top.toFloat();this.imageAttrs.left=(this.imageAttrs.left==undefined)?0:this.imageAttrs.left.toFloat();
+this.imageAttrs.bottom=(this.imageAttrs.bottom==undefined)?1:this.imageAttrs.bottom.toFloat();this.imageAttrs.right=(this.imageAttrs.right==undefined)?1:this.imageAttrs.right.toFloat();
+this.zoomAttrs={orig_width:this.imageAttrs.width,orig_height:this.imageAttrs.height,orig_top:this.imageAttrs.top,orig_left:this.imageAttrs.left,orig_bottom:this.imageAttrs.bottom,orig_right:this.imageAttrs.right};
+this.zoomAttrs.factorIn=0.3;this.zoomAttrs.factorOut=1/(1-this.zoomAttrs.factorIn);this.zoomAttrs.level=1;
+this.zoomAttrs.levels=10;this.imageEl=d?d:new Element("img",{oncontextmenu:"return false",ondragstart:"return false",onselectstart:"return false"});
+}ImgSimpleView.prototype.init=function(a){if((this.baseURL.length>0)&&this.imageAttrs.src&&((this.imageAttrs.width>0)||(this.imageAttrs.height>0))){if(a){this.containerEl.empty();
+this.containerEl.grab(this.imageEl);this.refresh();}this.imageEl.removeEvents("click");this.imageEl.addEvent("click",function(b){this.onImageClick(b);
+}.bind(this));}};ImgSimpleView.prototype.reset=function(){this.imageAttrs.width=this.zoomAttrs.orig_width;
+this.imageAttrs.height=this.zoomAttrs.orig_height;this.imageAttrs.top=this.zoomAttrs.orig_top;this.imageAttrs.left=this.zoomAttrs.orig_left;
+this.imageAttrs.bottom=this.zoomAttrs.orig_bottom;this.imageAttrs.right=this.zoomAttrs.orig_right;this.zoomAttrs.level=1;
+this.refresh();};ImgSimpleView.prototype.refresh=function(){if(this.zoomAttrs.level>1){this.imageAttrs.cache=0;
+this.imageAttrs.autocropfit=1;this.imageAttrs.stats=0;}else{delete this.imageAttrs.cache;delete this.imageAttrs.autocropfit;
+delete this.imageAttrs.stats;}this.imageAttrs.format="jpeg";this.imageEl.src=this.baseURL+"?"+Object.toQueryString(this.imageAttrs);
+};ImgSimpleView.prototype.onImageClick=function(i){if((this.imageEl.width>0)&&(this.zoomAttrs.level==1)){if((this.containerSize.width-this.imageEl.width>2)&&(this.containerSize.height-this.imageEl.height>2)){this.zoomAttrs.levels=1;
+}}var g=i.alt?null:!i.shift;if(g!=null){if((g&&this.zoomAttrs.level==this.zoomAttrs.levels)||(!g&&this.zoomAttrs.level==1)){return;
+}if(!g&&this.zoomAttrs.level==2){this.reset();return;}}var f=this.imageEl.getPosition();var h={x:(i.page.x-f.x),y:(i.page.y-f.y)};
+var b=this.imageAttrs.right-this.imageAttrs.left;var d=this.imageAttrs.bottom-this.imageAttrs.top;var j=h.x-(this.containerSize.width/2);
+var a=h.y-(this.containerSize.height/2);var l=(j/this.containerSize.width)*b;var k=(a/this.containerSize.height)*d;
+if(g!=null){this.zoomAttrs.level+=(g?1:-1);var c=g?(this.zoomAttrs.factorIn*b):-1*((this.zoomAttrs.factorOut*b)-b);
+var m=g?(this.zoomAttrs.factorIn*d):-1*((this.zoomAttrs.factorOut*d)-d);this.imageAttrs.top+=(m/2);this.imageAttrs.left+=(c/2);
+this.imageAttrs.bottom-=(m/2);this.imageAttrs.right-=(c/2);}if(this.imageAttrs.top+k<this.zoomAttrs.orig_top){k=this.zoomAttrs.orig_top-this.imageAttrs.top;
+}if(this.imageAttrs.left+l<this.zoomAttrs.orig_left){l=this.zoomAttrs.orig_left-this.imageAttrs.left;
+}if(this.imageAttrs.bottom+k>this.zoomAttrs.orig_bottom){k=this.zoomAttrs.orig_bottom-this.imageAttrs.bottom;
+}if(this.imageAttrs.right+l>this.zoomAttrs.orig_right){l=this.zoomAttrs.orig_right-this.imageAttrs.right;
+}this.imageAttrs.top=this.round(Math.max(this.imageAttrs.top+k,this.zoomAttrs.orig_top),8);this.imageAttrs.left=this.round(Math.max(this.imageAttrs.left+l,this.zoomAttrs.orig_left),8);
+this.imageAttrs.bottom=this.round(Math.min(this.imageAttrs.bottom+k,this.zoomAttrs.orig_bottom),8);this.imageAttrs.right=this.round(Math.min(this.imageAttrs.right+l,this.zoomAttrs.orig_right),8);
+this.refresh();};ImgSimpleView.prototype.round=function(c,b){var a=Math.round(c*Math.pow(10,b))/Math.pow(10,b);
+var d=""+a;if((b>2)&&(d.length==(b+2))){if((d[d.length-3]=="0")&&(d[d.length-2]=="0")){a=d.substring(0,d.length-3).toFloat();
+}}return a;};function _get_ct_viewer(a){a=document.id(a);return(a&&a._viewer)?a._viewer:null;}function simple_view_init(a,b){a=document.id(a);
+if(a){var c=new ImgSimpleView(a,null,b);c.init(true);a._viewer=c;}return false;}function simple_view_reset(a){var b=_get_ct_viewer(a);
+if(b){b.reset();}return false;}function simple_view_init_image(a){a=document.id(a);if(a){var b=new ImgSimpleView(a.getParent(),a,null);
+b.init(false);a._viewer=b;}return false;}function simple_view_reset_image(a){var b=_get_ct_viewer(a);
+if(b){b.reset();}return false;}

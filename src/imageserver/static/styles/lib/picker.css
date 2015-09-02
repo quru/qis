@@ -1,0 +1,260 @@
+/* MooTools Date Picker v2.10 by Arian Stolwijk
+ * http://mootools.net/forge/p/mootools_datepicker
+ */
+
+.picker {
+	position: absolute;
+	font-size: 10px;
+	font-family: Tahoma, sans-serif;
+	color: #000;
+	line-height: normal;
+	width: 172px;
+	height: 135px;
+	padding: 14px;
+	background: url('../../images/picker/frame.png') no-repeat;
+}
+
+/* header
+********************************************************/
+.picker .header {
+	position: relative;
+	height: 15px;
+	margin-bottom: 5px;
+	padding-top: 1px;
+}
+
+.picker .header .title {
+	text-align: center;
+	margin: 0 18px 0 18px;
+}
+
+.picker .header .titleText {
+}
+
+.picker .header .previous,
+.picker .header .next,
+.picker .header .closeButton {
+	position: absolute;
+	cursor: pointer;
+	text-indent: -40px;
+	overflow: hidden;
+	width: 12px;
+	height: 12px;
+	top: 2px;
+	background-image: url('../../images/picker/buttons.png');
+	background-position: left top;
+	background-repeat: no-repeat;
+}
+
+.picker .header .previous {
+	left: 4px;
+}
+.picker .header .previous:hover {
+	background-position: left bottom;
+}
+.picker .header .next {
+	right: 4px;
+	background-position: -13px top;
+}
+.picker .header .next:hover {
+	background-position: -13px bottom;
+}
+.picker .header .closeButton {
+	display: none;
+	right: 0px;
+	top: 0px;
+	background-position: right top;
+}
+.picker .header .closeButton:hover {
+	background-position: right bottom;
+}
+
+/* body
+********************************************************/
+.picker .body {
+	position: relative;
+	top: 0px;
+	left: 2px;
+	width: 168px;
+	height: 112px;
+	overflow: hidden;
+}
+
+/* time
+********************************************************/
+.picker .time {
+	position: relative;
+	width: 100%;
+	height: 100%;
+}
+
+.picker .time .hour,
+.picker .time .separator,
+.picker .time .minutes {
+	border: 1px solid #ccc;
+	background: #fff;
+	width: 50px;
+	font-size: 32px;
+	position: absolute;
+	top: 10px;
+	text-align: center;
+	padding: 2px;
+}
+
+.picker .time .hour {
+	left: 15px;
+}
+.picker .time .separator {
+	background: transparent;
+	border: 0px;
+	width: 10px;
+	left: 76px;
+}
+
+.picker .time .minutes {
+	left: 95px;
+}
+.picker .time .ok {
+	position: absolute;
+	top: 65px;
+	width: 136px;
+	left: 15px;
+	font-size: 20px;
+}
+
+/* days-grid
+********************************************************/
+.picker .days .day {
+	float: left;
+	text-align: center;
+	overflow: hidden;
+	width: 23px;
+	height: 15px;
+	margin: 0 1px 1px 0;
+}
+.picker .days .titles {
+	height: 15px;
+	border-bottom: 1px solid #e0e0e0;
+	margin-bottom: 1px;
+}
+.picker .days .day0 {
+	margin-right: 0;
+}
+
+.picker .days .week5 .day {
+	margin-bottom: 0;
+}
+
+/* days-colors
+********************************************************/
+.picker .days .week .day {
+	cursor: pointer;
+}
+.picker .days .week .day:hover {
+	background: url('../../images/picker/days.png') left top no-repeat;
+	color: #0084AA;
+}
+
+.picker .days .otherMonth {
+	color: #aaa;
+}
+
+.picker .days .selected {
+	background: url('../../images/picker/days.png') left bottom no-repeat;
+	color: #316879;
+}
+
+/* months-grid
+********************************************************/
+.picker .months .month {
+	float: left;
+	cursor: pointer;
+	text-align: center;
+	padding-top: 6px;
+	width: 55px;
+	overflow: hidden;
+	height: 21px;
+	margin: 0 1px 1px 0;
+}
+
+.picker .months .month3,
+.picker .months .month6,
+.picker .months .month9,
+.picker .months .month12 {
+	margin-right: 0;
+}
+
+.picker .months .month10,
+.picker .months .month11,
+.picker .months .month12 {
+	margin-bottom: 0;
+}
+
+/* months-colors
+********************************************************/
+.picker .months .month:hover {
+	background: url('../../images/picker/months.png') left top no-repeat;
+	color: #0084AA;
+}
+
+.picker .months .selected {
+	background: url('../../images/picker/months.png') left bottom no-repeat;
+	color: #316879;
+}
+
+/* years-grid
+********************************************************/
+.picker .years .year {
+	float: left;
+	cursor: pointer;
+	text-align: center;
+	padding-top: 6px;
+	width: 32px;
+	overflow: hidden;
+	height: 21px;
+	margin: 0 1px 1px 0;
+}
+
+.picker .years .year4,
+.picker .years .year9,
+.picker .years .year14,
+.picker .years .year19 {
+	margin-right: 0;
+}
+
+.picker .years .year15,
+.picker .years .year16,
+.picker .years .year17,
+.picker .years .year18,
+.picker .years .year19 {
+	margin-bottom: 0;
+}
+
+/* years-colors
+********************************************************/
+.picker .years .year:hover {
+	background: url('../../images/picker/years.png') left top no-repeat;
+	color: #0084AA;
+}
+
+.picker .years .selected {
+	background: url('../../images/picker/years.png') left bottom no-repeat;
+	color: #316879;
+}
+
+/* global
+********************************************************/
+.picker .unavailable {
+	background: none !important;
+	color: #fbb !important;
+	cursor: default !important;
+}
+
+.picker table {
+	border-spacing: 0;
+}
+
+.picker th,
+.picker td {
+	padding: 0;
+}

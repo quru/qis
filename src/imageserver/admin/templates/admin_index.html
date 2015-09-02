@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block copyright %}
+<!-- 
+	Document:      admin_index.html
+	Date started:  11 Aug 2011
+	By:            Matt Fozard
+	Purpose:       Quru Image Server Administration index page
+	Requires:      
+	Copyright:     Quru Ltd (www.quru.com)
+	
+	Last Changed:  $Date$ $Rev$ by $Author$
+	
+	Notable modifications:
+	Date       By    Details
+	=========  ====  ============================================================
+-->
+{% endblock %}
+
+{% block title %}Administration{% endblock %}
+
+{% block body %}
+	<div class="center">
+		<h1>
+			<img src="{{ url_for('static', filename='images/logo.gif') }}" />
+			Administration
+		</h1>
+		<div class="tall left centercol">
+			<ul>
+				{% if is_permitted(SystemPermission.PERMIT_ADMIN_USERS) %}
+				<li><a href="{{ url_for('admin.user_list') }}">Users</a></li>
+				<li><a href="{{ url_for('admin.group_list') }}">Groups</a></li>
+				{% endif %}
+				{% if is_permitted(SystemPermission.PERMIT_ADMIN_PERMISSIONS) %}
+				<li class="spacer">&nbsp;</li>
+				<li><a href="{{ url_for('admin.folder_permissions') }}">Folder permissions</a></li>
+				{% endif %}
+				{% if is_permitted(SystemPermission.PERMIT_SUPER_USER) %}
+				<li class="spacer">&nbsp;</li>
+				<li><a href="{{ url_for('admin.maintenance') }}">Data maintenance</a></li>
+				{% endif %}
+			</ul>
+		</div>
+	</div>	
+{% endblock %}

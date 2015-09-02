@@ -1,0 +1,24 @@
+<select name="{{ web_name }}" id="publish_field_{{ key }}" class="publish_field" autocomplete="off">
+	{% if validator.edge_choices|join == 'lcr' %}
+	<option value="L0">Left</option>
+	<option value="L0.25">Left edge at 25%</option>
+	<option value="L0.5">Left edge at 50%</option>
+	<option value="C0.25">Centre at 25%</option>
+	<option value="C0.5" selected>Centre</option>
+	<option value="C0.75">Centre at 75%</option>
+	<option value="R0.5">Right edge at 50%</option>
+	<option value="R0.75">Right edge at 75%</option>
+	<option value="R1">Right</option>
+	{% endif %}
+	{% if validator.edge_choices|join == 'tcb' %}
+	<option value="T0">Top</option>
+	<option value="T0.25">Top edge at 25%</option>
+	<option value="T0.5">Top edge at 50%</option>
+	<option value="C0.25">Middle at 25%</option>
+	<option value="C0.5" selected>Middle</option>
+	<option value="C0.75">Middle at 75%</option>
+	<option value="B0.5">Bottom edge at 50%</option>
+	<option value="B0.75">Bottom edge at 75%</option>
+	<option value="B1">Bottom</option>
+	{% endif %}
+</select>

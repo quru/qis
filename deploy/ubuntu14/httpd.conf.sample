@@ -1,0 +1,60 @@
+<VirtualHost *:80>
+
+    # Production host name
+    ServerName images.example.com
+
+    # Production host name aliases
+    # ServerAlias images
+
+    # Request: host, time, requested path
+    # Response: status code, content length, microseconds taken, image from cache
+    # Extra: browser/agent, web page or request origin
+    LogFormat "%h %t \"%r\" %>s %B %D %{X-From-Cache}o \"%{User-Agent}i\" \"%{Referer}i\"" imaging
+
+    # Log requests, or append "env=DISABLED" to disable logging
+    CustomLog /var/log/apache2/qis_access_log imaging
+
+    # Enable keep-alive, but don't hold connections open for long
+    KeepAlive On
+    KeepAliveTimeout 3
+
+    # Do not allow queued requests to wait too long
+    TimeOut 60
+
+    WSGIScriptAlias / /opt/qis/src/wsgi/runserver.wsgi
+
+    # Set the number of processes and threads as per the scalability required
+    WSGIApplicationGroup qis
+    WSGIProcessGroup qis
+    WSGIDaemonProcess qis user=qis group=apache processes=2 threads=15 python-path=/opt/qis/src:/opt/qis/lib/python2.7/site-packages:/opt/qis/lib64/python2.7/site-packages
+
+    # Preload the code to reduce the delay at startup
+    WSGIImportScript /opt/qis/src/wsgi/runserver.wsgi process-group=qis application-group=qis
+
+    <Directory /opt/qis/src/wsgi>
+        Require all granted
+    </Directory>
+
+    <Directory /opt/qis/src/imageserver/static>
+        ExpiresActive On
+        ExpiresDefault "access plus 7 days"
+        Require all granted
+    </Directory>
+    <Directory /opt/qis/src/imageserver/admin/static>
+        ExpiresActive On
+        ExpiresDefault "access plus 7 days"
+        Require all granted
+    </Directory>
+    <Directory /opt/qis/src/imageserver/reports/static>
+        ExpiresActive On
+        ExpiresDefault "access plus 7 days"
+        Require all granted
+    </Directory>
+
+    Alias /robots.txt      /opt/qis/src/imageserver/static/robots.txt
+    Alias /favicon.ico     /opt/qis/src/imageserver/static/favicon.ico
+    Alias /static/         /opt/qis/src/imageserver/static/
+    Alias /admin/static/   /opt/qis/src/imageserver/admin/static/
+    Alias /reports/static/ /opt/qis/src/imageserver/reports/static/
+
+</VirtualHost>

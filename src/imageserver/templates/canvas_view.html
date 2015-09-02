@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block copyright %}
+<!--
+	Document:      canvas_view.html
+	Date started:  22 Aug 2011
+	By:            Matt Fozard
+	Purpose:       Quru Image Server HTML 5 canvas viewer example
+	Requires:      
+	Copyright:     Quru Ltd (www.quru.com)
+	
+	Last Changed:  $Date$ $Rev$ by $Author$
+	
+	Notable modifications:
+	Date       By    Details
+	=========  ====  ============================================================
+	29Apr2015  Matt  Revamp, simplify to be called from help page
+-->
+{% endblock %}
+
+{% block title %}HTML5 canvas viewer API demo{% endblock %}
+
+{% block extra_head %}
+	<link rel="stylesheet" href="{{ url_for('static', filename='styles/demos.css') }}" type="text/css" />
+
+	<link rel="stylesheet" href="{{ url_for('static', filename='styles/canvas_view.css') }}" type="text/css" />
+	{% if settings.DEBUG %}
+	<!--[if lte IE 8]>
+	<script src="{{ url_for('static', filename='js/excanvas.js') }}" type="text/javascript"></script>
+	<![endif]-->
+	<script src="{{ url_for('static', filename='js/canvas_view.js') }}" type="text/javascript"></script>
+	{% else %}
+	<!--[if lte IE 8]>
+	<script src="{{ url_for('static', filename='js/excanvas_yc.js') }}" type="text/javascript"></script>
+	<![endif]-->
+	<script src="{{ url_for('static', filename='js/canvas_view_yc.js') }}" type="text/javascript"></script>
+	{% endif %}
+
+	<script type="text/javascript">
+		window.addEvent('domready', function() {
+			canvas_view_init('image1', '{{ url_for('image', src=image_src) }}');
+			canvas_view_init_all_images('clickable', {
+				showcontrols: 'yes',
+				controls: { download: true }
+			});
+		});
+	</script>	
+{% endblock %}
+
+{% block body %}
+	<h1>HTML5 canvas viewer API demo</h1>
+
+	<h2>Embedded viewer</h2>
+	<div id="image1" class="imageviewer border">
+		Loading zoomable image...
+	</div>
+
+	<h3>Notes</h3>
+	Click to zoom in, shift-click to zoom out, click and drag to pan, double-click to reset the zoom.<br>
+	Click the down arrow to show the control panel.<br>
+
+	<br>
+	<h2>Full-screen pop-up viewer</h2>
+	Click on a thumbnail image to launch a full-screen viewer.
+	<p>
+		<img class="clickable border" src="{{ url_for('image', src=image_src, width=200, height=200) }}"
+		     alt="Winchester cathedral"
+		     title="Winchester cathedral
+	This image shows the western face of the cathedral, on a sunny day in 2010"/>
+		&nbsp;
+		<img class="clickable border" src="{{ url_for('image', src=image_src, width=200, height=200, flip='v') }}"
+		     alt="Winchester cathedral, vertically flipped"
+		     title="Winchester cathedral, curiously upside down"/>
+	</p>
+{% endblock %}

@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block copyright %}
+<!-- 
+	Document:      login.html
+	Date started:  02 Aug 2011
+	By:            Matt Fozard
+	Purpose:       Quru Image Server login page
+	Requires:      
+	Copyright:     Quru Ltd (www.quru.com)
+	
+	Last Changed:  $Date$ $Rev$ by $Author$
+	
+	Notable modifications:
+	Date       By    Details
+	=========  ====  ============================================================
+-->
+{% endblock %}
+
+{% block title %}Sign in{% endblock %}
+
+{% block extra_head %}
+	<link rel="stylesheet" href="{{ url_for('static', filename='styles/login.css') }}" type="text/css" />
+{% endblock %}
+
+{% block body %}
+	<div class="center">
+		<h1>
+			<img src="{{ url_for('static', filename='images/logo.gif') }}" />
+			{{ about.__title__ }} v{{ about.__version__ }}
+		</h1>
+	</div>
+	
+	<br/>
+	<div id="form_area">
+		{% if err_msg %}
+			<div class="error">{{ err_msg|newlines }}</div>
+			<br/>
+		{% endif %}
+	
+		<form action="{{ url_for('login') }}" method="post" onsubmit="$('submit').disabled = true">
+		    <input type="hidden" name="next" value="{{ request.args.next or next }}" />
+		    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+			<div>
+				<label for="username">Username</label>
+				<input type="text" name="username" id="username"
+				       value="{{ username }}" maxlength="100" size="20"
+				       {% if not username %} autofocus="autofocus" {% endif %} />
+			</div>
+			<div>
+				<label for="password">Password</label>
+				<input type="password" name="password" id="password" 
+				       value="" maxlength="40" size="20" 
+				       {% if username %} autofocus="autofocus" {% endif %} />
+			</div>
+			<div>
+				<label></label>
+				<input type="submit" id="submit" value="Sign in" />
+			</div>
+		</form>
+	</div>
+	
+	<script type="text/javascript">
+    if (!('autofocus' in document.createElement('input'))) {
+      if (document.getElementById('username').value == '')
+	      document.getElementById('username').focus();
+      else
+	      document.getElementById('password').focus();
+    }
+  </script>
+{% endblock %}

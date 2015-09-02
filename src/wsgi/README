@@ -1,0 +1,2 @@
+This directory is exposed to Apache so that the wsgi file can be read.
+Do not place any files in here that should not be served by Apache.

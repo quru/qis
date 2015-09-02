@@ -1,0 +1,93 @@
+<html>
+<head>
+	<script>
+	  var start = (new Date()).getTime();
+	  
+		function loaded() {
+		  var end = (new Date()).getTime();
+		  
+			for (var i = 1500; i > 0; i -= 100) {
+				var imageid = 'img'+i;
+				image = document.getElementById(imageid);
+				if (!image || image.width != i)
+					alert('Image ' + imageid + ' did not load');
+				else
+					document.getElementById('info').innerHTML = 'All loaded in ' + (end - start) + ' millis';
+			}
+		}
+	</script>
+</head>
+<body onload="loaded()">
+	<h1>Image loading tests</h1>
+	<p>
+		Use Firebug on Firefox or Web Inspector on Safari to check the load times and concurrency.
+		You can compare loading without memcache, with memcache (1st time) and with memcache (subsequent times).
+	</p>
+	<p id="info">
+		Loading images....
+	</p>
+	
+	<h2>Test loading images from images.matt.quru</h2>
+	<p>
+		1500<br/>
+		<img id="img1500" src="http://images.matt.quru/image?src=test_images/cathedral.jpg&width=1500" />
+	</p>
+	<p>
+		1400<br/>
+		<img id="img1400" src="http://images.matt.quru/image?src=test_images/cathedral.jpg&width=1400" />
+	</p>
+	<p>
+		1300<br/>
+		<img id="img1300" src="http://images.matt.quru/image?src=test_images/cathedral.jpg&width=1300" />
+	</p>
+	<p>
+		1200<br/>
+		<img id="img1200" src="http://images.matt.quru/image?src=test_images/cathedral.jpg&width=1200" />
+	</p>
+	<p>
+		1100<br/>
+		<img id="img1100" src="http://images.matt.quru/image?src=test_images/cathedral.jpg&width=1100" />
+	</p>
+	<p>
+		1000<br/>
+		<img id="img1000" src="http://images.matt.quru/image?src=test_images/cathedral.jpg&width=1000" />
+	</p>
+	<p>
+		900<br/>
+		<img id="img900" src="http://images.matt.quru/image?src=test_images/cathedral.jpg&width=900" />
+	</p>
+	<p>
+		800<br/>
+		<img id="img800" src="http://images.matt.quru/image?src=test_images/cathedral.jpg&width=800" />
+	</p>
+	<p>
+		700<br/>
+		<img id="img700" src="http://images.matt.quru/image?src=test_images/cathedral.jpg&width=700" />
+	</p>
+	<p>
+		600<br/>
+		<img id="img600" src="http://images.matt.quru/image?src=test_images/cathedral.jpg&width=600" />
+	</p>
+	<p>
+		500<br/>
+		<img id="img500" src="http://images.matt.quru/image?src=test_images/cathedral.jpg&width=500" />
+	</p>
+	<p>
+		400<br/>
+		<img id="img400" src="http://images.matt.quru/image?src=test_images/cathedral.jpg&width=400" />
+	</p>
+	<p>
+		300<br/>
+		<img id="img300" src="http://images.matt.quru/image?src=test_images/cathedral.jpg&width=300" />
+	</p>
+	<p>
+		200<br/>
+		<img id="img200" src="http://images.matt.quru/image?src=test_images/cathedral.jpg&width=200" />
+	</p>
+	<p>
+		100<br/>
+		<img id="img100" src="http://images.matt.quru/image?src=test_images/cathedral.jpg&width=100" />
+	</p>
+	
+</body>
+</html>

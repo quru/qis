@@ -1,0 +1,29 @@
+apple ldap server
+
+doesn't seem to require bind
+
+to get a list of groups,
+$ ldapsearch -x -h gate.quru.com -b "dc=gate,dc=quru,dc=com" "(objectClass=apple-group)" dn cn gidNumber apple-generateduid apple-group-realname apple-group-memberguid description
+
+to get a list of organization units,
+$ ldapsearch -x -h gate.quru.com -b "dc=gate,dc=quru,dc=com" "(objectClass=container)" dn cn
+
+to get a list of users,
+$ ldapsearch -x -h gate.quru.com -b "dc=gate,dc=quru,dc=com" "(objectClass=apple-user)" dn uidNumber apple-generateduid gidNumber uid cn givenName sn
+
+to authenticate a user,
+first find their dn,
+$ ldapsearch -x -h gate.quru.com -b "dc=gate,dc=quru,dc=com" "(&(objectClass=apple-user)(uid=dhruv))" dn
+then try and bind with that dn and the supplied password password0
+$ ldapsearch -x -h gate.quru.com -b "dc=gate,dc=quru,dc=com" -D "uid=dhruv,cn=users,dc=gate,dc=quru,dc=com" -w password0 "(&(objectClass=apple-user)(uid=dhruv))" dn uidNumber apple-generateduid gidNumber uid cn givenName sn
+
+to authorize a user as a member of a group,
+first authenticate them while finding out their primary group,
+check for this gidNumber among the groups,
+$ ldapsearch -x -h gate.quru.com -b "dc=gate,dc=quru,dc=com" "(&(objectClass=apple-group)(gidNumber=20))" dn apple-generateduid
+if this result is not positive, check the supplementary group memberships,
+$ ldapsearch -x -h gate.quru.com -b "dc=gate,dc=quru,dc=com" "(&(objectClass=apple-group)(apple-group-memberguid=22353A20-FC0C-4514-AFE9-B638DFBAB109))" dn
+
+to authorize a user as a part of an organizational unit,
+authenticate them while including their OU branch,
+$ ldapsearch -x -h gate.quru.com -b "cn=users,dc=gate,dc=quru,dc=com" -D "uid=dhruv,cn=users,dc=gate,dc=quru,dc=com" -w password0 "(&(objectClass=apple-user)(uid=dhruv))" dn uidNumber apple-generateduid gidNumber uid cn givenName sn

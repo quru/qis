@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+
+{% block copyright %}
+<!-- 
+	Document:      topten.html
+	Date started:  07 Sep 2011
+	By:            Matt Fozard
+	Purpose:       Quru Image Server top 10 stats page
+	Requires:      
+	Copyright:     Quru Ltd (www.quru.com)
+	
+	Last Changed:  $Date$ $Rev$ by $Author$
+	
+	Notable modifications:
+	Date       By    Details
+	=========  ====  ============================================================
+	08 Jan 15  Matt  Changed from top 10 to top n, add time spent field
+-->
+{% endblock %}
+
+{% block title %}Top images{% endblock %}
+
+{% block extra_head %}
+	<link rel="stylesheet" href="{{ url_for('static', filename='styles/list.css') }}" type="text/css" />
+
+	{% if settings.DEBUG %}
+	<script src="{{ url_for('static', filename='js/list.js') }}" type="text/javascript"></script>
+	{% else %}
+	<script src="{{ url_for('static', filename='js/list_yc.js') }}" type="text/javascript"></script>
+	{% endif %}
+{% endblock %}
+
+{% block body %}
+	<h2>Top images</h2>
+	<p>
+		Showing the top
+		<select id="top_number" autocomplete="off">
+			<option {% if number == 10 %}selected{% endif %} value="10">10</option>
+			<option {% if number == 20 %}selected{% endif %} value="20">20</option>
+			<option {% if number == 50 %}selected{% endif %} value="50">50</option>
+			<option {% if number == 100 %}selected{% endif %} value="100">100</option>
+		</select>
+		<script type="text/javascript">
+			document.id('top_number').addEvent('change', function() {
+				window.location.href = '{{ url_for('reports.topten', data_type=data_type, days=days)|safe }}&number=' + this.options[this.selectedIndex].value;
+			});
+		</script>
+		images by
+		{% if data_type == 2 %}
+			number of images served
+		{% elif data_type == 4 %}
+			number of originals served
+		{% elif data_type == 5 %}
+			bandwidth used
+		{% elif data_type == 6 %}
+			server processing time
+		{% elif data_type == 7 %}
+			slowest response time
+		{% endif %}
+		
+		{% if days == 1 %}
+			in the last day.
+		{% else %}
+			in the last {{ days }} days.
+		{% endif %}
+	</p>
+
+	<p>
+		Switch to the top images by:
+		{% if data_type != 2 %}
+			&nbsp;<a href="{{ url_for('reports.topten', data_type=2, number=number, days=days) }}">images served</a>&nbsp;
+		{% endif %}
+		{% if data_type != 4 %}
+			{% if data_type != 2 %}|{% endif %}
+			&nbsp;<a href="{{ url_for('reports.topten', data_type=4, number=number, days=days) }}">originals served</a>&nbsp;
+		{% endif %}
+		{% if data_type != 5 %}
+			|
+			&nbsp;<a href="{{ url_for('reports.topten', data_type=5, number=number, days=days) }}">bandwidth used</a>&nbsp;
+		{% endif %}		
+		{% if data_type != 6 %}
+			|
+			&nbsp;<a href="{{ url_for('reports.topten', data_type=6, number=number, days=days) }}">server processing time</a>&nbsp;
+		{% endif %}
+		{% if data_type != 7 %}
+			|
+			&nbsp;<a href="{{ url_for('reports.topten', data_type=7, number=number, days=days) }}">slowest response</a>&nbsp;
+		{% endif %}
+		
+		<br/>in the last:
+		{% if days != 1 %}
+			&nbsp;<a href="{{ url_for('reports.topten', data_type=data_type, number=number, days=1) }}">1 day</a>&nbsp;
+		{% endif %}
+		{% if days != 7 %}
+			{% if days != 1 %}|{% endif %}
+			&nbsp;<a href="{{ url_for('reports.topten', data_type=data_type, number=number, days=7) }}">7 days</a>&nbsp;
+		{% endif %}
+		{% if days != 30 %}
+			| 
+			&nbsp;<a href="{{ url_for('reports.topten', data_type=data_type, number=number, days=30) }}">30 days</a>&nbsp;
+		{% endif %}
+	</p>
+	
+	<br/>
+	<table summary="Top images">
+	
+		<tr class="odd">
+			<td class="rank">Rank</td>
+			<td class="count">
+		    {% if data_type == 2 %}
+		    	Images served
+		    {% elif data_type == 4 %}
+		    	Originals served
+		    {% elif data_type == 5 %}
+		    	Bytes served
+		    {% elif data_type == 6 %}
+		    	Time spent
+		    {% elif data_type == 7 %}
+		    	Response time
+		    {% endif %}
+			</td>
+			<td>Image</td>
+		</tr>
+		
+		{% set row_class = cycler('even', 'odd') %}
+		
+		{% if results %}
+			{% for result in results %}
+				<tr class="{{ row_class.next() }}">
+					<td class="rank">
+						{{ loop.index }}
+					</td>
+					<td class="count">
+				    {% if data_type == 2 %}
+				    	{{ result.views }}
+				    {% elif data_type == 4 %}
+				    	{{ result.downloads }}
+				    {% elif data_type == 5 %}
+				    	{{ result.bytes|filesizeformat }}
+				    {% elif data_type == 6 %}
+				    	{{ '%.2f'|format(result.seconds) }}
+				    {% elif data_type == 7 %}
+				    	{{ '%.2f'|format(result.max_seconds) }}
+				    {% endif %}
+					</td>
+					<td>
+						<a class="image_preview" href="{{ url_for('details', src=result.src) }}">{{ result.src }}</a>
+					</td>
+				</tr>
+			{% endfor %}
+		{% else %}
+			<tr class="{{ row_class.next() }}">
+				<td colspan="3">Currently there are no statistics</td>
+			</tr>
+		{% endif %}
+	</table>
+	
+	<br/>
+	<div class="smalltext">Statistics are updated once a minute</div>
+
+	{% include "inc_preview_popup.html" %}
+	
+{% endblock %}

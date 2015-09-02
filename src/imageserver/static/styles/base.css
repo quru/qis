@@ -1,0 +1,427 @@
+/*
+	Document:      base.css
+	Date started:  04 Apr 2011
+	By:            Matt Fozard
+	Purpose:       Quru Image Server global base CSS
+	Requires:      
+	Copyright:     Quru Ltd (www.quru.com)
+	Licence:
+
+	This program is free software: you can redistribute it and/or modify
+	it under the terms of the GNU Affero General Public License as published
+	by the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
+
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU Affero General Public License for more details.
+
+	You should have received a copy of the GNU Affero General Public License
+	along with this program.  If not, see http://www.gnu.org/licenses/
+	
+	Last Changed:  $Date$ $Rev$ by $Author$
+*/
+
+body {
+	font-family: Arial;
+	font-size: 14px;
+	background-color: white;
+	color: black;
+	margin: 0;
+	padding: 1.5em;
+}
+
+iframe {
+	background-color: white;
+	-webkit-overflow-scrolling: touch;  /* For iOS 5+ */
+}
+
+/* Hyperlink styles
+ */
+a:link, a:visited, a:hover, a:active {
+	text-decoration: none;
+	color: black;
+	border-bottom: 1px dotted black;
+}
+a:hover {
+	color: gray;
+	border-bottom-color: gray;
+}
+
+/* Headings
+ */
+h1, h2, h3, h4 {
+	font-weight: normal;
+}
+h1 span, h2 span, h3 span, h4 span {
+	margin-left: 0.5em;
+	font-weight: normal;
+	font-style: normal;
+}
+h1 {
+	font-size: 180%;
+}
+h1 span {
+	font-size: 56%;
+}
+h2 {
+	font-size: 130%;
+	margin-bottom: 0.3em;
+}
+h2 span {
+	font-size: 77%;
+}
+h3, h4 {
+	font-size: 110%;
+	margin-bottom: 0.3em;
+	font-style: italic;
+}
+h3 span, h4 span {
+	font-size: 91%;
+}
+
+/* Misc HTML element styles
+ */
+img {
+	vertical-align: middle;
+	border: none;
+}
+
+li {
+	margin-top: 0.1em;
+	margin-bottom: 0.3em;
+}
+
+pre {
+	margin: 0.5em 0 0 0;
+	padding: 1em 0 1em 0;
+	line-height: normal;
+	white-space: pre-wrap;
+	font-size: 95%;	
+}
+code {
+	margin: 0;
+	padding: 0;
+}
+
+input[type="text"],
+input[type="password"],
+textarea {
+	font-family: Lucida Grande, Arial;
+	font-size: 11px;
+	padding: 2px;
+	border: 1px solid gray;
+}
+
+/* Standard table style
+ */
+table {
+	border: none;
+	border-spacing: 0;
+	empty-cells: show;
+	font-size: 95%;
+}
+table a:link, table a:visited, table a:hover, table a:active {
+	border-bottom: none;
+}
+table a.action:link, table a.action:visited, table a.action:hover, table a.action:active {
+	border-bottom: 1px dotted black;
+}
+table a:hover {
+	border-bottom: 1px dotted gray;
+	color: gray;	
+}
+tr {
+	margin: 0;
+	padding: 0;
+	line-height: 160%;
+	vertical-align: top;
+}
+tr.odd {
+	background-color: #f0f0f0;
+}
+tr.even {
+}
+tr.header {
+	font-style: italic;
+}
+td {
+	margin: 0;
+	padding: 2px 1em 2px 2px;
+}
+
+/* Forms
+ */
+form label {
+	display: inline-block;
+	width: 10em;
+	vertical-align: top;
+}
+form div,
+form fieldset {
+	line-height: 1.5em;
+	margin-top: 0.2em;
+	margin-bottom: 0.2em;
+	vertical-align: top;
+	border: none;
+}
+
+/* Common classes
+ */
+.action_menu_owner {
+	cursor: pointer;
+}
+.action_menu {
+	position: absolute;
+	visibility: hidden;
+	background-color: white;
+	z-index: 1;
+	margin-top: 5px;
+}
+.action_menu ul {
+	margin: 0;
+	padding: 0.5em 1em 0.6em 1em;
+}
+.action_menu li {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	line-height: 1.5em;
+}
+.action_menu li.spacer,
+li.spacer {
+	height: 0.5em;
+	line-height: 0.5em;
+	list-style: none;
+}
+
+.clickable {
+	cursor: pointer;
+}
+
+.error {
+	color: red;
+}
+input[type="text"].error,
+input[type="password"].error,
+input[type="file"].error,
+textarea.error,
+input:invalid,
+textarea:invalid {
+	color: red;
+	border-color: red;
+}
+
+input[type="text"].disabled,
+input[type="password"].disabled,
+input[type="file"].disabled,
+textarea.disabled {
+	background-color: #bbbbbb;
+	color: #555555;
+}
+.disabled,
+.disabled.highlight,
+.disabled .highlight {
+	color: #888888;
+}
+.disabled label {
+	color: black;
+}
+a.disabled:link, a.disabled:visited, a.disabled:hover, a.disabled:active {
+	cursor: default;
+	color: #888888;
+	border-bottom-color: #888888;
+}
+img.disabled {
+	opacity: 0.6;
+	filter: alpha(opacity=60);
+}
+
+.subtlebg {
+	background-color: #fafafa;  /* same as tr.odd */
+}
+
+.highlight {
+	color: #ff3333;
+}
+a:hover .highlight {
+	color: #ff7777;
+}
+
+.hidden {
+	visibility: hidden;
+}
+
+.center {
+	text-align: center;
+}
+.left {
+	text-align: left;
+}
+.right {
+	text-align: right;
+}
+.sticky {
+	position: sticky;
+	top: 0px;
+}
+
+.float {
+	float: left;
+}
+.rfloat {
+	float: right;
+}
+.clear {
+	clear: both;
+}
+
+.tall {
+	line-height: 1.5em;
+}
+
+.smalltext {
+	font-size: 85%;
+}
+
+.inline {
+	display: inline;
+}
+.inline-block {
+	display: inline-block;
+}
+
+.nowrap {
+	white-space: nowrap;
+}
+
+.centercol {
+	display: inline-block;
+	width: 18em;
+	margin-left: 6em;
+}
+
+.overlay_mask {
+	position: absolute;
+	z-index: 100;
+	opacity: 0.7;
+	filter: alpha(opacity=70);
+	background: #333333;
+}
+
+.edit_popup {
+	position: fixed;    /* Sit on top of overlay_mask */
+	z-index: 101;
+	left: 0;            /* Centre horizontally */
+	right: 0;
+	margin-left: auto;
+	margin-right: auto;
+	width: 575px;
+}
+
+.wait_popup {
+	background-color: white;
+	text-align: center;
+	padding: 1.5em;
+}
+
+.border {
+	border: 1px solid #bbbbbb;
+	
+	-moz-border-radius: 5px;
+	-webkit-border-radius: 5px;
+	border-radius: 5px;
+}
+
+.shadow {
+	-moz-box-shadow: 2px 2px 4px #bbbbbb;
+	-webkit-box-shadow: 2px 2px 4px #bbbbbb;
+	box-shadow: 2px 2px 4px #bbbbbb;
+}
+
+.chartcontainer, .chart {
+	width: 500px;
+	height: 350px;
+}
+.chartcontainer {
+	padding: 15px;
+}
+.chart {
+	position: absolute;
+	text-align: center;
+}
+.chart span {
+	display: block;
+	margin-top: 150px;
+}
+.charttext {
+	width: 530px;
+	margin-top: 0.8em;
+	text-align: center;
+}
+
+.dropzone {
+	color: gray;
+	border: 4px gray dashed;
+	padding: 2em 5em;
+	text-align: center;
+	display: inline-block;
+}
+.dropzone.active {
+	color: black;
+	border: 4px black dashed;
+}
+
+/* Base template styles
+ */
+#header .logo {
+	min-height: 1em;      /* if no logo image */
+	margin-bottom: 1.5em; /* match body top padding */
+}
+#header .menu_group {
+	float: right;
+	position: relative;
+}
+#header .menu_group .action_menu {
+	white-space: nowrap;
+}
+#header .menu_group .fix_right {
+	right: 0;
+}
+
+/* Image preview popup
+ */
+#preview_popup {
+	position: absolute;
+	top: 1px;
+	left: -1000px;
+	visibility: hidden;
+	clear: both;
+}
+#preview_popup img {
+	vertical-align: middle;
+}
+#preview_popup span { /* IE<8 fix, trigger hasLayout, also see JS */
+	display: inline-block;
+}
+#preview_popup_left {
+	width: 20px;
+	height: 200px;
+	position: relative;
+	z-index: 2;
+	float: left;
+	background-image: url("../images/preview-arrow.png");
+	background-position: center;
+	background-repeat: no-repeat;
+}
+#preview_popup_right {
+	width: 220px;
+	height: 200px;
+	line-height: 200px;
+	position: relative;
+	z-index: 1;
+	margin-left: 19px;
+	text-align: center;
+	background-color: #ffffff;
+}

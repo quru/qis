@@ -1,0 +1,85 @@
+{% if embed %}{% extends "base_blank_js.html" %}{% else %}{% extends "base.html" %}{% endif %}
+
+{% block copyright %}
+<!-- 
+	Document:      reports_image_stats.html
+	Date started:  15 Sep 2011
+	By:            Matt Fozard
+	Purpose:       Quru Image Server image stats page
+	Requires:      
+	Copyright:     Quru Ltd (www.quru.com)
+	
+	Last Changed:  $Date$ $Rev$ by $Author$
+	
+	Notable modifications:
+	Date       By    Details
+	=========  ====  ============================================================
+	08 Jan 15  Matt  Added total requests, % from cache, time spent fields
+-->
+{% endblock %}
+
+{% block title %}Image Statistics{% endblock %}
+
+{% block extra_head %}
+	{% include "reports_inc_chart_head.html" %}
+	
+	{% if settings.DEBUG %}
+	<script src="{{ url_for('reports.static', filename='js/system_stats.js') }}" type="text/javascript"></script>
+	{% else %}
+	<script src="{{ url_for('reports.static', filename='js/system_stats_yc.js') }}" type="text/javascript"></script>
+	{% endif %}
+{% endblock %}
+
+{% block body %}
+	
+	{% if embed %}
+		<div class="rfloat">
+			<a id="close" href="#">Close</a>
+		</div>
+	{% endif %}
+	
+	<h2>Image statistics</h2>
+	<br/>
+	<form id="chartform">
+		<div>
+			<label>For image:</label>
+			{% if db_image %}
+				{{ db_image.src }}
+			{% else %}
+				Sorry, this file does not exist.
+			{% endif %}
+		</div>
+		<div>
+			<label>show:</label>
+			<select id="data_type" autocomplete="off">
+				{% set sel = 'selected="selected"'|safe %}
+				<option value="1" {{ sel if data_type == '1' }}>total requests</option>
+				<option value="2" {{ sel if data_type == '2' }}>number of images served</option>
+				<option value="4" {{ sel if data_type == '4' }}>% served from cache</option>
+				<option value="5" {{ sel if data_type == '5' }}>number of originals served</option>
+				<option value="6" {{ sel if data_type == '6' }}>total bytes served</option>
+				<option value="7" {{ sel if data_type == '7' }}>time spent generating responses</option>
+				<option value="8" {{ sel if data_type == '8' }}>slowest response times</option>
+			</select>
+			&nbsp;
+			{% include "reports_inc_frequency.html" %}
+		</div>
+		<div>
+			<label>from:</label>
+			<input id="from_date" type="text" size="9" maxlength="10" value="{{ time_from|dateformat(False, 'dmy') }}"/> 
+			&nbsp;until&nbsp;
+			<input id="to_date" type="text" size="9" maxlength="10" value="{{ time_to|dateformat(False, 'dmy') }}"/> 
+		</div>
+		<div>
+			<label></label>
+			<input type="submit" value="Refresh chart">
+		</div>
+	</form>
+	<br/>
+	
+	{% set chart_axis = 'bytes' if data_type == '6' else 'percent' if data_type == '4' else 'int-positive-units' %}
+	{% set chart_opts = ('chart_1', True, True, 'time', chart_axis) %}
+	{% set chart_data_url = url_for('reports.datafeed_image', id=db_image.id) if db_image else '' %}
+	{% include "reports_inc_chart.html" %}
+
+{% endblock %}

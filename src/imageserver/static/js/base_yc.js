@@ -1,0 +1,79 @@
+/*!
+	Document:      base.js
+	Date started:  03 Oct 2012
+	By:            Matt Fozard
+	Purpose:       Quru Image Server common scripts
+	Requires:      MooTools Core 1.3 (no compat),
+	               MooTools More 1.3 - Mask
+	Copyright:     Quru Ltd (www.quru.com)
+	Licence:
+
+	This program is free software: you can redistribute it and/or modify
+	it under the terms of the GNU Affero General Public License as published
+	by the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
+
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU Affero General Public License for more details.
+
+	You should have received a copy of the GNU Affero General Public License
+	along with this program.  If not, see http://www.gnu.org/licenses/
+
+	Last Changed:  $Date$ $Rev$ by $Author$
+	
+	Notable modifications:
+	Date       By    Details
+	=========  ====  ============================================================
+*/
+APICodes={SUCCESS:200,SUCCESS_TASK_ACCEPTED:202,INVALID_PARAM:400,REQUIRES_AUTH:401,UNAUTHORISED:403,NOT_FOUND:404,ALREADY_EXISTS:409,IMAGE_ERROR:415,INTERNAL_ERROR:500,TOO_BUSY:503};
+Request.prototype._send=Request.prototype.send;Request.implement({send:function(a){var b=$$('meta[name="csrf-token"]')[0];
+if(b){Object.append(this.headers,{"X-CSRF-Token":b.getAttribute("content")});}return this._send(a);}});
+Math.roundx=function(b,a){return Math.round(b*Math.pow(10,a))/Math.pow(10,a);};Date.toUTCDate=function(a){return new Date(Date.UTC(a.getFullYear(),a.getMonth(),a.getDate(),a.getHours(),a.getMinutes(),a.getSeconds(),a.getMilliseconds()));
+};GenericPopup={};GenericPopup.closePage=function(){return popup_close();};GenericPopup.initButtons=function(){addEventEx("cancel","click",GenericPopup.closePage);
+addEventEx("close","click",GenericPopup.closePage);};GenericPopup.enableButtons=function(){$("cancel").disabled=false;
+$("submit").disabled=false;};GenericPopup.disableButtons=function(){$("cancel").disabled=true;$("submit").disabled=true;
+};GenericPopup.defaultSubmitting=function(){GenericPopup.disableButtons();};GenericPopup.defaultSubmitSuccess=function(){GenericPopup.closePage();
+};GenericPopup.defaultSubmitError=function(a,c){GenericPopup.enableButtons();var b=getAPIError(a,c);alert("Sorry, your changes were not saved.\n\n"+b.message);
+};function is_touch(){return("ontouchstart" in window)&&window.Touch;}function $2(a){var b=$(a);if(!b&&(document.forms.length>0)){b=$(document.forms[0].elements[a]);
+}return b;}function addEventEx(c,b,a){if($(c)){$(c).addEvent(b,a);}}function validate_isempty(a){var b=$2(a);
+if(b){return b.value.trim().length==0;}return true;}function validate_email(b){var c=$2(b);if(c){var a=/^([a-zA-Z0-9_=&'\!#\$%\*\/\?\^\{\}\|\~\.\-\+])+\@(([a-zA-Z0-9\-])+\.)+([a-zA-Z0-9]{2,4})+$/;
+return a.test(c.value);}return false;}function validate_length(c,b,a){var e=$2(c);if(e){var d=e.value.trim(),f=(a==undefined)||(a<1)||(d.length<=a);
+return f&&(d.length>=b);}return false;}function form_setError(a){var b=$2(a);if(b){b.addClass("error");
+}}function form_clearErrors(a){a=$(a);var b=$$(a.getElements("input")).append($$(a.getElements("textarea")));
+b.each(function(c){c.removeClass("error");});}function join_path(c,b,a){if((c!=a)&&(c.length>0)&&(c.charAt(c.length-1)==a)){c=c.substring(0,c.length-1);
+}if((b.length>0)&&(b.charAt(0)==a)){b=b.substring(1);}if((c==a)||(c.length==0)||(b.length==0)){return c+b;
+}else{return c+a+b;}}function setAjaxJsonForm(c,b,a,d,e){c=$(c);if(!c){return;}c.addEvent("submit",function(f){if(f){f.stop();
+}if(b&&!b()){return false;}if(a){a();}new Request.JSON({url:c.action,method:c.get("_method")?c.get("_method"):c.method,emulation:false,data:getFormQueryString(c),noCache:true,onSuccess:function(h,g){if(d){d(h);
+}},onFailure:function(g){if(e){e(g.status,g.responseText?g.responseText:g.statusText);}}}).send();return false;
+});}function getAPIError(a,b){return Function.attempt(function(){if(!b){throw ("Empty JSON");}else{return JSON.decode(b,true);
+}},function(){if(!a&&!b){return{status:0,message:"The connection was cancelled"};}else{return{status:a,message:"HTTP Error "+a+" ("+b+")"};
+}});}function getFormQueryString(d){var a="";for(var b=0;b<d.elements.length;b++){var c=d.elements[b];
+if((c.type=="text")||(c.type=="hidden")||(c.type=="password")||(c.type=="textarea")){a+=c.name+"="+encodeURIComponent(c.value)+"&";
+}else{if((c.type=="checkbox")||(c.type=="radio")){if(c.checked){a+=c.name+"="+encodeURIComponent(c.value)+"&";
+}}else{if(c.type=="select-one"){if(c.selectedIndex>-1){a+=c.name+"="+encodeURIComponent(c.options[c.selectedIndex].value)+"&";
+}else{a+=c.name+"=&";}}}}}if((a.length>1)&&(a.charAt(a.length-1)=="&")){a=a.substring(0,a.length-1);}return a;
+}function popup_convert_anchor(c,e,f,a){var d=$(c);if(d&&d.tagName=="A"){var b=d.href;d.href="#";d.addEvent(is_touch()?"touchstart":"click",function(g){g.preventDefault();
+return popup_iframe(b,e,f,a);});}}function popup_iframe(b,c,i,a){var f=15,d=window.getSize().y,i=Math.min((d-(2*f)),i),e=Math.max(f,Math.round((d-i)/2));
+var h=function(k){if(window.mask&&k.code==27){window.mask.hide();}};var g=new Element("iframe",{src:b,"class":"edit_popup border",styles:{top:e+"px",width:c+"px",height:i+"px","margin-bottom":e+"px"}});
+var j=new Mask($(document.body),{"class":"overlay_mask",hideOnClick:true,destroyOnHide:true});window.mask=j;
+window.mask.show();g.fade("hide");$(document.body).grab(g,"top");g.fade("in");window.mask.resize();$(document.body).addEvent("keyup",h);
+j.addEvent("destroy",function(){window.mask=null;$(document.body).removeEvent("keyup",h);g.destroy();
+if(a!=undefined){setTimeout(a,1);}});return false;}function popup_close(){var b=(window.location.href.indexOf("onClose=back")!=-1),a=(window.location.href.indexOf("onClose=backrefresh")!=-1);
+if(window.parent&&window.parent.mask&&!b){window.parent.mask.hide();}else{if(a){window.location.replace(document.referrer);
+}else{window.history.back();}}return false;}function wait_form_open(g){var e=15,b=window.getSize().y,d=100,c=Math.max(e,Math.round((b/2)-d));
+var f=new Element("div",{"class":"edit_popup wait_popup border",html:'<img src="../static/images/icon-wait.gif"> &nbsp; '+g,styles:{top:c+"px",width:"400px",height:"2.5em","margin-bottom":c+"px"}});
+var a=new Mask($(document.body),{"class":"overlay_mask",hideOnClick:false,destroyOnHide:true});window.mask=a;
+window.mask.show();$(document.body).grab(f,"top");window.mask.resize();a.addEvent("destroy",function(){window.mask=null;
+f.destroy();});return false;}function wait_form_close(){if(window.mask){window.mask.hide();}}function setDoubleClickHandler(a,b){if(is_touch()){a.addEvent("touchstart",function(c){c.preventDefault();
+if(a.lastTapTime!=undefined){var d=Date.now()-a.lastTapTime;if((d>10)&&(d<1000)){a.lastTapTime=0;b();
+}}a.lastTapTime=Date.now();});}else{a.addEvent("dblclick",b);}}function dd_menu_init(b,a){a.fade("hide");
+b.addEvent(is_touch()?"touchstart":"click",function(){if(a.opening!==true){a.active=!a.active;a.active?dd_menu_open(a):dd_menu_close(a);
+}});b.addEvent("mouseenter",function(){a.opening=true;a.active=true;dd_menu_open(a);setTimeout(function(){a.opening=false;
+},600);});b.addEvent("mouseleave",function(){a.opening=false;a.active=false;setTimeout(function(){dd_menu_close(a);
+},500);});a.addEvent("mouseenter",function(){a.active=true;});a.addEvent("mouseleave",function(){a.active=false;
+setTimeout(function(){dd_menu_close(a);},500);});}function dd_menu_open(a){a.fade("in");}function dd_menu_close(a){if(!a.active){a.fade("out");
+}}function base_init_menus(){var a=$$(".action_menu_owner");a.each(function(b){var c=$(b.id.substring(0,b.id.indexOf("_owner")));
+if(c){dd_menu_init(b,c);}});popup_convert_anchor("account_menu",575,300,function(){window.location.reload();
+});}window.addEvent("domready",function(){base_init_menus();});

@@ -1,0 +1,66 @@
+{% extends "admin_base.html" %}
+
+{% block copyright %}
+<!-- 
+	Document:      admin_user_list.html
+	Date started:  30 Oct 2012
+	By:            Matt Fozard
+	Purpose:       Quru Image Server Administration - user list
+	Requires:      
+	Copyright:     Quru Ltd (www.quru.com)
+	
+	Last Changed:  $Date$ $Rev$ by $Author$
+	
+	Notable modifications:
+	Date       By    Details
+	=========  ====  ============================================================
+-->
+{% endblock %}
+
+{% set body_id = 'user_list' %}
+{% set page_heading = 'Users' %}
+
+{% block body %}
+	{{ super() }}
+	<div class="smalltext">
+		{{ users|length }} user{{ users|length|pluralize }}
+		(<a class="popuplink" href="{{ url_for('admin.user_edit', user_id=0, embed=1) }}">add a new user</a>)
+	</div>
+	<br/>
+	<table summary="Listing of {{ page_heading }}">
+	
+		{% set row_class = cycler('even', 'odd') %}
+		<tr class="{{ row_class.next() }} header">
+			<td></td>
+			<td>Username</td>
+			<td>Name</td>
+			<td>Email</td>
+			<td>Action</td>
+		</tr>
+	
+		{% for user in users %}
+		{% set edit_url = url_for('admin.user_edit', user_id=user.id, embed=1) %}
+		
+		<tr class="{{ row_class.next() }}">
+			<td>
+				{% if user.status == 0 %}
+					<img src="{{ url_for('static', filename='images/icon-deleted.png') }}" alt="Deleted" title="Deleted" />
+				{% else %}
+					<img src="{{ url_for('static', filename='images/icon-active.png') }}" alt="Active" title="Active" />
+				{% endif %}
+			</td>
+			<td><a class="popuplink" href="{{ edit_url }}">{{ user.username }}</a></td>
+			<td><a class="popuplink" href="{{ edit_url }}">{{ user.get_full_name() }}</a></td>
+			<td><a class="popuplink" href="{{ edit_url }}">{{ user.email }}</a></td>
+			<td>
+				{% if user.id != 1 and user.status != 0 %}
+				<form id="delform_{{ user.id }}" class="delform" action="{{ url_for('api.admin.user', user_id=user.id) }}" _method="delete">
+					<input type="hidden" name="del_name" value="{{ user.get_full_name() }}" />
+					(<a class="action" href="#" onclick="return submitParentForm(this)">delete</a>)
+				</form>
+				{% endif %}
+			</td>
+		</tr>
+		{% endfor %}
+	</table>
+{% endblock %}

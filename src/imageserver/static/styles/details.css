@@ -1,0 +1,71 @@
+/*
+	Document:      details.css
+	Date started:  21 Jul 2011
+	By:            Matt Fozard
+	Purpose:       Quru Image Server file details CSS
+	Requires:      base.css
+	Copyright:     Quru Ltd (www.quru.com)
+	Licence:
+
+	This program is free software: you can redistribute it and/or modify
+	it under the terms of the GNU Affero General Public License as published
+	by the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
+
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU Affero General Public License for more details.
+
+	You should have received a copy of the GNU Affero General Public License
+	along with this program.  If not, see http://www.gnu.org/licenses/
+	
+	Last Changed:  $Date$ $Rev$ by $Author$
+*/
+
+#header {
+	margin-bottom: -14px;
+}
+
+.datatable {
+	width: 500px;
+	margin-right: 30px;
+}
+.datatable .label {
+	width: 200px;
+	white-space: nowrap;
+}
+.datatable .nowrap {
+	white-space: nowrap;
+}
+
+#viewport,
+#viewport_empty {
+	width: 500px;
+	height: 500px;
+	line-height: 500px;
+	margin-top: 1em;
+	margin-bottom: 1em;
+	margin-right: 30px;
+}
+#viewport canvas {
+	-moz-border-radius: 5px;
+	-webkit-border-radius: 5px;
+	border-radius: 5px;
+}
+#viewport.fullscreen {
+	border: none;
+	-moz-box-shadow: none;
+	-webkit-box-shadow: none;
+	box-shadow: none;
+}
+
+#map {
+	width: 500px;
+	height: 400px;
+}
+
+#editform input[type="text"],
+#editform textarea {
+	width: 300px;
+}

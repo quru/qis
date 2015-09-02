@@ -1,0 +1,24 @@
+{% extends "base_help.html" %}
+
+{% block copyright %}
+<!-- 
+	Document:      slideshow_view_help.html
+	Date started:  28 Apr 2015
+	By:            Matt Fozard
+	Purpose:       Quru Image Server slideshow_view API help
+	Requires:      
+	Copyright:     Quru Ltd (www.quru.com)
+	
+	Last Changed:  $Date$ $Rev$ by $Author$
+	
+	Notable modifications:
+	Date       By    Details
+	=========  ====  ============================================================
+-->
+{% endblock %}
+
+{% block title %}Slideshow API guide{% endblock %}
+
+{% block body %}
+	{% include_markdown "js_slideshow_help.md", subs %}
+{% endblock %}

@@ -1,0 +1,193 @@
+/*
+	Document:      canvas_view.css
+	Date started:  24 Jan 2012
+	By:            Matt Fozard
+	Purpose:       Quru Image Server canvas view API CSS
+	Requires:      
+	Copyright:     Quru Ltd (www.quru.com)
+	Licence:
+
+	This program is free software: you can redistribute it and/or modify
+	it under the terms of the GNU Affero General Public License as published
+	by the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
+
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU Affero General Public License for more details.
+
+	You should have received a copy of the GNU Affero General Public License
+	along with this program.  If not, see http://www.gnu.org/licenses/
+	
+	Last Changed:  $Date$ $Rev$ by $Author$
+*/
+
+.imageviewer {
+	overflow: visible;  /* for control panel */
+	text-align: center; /* centre text */
+}
+
+/* Reset inner element styles (div is for excanvas on IE) */
+.imageviewer div,
+.imageviewer span,
+.imageviewer img, 
+.imageviewer canvas {
+	margin: 0;
+	padding: 0;
+	/* Prevent drag and select */
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	-o-user-select: none;
+	user-select: none;
+	-webkit-user-drag: none;
+	-moz-user-drag: none;
+	-o-user-drag: none;
+	user-drag: none;	
+}
+.imageviewer canvas { display: block; /* IE 8-9 */ }
+.imageviewer div { display: block; }
+.imageviewer span { display: inline; }
+.imageviewer img { vertical-align: middle; }
+
+.imageviewer canvas,
+.imageviewer div {
+	cursor: pointer;
+	cursor: -webkit-grab;
+	cursor: -moz-grab;
+	cursor: grab;
+}
+.imageviewer canvas.panning,
+.imageviewer .panning div {
+	cursor: move;
+	cursor: -webkit-grabbing;
+	cursor: -moz-grabbing;
+	cursor: grabbing;
+}
+
+/* Control panel toggle button */
+.imageviewer .controltoggle {
+	width: 40px;
+	height: 32px;
+	line-height: 32px;
+	margin: -32px auto 0px auto;
+	cursor: pointer;
+	background: url('../images/viewer/icon-down.png') center center no-repeat;
+	border-top-left-radius: 5px;
+	border-top-right-radius: 5px;
+}
+.imageviewer .controltoggle.up {
+	background-image: url('../images/viewer/icon-up.png');
+}
+
+/* Control panel elements */
+.imageviewer .controlpanel {
+	display: inline-block;
+	font-size: 10pt;
+	border-bottom-left-radius: 5px;
+	border-bottom-right-radius: 5px;
+}
+.imageviewer .controlpanel .controltitle {
+	display: inline-block;
+	vertical-align: top;
+	margin: 7px 0.4em 0px 1em;
+	cursor: pointer;
+}
+.imageviewer .controlpanel .separator {
+	display: inline-block;
+	width: 2px;
+	height: 24px;
+	position: relative;
+	top: 4px;
+	border-right: 1px dotted #bbbbbb;
+	margin-left: 3px;
+	margin-right: 5px;
+}
+.imageviewer .controlpanel .icon {
+	display: inline-block;
+	width: 32px;
+	height: 32px;
+	border-radius: 3px;
+	margin: 0px 2px 0 2px;
+	cursor: pointer;
+}
+.imageviewer .controlpanel .icon.disabled {
+	filter: alpha(opacity=30);
+	opacity: 0.30;
+}
+.imageviewer .controlpanel .icon.rollover {
+	background-color: #696969;
+}
+.imageviewer .controlpanel .icon.rollover.disabled {
+	background-color: transparent;
+}
+.imageviewer .controlpanel .download {
+	background: url('../images/viewer/icon-download.png') center center no-repeat;
+}
+.imageviewer .controlpanel .help {
+	background: url('../images/viewer/icon-help.png') center center no-repeat;
+}
+.imageviewer .controlpanel .reset {
+	background: url('../images/viewer/icon-reset.png') center center no-repeat;
+}
+.imageviewer .controlpanel .zoomin {
+	background: url('../images/viewer/icon-zoom-in.png') center center no-repeat;
+}
+.imageviewer .controlpanel .zoomout {
+	background: url('../images/viewer/icon-zoom-out.png') center center no-repeat;
+}
+.imageviewer .controlpanel .fulltoggle {
+	background: url('../images/viewer/icon-fullscreen.png') center center no-repeat;
+}
+
+/* IE6 compatible icons.
+   Cannot use AlphaImageLoader as its src is always relative to the web page. */
+* html .imageviewer .controltoggle { background-image: url('../images/viewer/icon-down.gif'); }
+* html .imageviewer .controltoggle.up { background-image: url('../images/viewer/icon-up.gif'); }
+* html .imageviewer .controlpanel .download { background-image: url('../images/viewer/icon-download.gif'); }
+* html .imageviewer .controlpanel .help { background-image: url('../images/viewer/icon-help.gif'); }
+* html .imageviewer .controlpanel .reset { background-image: url('../images/viewer/icon-reset.gif'); }
+* html .imageviewer .controlpanel .zoomin { background-image: url('../images/viewer/icon-zoom-in.gif'); }
+* html .imageviewer .controlpanel .zoomout { background-image: url('../images/viewer/icon-zoom-out.gif'); }
+/* End IE6 icons */
+
+/* Help/description window */
+.imageviewer .alertpanel {
+	width: 25em;
+	padding: 1em;
+	border-radius: 5px;
+	text-align: left;
+	cursor: pointer;
+}
+
+/* Common panel background */
+.imageviewer .panelbg {
+	color: #dddddd;
+	background-color: #555555;
+}
+.imageviewer.fullscreen .panelbg,
+.gallery .imageviewer .panelbg {
+	background-color: #333333;
+}
+
+/* Full-screen mode */
+.fullscreen_mask {
+	background-color: #000000;
+	filter: alpha(opacity=80);
+	opacity: 0.8;
+}
+
+.imageviewer .close_button,
+.gallery .close_button {
+	background-color: #333333;
+	background-color: rgba(50, 50, 50, 0.8);
+	background-image: url('../images/viewer/icon-close.png');
+	background-position: center center;
+	background-repeat: no-repeat;
+	border-radius: 16px;
+	cursor: pointer;
+}
+.imageviewer .close_button:hover,
+.gallery .close_button:hover {
+	background-color: #696969;
+}

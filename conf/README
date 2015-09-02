@@ -1,0 +1,27 @@
+You can place local configuration settings files into this directory.
+
+By default, the image server looks for a file called local_settings.py
+but you can override this with the QIS_SETTINGS environment variable.
+E.g. export QIS_SETTINGS=/opt/qis/conf/mysettings.py
+
+These local settings are applied after the image server's base settings,
+so you only need entries for those values that you want to override.
+
+As a minimum you should override:
+
+* SECRET_KEY - To generate a new secret key, you can use command:
+               python -c 'import os; print repr(os.urandom(24))'
+
+but other settings of note are:
+
+* PUBLIC_HOST_NAME - Set this if your generated image URLs do not contain
+                     the server's correct host name by default
+
+* IMAGE_FORMAT_DEFAULT     - These determine the default image type returned
+* IMAGE_QUALITY_DEFAULT      when there is no other instruction in place
+* IMAGE_COLORSPACE_DEFAULT
+* IMAGE_STRIP_DEFAULT
+
+* MGMT_DATABASE_POOL_SIZE  - The appropriate number of database connections to
+* CACHE_DATABASE_POOL_SIZE   reserve depends on your Apache settings
+                             (i.e. worker and thread limits)

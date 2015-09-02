@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block copyright %}
+<!-- 
+	Document:      reports_index.html
+	Date started:  08 Sep 2011
+	By:            Matt Fozard
+	Purpose:       Quru Image Server Reports index page
+	Requires:      
+	Copyright:     Quru Ltd (www.quru.com)
+	
+	Last Changed:  $Date$ $Rev$ by $Author$
+	
+	Notable modifications:
+	Date       By    Details
+	=========  ====  ============================================================
+-->
+{% endblock %}
+
+{% block title %}Reports{% endblock %}
+
+{% block body %}
+	<div class="center">
+		<h1>
+			<img src="{{ url_for('static', filename='images/logo.gif') }}" />
+			Reports
+		</h1>
+		<div class="tall left centercol">
+			<ul>
+				<li><a href="{{ url_for('reports.topten') }}">Top images</a></li>
+				<li><a href="{{ url_for('reports.system_stats') }}">System statistics</a></li>
+			</ul>
+		</div>
+	</div>
+{% endblock %}

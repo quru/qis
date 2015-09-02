@@ -1,0 +1,25 @@
+{% extends "base_help.html" %}
+
+{% block copyright %}
+<!-- 
+	Document:      simple_view_help.html
+	Date started:  20 Jul 2011
+	By:            Matt Fozard
+	Purpose:       Quru Image Server simple_view API help
+	Requires:      
+	Copyright:     Quru Ltd (www.quru.com)
+	
+	Last Changed:  $Date$ $Rev$ by $Author$
+	
+	Notable modifications:
+	Date       By    Details
+	=========  ====  ============================================================
+	28Apr2015  Matt  Converted to markdown
+-->
+{% endblock %}
+
+{% block title %}Simple viewer API guide{% endblock %}
+
+{% block body %}
+	{% include_markdown "js_simpleview_help.md", subs %}
+{% endblock %}

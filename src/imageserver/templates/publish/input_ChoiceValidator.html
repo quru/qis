@@ -1,0 +1,31 @@
+<select name="{{ web_name }}" id="publish_field_{{ key }}" class="publish_field" autocomplete="off">
+{% if validator.choices|join == 'hv' %}
+	<option value="" selected>None</option>
+	<option value="h">Horizontal</option>
+	<option value="v">Vertical</option>
+{% elif validator.choices|join == 'cneswnenwsesw' %}
+	<option value="" selected></option>
+	<option value="nw">Left top</option>
+	<option value="w">Left middle</option>
+	<option value="sw">Left bottom</option>
+	<option value="n">Centre top</option>
+	<option value="c">Centre middle</option>
+	<option value="s">Centre bottom</option>
+	<option value="ne">Right top</option>
+	<option value="e">Right middle</option>
+	<option value="se">Right bottom</option>
+{% elif 'cmyk' in validator.choices %}
+	<option value="" selected></option>
+	<option value="rgb">RGB</option>
+	<option value="cmyk">CMYK</option>
+	<option value="gray">GRAY</option>
+{% else %}
+	{% for choice in validator.choices|sort %}
+		{% if choice == default %}
+		<option value="{{ choice }}" selected>{{ choice|capitalize }}</option>
+		{% else %}
+		<option value="{{ choice }}">{{ choice|capitalize }}</option>
+		{% endif %}
+	{% endfor %}
+{% endif %}
+</select>

@@ -1,0 +1,65 @@
+/*
+	Document:      help.css
+	Date started:  24 Jun 2011
+	By:            Matt Fozard
+	Purpose:       Quru Image Server help pages CSS
+	Requires:      base.css
+	Copyright:     Quru Ltd (www.quru.com)
+	Licence:
+
+	This program is free software: you can redistribute it and/or modify
+	it under the terms of the GNU Affero General Public License as published
+	by the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
+
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU Affero General Public License for more details.
+
+	You should have received a copy of the GNU Affero General Public License
+	along with this program.  If not, see http://www.gnu.org/licenses/
+	
+	Last Changed:  $Date$ $Rev$ by $Author$
+*/
+
+body#embed_help {
+	padding: 0;
+}
+
+h2 {
+	margin-top: 2em;
+}
+
+h3 {
+	margin-top: 1.5em;
+}
+
+code strong {
+	color: #d14;	/* same as .hljs-string github theme */
+	font-weight: normal;
+}
+
+table, td, tr {
+	padding: 0;
+	margin: 0;
+}
+
+.padded td {
+	padding: 0.2em 0.5em;
+}
+
+.hljs {
+	background-color: white;
+	padding: 0;
+}
+
+.imagecode {
+	position: absolute;
+	margin-left: 220px;  /* space for 200px image */
+	margin-right: 1.5em; /* to match body padding */
+}
+
+image.border {
+	border: 1px solid gray;
+}

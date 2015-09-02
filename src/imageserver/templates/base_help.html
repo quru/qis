@@ -1,0 +1,20 @@
+{% if embed %}{% extends "base_blank_js.html" %}{% else %}{% extends "base.html" %}{% endif %}
+{% if embed %}{% set body_id = 'embed_help' %}{% endif %}
+
+{% block title %}User's guide{% endblock %}
+
+{% block extra_head %}
+	<link rel="stylesheet" href="{{ url_for('static', filename='styles/lib/github.css') }}" type="text/css" />
+	<link rel="stylesheet" href="{{ url_for('static', filename='styles/help.css') }}" type="text/css" />
+
+	<script src="{{ url_for('static', filename='js/lib/highlight.pack.js') }}" type="text/javascript"></script>
+{% endblock %}
+
+{% block body %}
+{% endblock %}
+
+{% block after_footer %}
+	<script type="text/javascript">
+	hljs.initHighlightingOnLoad();
+	</script>
+{% endblock %}

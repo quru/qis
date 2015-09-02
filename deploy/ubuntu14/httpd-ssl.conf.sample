@@ -1,0 +1,80 @@
+<VirtualHost *:443>
+
+    # Production host name
+    ServerName images.example.com
+
+    # Production host name aliases
+    # ServerAlias images
+
+    # Request: host, time, requested path
+    # Response: status code, content length, microseconds taken, image from cache
+    # Extra: browser/agent, web page or request origin
+    LogFormat "%h %t \"%r\" %>s %B %D %{X-From-Cache}o \"%{User-Agent}i\" \"%{Referer}i\"" imaging
+
+    # Log requests, or append "env=DISABLED" to disable logging
+    CustomLog /var/log/apache2/qis_ssl_access_log imaging
+
+    # Enable keep-alive, but don't hold connections open for long
+    KeepAlive On
+    KeepAliveTimeout 3
+
+    # Do not allow queued requests to wait too long
+    TimeOut 60
+
+    WSGIScriptAlias / /opt/qis/src/wsgi/runserver.wsgi
+
+    # Set the number of processes and threads as per the scalability required
+    WSGIApplicationGroup qis
+    WSGIProcessGroup qis-ssl
+    WSGIDaemonProcess qis-ssl user=qis group=apache processes=2 threads=15 python-path=/opt/qis/src:/opt/qis/lib/python2.7/site-packages:/opt/qis/lib64/python2.7/site-packages
+
+    # Preload the code to reduce the delay at startup
+    WSGIImportScript /opt/qis/src/wsgi/runserver.wsgi process-group=qis-ssl application-group=qis
+
+    # Pass through HTTP Auth headers for API token authentication
+    WSGIPassAuthorization On
+
+    <Directory /opt/qis/src/wsgi>
+        Require all granted
+    </Directory>
+
+    <Directory /opt/qis/src/imageserver/static>
+        ExpiresActive On
+        ExpiresDefault "access plus 7 days"
+        Require all granted
+    </Directory>
+    <Directory /opt/qis/src/imageserver/admin/static>
+        ExpiresActive On
+        ExpiresDefault "access plus 7 days"
+        Require all granted
+    </Directory>
+    <Directory /opt/qis/src/imageserver/reports/static>
+        ExpiresActive On
+        ExpiresDefault "access plus 7 days"
+        Require all granted
+    </Directory>
+
+    Alias /robots.txt      /opt/qis/src/imageserver/static/robots.txt
+    Alias /favicon.ico     /opt/qis/src/imageserver/static/favicon.ico
+    Alias /static/         /opt/qis/src/imageserver/static/
+    Alias /admin/static/   /opt/qis/src/imageserver/admin/static/
+    Alias /reports/static/ /opt/qis/src/imageserver/reports/static/
+
+    # SSL settings recommended by https://wiki.mozilla.org/Security/Server_Side_TLS
+    SSLEngine               on
+    SSLProtocol             all -SSLv2 -SSLv3
+    SSLCipherSuite          ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:kEDH+AESGCM:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:ECDHE-ECDSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-DSS-AES128-SHA256:DHE-RSA-AES256-SHA256:DHE-DSS-AES256-SHA:DHE-RSA-AES256-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128:AES256:AES:DES-CBC3-SHA:HIGH:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!MD5:!PSK
+    SSLHonorCipherOrder     on
+    # Replace these with a proper certificate and key
+    SSLCertificateFile /etc/ssl/certs/ssl-cert-snakeoil.pem
+    SSLCertificateKeyFile /etc/ssl/private/ssl-cert-snakeoil.key
+    # SSLCACertificateFile /etc/ssl/certs/intermediate-ca.pem
+    # SSLCertificateChainFile /etc/ssl/certs/intermediary.pem
+
+    SetEnvIf User-Agent ".*MSIE [2-6].*" \
+        nokeepalive ssl-unclean-shutdown \
+        downgrade-1.0 force-response-1.0
+    SetEnvIf User-Agent ".*MSIE [7-9].*" \
+        ssl-unclean-shutdown
+
+</VirtualHost>

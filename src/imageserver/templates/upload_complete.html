@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block copyright %}
+<!-- 
+	Document:      upload_complete.html
+	Date started:  20 Jun 2011
+	By:            Matt Fozard
+	Purpose:       Quru Image Server file upload complete page
+	Requires:      
+	Copyright:     Quru Ltd (www.quru.com)
+	
+	Last Changed:  $Date$ $Rev$ by $Author$
+	
+	Notable modifications:
+	Date       By    Details
+	=========  ====  ============================================================
+	19Jan2015  Matt  Support for multiple file uploads
+-->
+{% endblock %}
+
+{% block title %}Upload Complete{% endblock %}
+
+{% block extra_head %}
+	<link rel="stylesheet" href="{{ url_for('static', filename='styles/lib/github.css') }}" type="text/css" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/upload.css') }}" type="text/css" />
+
+	<script src="{{ url_for('static', filename='js/lib/highlight.pack.js') }}" type="text/javascript"></script>
+{% endblock %}
+
+{% block body %}
+	<h2>Upload Complete</h2>
+	<br/>
+
+	{% if uploaded_images %}
+		{% if uploaded_images|length == 1 %}
+		1 image was uploaded successfully.
+		{% else %}
+		{{ uploaded_images|length }} images were uploaded successfully.
+		{% endif %}
+		<p class="tall">
+			<a href="{{ url_for('browse', path=image_folder) }}">View the upload folder</a><br/>
+			<a href="{{ url_for('upload_form', path=image_folder) }}">Upload another image</a>
+		</p>
+	{% else %}
+		You don't seem to have uploaded any images recently.
+		<p class="tall">
+			<a href="{{ url_for('browse') }}">Browse images</a><br/>
+			<a href="{{ url_for('upload_form') }}">Upload an image</a>
+		</p>
+	{% endif %}
+	
+	{% for image in uploaded_images %}
+
+		<div class="tall uploadresult">
+			<a href="{{ url_for('details', src=image.src) }}">
+				<img class="border shadow" src="{{ url_for('image', src=image.src, format='jpg', width=200, height=200, stats=0) }}" />
+			</a>
+			<a href="{{ url_for('details', src=image.src) }}">View image details</a><br/>
+			<a href="{{ url_for('publish', src=image.src) }}">Publish this image</a><br/>
+			<br/>
+HTML snippets:<br>
+<pre><code>&lt;!-- To embed in a web page --&gt;
+{% if settings['IMAGE_UPLOADED_TEMPLATE'] %}
+&lt;img src="{{ external_url_for('image', src=image.src) }}&amp;tmp={{settings['IMAGE_UPLOADED_TEMPLATE']}}"&gt;
+{% else %}
+&lt;img src="{{ external_url_for('image', src=image.src) }}&amp;width=200&amp;height=200&amp;format=jpg"&gt;
+{% endif %}
+&lt;!-- To link to the original image --&gt;
+&lt;img src="{{ external_url_for('original', src=image.src) }}"&gt;
+</code></pre>
+		</div>
+		<div class="clear"></div>
+	{% endfor %}
+	
+	{% if uploaded_images %}
+		<div class="tall uploadresult">
+			For more information and to see all HTML image options, <a href="{{ url_for('image_help') }}">see the user's guide</a>.
+		</div>
+	{% endif %}
+
+	<script type="text/javascript">
+	hljs.initHighlightingOnLoad();
+	</script>
+
+{% endblock %}

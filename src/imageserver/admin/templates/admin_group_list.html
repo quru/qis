@@ -1,0 +1,59 @@
+{% extends "admin_base.html" %}
+
+{% block copyright %}
+<!-- 
+	Document:      admin_group_list.html
+	Date started:  31 Oct 2012
+	By:            Matt Fozard
+	Purpose:       Quru Image Server Administration - group list
+	Requires:      
+	Copyright:     Quru Ltd (www.quru.com)
+	
+	Last Changed:  $Date$ $Rev$ by $Author$
+	
+	Notable modifications:
+	Date       By    Details
+	=========  ====  ============================================================
+-->
+{% endblock %}
+
+{% set body_id = 'group_list' %}
+{% set page_heading = 'Groups' %}
+
+{% block body %}
+	{{ super() }}
+	<div class="smalltext">
+		{{ groups|length }} group{{ groups|length|pluralize }}
+		{% if is_permitted(SystemPermission.PERMIT_ADMIN_PERMISSIONS) %}
+		(<a class="popuplink" href="{{ url_for('admin.group_edit', group_id=0, embed=1) }}">add a new group</a>)
+		{% endif %}
+	</div>
+	<br/>
+	<table summary="Listing of {{ page_heading }}">
+	
+		{% set row_class = cycler('even', 'odd') %}
+		<tr class="{{ row_class.next() }} header">
+			<td>Name</td>
+			<td>Description</td>
+			<td>Action</td>
+		</tr>
+	
+		{% for group in groups %}
+		{% set edit_url = url_for('admin.group_edit', group_id=group.id, embed=1) %}
+		
+		<tr class="{{ row_class.next() }}">
+			<td><a class="popuplink" href="{{ edit_url }}">{{ group.name }}</a></td>
+			<td><a class="popuplink" href="{{ edit_url }}">{{ group.description }}</a></td>
+			<td>
+				{% if is_permitted(SystemPermission.PERMIT_ADMIN_PERMISSIONS) and
+				      group.group_type != GROUP_TYPE_SYSTEM %}
+				<form id="delform_{{ group.id }}" class="delform" action="{{ url_for('api.admin.group', group_id=group.id) }}" _method="delete">
+					<input type="hidden" name="del_name" value="{{ group.name }}" />
+					(<a class="action" href="#" onclick="return submitParentForm(this)">delete</a>)
+				</form>
+				{% endif %}
+			</td>
+		</tr>
+		{% endfor %}
+	</table>
+{% endblock %}

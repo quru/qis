@@ -1,0 +1,78 @@
+# QIS Database server
+#
+# Build notes:
+#   Configures Postgres listening on TCP port 5432, and creates the
+#   QIS database login and a new database in the default data location.
+#   At runtime, requires a data volume container for /var/lib/pgsql/data
+#   The default environment variables assume a memory limit of about 1GB.
+#
+# Files required in current directory:
+#   deploy/ (folder from QIS distribution imageserver.tar.gz)
+#
+# Build/Environment variables:
+#   PG_USER (Optional - to override the QIS database login username)
+#   PG_PASS (Required - set the QIS database login password)
+#   PG_MAX_CONNECTIONS (Optional - set Postgres connection limit)
+#   PG_SHARED_BUFFERS (Optional - set Postgres internal cache size)
+#   PG_EFFECTIVE_CACHE_SIZE (Optional - set expected o/s free memory + buffers total)
+#
+FROM fedora:21
+MAINTAINER Matt Fozard <matt@quru.com>
+
+# Use the latest o/s
+RUN yum -y update && yum clean all
+
+# Set the locale for installation
+RUN yum -y install glibc-common \
+    && localedef --no-archive -i en_GB -f UTF-8 en_GB.utf8 \
+    && yum clean all
+ENV LANG en_GB.utf8
+ENV LC_ALL en_GB.utf8
+
+# Install database server
+RUN yum -y install postgresql-server \
+    && yum clean all
+
+# Set a default password (override this with docker run --env PG_PASS=foo)
+# to be applied in run-db.sh
+ENV PG_USER qis
+ENV PG_PASS qispass
+
+# Set default tuning options (override these with docker run --env KEY=value)
+# to be applied in run-db.sh
+ENV PG_MAX_CONNECTIONS 100
+ENV PG_SHARED_BUFFERS 400MB
+ENV PG_EFFECTIVE_CACHE_SIZE 700MB
+
+# Add our run script
+ADD deploy/docker/run-db.sh /opt/qis/
+RUN chmod a+x /opt/qis/run-db.sh \
+    && chown -R postgres:postgres /opt/qis
+
+# Create the initial postgres database cluster
+USER postgres
+RUN initdb -D /var/lib/pgsql/data --auth-host=trust --auth-local=trust
+
+# Enable external TCP connections
+RUN echo "listen_addresses = '*'" >> /var/lib/pgsql/data/postgresql.conf
+RUN echo "host    all    all    0.0.0.0/0    md5" >> /var/lib/pgsql/data/pg_hba.conf
+
+# Set logging to stderr, which Docker picks up as standard
+# But also save 7 days worth of logs in /var/lib/pgsql/data/pg_log
+RUN echo "log_destination = 'stderr'" >> /var/lib/pgsql/data/postgresql.conf \
+    && echo "logging_collector = on" >> /var/lib/pgsql/data/postgresql.conf \
+    && echo "log_filename = 'postgresql-%a.log'" >> /var/lib/pgsql/data/postgresql.conf \
+    && echo "log_truncate_on_rotation = on" >> /var/lib/pgsql/data/postgresql.conf \
+    && echo "log_rotation_age = 1d" >> /var/lib/pgsql/data/postgresql.conf
+
+# Set some standard tuning options
+RUN echo "checkpoint_segments = 16" >> /var/lib/pgsql/data/postgresql.conf \
+    && echo "checkpoint_completion_target = 0.9" >> /var/lib/pgsql/data/postgresql.conf
+
+EXPOSE 5432
+
+# Add a volume for the persistent data
+VOLUME ["/var/lib/pgsql/data"]
+
+# Set the default command to run when starting the container
+CMD ["/opt/qis/run-db.sh"]

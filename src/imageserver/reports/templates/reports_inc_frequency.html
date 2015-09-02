@@ -1,0 +1,20 @@
+{#
+  A generic HTML fragment that provides a text fragment for how often the
+  stats records are recorded.
+  
+  Template variables:
+    settings - used to determine the stats recording frequency
+#}
+{%- if settings.STATS_FREQUENCY == 1 %}
+	per minute
+{%- elif settings.STATS_FREQUENCY == 60 %}
+	per hour
+{%- elif settings.STATS_FREQUENCY == 1440 %}
+	per day
+{%- elif settings.STATS_FREQUENCY is divisibleby(1440) %}
+	per {{ settings.STATS_FREQUENCY // 1440 }} days
+{%- elif settings.STATS_FREQUENCY is divisibleby(60) %}
+	per {{ settings.STATS_FREQUENCY // 60 }} hours
+{%- else %}
+	per {{ settings.STATS_FREQUENCY }} minutes
+{%- endif %}

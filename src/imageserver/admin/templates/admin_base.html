@@ -1,0 +1,26 @@
+{% if embed %}{% extends "base_blank_js.html" %}{% else %}{% extends "base.html" %}{% endif %}
+
+{% block extra_head %}
+	<link rel="stylesheet" href="{{ url_for('admin.static', filename='styles/admin.css') }}" type="text/css" />
+
+	{% if settings.DEBUG %}
+	<script src="{{ url_for('admin.static', filename='js/admin.js') }}" type="text/javascript"></script>
+	<script src="{{ url_for('admin.static', filename='js/mootools-extras.js') }}" type="text/javascript"></script>
+	{% else %}
+	<script src="{{ url_for('admin.static', filename='js/admin_yc.js') }}" type="text/javascript"></script>
+	<script src="{{ url_for('admin.static', filename='js/mootools-extras_yc.js') }}" type="text/javascript"></script>
+	{% endif %}
+{% endblock %}
+
+{% block title %}Administration{% endblock %}
+
+{% block body %}
+
+	{% if embed %}
+		<div class="rfloat">
+			<a id="close" href="#">Close</a>
+		</div>
+	{% endif %}
+
+	<h2>{{ page_heading }}</h2>
+{% endblock %}

@@ -1,0 +1,62 @@
+# QIS Build environment
+#
+# Build notes:
+#   DO NOT PUBLISH OR DISTRIBUTE THIS IMAGE!
+#   It contains an SSH private key for accessing GitHub.
+#
+# Files required in current directory:
+#   git_ssh_key (SSH private key file, corresponding to a public key
+#                that has been imported in your GitHub account)
+#
+# Build/Environment variables:
+#   None
+#
+FROM fedora:21
+MAINTAINER Matt Fozard <matt@quru.com>
+
+# Use the latest o/s
+RUN yum -y update && yum clean all
+
+# Set the locale for installation
+RUN yum -y install glibc-common \
+    && localedef --no-archive -i en_GB -f UTF-8 en_GB.utf8 \
+    && yum clean all
+ENV LANG en_GB.utf8
+ENV LC_ALL en_GB.utf8
+
+# Add utils and dependencies
+RUN yum -y install sudo git curl wget gcc make tar zip unzip man openssl \
+           openssh-clients python-devel python-virtualenv python-pip \
+           memcached ghostscript python postgresql-server ImageMagick \
+           openldap-devel postgresql-devel ImageMagick-devel \
+           zlib-devel libmemcached-devel setroubleshoot-server \
+    && yum clean all
+
+# Expected SSH key file
+ENV GIT_SSH_KEYFILE git_ssh_key
+
+# Create build user
+RUN useradd --comment "QIS Build User" --home-dir /home/qis/ --create-home --shell /bin/bash -p $(openssl passwd -1 qispass) qis
+RUN usermod qis -a -G wheel
+
+# Add ssh files
+RUN mkdir /home/qis/.ssh/
+ADD $GIT_SSH_KEYFILE /home/qis/.ssh/id_rsa
+RUN ssh-keyscan -t rsa github.com > /home/qis/.ssh/known_hosts
+RUN chown -R qis:qis /home/qis/.ssh \
+    && chmod 600 /home/qis/.ssh/id_rsa
+
+# Create the initial postgres database cluster
+USER postgres
+RUN initdb -D /var/lib/pgsql/data --auth-host=trust --auth-local=trust
+
+# Create build directory
+USER qis
+WORKDIR /home/qis
+RUN git clone git@github.com:quru/qis.git
+
+# Tell the user to log in and build manually
+CMD echo -e ' The build environment is at /home/qis/\n' \
+         'DO NOT PUBLISH OR DISTRIBUTE THIS DOCKER IMAGE!\n\n' \
+         'To log in and run the QIS build, use: docker run -ti <this_image> /bin/bash\n' \
+         'Then cd qis and follow the normal build process.'
