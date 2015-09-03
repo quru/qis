@@ -3,7 +3,7 @@ Flask==0.10.1
 python-ldap>=2.4.13
 pylibmc==1.4.2
 psycopg2==2.5.5
-SQLAlchemy==0.9.8
+SQLAlchemy==1.0.8
 requests==2.5.1
 psutil==2.2.1
 itsdangerous==0.24

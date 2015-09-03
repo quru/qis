@@ -74,7 +74,7 @@ import threading
 
 import pylibmc
 import sqlalchemy
-from sqlalchemy import desc
+from sqlalchemy import desc, text
 from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import mapper, sessionmaker
 from sqlalchemy.schema import MetaData
@@ -231,7 +231,7 @@ class CacheManager(object):
                 # Check parameter type
                 if sql_value is None:
                     # Add x IS NULL
-                    db_query = db_query.filter(sql_field + ' is null')
+                    db_query = db_query.filter(text(sql_field + ' is null'))
                 elif type(sql_value) == list:
                     # OR the list values
                     sql_operator = sql_operators[sql_opcode]
@@ -245,11 +245,11 @@ class CacheManager(object):
                             or_query += sql_field + sql_operator + ':' + sql_field + str(i)
                             sql_params[sql_field + str(i)] = sql_value[i]
                     or_query += ')'
-                    db_query = db_query.filter(or_query)
+                    db_query = db_query.filter(text(or_query))
                 else:
                     # Add a single expression
                     sql_operator = sql_operators[sql_opcode]
-                    db_query = db_query.filter(sql_field + sql_operator + ':' + sql_field)
+                    db_query = db_query.filter(text(sql_field + sql_operator + ':' + sql_field))
                     sql_params[sql_field] = sql_value
             db_query = db_query.params(**sql_params)
             # Apply order and limits
