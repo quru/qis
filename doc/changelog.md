@@ -1,5 +1,6 @@
 # v1.33
-_Changes: first-run permissions now make images publicly viewable_
+_Changes: first-run permissions now make images publicly viewable,
+first version licensed under the AGPL_
 
 Relevant only to new installations.
 
