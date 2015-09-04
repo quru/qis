@@ -1,3 +1,13 @@
+# v2.0.0-dev-0
+_Changes: upgrade SQLAlchemy to v1, upgrade internal database models_
+
+Stop the Apache service  
+Update the Python and web code  
+Update the Python dependencies  
+Restart the Memcached service  
+Start the Apache service
+
+
 # v1.33
 _Changes: first-run permissions now make images publicly viewable,
 first version licensed under the AGPL_

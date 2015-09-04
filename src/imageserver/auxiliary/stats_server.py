@@ -326,7 +326,6 @@ class StatsSocketServer(SocketServer.ThreadingTCPServer):
     def _flush_img_stats_bucket(self, db_session, dt_period_start, dt_now, stats):
         inserts = []
         model = ImageStats
-        table = self.database._db_metadata.tables[ImageStats.__table_name__]
         for image_id, istats in stats.iteritems():
             rcount = istats['requests']
             vcount = istats['views']
@@ -368,12 +367,12 @@ class StatsSocketServer(SocketServer.ThreadingTCPServer):
 
         if inserts:
             try:
-                db_session.execute(table.insert(), inserts)
+                db_session.execute(ImageStats.__table__.insert(), inserts)
             except IntegrityError:
                 db_session.rollback()
                 inserts = self._fix_insert_list(inserts, db_session)
                 if inserts:
-                    db_session.execute(table.insert(), inserts)
+                    db_session.execute(ImageStats.__table__.insert(), inserts)
 
     def _flush(self):
         """

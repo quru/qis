@@ -76,11 +76,10 @@ import pylibmc
 import sqlalchemy
 from sqlalchemy import desc, text
 from sqlalchemy.exc import IntegrityError, OperationalError
-from sqlalchemy.orm import mapper, sessionmaker
-from sqlalchemy.schema import MetaData
+from sqlalchemy.orm import sessionmaker
 
 import errors
-from models import CacheEntry
+from models import CacheBase, CacheEntry
 from util import unicode_to_ascii
 
 
@@ -118,12 +117,10 @@ class CacheManager(object):
             self._db_uri = db_uri
             self._db_pool_size = db_pool_size
             self._capacity = 0L
-
             self._db = None
-            self._db_metadata = None
-
             self._logger = logger
             self._locals = threading.local()
+
             self._init_cache()
             self._open_db()
             self._init_db()
@@ -269,7 +266,7 @@ class CacheManager(object):
                     'searchfield3': entry.searchfield3,
                     'searchfield4': entry.searchfield4,
                     'searchfield5': entry.searchfield5,
-                    'metadata': None if entry.metadata is None else cPickle.loads(entry.metadata)
+                    'metadata': None if entry.extradata is None else cPickle.loads(entry.extradata)
                 })
         finally:
             db_session.close()
@@ -345,7 +342,7 @@ class CacheManager(object):
                 entry.searchfield4 = search_info['searchfield4']
                 entry.searchfield5 = search_info['searchfield5']
                 if search_info['metadata'] is not None:
-                    entry.metadata = cPickle.dumps(
+                    entry.extradata = cPickle.dumps(
                         search_info['metadata'],
                         protocol=cPickle.HIGHEST_PROTOCOL
                     )
@@ -367,7 +364,7 @@ class CacheManager(object):
                     'searchfield3': entry.searchfield3,
                     'searchfield4': entry.searchfield4,
                     'searchfield5': entry.searchfield5,
-                    'metadata': entry.metadata
+                    'extradata': entry.extradata
                 }, synchronize_session=False)
                 db_session.commit()
                 db_committed = True
@@ -498,7 +495,7 @@ class CacheManager(object):
         try:
             prepared_key = self._prepare_cache_key(key)
             obj = self.client().get(prepared_key)
-        except pylibmc.Error as e:
+        except pylibmc.Error:
             obj = None
 
         if integrity_check and obj is not None:
@@ -543,7 +540,7 @@ class CacheManager(object):
         """
         try:
             return self.client().get_multi(self._prepare_cache_keys(keys))
-        except pylibmc.Error as e:
+        except pylibmc.Error:
             return {}
 
     def raw_atomic_add(self, key, obj, expiry_secs=0):
@@ -578,7 +575,7 @@ class CacheManager(object):
             )
         try:
             return self.client().set(prepared_key, prepared_obj, expiry_secs)
-        except pylibmc.Error as e:
+        except pylibmc.Error:
             return False
 
     def raw_putn(self, mapping, expiry_secs=0):
@@ -591,7 +588,7 @@ class CacheManager(object):
         try:
             failed_keys = self.client().set_multi(mapping, expiry_secs)
             return (len(failed_keys) == 0)
-        except pylibmc.Error as e:
+        except pylibmc.Error:
             return False
 
     def raw_delete(self, key):
@@ -766,7 +763,7 @@ class CacheManager(object):
         """
         For testing purposes only, drops the database schema.
         """
-        self._db_metadata.drop_all()
+        CacheBase.metadata.drop_all(self._db)
         self._logger.info('Cache control database dropped')
 
     def _init_db(self):
@@ -774,19 +771,12 @@ class CacheManager(object):
         Creates the database schema, or clears the database if the cache is empty.
         This method cannot be called while the database is in normal use.
         """
-        metadata = MetaData(bind=self._db)
-        self._db_metadata = metadata
-
-        # Set the ORM mapping
-        cache_table = CacheEntry.get_alchemy_mapping(metadata)
-        mapper(CacheEntry, cache_table)
-
         # The next section must only be attempted by one process at a time on server startup
         self.get_global_lock()
         try:
             # Check the control database schema has been created
-            if not cache_table.exists():
-                self._create_db_schema(cache_table)
+            if not CacheEntry.__table__.exists(self._db):
+                self._create_db_schema()
                 self._logger.info('Cache control database created.')
 
             # See if the cache is empty
@@ -802,8 +792,8 @@ class CacheManager(object):
                         # Cache is empty, control database is not. Delete and re-create
                         # the database so we're not left with any fragmentation, etc.
                         self._logger.info('Cache is empty. Resetting cache control database.')
-                        self._drop_db_schema(cache_table)
-                        self._create_db_schema(cache_table)
+                        self._drop_db_schema()
+                        self._create_db_schema()
             else:
                 self._logger.warn('Cache is down, skipped cache control database check.')
 
@@ -811,14 +801,14 @@ class CacheManager(object):
         finally:
             self.free_global_lock()
 
-    def _create_db_schema(self, cache_table):
+    def _create_db_schema(self):
         """
         Creates the database schema for the cache control database.
         """
-        cache_table.create()
+        CacheEntry.__table__.create(self._db)
 
-    def _drop_db_schema(self, cache_table):
+    def _drop_db_schema(self):
         """
         Drops the database schema for the cache control database.
         """
-        cache_table.drop()
+        CacheEntry.__table__.drop(self._db)

@@ -149,12 +149,8 @@ def reset_databases():
     assert flask_app.config['TESTING'], \
         'Testing settings have not been applied, not clearing the database!'
 
-    import sqlalchemy.orm
     cm._drop_db()
-    cm._db_metadata.clear()
     dm._drop_db()
-    dm._db_metadata.clear()
-    sqlalchemy.orm.clear_mappers()
     cm._init_db()
     dm._init_db()
     # Set the admin password to something known so we can log in

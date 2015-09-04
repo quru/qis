@@ -46,11 +46,11 @@ import sqlalchemy
 from sqlalchemy import desc, event, or_
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError, OperationalError, SQLAlchemyError
-from sqlalchemy.orm import eagerload, mapper, sessionmaker
-from sqlalchemy.schema import MetaData
+from sqlalchemy.orm import eagerload, sessionmaker
 from sqlalchemy.sql.expression import bindparam, func
 
 import errors
+from models import Base
 from models import User, Folder, FolderPermission, Group
 from models import Image, ImageHistory, ImageStats, Property
 from models import SystemPermissions, SystemStats, Task, UserGroup
@@ -92,9 +92,7 @@ class DataManager(object):
             self._db_pool_size = db_pool_size
             self._cache = cache_manager
             self._logger = logger
-
             self._db = None
-            self._db_metadata = None
 
             if DataManager.LOG_SQL_TIMING:
                 self._enable_sql_time_logging()
@@ -166,7 +164,7 @@ class DataManager(object):
         """
         db_session = _db_session or self._db.Session()
         try:
-            ins = self._db_metadata.tables[table_name].insert()
+            ins = Base.metadata.tables[table_name].insert()
             res = db_session.execute(ins, data)
             icount = res.rowcount
             res.close()
@@ -203,7 +201,7 @@ class DataManager(object):
         """
         db_session = _db_session or self._db.Session()
         try:
-            t = self._db_metadata.tables[table_name]
+            t = Base.metadata.tables[table_name]
             up = t.update().where(t.c[table_id_column] == bindparam(data_id_column))
             res = db_session.execute(up, data)
             icount = res.rowcount
@@ -1234,7 +1232,7 @@ class DataManager(object):
         """
         db_session = self._db.Session()
         try:
-            task_table = self._db_metadata.tables[Task.__table_name__]
+            task_table = Task.__table__
             up = task_table.update().\
                 where(Task.id == task.id).\
                 where(Task.status == Task.STATUS_PENDING).\
@@ -1543,63 +1541,17 @@ class DataManager(object):
         """
         For testing purposes only, drops the database schema.
         """
-        self._db_metadata.drop_all()
+        Base.metadata.drop_all(self._db)
         self._logger.info('Management database dropped')
 
     def _init_db(self):
         """
-        Defines the database schema, creates ORM mappings,
-        and creates the schema if it does not yet exist.
+        Checks the database schema,
+        and creates the schema and default data if it does not yet exist.
         """
-        metadata = MetaData(bind=self._db)
-        self._db_metadata = metadata
-
-        # Set the ORM mappings
-        user_group_table = UserGroup.get_alchemy_mapping(metadata)
-        mapper(UserGroup, user_group_table)
-
-        user_table = User.get_alchemy_mapping(metadata)
-        user_props = User.get_alchemy_mapping_properties(user_table, user_group_table)
-        mapper(User, user_table, properties=user_props)
+        # Add database event listeners
         event.listen(User, 'before_insert', DataManager._validate_user)
         event.listen(User, 'before_update', DataManager._validate_user)
-
-        group_table = Group.get_alchemy_mapping(metadata)
-        group_props = Group.get_alchemy_mapping_properties(group_table, user_group_table)
-        mapper(Group, group_table, properties=group_props)
-
-        sysp_table = SystemPermissions.get_alchemy_mapping(metadata)
-        sysp_props = SystemPermissions.get_alchemy_mapping_properties(sysp_table)
-        mapper(SystemPermissions, sysp_table, properties=sysp_props)
-
-        folder_table = Folder.get_alchemy_mapping(metadata)
-        folder_props = Folder.get_alchemy_mapping_properties(folder_table)
-        mapper(Folder, folder_table, properties=folder_props)
-
-        folderp_table = FolderPermission.get_alchemy_mapping(metadata)
-        folderp_props = FolderPermission.get_alchemy_mapping_properties(folderp_table)
-        mapper(FolderPermission, folderp_table, properties=folderp_props)
-
-        image_table = Image.get_alchemy_mapping(metadata)
-        image_props = Image.get_alchemy_mapping_properties(image_table)
-        mapper(Image, image_table, properties=image_props)
-
-        image_history_table = ImageHistory.get_alchemy_mapping(metadata)
-        image_history_props = ImageHistory.get_alchemy_mapping_properties(image_history_table)
-        mapper(ImageHistory, image_history_table, properties=image_history_props)
-
-        image_stats_table = ImageStats.get_alchemy_mapping(metadata)
-        mapper(ImageStats, image_stats_table)
-
-        system_stats_table = SystemStats.get_alchemy_mapping(metadata)
-        mapper(SystemStats, system_stats_table)
-
-        tasks_table = Task.get_alchemy_mapping(metadata)
-        tasks_props = Task.get_alchemy_mapping_properties(tasks_table)
-        mapper(Task, tasks_table, properties=tasks_props)
-
-        props_table = Property.get_alchemy_mapping(metadata)
-        mapper(Property, props_table)
 
         # The next section must only be attempted by one process at a time on server startup
         if self._cache:
@@ -1611,55 +1563,70 @@ class DataManager(object):
                 create_properties = False
 
                 # Create the database schema
-                if not group_table.exists():
-                    group_table.create()
+                if not Group.__table__.exists(self._db):
+                    Group.__table__.create(self._db)
                     create_default_groups = True
 
-                if not user_table.exists():
-                    user_table.create()
+                if not User.__table__.exists(self._db):
+                    User.__table__.create(self._db)
                     create_default_users = True
 
-                if not user_group_table.exists():
-                    user_group_table.create()
+                if not UserGroup.__table__.exists(self._db):
+                    UserGroup.__table__.create(self._db)
 
-                if not sysp_table.exists():
-                    sysp_table.create()
+                if not SystemPermissions.__table__.exists(self._db):
+                    SystemPermissions.__table__.create(self._db)
 
-                if not folder_table.exists():
-                    folder_table.create()
+                if not Folder.__table__.exists(self._db):
+                    Folder.__table__.create(self._db)
                     create_default_folders = True
 
-                if not folderp_table.exists():
-                    folderp_table.create()
+                if not FolderPermission.__table__.exists(self._db):
+                    FolderPermission.__table__.create(self._db)
 
-                if not image_table.exists():
-                    image_table.create()
+                if not Image.__table__.exists(self._db):
+                    Image.__table__.create(self._db)
 
-                if not image_history_table.exists():
-                    image_history_table.create()
+                if not ImageHistory.__table__.exists(self._db):
+                    ImageHistory.__table__.create(self._db)
 
-                if not image_stats_table.exists():
-                    image_stats_table.create()
+                if not ImageStats.__table__.exists(self._db):
+                    ImageStats.__table__.create(self._db)
 
-                if not system_stats_table.exists():
-                    system_stats_table.create()
+                if not SystemStats.__table__.exists(self._db):
+                    SystemStats.__table__.create(self._db)
 
-                if not tasks_table.exists():
-                    tasks_table.create()
+                if not Task.__table__.exists(self._db):
+                    Task.__table__.create(self._db)
 
-                if not props_table.exists():
-                    props_table.create()
+                if not Property.__table__.exists(self._db):
+                    Property.__table__.create(self._db)
                     create_properties = True
 
                 # Create system data (needs all tables in place first)
                 if create_default_groups:
                     # Create fixed system groups
-                    self.create_group(Group('Public', 'Provides the access rights for unknown users', Group.GROUP_TYPE_SYSTEM))
+                    self.create_group(Group(
+                        'Public',
+                        'Provides the access rights for unknown users',
+                        Group.GROUP_TYPE_SYSTEM
+                    ))
                     self._logger.info('Created Public group')
-                    self.create_group(Group('Normal users', 'Provides the default access rights for known users', Group.GROUP_TYPE_SYSTEM))
+                    self.create_group(Group(
+                        'Normal users',
+                        'Provides the default access rights for known users',
+                        Group.GROUP_TYPE_SYSTEM
+                    ))
                     self._logger.info('Created Normal users group')
-                    admin_group = Group('Administrators', 'Provides full administration access', Group.GROUP_TYPE_SYSTEM)
-                    admin_group.permissions = SystemPermissions(admin_group, True, True, True, True, True, True, True)
+                    admin_group = Group(
+                        'Administrators',
+                        'Provides full administration access',
+                        Group.GROUP_TYPE_SYSTEM
+                    )
+                    admin_group.permissions = SystemPermissions(
+                        admin_group,
+                        True, True, True, True, True, True, True
+                    )
                     self.create_group(admin_group)
                     self._logger.info('Created Administrators group')
 
