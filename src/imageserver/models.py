@@ -31,11 +31,14 @@
 # 03Sep2015  Matt  Change classes to SQLAlchemy declarative syntax
 #
 
+import datetime
 import os.path
 
+from sqlalchemy import func
 from sqlalchemy import ForeignKey
 from sqlalchemy import BigInteger, Boolean, Column, DateTime, Float, Index
 from sqlalchemy import Integer, LargeBinary, String, Text
+from sqlalchemy.dialects.postgresql import JSON
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import backref, relationship
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -76,12 +79,6 @@ class CacheEntry(CacheBase, BaseMixin):
     """
     SQLAlchemy ORM wrapper for an entry in the image cache control database.
     """
-    __tablename__ = 'cachectl'
-
-    __table_args__ = (
-        Index('idx_cc_search', 'searchfield1', 'searchfield2'),
-    )
-
     key = Column(String(256), nullable=False, primary_key=True)
     valuesize = Column(BigInteger, nullable=False)
     searchfield1 = Column(BigInteger, nullable=True)
@@ -90,6 +87,11 @@ class CacheEntry(CacheBase, BaseMixin):
     searchfield4 = Column(BigInteger, nullable=True)
     searchfield5 = Column(BigInteger, nullable=True)
     extradata = Column(LargeBinary, nullable=True)
+
+    __tablename__ = 'cachectl'
+    __table_args__ = (
+        Index('idx_cc_search', searchfield1, searchfield2),
+    )
 
     def __init__(self, key, valuesize, searchfield1=None, searchfield2=None,
                  searchfield3=None, searchfield4=None, searchfield5=None, extradata=None):
@@ -107,12 +109,6 @@ class User(Base, BaseMixin, IDEqualityMixin):
     """
     SQLAlchemy ORM wrapper for a basic user record.
     """
-    __tablename__ = 'users'
-
-    __table_args__ = (
-        Index('idx_us_username', 'username', unique=True),
-    )
-
     AUTH_TYPE_PASSWORD = 1
     AUTH_TYPE_LDAP = 2
 
@@ -133,6 +129,11 @@ class User(Base, BaseMixin, IDEqualityMixin):
         'Group',
         secondary=lambda: UserGroup.__table__,
         order_by=lambda: Group.name
+    )
+
+    __tablename__ = 'users'
+    __table_args__ = (
+        Index('idx_us_username', username, unique=True),
     )
 
     def __init__(self, first_name, last_name, email, username, password,
@@ -167,12 +168,6 @@ class Group(Base, BaseMixin, IDEqualityMixin):
     """
     SQLAlchemy ORM wrapper for a group record.
     """
-    __tablename__ = 'groups'
-
-    __table_args__ = (
-        Index('idx_gp_name', 'name', unique=True),
-    )
-
     ID_PUBLIC = 1
     ID_EVERYONE = 2
     ID_ADMINS = 3
@@ -202,6 +197,11 @@ class Group(Base, BaseMixin, IDEqualityMixin):
         cascade='all, delete-orphan'
     )
 
+    __tablename__ = 'groups'
+    __table_args__ = (
+        Index('idx_gp_name', name, unique=True),
+    )
+
     def __init__(self, name, description, group_type):
         self.id = None
         self.name = name
@@ -218,10 +218,10 @@ class UserGroup(Base, BaseMixin):
     This class is only used internally by SQLAlchemy - these records are
     normally maintained via the user.groups or group.users properties.
     """
-    __tablename__ = 'usergroups'
-
     user_id = Column(Integer, ForeignKey('users.id'), nullable=False, primary_key=True)
     group_id = Column(Integer, ForeignKey('groups.id'), nullable=False, primary_key=True)
+
+    __tablename__ = 'usergroups'
 
 
 class SystemPermissions(Base, BaseMixin):
@@ -230,8 +230,6 @@ class SystemPermissions(Base, BaseMixin):
     These control access to global functions
     (all other permissions being based on the file-system/folder tree).
     """
-    __tablename__ = 'syspermissions'
-
     PERMIT_FOLIOS = 'folios'
     PERMIT_REPORTS = 'reports'
     PERMIT_ADMIN_USERS = 'admin_users'
@@ -250,6 +248,8 @@ class SystemPermissions(Base, BaseMixin):
     admin_all = Column(Boolean, nullable=False)
 
     group = relationship('Group')
+
+    __tablename__ = 'syspermissions'
 
     def __init__(self, group, folios, reports, admin_users, admin_files,
                  admin_folios, admin_permissions, admin_all):
@@ -270,13 +270,6 @@ class Folder(Base, BaseMixin, IDEqualityMixin):
     """
     SQLAlchemy ORM wrapper for a disk folder record.
     """
-    __tablename__ = 'folders'
-
-    __table_args__ = (
-        Index('idx_fr_path', 'path', unique=True),
-        Index('idx_fr_parent', 'parent_id'),
-    )
-
     STATUS_DELETED = 0
     STATUS_ACTIVE = 1
 
@@ -291,6 +284,12 @@ class Folder(Base, BaseMixin, IDEqualityMixin):
         join_depth=1,
         backref=backref('parent', remote_side=lambda: Folder.__table__.c.id),
         order_by=lambda: Folder.name
+    )
+
+    __tablename__ = 'folders'
+    __table_args__ = (
+        Index('idx_fr_path', path, unique=True),
+        Index('idx_fr_parent', parent_id),
     )
 
     def __init__(self, name, path, parent, status):
@@ -313,12 +312,6 @@ class FolderPermission(Base, BaseMixin, IDEqualityMixin):
     SQLAlchemy ORM wrapper for a folder permissions record.
     These specify the image access levels across the folder tree, by group.
     """
-    __tablename__ = 'folderpermissions'
-
-    __table_args__ = (
-        Index('idx_fp_pk', 'folder_id', 'group_id', unique=True),
-    )
-
     ACCESS_NONE = 0
     ACCESS_VIEW = 10
     ACCESS_DOWNLOAD = 20
@@ -337,6 +330,11 @@ class FolderPermission(Base, BaseMixin, IDEqualityMixin):
     group = relationship('Group')
     folder = relationship('Folder')
 
+    __tablename__ = 'folderpermissions'
+    __table_args__ = (
+        Index('idx_fp_pk', folder_id, group_id, unique=True),
+    )
+
     def __init__(self, folder, group, access):
         self.id = None
         self.folder = folder
@@ -353,13 +351,6 @@ class Image(Base, BaseMixin, IDEqualityMixin):
     """
     SQLAlchemy ORM wrapper for an image record.
     """
-    __tablename__ = 'images'
-
-    __table_args__ = (
-        Index('idx_im_src', 'src', unique=True),
-        Index('idx_im_folder', 'folder_id', 'status'),
-    )
-
     STATUS_DELETED = 0
     STATUS_ACTIVE = 1
 
@@ -379,6 +370,12 @@ class Image(Base, BaseMixin, IDEqualityMixin):
         cascade='all, delete-orphan'
     )
 
+    __tablename__ = 'images'
+    __table_args__ = (
+        Index('idx_im_src', src, unique=True),
+        Index('idx_im_folder', folder_id, status),
+    )
+
     def __init__(self, src, folder, title, description, width, height, status):
         self.id = None
         self.src = src
@@ -393,18 +390,34 @@ class Image(Base, BaseMixin, IDEqualityMixin):
         return self.src + ' [' + str(self.width) + ',' + str(self.height) + ']'
 
 
+class ImageTemplate(Base, BaseMixin, IDEqualityMixin):
+    """
+    SQLAlchemy ORM wrapper for an image processing template.
+    """
+    id = Column(Integer, nullable=False, autoincrement=True, primary_key=True)
+    name = Column(String(120), nullable=False)
+    description = Column(Text, nullable=False)
+    template = Column(JSON, nullable=False)
+
+    __tablename__ = 'imagetemplates'
+    __table_args__ = (
+        Index('idx_it_name', func.lower(name), unique=True),
+    )
+
+    def __init__(self, name, description, template_dict):
+        self.id = None
+        self.name = name
+        self.description = description
+        self.template = template_dict
+
+    def __unicode__(self):
+        return self.name
+
+
 class ImageHistory(Base, BaseMixin, IDEqualityMixin):
     """
     SQLAlchemy ORM wrapper for an image history (audit) record.
     """
-    __tablename__ = 'imagesaudit'
-
-    __table_args__ = (
-        Index('idx_ia_image_action', 'image_id', 'action', unique=False),
-        Index('idx_ia_user', 'user_id', unique=False),
-        Index('idx_ia_time', 'action_time', unique=False),
-    )
-
     ACTION_DELETED = 0
     ACTION_CREATED = 1
     ACTION_REPLACED = 2
@@ -420,6 +433,13 @@ class ImageHistory(Base, BaseMixin, IDEqualityMixin):
 
     image = relationship('Image')
     user = relationship('User', lazy='joined', innerjoin=False)
+
+    __tablename__ = 'imagesaudit'
+    __table_args__ = (
+        Index('idx_ia_image_action', image_id, action, unique=False),
+        Index('idx_ia_user', user_id, unique=False),
+        Index('idx_ia_time', action_time, unique=False),
+    )
 
     def __init__(self, image, user, action, action_info, action_time):
         self.id = None
@@ -438,13 +458,6 @@ class ImageStats(Base, BaseMixin, IDEqualityMixin):
     """
     SQLAlchemy ORM wrapper for an image statistics record.
     """
-    __tablename__ = 'imagestats'
-
-    __table_args__ = (
-        Index('idx_is_image', 'image_id', 'from_time', unique=False),
-        Index('idx_is_time', 'from_time', unique=False),
-    )
-
     id = Column(BigInteger, nullable=False, autoincrement=True, primary_key=True)
     image_id = Column(BigInteger, ForeignKey('images.id'), nullable=False)
     requests = Column(BigInteger, nullable=False)
@@ -456,6 +469,12 @@ class ImageStats(Base, BaseMixin, IDEqualityMixin):
     max_request_seconds = Column(Float, nullable=False)
     from_time = Column(DateTime, nullable=False)
     to_time = Column(DateTime, nullable=False)
+
+    __tablename__ = 'imagestats'
+    __table_args__ = (
+        Index('idx_is_image', image_id, from_time, unique=False),
+        Index('idx_is_time', from_time, unique=False),
+    )
 
     def __init__(self, image_id, req_count, view_count, view_cached_count, download_count,
                  total_bytes, request_seconds, max_request_seconds, from_time, to_time):
@@ -480,12 +499,6 @@ class SystemStats(Base, BaseMixin, IDEqualityMixin):
     """
     SQLAlchemy ORM wrapper for a system statistics record.
     """
-    __tablename__ = 'systemstats'
-
-    __table_args__ = (
-        Index('idx_ss_time', 'from_time', unique=True),
-    )
-
     id = Column(BigInteger, nullable=False, autoincrement=True, primary_key=True)
     requests = Column(BigInteger, nullable=False)
     views = Column(BigInteger, nullable=False)
@@ -499,6 +512,11 @@ class SystemStats(Base, BaseMixin, IDEqualityMixin):
     cache_pc = Column(Float, nullable=False)
     from_time = Column(DateTime, nullable=False)
     to_time = Column(DateTime, nullable=False)
+
+    __tablename__ = 'systemstats'
+    __table_args__ = (
+        Index('idx_ss_time', from_time, unique=True),
+    )
 
     def __init__(self, req_count, view_count, view_cached_count, download_count,
                  total_bytes, request_seconds, max_request_seconds,
@@ -526,12 +544,6 @@ class Task(Base, BaseMixin, IDEqualityMixin):
     """
     SQLAlchemy ORM wrapper for a background task record.
     """
-    __tablename__ = 'tasks'
-
-    __table_args__ = (
-        Index('idx_tk_function', 'funcname', 'params', unique=True),
-    )
-
     STATUS_PENDING = 0
     STATUS_ACTIVE = 1
     STATUS_COMPLETE = 2
@@ -555,6 +567,11 @@ class Task(Base, BaseMixin, IDEqualityMixin):
     keep_until = Column(DateTime, nullable=True)
 
     user = relationship('User', lazy='joined', innerjoin=False)
+
+    __tablename__ = 'tasks'
+    __table_args__ = (
+        Index('idx_tk_function', funcname, params, unique=True),
+    )
 
     def __init__(self, user, name, funcname, params, priority,
                  log_level, error_log_level, keep_for):
@@ -580,12 +597,13 @@ class Property(Base, BaseMixin):
     """
     SQLAlchemy ORM wrapper for a simple key/value properties store.
     """
-    __tablename__ = 'properties'
-
     FOLDER_PERMISSION_VERSION = 'fp_version'
+    IMAGE_TEMPLATES_VERSION = 'template_version'
 
     key = Column(String(50), nullable=False, unique=True, primary_key=True)
     value = Column(Text, nullable=True)
+
+    __tablename__ = 'properties'
 
     def __init__(self, key, value):
         self.key = key

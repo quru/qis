@@ -502,7 +502,7 @@ The image's database object.
 Gets the content of an image template.
 
 ### URL
-* `/api/v1/admin/templates/[template_name]/`
+* `/api/v1/admin/templates/[template id]/`
 
 ### Supported methods
 * `GET`
@@ -514,48 +514,58 @@ Gets the content of an image template.
 * None
 
 ### Returns
-An object containing the image generation parameter names and values defined in the template.
-Values are `null` if the template does not set them.
+A single template object, in which the `template` field contains image generation
+parameter names and values. Note that some fields are named differently here than
+they are in the `image` [web interface](image_help.md).
+
+Values are either `null` or excluded from the output if the template does not set
+them. Existing older templates may also be missing fields that have been added in
+more recent versions of the software.
 
 ### Example
 
-	$ curl -u token: 'https://images.example.com/api/v1/admin/templates/smalljpeg/'
+	$ curl -u token: 'https://images.example.com/api/v1/admin/templates/1/'
 	{
 	  "data": {
-	    "align_h": null,
-	    "align_v": null,
-	    "attachment": null,
-	    "bottom": null,
-	    "colorspace": "rgb",
-	    "crop_fit": null,
-	    "dpi_x": 72,
-	    "dpi_y": 72,
-	    "expiry_secs": null,
-	    "filename": "smalljpeg",
-	    "fill": null,
-	    "flip": null,
-	    "format": "jpg",
-	    "height": 200,
-	    "icc_bpc": null,
-	    "icc_intent": null,
-	    "icc_profile": null,
-	    "left": null,
-	    "overlay_opacity": null,
-	    "overlay_pos": null,
-	    "overlay_size": null,
-	    "overlay_src": null,
-	    "page": null,
-	    "quality": 70,
-	    "record_stats": null,
-	    "right": null,
-	    "rotation": null,
-	    "sharpen": 50,
-	    "size_fit": null,
-	    "strip": true,
-	    "template": null,
-	    "tile": null,
-	    "top": null,
-	    "width": 200
+	    "description": "",
+	    "id": 1,
+	    "name": "SmallJpeg",
+	    "template": {
+	      "align_h": null,
+	      "align_v": null,
+	      "attachment": null,
+	      "bottom": null,
+	      "colorspace": "rgb",
+	      "crop_fit": null,
+	      "dpi_x": null,
+	      "dpi_y": null,
+	      "expiry_secs": null,
+	      "filename": "SmallJpeg",
+	      "fill": null,
+	      "flip": null,
+	      "format": "jpg",
+	      "height": 200,
+	      "icc_bpc": null,
+	      "icc_intent": null,
+	      "icc_profile": null,
+	      "left": null,
+	      "overlay_opacity": null,
+	      "overlay_pos": null,
+	      "overlay_size": null,
+	      "overlay_src": null,
+	      "page": null,
+	      "quality": 80,
+	      "record_stats": null,
+	      "right": null,
+	      "rotation": null,
+	      "sharpen": null,
+	      "size_fit": null,
+	      "strip": true,
+	      "template": null,
+	      "tile": null,
+	      "top": null,
+	      "width": 200
+	    }
 	  },
 	  "message": "OK",
 	  "status": 200

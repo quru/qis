@@ -415,6 +415,7 @@ def publish():
         'publish.html',
         fields=ImageAttrs.validators(),
         image_info=image_engine.get_image_properties(src, False),
+        template_list=image_engine.get_template_list(),
         embed=embed,
         src=src,
         path=filepath_parent(src)

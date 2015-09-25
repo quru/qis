@@ -173,8 +173,6 @@ class ImageAttrs():
     Users of this class should call validate() at some point before using
     the attribute values.
     """
-    class_version = 1500
-
     def __init__(self, src, db_id=-1, page=None,
                  iformat=None, template=None, width=None, height=None,
                  align_h=None, align_v=None, rotation=None, flip=None,
@@ -183,7 +181,10 @@ class ImageAttrs():
                  overlay_src=None, overlay_size=None, overlay_pos=None, overlay_opacity=None,
                  icc_profile=None, icc_intent=None, icc_bpc=None, colorspace=None,
                  strip=None, dpi=None, tile_spec=None):
-        self._version = self.__class__.class_version
+        """
+        Constructs a new image attributes object.
+        See this class's attribute methods for allowed parameter values.
+        """
         self._filename = filepath_normalize(src)
         self._filename_ext = get_file_extension(self._filename)
         self._db_id = db_id
@@ -228,15 +229,6 @@ class ImageAttrs():
 
     def __unicode__(self):
         return unicode(self.__str__())
-
-    def to_dict(self):
-        """
-        Returns a dictionary of fields and values represented by this object.
-        """
-        dct = {}
-        for attr in self.validators().keys():
-            dct[attr] = getattr(self, "_%s" % attr)
-        return dct
 
     def filename(self, with_path=True, append_format=False, replace_format=False):
         """
@@ -501,7 +493,7 @@ class ImageAttrs():
         """
         # These are lazy-loaded choices not available at import time
         formats = lambda: [""] + app.image_engine.get_image_formats()
-        templates = lambda: [""] + app.image_engine.get_template_names()
+        templates = lambda: [""] + app.image_engine.get_template_names(True)
         iccs = lambda: [""] + app.image_engine.get_icc_profile_names()
         # These are hard-coded choices
         ov_positions = ("", "c", "n", "e", "s", "w", "ne", "nw", "se", "sw")
@@ -612,8 +604,8 @@ class ImageAttrs():
         (excluding template name) has been given a value.
 
         Because the template name is not considered by this function, callers
-        should ensure that apply_template_values() has been invoked as
-        required before calling this function.
+        should ensure that template values have been applied as required
+        before calling this function.
         """
         # aligns, fill, crop_fit, size_fit, overlay_*, ICC intent and BPC
         # require other attributes to be set to have any effect,
@@ -887,8 +879,8 @@ class ImageAttrs():
 
         Note: the template attribute is not included in the returned key,
         because template definitions may change during the lifetime of the
-        cache. When a template is specified, callers should ensure that
-        apply_template_values() has first been invoked.
+        cache. When a template is specified, callers should ensure that the
+        template values have first been applied.
         """
         assert self._db_id > 0, 'Image database ID must be set to create cache key'
         key_parts = [_prefix + str(self._db_id)]
@@ -984,106 +976,47 @@ class ImageAttrs():
 
         return ','.join(key_parts)
 
-    def apply_template_values(
-        self, override_values, page, iformat,
-        width, height, align_h, align_v,
-        rotation, flip,
-        top, left, bottom, right, crop_fit,
-        size_fit, fill, quality, sharpen,
-        overlay_src, overlay_size, overlay_pos, overlay_opacity,
-        icc_profile, icc_intent, icc_bpc,
-        colorspace, strip, dpi
-    ):
+    @staticmethod
+    def from_dict(attr_dict):
         """
-        Applies a set of new image attributes to this object.
-        If override_values is False, each new attribute value will only be applied
-        if there is no existing value for that attribute.
+        Returns a new ImageAttrs, populated from the given dictionary.
+        This is the opposite of to_dict().
+        Raises a ValueError if any of the dictionary values fail validation.
         """
-        if override_values or self._format is None:
-            self._format = self._no_blank(iformat)
+        new_obj = ImageAttrs('')
+        new_obj.apply_dict(attr_dict, True, True)
+        return new_obj
 
-        if override_values or self._page is None:
-            self._page = page
+    def to_dict(self):
+        """
+        Returns a dictionary of fields and values represented by this object.
+        The database ID field is not included, since an ID can be associated
+        with different file paths over time.
+        This is the opposite of from_dict().
+        """
+        dct = {}
+        for attr, _, _ in ImageAttrs.validators_flat():
+            dct[attr] = getattr(self, "_%s" % attr)
+        return dct
 
-        if override_values or self._width is None:
-            self._width = width
-
-        if override_values or self._height is None:
-            self._height = height
-
-        if override_values or self._align_h is None:
-            self._align_h = align_h
-
-        if override_values or self._align_v is None:
-            self._align_v = align_v
-
-        if override_values or self._rotation is None:
-            self._rotation = rotation
-
-        if override_values or self._flip is None:
-            self._flip = self._no_blank(flip)
-
-        if override_values or self._top is None:
-            self._top = top
-
-        if override_values or self._left is None:
-            self._left = left
-
-        if override_values or self._bottom is None:
-            self._bottom = bottom
-
-        if override_values or self._right is None:
-            self._right = right
-
-        if override_values or self._crop_fit is None:
-            self._crop_fit = crop_fit
-
-        if override_values or self._size_fit is None:
-            self._size_fit = size_fit
-
-        if override_values or self._fill is None:
-            self._fill = self._no_blank(fill)
-
-        if override_values or self._quality is None:
-            self._quality = quality
-
-        if override_values or self._sharpen is None:
-            self._sharpen = sharpen
-
-        if override_values or self._overlay_src is None:
-            self._overlay_src = self._no_blank(overlay_src)
-
-        if override_values or self._overlay_size is None:
-            self._overlay_size = overlay_size
-
-        if override_values or self._overlay_pos is None:
-            self._overlay_pos = self._no_blank(overlay_pos)
-
-        if override_values or self._overlay_opacity is None:
-            self._overlay_opacity = overlay_opacity
-
-        if override_values or self._icc_profile is None:
-            self._icc_profile = self._no_blank(icc_profile)
-
-        if override_values or self._icc_intent is None:
-            self._icc_intent = self._no_blank(icc_intent)
-
-        if override_values or self._icc_bpc is None:
-            self._icc_bpc = icc_bpc
-
-        if override_values or self._colorspace is None:
-            self._colorspace = self._no_blank(colorspace)
-
-        if override_values or self._strip is None:
-            self._strip = strip
-
-        if override_values or self._dpi_x is None:
-            self._dpi_x = dpi
-
-        if override_values or self._dpi_y is None:
-            self._dpi_y = dpi
-
+    def apply_dict(self, attr_dict, override_values=True, validate=True, normalise=True):
+        """
+        Applies a set image attributes to this object from a dictionary.
+        If override_values is False, each new attribute value will only
+        be applied if there is no existing value for that attribute.
+        Raises a ValueError if any of the dictionary values fail validation.
+        """
+        for attr, _, _ in ImageAttrs.validators_flat():
+            dict_val = attr_dict.get(attr)
+            if dict_val is not None and dict_val != '':
+                obj_key = "_%s" % attr
+                if override_values or getattr(self, obj_key) is None:
+                    setattr(self, obj_key, dict_val)
         self._round_floats()
+        if validate:
+            self.validate()
+        if normalise:
+            self.normalise_values()
 
     def apply_default_values(
         self, iformat=None, colorspace=None, strip=None, dpi=None
@@ -1119,9 +1052,9 @@ class ImageAttrs():
         It is necessary to call this function before calling attributes_change_image
         or suitable_for_base.
 
-        But this function should not be called until after apply_template_values
-        and apply_default_values, so that attribute removal is not performed until
-        all possible parameters have been applied.
+        But this function should not be called until after any template values
+        and default values have been applied, so that attribute removal is
+        not performed until all possible parameters are present.
         """
         if self._page == 0 or self._page == 1:
             self._page = None
@@ -1254,22 +1187,6 @@ class ImageAttrs():
             self._icc_intent = None
             self._icc_bpc = None
 
-    def _no_blank(self, strval):
-        """
-        Returns strval if it has a value, or None if strval is either None
-        or an empty string.
-        """
-        return strval or None
-
-    def _float_to_str(self, f):
-        """
-        Returns f as a string, without scientific notation.
-        E.g. 0.00005 is returned as '0.00005' where a simple
-             str(0.00005) would return '5e-05'.
-        """
-        s = ('%.5f' % f).rstrip('0')
-        return (s + '0') if s.endswith('.') else s
-
     def _round_floats(self):
         """
         Rounds float attributes to a standard number of decimal places
@@ -1300,3 +1217,21 @@ class ImageAttrs():
 
         if self._overlay_opacity is not None:
             self._overlay_opacity = round_crop(self._overlay_opacity)
+
+    @staticmethod
+    def _no_blank(strval):
+        """
+        Returns strval if it has a value,
+        or None if strval is either None or an empty string.
+        """
+        return strval or None
+
+    @staticmethod
+    def _float_to_str(f):
+        """
+        Returns f as a string, without scientific notation.
+        E.g. 0.00005 is returned as '0.00005' where a simple
+             str(0.00005) would return '5e-05'.
+        """
+        s = ('%.5f' % f).rstrip('0')
+        return (s + '0') if s.endswith('.') else s

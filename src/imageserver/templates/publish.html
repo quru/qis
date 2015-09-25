@@ -57,10 +57,10 @@
 			external_image_url: '{{ external_url_for('image') }}',
 			external_static_url: '{{ external_url_for('static', filename='') }}',
 			help_url: '{{ url_for('image_help', embed=1) }}',
-			template_api_url: '{{ url_for('api.admin.template', template_name='') }}',
+			template_api_url: '{{ url_for('api.admin.template', template_id=0) }}',
 			warn_icon_url: '{{ url_for('static', filename='images/icon-warning.png') }}'
 		};
-		
+
 		// UI text for the Publisher JS
 		var PublisherText = {
 			// Templates
@@ -126,7 +126,7 @@
 				<fieldset class="subtlebg">
 					<div>
 						<label>Base on template:</label>
-						{{ input('template') }}
+						{{ input('template') }}   {# Note that input_template.html requires {{ template_list }} #}
 						{{ help('option_tmp') }}
 					</div>
 					<div id="template_fields">

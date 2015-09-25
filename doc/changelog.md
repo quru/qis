@@ -1,4 +1,34 @@
-# v2.0.0-dev-0
+# v2.0.0-dev.2
+_Changes: new APIs for administration of image templates_
+
+TODO
+
+
+# v2.0.0-dev.1
+_Breaking change: move image templates into the database_
+
+Update the Python and web code  
+Update the Python dependencies  
+If there are any user-defined image templates (apart from the defaults
+_Precache_ and _SmallJpeg_), import these into the database:
+
+	cd src/imageserver/scripts
+	sudo -u qis python import_templates.py
+
+Delete the local template files:
+
+	sudo -u qis rm -rf /opt/qis/templates
+
+From `local_settings.py`, delete the setting `TEMPLATES_BASE_DIR` (if present)
+
+The API `/api/v1/admin/templates/[template name]/` now takes a template ID
+instead of name, and returns the complete template object (with `name` and
+`description` fields) instead of just the raw template value. Backwards
+compatibility is not being maintained. There will soon be new API functions
+for listing, creating, updating and deleting templates.
+
+
+# v2.0.0-dev.0
 _Changes: upgrade SQLAlchemy to v1, upgrade internal database models_
 
 Stop the Apache service  

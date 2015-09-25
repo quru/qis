@@ -40,7 +40,7 @@ from imageserver.api import api_add_url_rules, url_version_prefix
 from imageserver.api_util import add_api_error_handler, add_parameter_error_handler
 from imageserver.api_util import make_api_success_response
 from imageserver.errors import DoesNotExistError, ParameterError, SecurityError
-from imageserver.flask_app import data_engine, image_engine, permissions_engine
+from imageserver.flask_app import data_engine, permissions_engine
 from imageserver.flask_util import api_permission_required, _check_internal_request
 from imageserver.models import Group, ImageHistory, User
 from imageserver.models import FolderPermission, SystemPermissions
@@ -150,12 +150,15 @@ class TemplateAPI(MethodView):
     - None (caller must only be logged in)
     """
     @add_api_error_handler
-    def get(self, template_name):
-        try:
-            template = image_engine.get_template(template_name)
-            return make_api_success_response(template.to_dict())
-        except KeyError:
-            raise DoesNotExistError(template_name)
+    def get(self, template_id):
+        template_info = data_engine.get_image_template(template_id)
+        if template_info is None:
+            raise DoesNotExistError(str(template_id))
+        return make_api_success_response(object_to_dict(template_info))
+
+# TODO Add template list, create, update, delete & update API docs
+# TODO Call template manager reset after making changes
+# TODO For changes, validate data types and lower case most of the incoming strings like the prop file code used to do
 
 
 class UserAPI(MethodView):
@@ -696,8 +699,8 @@ api_add_url_rules(
 
 _dapi_template_views = api_permission_required(TemplateAPI.as_view('admin.template'))
 api_add_url_rules(
-    [url_version_prefix + '/admin/templates/<template_name>/',
-     '/admin/templates/<template_name>/'],
+    [url_version_prefix + '/admin/templates/<int:template_id>/',
+     '/admin/templates/<int:template_id>/'],
     view_func=_dapi_template_views,
     methods=['GET']
 )

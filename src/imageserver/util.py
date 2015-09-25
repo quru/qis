@@ -853,8 +853,9 @@ class SimpleODict(DictMixin):
 
 class KeyValueCache(object):
     """
-    Implements a simple key/value in-memory cache,
-    with an internal lock to ensure thread safety.
+    Implements a simple key/value in-memory cache, with an internal lock to
+    ensure thread safety. This object is for simple use cases within one Python
+    process. Use something like Memcached for a scalable system-wide cache.
     """
     def __init__(self):
         self._lock = threading.Lock()
@@ -882,6 +883,24 @@ class KeyValueCache(object):
         """
         with self._lock:
             self._cache.update(kv_dict)
+
+    def keys(self):
+        """
+        Returns the list of keys currently stored in this cache.
+        In a multi-threaded environment this list may be immediately obsolete.
+        """
+        with self._lock:
+            keys = self._cache.keys()
+        return keys
+
+    def values(self):
+        """
+        Returns the list of values currently stored in this cache.
+        In a multi-threaded environment this list may be immediately obsolete.
+        """
+        with self._lock:
+            values = self._cache.values()
+        return values
 
     def clear(self):
         """

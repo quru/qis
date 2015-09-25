@@ -2,11 +2,13 @@ QIS v2.0 Move image templates from text files into the database
 ===============================================================
 
 Add Template model class
-- name (lower case, unique index)
-- displayname (user's own case)
+- name (lower case, unique index)     } one field using function index?
+- displayname (user's own case)       }
 - description
 - template (json)
 - last changed date? by who?
+
+Using the Postgres JSON type requires Postgres 9.2 or above.
 
 [With a displayname for templates, we could do with the same for ICC profiles,
  which are currently all lower case in the UI, not ideal]
@@ -22,7 +24,7 @@ Add a template manager to list/get/set/delete templates. Validation function too
 Template manager to call data manager and cache templates internally.
 Template manager cache to be invalidated when a template is updated/deleted.
 Add templates to data API, API to call template manager.
-API to handle validation failures on add/update.
+API to report validation failures on add/update.
 
 Existing image publish page does most of what we need for defining a template.
 Having a preview is nice for some fields.

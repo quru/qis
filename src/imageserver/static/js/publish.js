@@ -105,13 +105,13 @@ Publisher.onBrowseOverlay = function() {
 Publisher.onTemplateChanged = function() {
 	var infoEl = $('template_fields'),
 	    tempEl = $('publish_field_template'),
-	    tempVal = tempEl.options[tempEl.selectedIndex].value,
+	    tempVal = tempEl.options[tempEl.selectedIndex].getProperty('data-id'),
 	    apiURL = PublisherConfig.template_api_url;
 
 	if (tempVal) {
 		infoEl.set('html', PublisherText.loading);
 		(new Request.JSON({
-			url: apiURL.replace('//', '/' + tempVal + '/'),
+			url: apiURL.replace('/0/', '/' + tempVal + '/'),
 			onSuccess: function(jsonObj, jsonText) {
 				Publisher.refreshTemplateInfo(infoEl, jsonObj);
 			},
@@ -332,12 +332,13 @@ Publisher.toPx = function(val, unit, dpi) {
 };
 
 Publisher.refreshTemplateInfo = function(el, jsonObj) {
-	var t = jsonObj.data,
+	var tObj = jsonObj.data,
+	    t = tObj.template,
 	    tempEl = $('publish_field_template'),
-	    tempName = tempEl.options[tempEl.selectedIndex].value;
+	    tempVal = tempEl.options[tempEl.selectedIndex].getProperty('data-id');
 	
 	// If this data is for the currently selected template
-	if (t && (t.filename.toLowerCase() === tempName.toLowerCase())) {
+	if (t && (tObj.id === parseInt(tempVal))) {
 		// Remove any fields we don't want to show
 		delete t.filename;
 		// Show the list of key:value items in the template

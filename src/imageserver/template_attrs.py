@@ -29,6 +29,7 @@
 # =========  ====  ============================================================
 #
 
+from image_attrs import ImageAttrs
 from util import validate_boolean, validate_number
 
 
@@ -37,10 +38,13 @@ class TemplateAttrs(object):
     Class to hold an image template definition, that is a set of desired image
     attributes together with optional handling settings.
     """
+    # The template fields that are not part of ImageAttrs
+    __attrs = ['expiry_secs', 'attachment', 'record_stats']
+
     def __init__(self, image_attrs, expiry_secs=None, attachment=None, record_stats=None):
         """
-        Constructs a new template object. See the ImageAttrs class and this
-        class's methods for allowed parameter values.
+        Constructs a new template object.
+        See the ImageAttrs class and this class's methods for allowed parameter values.
         """
         self.image_attrs = image_attrs
         self.image_attrs.normalise_values()
@@ -48,15 +52,43 @@ class TemplateAttrs(object):
         self._attachment = attachment
         self._record_stats = record_stats
 
+    @staticmethod
+    def from_dict(name, attr_dict):
+        """
+        Returns a new TemplateAttrs, populated from the given dictionary.
+        This is the opposite of to_dict().
+        Raises a ValueError if any of the dictionary values fail validation.
+        """
+        new_obj = TemplateAttrs(ImageAttrs(name))
+        new_obj.apply_dict(attr_dict, True, True)
+        return new_obj
+
     def to_dict(self):
         """
         Returns a dictionary of fields and values represented by this object.
+        This is the opposite of from_dict().
         """
         dct = self.image_attrs.to_dict()
-        dct['expiry_secs'] = self._expiry_secs
-        dct['attachment'] = self._attachment
-        dct['record_stats'] = self._record_stats
+        for attr in TemplateAttrs.__attrs:
+            dct[attr] = getattr(self, "_%s" % attr)
         return dct
+
+    def apply_dict(self, attr_dict, override_values=True, validate=True):
+        """
+        Applies a set template attributes to this object from a dictionary.
+        If override_values is False, each new attribute value will only
+        be applied if there is no existing value for that attribute.
+        Raises a ValueError if any of the dictionary values fail validation.
+        """
+        self.image_attrs.apply_dict(attr_dict, override_values, validate=False)
+        for attr in TemplateAttrs.__attrs:
+            dict_val = attr_dict.get(attr)
+            if dict_val is not None and dict_val != '':
+                obj_key = "_%s" % attr
+                if override_values or getattr(self, obj_key) is None:
+                    setattr(self, obj_key, dict_val)
+        if validate:
+            self.validate()
 
     def expiry_secs(self):
         """

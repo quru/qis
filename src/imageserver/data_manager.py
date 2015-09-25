@@ -52,7 +52,7 @@ from sqlalchemy.sql.expression import bindparam, func
 import errors
 from models import Base
 from models import User, Folder, FolderPermission, Group
-from models import Image, ImageHistory, ImageStats, Property
+from models import Image, ImageTemplate, ImageHistory, ImageStats, Property
 from models import SystemPermissions, SystemStats, Task, UserGroup
 from util import add_sep, strip_sep
 from util import filepath_components, filepath_parent, filepath_normalize
@@ -234,12 +234,15 @@ class DataManager(object):
                 if refresh:
                     db_session.refresh(obj, ['id'])
             return obj
-        except IntegrityError:
+        except IntegrityError as e:
             if _commit:
-                # Rollback prevents InvalidRequestError
-                # for existing db objects at session.close()
-                db_session.rollback()
-            raise errors.AlreadyExistsError('Object \'' + str(obj) + '\' already exists')
+                db_session.rollback()  # Prevents InvalidRequestError at session.close()
+            if 'duplicate' in e.message:
+                raise errors.AlreadyExistsError(
+                    'Object \'' + str(obj) + '\' contains a duplicate key'
+                )
+            else:
+                raise e
         except SQLAlchemyError:
             if _commit:
                 db_session.rollback()
@@ -342,6 +345,25 @@ class DataManager(object):
                 return q.get(image_id)
             else:
                 return q.filter(Image.src == self._normalize_image_path(src)).first()
+        finally:
+            if not _db_session:
+                db_session.close()
+
+    @db_operation
+    def get_image_template(self, template_id=0, tempname=None, _db_session=None):
+        """
+        Returns the ImageTemplate object with the given ID or name,
+        or None if there is no match in the database.
+        """
+        db_session = _db_session or self._db.Session()
+        try:
+            if not template_id and not tempname:
+                raise ValueError('Template ID or name must be provided')
+            q = db_session.query(ImageTemplate)
+            if template_id:
+                return q.get(template_id)
+            else:
+                return q.filter(func.lower(ImageTemplate.name) == func.lower(tempname)).first()
         finally:
             if not _db_session:
                 db_session.close()
@@ -1560,6 +1582,7 @@ class DataManager(object):
                 create_default_users = False
                 create_default_groups = False
                 create_default_folders = False
+                create_default_templates = False
                 create_properties = False
 
                 # Create the database schema
@@ -1586,6 +1609,10 @@ class DataManager(object):
 
                 if not Image.__table__.exists(self._db):
                     Image.__table__.create(self._db)
+
+                if not ImageTemplate.__table__.exists(self._db):
+                    ImageTemplate.__table__.create(self._db)
+                    create_default_templates = True
 
                 if not ImageHistory.__table__.exists(self._db):
                     ImageHistory.__table__.create(self._db)
@@ -1660,8 +1687,42 @@ class DataManager(object):
                     ))
                     self._logger.info('Created default folder permissions')
 
+                if create_default_templates:
+                    # Create sample SmallJpeg template
+                    self.save_object(ImageTemplate(
+                        'SmallJpeg',
+                        'Defines a 200x200 JPG image that would be suitable for '
+                        'use as a thumbnail image on a web site.', {
+                            'filename': 'SmallJpeg',
+                            'format': 'jpg',
+                            'quality': 80,
+                            'width': 200,
+                            'height': 200,
+                            'strip': True,
+                            'colorspace': 'rgb'
+                        }
+                    ))
+                    # Create sample Precache template
+                    self.save_object(ImageTemplate(
+                        'Precache',
+                        'Resizes an image to 800x600 (or the closest match to it) '
+                        'while leaving other attributes unchanged. Useful alongside '
+                        'the pre-cache utility to warm the cache with smaller versions '
+                        'of images so that e.g. thumbnails are faster to produce from then '
+                        'on.', {
+                            'filename': 'Precache',
+                            'width': 800,
+                            'height': 600,
+                            'size_fit': True,
+                            'record_stats': False
+                        }
+                    ))
+                    self.save_object(Property(Property.IMAGE_TEMPLATES_VERSION, '1'))
+                    self._logger.info('Created default image templates')
+
                 if create_properties:
                     self.save_object(Property(Property.FOLDER_PERMISSION_VERSION, '1'))
+                    self.save_object(Property(Property.IMAGE_TEMPLATES_VERSION, '1'))
 
             finally:
                 self._cache.free_global_lock()

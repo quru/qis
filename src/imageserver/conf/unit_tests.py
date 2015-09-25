@@ -22,7 +22,6 @@ DOCS_BASE_DIR = INSTALL_DIR + "/doc/"
 ICC_BASE_DIR = INSTALL_DIR + "/icc/"
 IMAGES_BASE_DIR = INSTALL_DIR + "/images/"
 LOGGING_BASE_DIR = INSTALL_DIR + "/logs/"
-TEMPLATES_BASE_DIR = INSTALL_DIR + "/templates/"
 
 # Use reasonably standard image defaults
 IMAGE_FORMAT_DEFAULT = 'jpg'

@@ -91,12 +91,16 @@ from imageserver.filesystem_sync import (
 from imageserver.flask_util import internal_url_for
 from imageserver.image_attrs import ImageAttrs
 from imageserver.image_manager import ImageManager
-from imageserver.models import Folder, Group, User, Image, ImageHistory
-from imageserver.models import FolderPermission, SystemPermissions, Task
+from imageserver.models import (
+    Folder, Group, User, Image, ImageHistory, ImageTemplate,
+    FolderPermission, SystemPermissions, Task
+)
 from imageserver.permissions_manager import _trace_to_str
 from imageserver.session_manager import get_session_user
 from imageserver.util import strip_sep, unicode_to_utf8
 from imageserver.scripts.cache_util import delete_image_ids
+from imageserver.template_attrs import TemplateAttrs
+from imageserver.template_manager import ImageTemplateManager
 
 
 # For nose
@@ -131,17 +135,6 @@ def teardown():
                     print "Failed to kill child process %s" % pid
     except ValueError:
         print "Failed to kill test child processes"
-
-
-# Utility - flushing file write with optional touch (modification time update)
-#           note touch delays as modification times are 1 second resolution
-def fwrite(f, strval, touch=False):
-    f.write(strval)
-    f.flush()
-    os.fsync(f.fileno())
-    if touch:
-        os.utime(f.name, None)
-        time.sleep(1)
 
 
 # Utility - delete and re-create the internal databases
@@ -775,23 +768,26 @@ class ImageServerTestsFast(BaseTestCase):
     def test_template_public_image_defaults(self):
         flask_app.config['PUBLIC_MAX_IMAGE_WIDTH'] = 800
         flask_app.config['PUBLIC_MAX_IMAGE_HEIGHT'] = 800
+        # Create a blank template
+        dm.save_object(ImageTemplate('Blank', '', {}))
+        ie._templates.reset()
         # Just template should serve at the image size (below limit)
-        rv = self.app.get('/image?src=test_images/quru470.png&tmp=sample&format=png')
+        rv = self.app.get('/image?src=test_images/quru470.png&tmp=blank&format=png')
         self.assertEqual(rv.status_code, 200)
         (w, h) = get_png_dimensions(rv.data)
         self.assertEqual(w, 470)
         self.assertEqual(h, 300)
         # Just template should serve at the limit size (image larger than limit)
-        rv = self.app.get('/image?src=test_images/cathedral.jpg&tmp=sample&format=png')
+        rv = self.app.get('/image?src=test_images/cathedral.jpg&tmp=blank&format=png')
         self.assertEqual(rv.status_code, 200)
         (w, h) = get_png_dimensions(rv.data)
         self.assertEqual(w, 800)
         self.assertEqual(h, 600)
         # Up to limit should be ok
-        rv = self.app.get('/image?src=test_images/cathedral.jpg&tmp=sample&format=png&width=600')
+        rv = self.app.get('/image?src=test_images/cathedral.jpg&tmp=blank&format=png&width=600')
         self.assertEqual(rv.status_code, 200)
         # Over the limit should error
-        rv = self.app.get('/image?src=test_images/cathedral.jpg&tmp=sample&format=png&width=900')
+        rv = self.app.get('/image?src=test_images/cathedral.jpg&tmp=blank&format=png&width=900')
         self.assertEqual(rv.status_code, 400)
 
     # Test serving of original image
@@ -1425,60 +1421,54 @@ class ImageServerTestsFast(BaseTestCase):
     def test_image_attrs_precedence(self):
         ia = ImageAttrs('myimage.png', -1, width=789, fill='auto')
         # Apply a fictional template
-        ia.apply_template_values(
-            override_values=False, page=None, iformat=None,
-            width=100, height=None, align_h=None, align_v=None,
-            rotation=360, flip=None,
-            top=None, left=None, bottom=None, right=None, crop_fit=None,
-            size_fit=None, fill='red', quality=None, sharpen=None,
-            overlay_src=None, overlay_size=None, overlay_pos=None, overlay_opacity=None,
-            icc_profile=None, icc_intent=None, icc_bpc=None,
-            colorspace=None, strip=None, dpi=300
+        ia.apply_dict({
+            'width': 100,
+            'rotation': 360,
+            'fill': 'red',
+            'dpi_x': 300,
+            'dpi_y': 300},
+            override_values=False,
+            normalise=False
         )
         # Ensure the template params are there
-        assert ia.rotation() == 360
-        assert ia.dpi() == 300
+        self.assertEqual(ia.rotation(), 360)
+        self.assertEqual(ia.dpi(), 300)
         # Ensure the initial parameters override the template
-        assert ia.width() == 789
-        assert ia.fill() == 'auto'
+        self.assertEqual(ia.width(), 789)
+        self.assertEqual(ia.fill(), 'auto')
         # Apply fictional server defaults
         ia.apply_default_values(iformat='png', strip=True, dpi=72)
         # Ensure the server defaults are there
-        assert ia.format_raw() == 'png'
-        assert ia.format() == ia.format_raw()
-        assert ia.strip_info() == True
+        self.assertEqual(ia.format_raw(), 'png')
+        self.assertEqual(ia.format(), ia.format_raw())
+        self.assertTrue(ia.strip_info())
         # Ensure the previous params override the server defaults
-        assert ia.dpi() == 300
+        self.assertEqual(ia.dpi(), 300)
         # Ensure the net parameters look good
         ia.normalise_values()
-        assert ia.format_raw() is None # png is the image's format anyway
-        assert ia.format() == 'png'    # from filename, not params
-        assert ia.width() == 789
-        assert ia.dpi() == 300
-        assert ia.strip_info() == True
-        assert ia.rotation() is None   # 360 would have no effect
-        assert ia.fill() is None       # As there's no rotation and no other filling to do
+        self.assertIsNone(ia.format_raw())    # png is the image's format anyway
+        self.assertEqual(ia.format(), 'png')  # from filename, not params
+        self.assertEqual(ia.width(), 789)
+        self.assertEqual(ia.dpi(), 300)
+        self.assertTrue(ia.strip_info())
+        self.assertIsNone(ia.rotation())      # 360 would have no effect
+        self.assertIsNone(ia.fill())          # As there's no rotation and no other filling to do
         # Test for the bug that caused this unit test in the first place
         # (auto fill param should take precendence over red fill template)
         ia = ImageAttrs('myimage.png', -1, top=0.2, fill='auto')
-        ia.apply_template_values(
-            override_values=False, page=None, iformat=None,
-            width=300, height=300, align_h=None, align_v=None,
-            rotation=None, flip=None,
-            top=None, left=None, bottom=None, right=None, crop_fit=None,
-            size_fit=None, fill='red', quality=None, sharpen=None,
-            overlay_src=None, overlay_size=None, overlay_pos=None, overlay_opacity=None,
-            icc_profile=None, icc_intent=None, icc_bpc=None,
-            colorspace=None, strip=None, dpi=None
+        ia.apply_dict({
+            'width': 300,
+            'height': 300,
+            'fill': 'red'},
+            override_values=False,
+            normalise=True
         )
-        ia.normalise_values()
-        assert ia.fill() == 'auto'
+        self.assertEqual(ia.fill(), 'auto')
         # And that 0 DPI does override the system (handled differently in previous versions)
         ia = ImageAttrs('myimage.png', -1, dpi=0)
         ia.apply_default_values(dpi=72)
         ia.normalise_values()
-        assert ia.dpi() is None
-
+        self.assertIsNone(ia.dpi())
 
     # Test the identification of suitable base images in cache
     def test_base_image_detection(self):
@@ -1872,81 +1862,73 @@ class ImageServerTestsFast(BaseTestCase):
 
     # Test image templates
     def test_templates(self):
-        template = 'qis_template_test'
-        tempfile = '/tmp/'+template+'.cfg'
-        # Set image manager to re-check template files continuously
-        prev_check_time = ImageManager.TEMPLATE_CHECK_SECONDS
-        ImageManager.TEMPLATE_CHECK_SECONDS = 0
-        try:
-            # Reload with 0 templates
-            flask_app.config['TEMPLATES_BASE_DIR'] = '/tmp/'
-            flask_app.image_engine._reload_templates()
-            self.assertEqual(len(flask_app.image_engine.get_template_names()), 0)
-            # Create a temporary template to work from
-            with open(tempfile, 'w') as tfile:
-                flask_app.image_engine._reload_templates()
-                # Test format - original first
-                flask_app.config['IMAGE_FORMAT_DEFAULT'] = ''
-                rv = self.app.get('/image?src=test_images/thames.jpg')
-                self.assertEqual(rv.status_code, 200)
-                self.assertIn('image/jpeg', rv.headers['Content-Type'])
-                # Test format from template
-                fwrite(tfile, '\n[ImageAttributes]\nformat=png\n', True)
-                self.assertIn(template, flask_app.image_engine.get_template_names())
-                rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template)
-                self.assertEqual(rv.status_code, 200)
-                self.assertIn('image/png', rv.headers['Content-Type'])
-                original_len = len(rv.data)
-                # Test cropping from template makes it smaller
-                fwrite(tfile, '\ntop=0.1\nleft=0.1\nbottom=0.9\nright=0.9\n', True)
-                rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template)
-                self.assertEqual(rv.status_code, 200)
-                cropped_len = len(rv.data)
-                self.assertLess(cropped_len, original_len)
-                # Test stripping the EXIF data makes it smaller again 2
-                fwrite(tfile, '\nstrip=1\n', True)
-                rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template)
-                self.assertEqual(rv.status_code, 200)
-                stripped_len = len(rv.data)
-                self.assertLess(stripped_len, cropped_len)
-                # Test resizing it small makes it smaller again 3
-                fwrite(tfile, '\nwidth=500\nheight=500\n', True)
-                rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template)
-                self.assertEqual(rv.status_code, 200)
-                resized_len = len(rv.data)
-                self.assertLess(resized_len, stripped_len)
-                # And that auto-fitting the crop then makes it slightly larger
-                fwrite(tfile, '\nautocropfit=1\n', True)
-                rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template)
-                self.assertEqual(rv.status_code, 200)
-                autofit_crop_len = len(rv.data)
-                self.assertGreater(autofit_crop_len, resized_len)
-                # Test expiry settings - original first
-                flask_app.config['IMAGE_EXPIRY_TIME_DEFAULT'] = 99
-                rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template)
-                self.assertEqual(rv.headers.get('Expires'), http_date(int(time.time() + 99)))
-                # Test expiry settings from template
-                fwrite(tfile, '\n[BrowserOptions]\nexpiry=-1\n', True)
-                rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template)
-                self.assertEqual(rv.headers.get('Expires'), http_date(0))
-                # Test attachment settings from template
-                fwrite(tfile, '\nattach=true\n', True)
-                rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template)
-                self.assertIsNotNone(rv.headers.get('Content-Disposition'))
-                self.assertIn('attachment', rv.headers['Content-Disposition'])
-                # Test that URL params override the template
-                rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template+'&format=bmp&attach=0')
-                self.assertEqual(rv.status_code, 200)
-                self.assertIn('image/bmp', rv.headers['Content-Type'])
-                self.assertIsNone(rv.headers.get('Content-Disposition'))
-                template_bmp_len = len(rv.data)
-                rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template+'&format=bmp&width=600&height=600&attach=0')
-                self.assertEqual(rv.status_code, 200)
-                self.assertGreater(len(rv.data), template_bmp_len)
-        finally:
-            ImageManager.TEMPLATE_CHECK_SECONDS = prev_check_time
-            if os.path.exists(tempfile):
-                os.remove(tempfile)
+        template = 'Unit test template'
+        # Utility to update a template in the database and reset the template manager cache
+        def update_db_template(db_obj, update_dict):
+            db_obj.template.update(update_dict)
+            dm.save_object(db_template)
+            ie._templates.reset()
+        # Create a temporary template to work with
+        db_template = ImageTemplate(template, 'Temporary template for unit testing', {})
+        db_template = dm.save_object(db_template, refresh=True)
+        # Test format - original first
+        flask_app.config['IMAGE_FORMAT_DEFAULT'] = ''
+        rv = self.app.get('/image?src=test_images/thames.jpg')
+        self.assertEqual(rv.status_code, 200)
+        self.assertIn('image/jpeg', rv.headers['Content-Type'])
+        # Test format from template
+        update_db_template(db_template, {'format': 'png'})
+        self.assertIn(template, ie.get_template_names())
+        rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template)
+        self.assertEqual(rv.status_code, 200)
+        self.assertIn('image/png', rv.headers['Content-Type'])
+        original_len = len(rv.data)
+        # Test cropping from template makes it smaller
+        update_db_template(db_template, {'top': 0.1, 'left': 0.1, 'bottom': 0.9, 'right': 0.9})
+        rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template)
+        self.assertEqual(rv.status_code, 200)
+        cropped_len = len(rv.data)
+        self.assertLess(cropped_len, original_len)
+        # Test stripping the EXIF data makes it smaller again 2
+        update_db_template(db_template, {'strip': True})
+        rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template)
+        self.assertEqual(rv.status_code, 200)
+        stripped_len = len(rv.data)
+        self.assertLess(stripped_len, cropped_len)
+        # Test resizing it small makes it smaller again 3
+        update_db_template(db_template, {'width': 500, 'height': 500})
+        rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template)
+        self.assertEqual(rv.status_code, 200)
+        resized_len = len(rv.data)
+        self.assertLess(resized_len, stripped_len)
+        # And that auto-fitting the crop then makes it slightly larger
+        update_db_template(db_template, {'crop_fit': True})
+        rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template)
+        self.assertEqual(rv.status_code, 200)
+        autofit_crop_len = len(rv.data)
+        self.assertGreater(autofit_crop_len, resized_len)
+        # Test expiry settings - original first
+        flask_app.config['IMAGE_EXPIRY_TIME_DEFAULT'] = 99
+        rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template)
+        self.assertEqual(rv.headers.get('Expires'), http_date(int(time.time() + 99)))
+        # Test expiry settings from template
+        update_db_template(db_template, {'expiry_secs': -1})
+        rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template)
+        self.assertEqual(rv.headers.get('Expires'), http_date(0))
+        # Test attachment settings from template
+        update_db_template(db_template, {'attachment': True})
+        rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template)
+        self.assertIsNotNone(rv.headers.get('Content-Disposition'))
+        self.assertIn('attachment', rv.headers['Content-Disposition'])
+        # Test that URL params override the template
+        rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template+'&format=bmp&attach=0')
+        self.assertEqual(rv.status_code, 200)
+        self.assertIn('image/bmp', rv.headers['Content-Type'])
+        self.assertIsNone(rv.headers.get('Content-Disposition'))
+        template_bmp_len = len(rv.data)
+        rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template+'&format=bmp&width=600&height=600&attach=0')
+        self.assertEqual(rv.status_code, 200)
+        self.assertGreater(len(rv.data), template_bmp_len)
 
     # Test spaces in file names - serving and caching
     def test_filename_spaces(self):
@@ -2069,7 +2051,7 @@ class ImageServerTestsFast(BaseTestCase):
         try:
             # Create a php.ini
             with open(tempfile, 'w') as tfile:
-                fwrite(tfile, 'UNIT TEST! This is my php.ini file containing interesting info.')
+                tfile.write('UNIT TEST! This is my php.ini file containing interesting info.')
             # Test we can't now serve that up
             rv = self.app.get('/original?src=php.ini')
             self.assertEqual(rv.status_code, 415)
@@ -3448,23 +3430,28 @@ class ImageServerAPITests(BaseTestCase):
     # Tests the image template API
     def test_data_api_templates(self):
         # Not logged in - getting details should fail
-        rv = self.app.get('/api/admin/templates/smalljpeg/')
+        rv = self.app.get('/api/admin/templates/1/')
         self.assertEqual(rv.status_code, API_CODES.REQUIRES_AUTH)
         # Log in as std user
         setup_user_account('kryten', 'none')
         self.login('kryten', 'kryten')
         # Logged in - template details should be available
-        rv = self.app.get('/api/admin/templates/smalljpeg/')
+        rv = self.app.get('/api/admin/templates/1/')
         self.assertEqual(rv.status_code, API_CODES.SUCCESS)
         obj = json.loads(rv.data)['data']
-        self.assertEqual(obj['filename'], 'smalljpeg')
-        self.assertEqual(obj['format'], 'jpg')
-        self.assertEqual(obj['width'], 200)
-        self.assertEqual(obj['height'], 200)
-        self.assertIsNone(obj['record_stats'])
-        # Invalid template name - getting details should fail
-        rv = self.app.get('/api/admin/templates/moon cheese/')
+        self.assertEqual(obj['name'], 'SmallJpeg')
+        tdict = obj['template']
+        self.assertEqual(tdict['filename'], 'SmallJpeg')
+        self.assertEqual(tdict['format'], 'jpg')
+        self.assertEqual(tdict['width'], 200)
+        self.assertEqual(tdict['height'], 200)
+        self.assertNotIn('record_stats', tdict)
+        # Invalid template ID - getting details should fail
+        rv = self.app.get('/api/admin/templates/-1/')
         self.assertEqual(rv.status_code, API_CODES.NOT_FOUND)
+        # TODO add get/set/create/delete tests
+        # TODO test permission to update
+        # TODO test that changed templates take effect on images
 
     # File admin API - images
     def test_file_api_images(self):
@@ -4346,3 +4333,79 @@ class ImageServerTestsWebPages(BaseTestCase):
 
     def test_slideshow_viewer_page_help(self):
         self.call_page_requiring_login('/slideshow/help/', required_text='A demo page is')
+
+
+class UtilityTests(unittest.TestCase):
+    def test_image_attrs_serialisation(self):
+        ia = ImageAttrs('some/path', -1, page=2, iformat='psd', template='smalljpeg',
+                        width=1000, height=1000, size_fit=False,
+                        fill='black', colorspace='rgb', strip=False)
+        ia_dict = ia.to_dict()
+        self.assertEqual(ia_dict['template'], 'smalljpeg')
+        self.assertEqual(ia_dict['fill'], 'black')
+        self.assertEqual(ia_dict['page'], 2)
+        self.assertEqual(ia_dict['size_fit'], False)
+        rev = ImageAttrs.from_dict(ia_dict)
+        rev_dict = rev.to_dict()
+        self.assertEqual(ia_dict, rev_dict)
+
+    def test_image_attrs_bad_serialisation(self):
+        bad_dict = {
+            'filename': 'some/path',
+            'format': 'potato'
+        }
+        self.assertRaises(ValueError, ImageAttrs.from_dict, bad_dict)
+        bad_dict = {
+            'filename': 'some/path',
+            'width': '-1'
+        }
+        self.assertRaises(ValueError, ImageAttrs.from_dict, bad_dict)
+        bad_dict = {
+            'filename': ''
+        }
+        self.assertRaises(ValueError, ImageAttrs.from_dict, bad_dict)
+
+    def test_template_attrs_serialisation(self):
+        # Test the standard constructor
+        ta = TemplateAttrs(
+            ImageAttrs('abcdef', -1, width=1000, height=1000),
+            expiry_secs=50000,
+            record_stats=True
+        )
+        ta_dict = ta.to_dict()
+        self.assertEqual(ta_dict['filename'], 'abcdef')
+        self.assertEqual(ta_dict['width'], 1000)
+        self.assertEqual(ta_dict['expiry_secs'], 50000)
+        self.assertEqual(ta_dict['record_stats'], True)
+        rev = TemplateAttrs.from_dict('abcdef', ta_dict)
+        rev_dict = rev.to_dict()
+        self.assertEqual(ta_dict, rev_dict)
+        # Test the dictionary constructor
+        good_dict = {
+            'filename': 'abcdef',
+            'expiry_secs': 50000,
+            'record_stats': True
+        }
+        ta = TemplateAttrs.from_dict('abcdef', good_dict)
+        self.assertEqual(ta.image_attrs.filename(), 'abcdef')
+        self.assertEqual(ta.expiry_secs(), 50000)
+        self.assertEqual(ta.record_stats(), True)
+        self.assertIsNone(ta.attachment())
+
+    def test_template_attrs_bad_serialisation(self):
+        bad_dict = {
+            'filename': 'some/path',
+            'expiry_secs': -2
+        }
+        self.assertRaises(ValueError, TemplateAttrs.from_dict, '', bad_dict)
+        bad_dict = {
+            'filename': 'some/path',
+            'expiry_secs': 'not an int'
+        }
+        self.assertRaises(ValueError, TemplateAttrs.from_dict, '', bad_dict)
+        bad_dict = {
+            'filename': 'some/path',
+            'expiry_secs': 50000,
+            'record_stats': 'not a bool'
+        }
+        self.assertRaises(ValueError, TemplateAttrs.from_dict, '', bad_dict)

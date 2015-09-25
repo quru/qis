@@ -1,9 +1,9 @@
 # Known good versions of application dependencies
 
-* Python 2.6 or 2.7
-	* Minimum 2.6.5 (we are affected by a deadlock bug in < 2.6.5)
-	* Prefer 2.7 (the latest revision available)
-* PostgreSQL 8.3 or above, prefer 9.x
+* Python 2.6.5+ or 2.7
+	* Prefer 2.7
+	* We are affected by a deadlock bug in < 2.6.5
+* PostgreSQL 9.2 or above (due to use of JSON data type)
 * Memcached 1.2.8 or above
 * libmemcached 1.0.16 (0.32 or above is required)
 * Membase 1.7.1 (note: Membase support is untested since 2011)

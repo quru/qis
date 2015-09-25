@@ -76,7 +76,7 @@ applied.
 ### page
 Relevant only to multi-page file formats such as `tiff` and `pdf`, specifies which page number
 to return. The first page number is 1, which is also the default value.
-	
+
 <a name="option_format"></a>
 ### format
 Converts the image to a different file format, e.g. `jpg`, `tiff`, `png`, `bmp`, `gif`.

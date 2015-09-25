@@ -589,7 +589,7 @@ def _public_image_limits_pre_image_checks(req_width, req_height, req_autosizefit
                 templ = image_engine.get_template(req_template)
                 template_w = templ.image_attrs.width() or 0
                 template_h = templ.image_attrs.height() or 0
-            except KeyError:
+            except ValueError:
                 # Validation (yet to come) will reject the bad template name
                 pass
 

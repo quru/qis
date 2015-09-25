@@ -161,7 +161,6 @@ DOCS_BASE_DIR = INSTALL_DIR + "/doc/"
 ICC_BASE_DIR = INSTALL_DIR + "/icc/"
 IMAGES_BASE_DIR = INSTALL_DIR + "/images/"
 LOGGING_BASE_DIR = INSTALL_DIR + "/logs/"
-TEMPLATES_BASE_DIR = INSTALL_DIR + "/templates/"
 
 # The path where temporary imaging files are stored.
 # Old temporary files will be periodically deleted.
