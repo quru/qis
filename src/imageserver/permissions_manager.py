@@ -134,8 +134,10 @@ class PermissionsManager(object):
                     return True
                 elif flag == 'admin_any':
                     # Special flag
-                    return sys_perms.admin_users or sys_perms.admin_files or \
-                           sys_perms.admin_folios or sys_perms.admin_permissions
+                    return (
+                        sys_perms.admin_users or sys_perms.admin_files or
+                        sys_perms.admin_folios or sys_perms.admin_permissions
+                    )
                 else:
                     # Check just the specified flag name
                     return getattr(sys_perms, flag)

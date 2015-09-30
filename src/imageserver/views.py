@@ -115,30 +115,19 @@ def image():
         # eRez compatibility mode
         src = erez_params_compat(src)
 
-        # Tweak strings as necessary and convert non-string parameters
-        # to the correct data types
+        # Convert non-string parameters to the correct data types
         try:
             # Image options
             if page is not None:
                 page = parse_int(page)
-            if iformat is not None:
-                iformat = iformat.lower()
-            if template is not None:
-                template = template.lower()
             if width is not None:
                 width = parse_int(width)
             if height is not None:
                 height = parse_int(height)
-            if halign is not None:
-                halign = halign.lower()
-            if valign is not None:
-                valign = valign.lower()
             if autosizefit is not None:
                 autosizefit = parse_boolean(autosizefit)
             if rotation is not None:
                 rotation = parse_float(rotation)
-            if flip is not None:
-                flip = flip.lower()
             if top is not None:
                 top = parse_float(top)
             if left is not None:
@@ -157,18 +146,10 @@ def image():
                 sharpen = parse_int(sharpen)
             if ov_size is not None:
                 ov_size = parse_float(ov_size)
-            if ov_pos is not None:
-                ov_pos = ov_pos.lower()
             if ov_opacity is not None:
                 ov_opacity = parse_float(ov_opacity)
-            if icc_profile is not None:
-                icc_profile = icc_profile.lower()
-            if icc_intent is not None:
-                icc_intent = icc_intent.lower()
             if icc_bpc is not None:
                 icc_bpc = parse_boolean(icc_bpc)
-            if colorspace is not None:
-                colorspace = colorspace.lower()
             if strip is not None:
                 strip = parse_boolean(strip)
             if dpi is not None:

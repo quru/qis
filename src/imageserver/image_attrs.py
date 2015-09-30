@@ -35,9 +35,12 @@ import re
 import threading
 
 from flask_app import app
-from util import filepath_filename, filepath_parent, filepath_normalize
-from util import get_file_extension, round_crop, unicode_to_ascii
-from util import validate_number, validate_tile_spec
+
+from util import (
+    filepath_filename, filepath_parent, filepath_normalize,
+    get_file_extension, unicode_to_ascii,
+    validate_number, validate_tile_spec
+)
 
 # We'll cache the image attribute validators. One copy per thread as I suspect
 # - e.g. the RegexValidator construction - probably isn't thread safe.
@@ -170,8 +173,8 @@ class ImageAttrs():
     Setting an attribute value to None (or not specifying a value) means
     "leave this attribute unchanged" with respect to the original image.
 
-    Users of this class should call validate() at some point before using
-    the attribute values.
+    Before using the attribute values, call normalise_values() to standardise
+    strings and remove unnecessary values, and validate() to check for bad values.
     """
     def __init__(self, src, db_id=-1, page=None,
                  iformat=None, template=None, width=None, height=None,
@@ -186,39 +189,39 @@ class ImageAttrs():
         See this class's attribute methods for allowed parameter values.
         """
         self._filename = filepath_normalize(src)
-        self._filename_ext = get_file_extension(self._filename)
         self._db_id = db_id
         self._page = page
-        self._format = self._no_blank(iformat)
-        self._template = self._no_blank(template)
+        self._format = iformat
+        self._template = template
         self._width = width
         self._height = height
-        self._align_h = self._no_blank(align_h)
-        self._align_v = self._no_blank(align_v)
+        self._align_h = align_h
+        self._align_v = align_v
         self._rotation = rotation
-        self._flip = self._no_blank(flip)
+        self._flip = flip
         self._top = top
         self._left = left
         self._bottom = bottom
         self._right = right
         self._crop_fit = crop_fit
         self._size_fit = size_fit
-        self._fill = self._no_blank(fill)
+        self._fill = fill
         self._quality = quality
         self._sharpen = sharpen
-        self._overlay_src = self._no_blank(overlay_src)
+        self._overlay_src = overlay_src
         self._overlay_size = overlay_size
-        self._overlay_pos = self._no_blank(overlay_pos)
+        self._overlay_pos = overlay_pos
         self._overlay_opacity = overlay_opacity
-        self._icc_profile = self._no_blank(icc_profile)
-        self._icc_intent = self._no_blank(icc_intent)
+        self._icc_profile = icc_profile
+        self._icc_intent = icc_intent
         self._icc_bpc = icc_bpc
-        self._colorspace = self._no_blank(colorspace)
+        self._colorspace = colorspace
         self._strip = strip
         self._dpi_x = dpi
         self._dpi_y = dpi
         self._tile = tile_spec
-        self._round_floats()
+        self._normalise_strings()
+        self._normalise_floats()
 
     def __str__(self):
         filename = unicode_to_ascii(self.filename(with_path=False))
@@ -505,14 +508,8 @@ class ImageAttrs():
             "page": (RangeValidator(0, 999999), 'page'),
             "format": (ChoiceValidator(formats), 'format'),
             "template": (ChoiceValidator(templates), 'tmp'),
-            "width": (
-                RangeValidator(0, app.config['MAX_IMAGE_DIMENSION']),
-                'width'
-            ),
-            "height": (
-                RangeValidator(0, app.config['MAX_IMAGE_DIMENSION']),
-                'height'
-            ),
+            "width": (RangeValidator(0, app.config['MAX_IMAGE_DIMENSION']), 'width'),
+            "height": (RangeValidator(0, app.config['MAX_IMAGE_DIMENSION']), 'height'),
             "align_h": (AlignValidator(("l", "c", "r")), 'halign'),
             "align_v": (AlignValidator(("t", "c", "b")), 'valign'),
             "rotation": (RealRangeValidator(-360.0, 360.0), 'angle'),
@@ -588,8 +585,7 @@ class ImageAttrs():
         ValueError if an attribute value is invalid, otherwise returns with no value.
         """
         try:
-            validators = self.validators_flat()
-            for (attr, validator, web_attr) in validators:
+            for (attr, validator, web_attr) in self.validators_flat():
                 val = getattr(self, "_%s" % attr)
                 if val is not None:
                     validator(val)
@@ -979,12 +975,12 @@ class ImageAttrs():
     @staticmethod
     def from_dict(attr_dict):
         """
-        Returns a new ImageAttrs, populated from the given dictionary.
-        This is the opposite of to_dict().
+        Returns a new ImageAttrs, populated from the given dictionary,
+        normalised and validated. This is the opposite of to_dict().
         Raises a ValueError if any of the dictionary values fail validation.
         """
         new_obj = ImageAttrs('')
-        new_obj.apply_dict(attr_dict, True, True)
+        new_obj.apply_dict(attr_dict, True, True, True)
         return new_obj
 
     def to_dict(self):
@@ -1012,7 +1008,8 @@ class ImageAttrs():
                 obj_key = "_%s" % attr
                 if override_values or getattr(self, obj_key) is None:
                     setattr(self, obj_key, dict_val)
-        self._round_floats()
+        self._normalise_strings()
+        self._normalise_floats()
         if validate:
             self.validate()
         if normalise:
@@ -1027,11 +1024,11 @@ class ImageAttrs():
         there is no existing value for that attribute.
         """
         if iformat and self._format is None:
-            self._format = self._no_blank(iformat)
+            self._format = iformat.lower()
 
         if colorspace and self._colorspace is None and self._icc_profile is None:
             # Note we only do this if the ICC profile is blank too
-            self._colorspace = self._no_blank(colorspace)
+            self._colorspace = colorspace.lower()
 
         if strip and self._strip is None:
             self._strip = strip
@@ -1187,44 +1184,47 @@ class ImageAttrs():
             self._icc_intent = None
             self._icc_bpc = None
 
-    def _round_floats(self):
+    def _normalise_strings(self):
         """
-        Rounds float attributes to a standard number of decimal places
+        Converts string attributes (except file paths) to lower case,
+        and removes empty strings.
         """
-        if self._align_h is not None and len(self._align_h) > 8:
-            self._align_h = self._align_h[:8]
+        self._filename_ext = get_file_extension(self._filename)
+        # Keep the case of file paths intact
+        self._overlay_src = self._no_blank(self._overlay_src, False)
 
-        if self._align_v is not None and len(self._align_v) > 8:
+        # For everything else we use lower case
+        for attr in ['_format', '_template', '_align_h', '_align_v',
+                     '_flip', '_fill', '_overlay_pos',
+                     '_icc_profile', '_icc_intent', '_colorspace']:
+            setattr(
+                self, attr, self._no_blank(getattr(self, attr), True)
+            )
+
+    def _normalise_floats(self):
+        """
+        Rounds float attributes to a standard number of decimal places.
+        """
+        if self._align_h is not None:
+            self._align_h = self._align_h[:8]
+        if self._align_v is not None:
             self._align_v = self._align_v[:8]
 
-        if self._rotation is not None:
-            self._rotation = round_crop(self._rotation)
-
-        if self._top is not None:
-            self._top = round_crop(self._top)
-
-        if self._left is not None:
-            self._left = round_crop(self._left)
-
-        if self._bottom is not None:
-            self._bottom = round_crop(self._bottom)
-
-        if self._right is not None:
-            self._right = round_crop(self._right)
-
-        if self._overlay_size is not None:
-            self._overlay_size = round_crop(self._overlay_size)
-
-        if self._overlay_opacity is not None:
-            self._overlay_opacity = round_crop(self._overlay_opacity)
+        for attr in ['_rotation', '_top', '_left', '_bottom', '_right',
+                     '_overlay_size', '_overlay_opacity']:
+            val = getattr(self, attr)
+            if val is not None:
+                setattr(self, attr, self._round_crop(val))
 
     @staticmethod
-    def _no_blank(strval):
+    def _no_blank(strval, lowercase):
         """
-        Returns strval if it has a value,
+        Returns strval if it has a value (optionally converted to lower case),
         or None if strval is either None or an empty string.
         """
-        return strval or None
+        if strval:
+            return strval.lower() if lowercase else strval
+        return None
 
     @staticmethod
     def _float_to_str(f):
@@ -1235,3 +1235,14 @@ class ImageAttrs():
         """
         s = ('%.5f' % f).rstrip('0')
         return (s + '0') if s.endswith('.') else s
+
+    @staticmethod
+    def _round_crop(crop_val):
+        """
+        Returns an image cropping float value rounded to a
+        standard number of decimal places.
+        """
+        try:
+            return round(crop_val, 5)
+        except:
+            return crop_val

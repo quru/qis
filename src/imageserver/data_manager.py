@@ -221,7 +221,8 @@ class DataManager(object):
         the object causes a duplicate key, or a DBError for any other problem.
 
         If committing and a refresh is requested, the object is re-read after
-        saving so that its newly assigned ID is set.
+        saving so that its newly assigned ID is set. Use the object returned by
+        this method, as it may be a different object to that passed in.
 
         Objects already attached to a database session update automatically when
         the session is flushed without the use of this method.

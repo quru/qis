@@ -614,6 +614,12 @@ class ImageManager(object):
             finally:
                 db_session.close()
 
+    def reset_templates(self):
+        """
+        Instructs the template system to refresh its data from the database.
+        """
+        self._templates.reset()
+
     def _is_image_lock(self, image_key):
         """
         Returns whether there is an image lock currently in place for the given key.

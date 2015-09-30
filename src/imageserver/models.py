@@ -31,7 +31,6 @@
 # 03Sep2015  Matt  Change classes to SQLAlchemy declarative syntax
 #
 
-import datetime
 import os.path
 
 from sqlalchemy import func

@@ -132,7 +132,7 @@ def import_templates():
                 log('Importing template \'%s\'' % template_name)
                 data_engine.save_object(ImageTemplate(
                     template_name,
-                    '',
+                    'Imported template',
                     template_attrs.to_dict()
                 ))
             else:

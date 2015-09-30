@@ -499,24 +499,42 @@ The image's database object.
 
 <a name="api_data_templates"></a>
 ## image templates
-Gets the content of an image template.
+Lists all image templates, or gets, creates, updates, or deletes a single template.
+
+A template combines a number of imaging operations into a named group, or a preset,
+as described in the [imaging guide](image_help.md#option_tmp).
 
 ### URL
-* `/api/v1/admin/templates/[template id]/`
+* `/api/v1/admin/templates/` for `GET` (list templates) and `POST`
+* `/api/v1/admin/templates/[template id]/` for `GET`, `PUT`, and `DELETE`
 
 ### Supported methods
 * `GET`
+* `POST`
+* `PUT`
+* `DELETE`
 
 ### Parameters
-* None
+* None for `GET` or `DELETE`
+* For `POST` and `PUT`:
+	* `name` - Mandatory, text - A unique name for the template
+	* `description` - Mandatory, text - A description for the template
+	* `template` - Mandatory, JSON text - A set of field/value pairs containing the
+	    imaging operations that define the template. See the examples below for
+	    the list of possible field names. Values to remain unchanged can either
+	    be set to `null` or omitted from the JSON.
 
 ### Permissions required
-* None
+* None for `GET`
+* Super user for `POST`, `PUT`, `DELETE`
 
 ### Returns
-A single template object, in which the `template` field contains image generation
-parameter names and values. Note that some fields are named differently here than
-they are in the `image` [web interface](image_help.md).
+A list of template objects (for the list URL), a single template object
+(for most other URLs), or nothing (after a delete).
+
+In the template object, the `template` field contains image generation
+parameter names and values. Note that some parameters are named differently
+here than in the `image` [web interface](image_help.md).
 
 Values are either `null` or excluded from the output if the template does not set
 them. Existing older templates may also be missing fields that have been added in
@@ -527,7 +545,7 @@ more recent versions of the software.
 	$ curl -u token: 'https://images.example.com/api/v1/admin/templates/1/'
 	{
 	  "data": {
-	    "description": "",
+	    "description": "Defines a 200x200 JPG image that would be suitable for use as a thumbnail image on a web site.",
 	    "id": 1,
 	    "name": "SmallJpeg",
 	    "template": {
@@ -540,7 +558,6 @@ more recent versions of the software.
 	      "dpi_x": null,
 	      "dpi_y": null,
 	      "expiry_secs": null,
-	      "filename": "SmallJpeg",
 	      "fill": null,
 	      "flip": null,
 	      "format": "jpg",
@@ -561,12 +578,66 @@ more recent versions of the software.
 	      "sharpen": null,
 	      "size_fit": null,
 	      "strip": true,
-	      "template": null,
 	      "tile": null,
 	      "top": null,
 	      "width": 200
 	    }
 	  },
+	  "message": "OK",
+	  "status": 200
+	}
+
+	$ curl -X POST -u token: -F 'name=grey-thumb' \
+	       -F 'description=Defines a greyscale thumbnail with a black fill' \
+	       -F 'template={ "colorspace":"grey", "width":400, "height":400, "fill":"black" }' \
+	       'https://images.example.com/api/v1/admin/templates/'
+	{
+	  "data": {
+	    "description": "Defines a greyscale thumbnail with a black fill",
+	    "id": 3,
+	    "name": "grey-thumb",
+	    "template": {
+	      "align_h": null,
+	      "align_v": null,
+	      "attachment": null,
+	      "bottom": null,
+	      "colorspace": "gray",
+	      "crop_fit": null,
+	      "dpi_x": null,
+	      "dpi_y": null,
+	      "expiry_secs": null,
+	      "fill": "black",
+	      "flip": null,
+	      "format": null,
+	      "height": 400,
+	      "icc_bpc": null,
+	      "icc_intent": null,
+	      "icc_profile": null,
+	      "left": null,
+	      "overlay_opacity": null,
+	      "overlay_pos": null,
+	      "overlay_size": null,
+	      "overlay_src": null,
+	      "page": null,
+	      "quality": null,
+	      "record_stats": null,
+	      "right": null,
+	      "rotation": null,
+	      "sharpen": null,
+	      "size_fit": null,
+	      "strip": null,
+	      "tile": null,
+	      "top": null,
+	      "width": 400
+	    }
+	  },
+	  "message": "OK",
+	  "status": 200
+	}
+
+	$ curl -X DELETE -u token: 'https://images.example.com/api/v1/admin/templates/3/'
+	{
+	  "data": null,
 	  "message": "OK",
 	  "status": 200
 	}
@@ -591,7 +662,7 @@ Lists all user accounts, or gets, creates, updates, or deletes a single user acc
 	* `first_name` - Mandatory, text - The user's first name
 	* `last_name` - Mandatory, text - The user's last name
 	* `email` - Mandatory, text - The user's email address
-	* `username` - Mandatory, text - The account username
+	* `username` - Mandatory, text - A unique username for the account
 	* `password` - Mandatory for `POST`, optional for `PUT`, text - The account password
 	* `auth_type` - Mandatory, integer - Should be set to `1`
 	* `allow_api` - Mandatory, boolean - Whether this account should be allowed to request
@@ -687,7 +758,7 @@ controls.
 ### Parameters
 * None for `GET` or `DELETE`
 * For `POST` and `PUT`:
-	* `name` - Mandatory, text - the name of the group
+	* `name` - Mandatory, text - the unique name of the group
 	* `description` - Mandatory, text - a description of the group
 	* `group_type` - Mandatory, integer - set to `1` for required system groups that must not
 	  be deleted, set to `2` for normal, user-defined groups

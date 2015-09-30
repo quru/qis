@@ -31,6 +31,7 @@
 
 import copy
 from functools import wraps
+import json
 import sys
 
 from flask import request, session
@@ -40,12 +41,13 @@ from imageserver.api import api_add_url_rules, url_version_prefix
 from imageserver.api_util import add_api_error_handler, add_parameter_error_handler
 from imageserver.api_util import make_api_success_response
 from imageserver.errors import DoesNotExistError, ParameterError, SecurityError
-from imageserver.flask_app import data_engine, permissions_engine
+from imageserver.flask_app import data_engine, image_engine, permissions_engine
 from imageserver.flask_util import api_permission_required, _check_internal_request
-from imageserver.models import Group, ImageHistory, User
+from imageserver.models import Group, ImageHistory, ImageTemplate, User
 from imageserver.models import FolderPermission, SystemPermissions
 from imageserver.session_manager import get_session_user, get_session_user_id
 from imageserver.session_manager import log_out
+from imageserver.template_attrs import TemplateAttrs
 from imageserver.util import get_string_changes, generate_password
 from imageserver.util import object_to_dict, object_to_dict_list
 from imageserver.util import parse_boolean, parse_int
@@ -144,21 +146,108 @@ class ImageAPI(MethodView):
 
 class TemplateAPI(MethodView):
     """
-    Provides the REST admin API to get image template data.
+    Provides the REST admin API to list, create, get, update or delete
+    image templates.
 
     Required access:
-    - None (caller must only be logged in)
+    - None to get or list the templates (caller must only be logged in)
+    - Otherwise requires super user
     """
+    # ImageAttrs fields we don't want to store or return in the JSON
+    HIDE_FIELDS = ['filename', 'template']
+
     @add_api_error_handler
-    def get(self, template_id):
+    def get(self, template_id=None):
+        if template_id is None:
+            # List templates
+            tlist = data_engine.list_objects(ImageTemplate, ImageTemplate.name)
+            tdictlist = object_to_dict_list(tlist)
+            for tdict in tdictlist:
+                self._del_keys(tdict['template'], TemplateAPI.HIDE_FIELDS)
+            return make_api_success_response(tdictlist)
+        else:
+            # Get single template
+            template_info = data_engine.get_image_template(template_id)
+            if template_info is None:
+                raise DoesNotExistError(str(template_id))
+            tdict = object_to_dict(template_info)
+            self._del_keys(tdict['template'], TemplateAPI.HIDE_FIELDS)
+            return make_api_success_response(tdict)
+
+    @add_api_error_handler
+    def post(self):
+        permissions_engine.ensure_permitted(
+            SystemPermissions.PERMIT_SUPER_USER, get_session_user()
+        )
+        params = self._get_validated_object_parameters(request.form)
+        template = ImageTemplate(
+            params['name'],
+            params['description'],
+            params['template']
+        )
+        template = data_engine.save_object(template, refresh=True)
+        image_engine.reset_templates()
+        return self.get(template.id)
+
+    @add_api_error_handler
+    def put(self, template_id):
+        permissions_engine.ensure_permitted(
+            SystemPermissions.PERMIT_SUPER_USER, get_session_user()
+        )
+        params = self._get_validated_object_parameters(request.form)
+        template = data_engine.get_image_template(template_id)
+        if template is None:
+            raise DoesNotExistError(str(template_id))
+        template.name = params['name']
+        template.description = params['description']
+        template.template = params['template']
+        data_engine.save_object(template)
+        image_engine.reset_templates()
+        return self.get(template.id)
+
+    @add_api_error_handler
+    def delete(self, template_id):
+        permissions_engine.ensure_permitted(
+            SystemPermissions.PERMIT_SUPER_USER, get_session_user()
+        )
         template_info = data_engine.get_image_template(template_id)
         if template_info is None:
             raise DoesNotExistError(str(template_id))
-        return make_api_success_response(object_to_dict(template_info))
+        data_engine.delete_object(template_info)
+        image_engine.reset_templates()
+        return make_api_success_response()
 
-# TODO Add template list, create, update, delete & update API docs
-# TODO Call template manager reset after making changes
-# TODO For changes, validate data types and lower case most of the incoming strings like the prop file code used to do
+    @add_parameter_error_handler
+    def _get_validated_object_parameters(self, data_dict):
+        params = {
+            'name': data_dict.get('name', '').strip(),
+            'description': data_dict.get('description', ''),
+            'template': data_dict.get('template', '')
+        }
+        validate_string(params['name'], 1, 120)
+        validate_string(params['description'], 0, 5 * 1024)
+        validate_string(params['template'], 2, 10 * 1024)
+        # Validate the JSON syntax
+        try:
+            template_dict = json.loads(params['template'])
+        except ValueError as e:
+            raise ValueError(u'template: ' + unicode(e))
+        # Validate the JSON data values
+        self._del_keys(template_dict, TemplateAPI.HIDE_FIELDS)
+        template_attrs = TemplateAttrs.from_dict(params['name'], template_dict)
+        # Return the template as a validated dict
+        params['template'] = template_attrs.to_dict()
+        return params
+
+    def _del_keys(self, dct, keys_list):
+        """
+        Deletes the keys in keys_list from dictionary dct.
+        """
+        for k in keys_list:
+            try:
+                del dct[k]
+            except KeyError:
+                pass
 
 
 class UserAPI(MethodView):
@@ -578,12 +667,16 @@ def _user_api_permission_required(f):
     """
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        res = _check_internal_request(request, session, False, True, SystemPermissions.PERMIT_ADMIN_USERS)
+        res = _check_internal_request(
+            request, session, False, True, SystemPermissions.PERMIT_ADMIN_USERS
+        )
         # If not admin_users, allow GET and PUT for current user's record
         if res:
-            allow = (request.method == 'GET' or request.method == 'PUT') and \
-                    'user_id' in kwargs and \
-                    kwargs['user_id'] == get_session_user_id()
+            allow = (
+                request.method in ['GET', 'PUT'] and
+                'user_id' in kwargs and
+                kwargs['user_id'] == get_session_user_id()
+            )
             if not allow:
                 return res
         return f(*args, **kwargs)
@@ -699,8 +792,14 @@ api_add_url_rules(
 
 _dapi_template_views = api_permission_required(TemplateAPI.as_view('admin.template'))
 api_add_url_rules(
+    [url_version_prefix + '/admin/templates/',
+     '/admin/templates/'],
+    view_func=_dapi_template_views,
+    methods=['GET', 'POST']
+)
+api_add_url_rules(
     [url_version_prefix + '/admin/templates/<int:template_id>/',
      '/admin/templates/<int:template_id>/'],
     view_func=_dapi_template_views,
-    methods=['GET']
+    methods=['GET', 'PUT', 'DELETE']
 )

@@ -55,8 +55,8 @@ class TemplateAttrs(object):
     @staticmethod
     def from_dict(name, attr_dict):
         """
-        Returns a new TemplateAttrs, populated from the given dictionary.
-        This is the opposite of to_dict().
+        Returns a new TemplateAttrs, populated from the given dictionary
+        and validated. This is the opposite of to_dict().
         Raises a ValueError if any of the dictionary values fail validation.
         """
         new_obj = TemplateAttrs(ImageAttrs(name))
@@ -121,13 +121,13 @@ class TemplateAttrs(object):
         """
         self.image_attrs.validate()
         try:
-            field_name = 'expiry'
+            field_name = 'expiry_secs'
             if self._expiry_secs is not None:
                 validate_number(self._expiry_secs, -1, 31536000)
             field_name = 'attachment'
             if self._attachment is not None:
                 validate_boolean(self._attachment)
-            field_name = 'stats'
+            field_name = 'record_stats'
             if self._record_stats is not None:
                 validate_boolean(self._record_stats)
         except ValueError as e:

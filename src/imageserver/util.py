@@ -479,14 +479,6 @@ def filepath_components(filepath):
     return (filename, fullpath, path_list)
 
 
-def round_crop(crop_val):
-    """
-    Returns an image cropping float value rounded to a standard number
-    of decimal places.
-    """
-    return round(crop_val, 5)
-
-
 def adjust_query_string(qs, add_update_params=None, del_params=None):
     """
     Adjusts query string qs, updating or adding new parameters with the dictionary

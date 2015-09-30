@@ -626,6 +626,9 @@ class ImageServerAPITests(BaseTestCase):
 
     # Tests the image template API
     def test_data_api_templates(self):
+        # Utility - return dict with None values removed
+        def strip_dict(d):
+            return {k: d[k] for k in d if d[k] is not None}
         # Not logged in - getting details should fail
         rv = self.app.get('/api/admin/templates/1/')
         self.assertEqual(rv.status_code, API_CODES.REQUIRES_AUTH)
@@ -638,7 +641,6 @@ class ImageServerAPITests(BaseTestCase):
         obj = json.loads(rv.data)['data']
         self.assertEqual(obj['name'], 'SmallJpeg')
         tdict = obj['template']
-        self.assertEqual(tdict['filename'], 'SmallJpeg')
         self.assertEqual(tdict['format'], 'jpg')
         self.assertEqual(tdict['width'], 200)
         self.assertEqual(tdict['height'], 200)
@@ -646,9 +648,121 @@ class ImageServerAPITests(BaseTestCase):
         # Invalid template ID - getting details should fail
         rv = self.app.get('/api/admin/templates/-1/')
         self.assertEqual(rv.status_code, API_CODES.NOT_FOUND)
-        # TODO add get/set/create/delete tests
-        # TODO test permission to update
-        # TODO test that changed templates take effect on images
+        # List templates
+        rv = self.app.get('/api/admin/templates/')
+        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        obj = json.loads(rv.data)['data']
+        self.assertEqual(len(obj), 2)  # SmallJpeg and Precache
+        # Std user cannot update templates
+        rv = self.app.put('/api/admin/templates/1/', data={
+            'name': 'should fail', 'description': '', 'template': '{}'
+        })
+        self.assertEqual(rv.status_code, API_CODES.UNAUTHORISED)
+        rv = self.app.delete('/api/admin/templates/1/')
+        self.assertEqual(rv.status_code, API_CODES.UNAUTHORISED)
+        # Super user can perform updates
+        setup_user_account('kryten', 'admin_all')
+        self.login('kryten', 'kryten')
+        # Create
+        rv = self.app.post('/api/admin/templates/', data={
+            'name': 'new template',
+            'description': 'new template desc',
+            'template': '''{ "format": "png" }'''
+        })
+        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        obj = json.loads(rv.data)['data']
+        self.assertEqual(obj['name'], 'new template')
+        new_tmp_id = obj['id']
+        self.assertGreater(new_tmp_id, 0)
+        self.assertEqual(strip_dict(obj['template']), {'format': 'png'})
+        # We should be able to use it immediately
+        rv = self.app.get('/image?src=test_images/cathedral.jpg&width=200&tmp=new template')
+        self.assertEqual(rv.status_code, 200)
+        self.assertIn('image/png', rv.headers['Content-Type'])
+        # Update
+        rv = self.app.put('/api/admin/templates/' + str(new_tmp_id) + '/', data={
+            'name': 'new template',
+            'description': 'new template desc',
+            'template': '''{ "format": "jpg" }'''
+        })
+        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        obj = json.loads(rv.data)['data']
+        self.assertEqual(strip_dict(obj['template']), {'format': 'jpg'})
+        # Changes should take effect immediately
+        rv = self.app.get('/image?src=test_images/cathedral.jpg&width=200&tmp=new template')
+        self.assertEqual(rv.status_code, 200)
+        self.assertIn('image/jpeg', rv.headers['Content-Type'])
+        # Validation - name must be unique
+        rv = self.app.post('/api/admin/templates/', data={
+            'name': 'new template', 'description': '', 'template': '''{ "format": "jpg" }'''
+        })
+        self.assertEqual(rv.status_code, API_CODES.ALREADY_EXISTS)
+        # Validation - name is required
+        rv = self.app.put('/api/admin/templates/' + str(new_tmp_id) + '/', data={
+            'name': '', 'description': '', 'template': '''{ "format": "jpg" }'''
+        })
+        self.assertEqual(rv.status_code, API_CODES.INVALID_PARAM)
+        # Validation - format must be supported
+        rv = self.app.put('/api/admin/templates/' + str(new_tmp_id) + '/', data={
+            'name': 'new template', 'description': '', 'template': '''{ "format": "qwerty" }'''
+        })
+        self.assertEqual(rv.status_code, API_CODES.INVALID_PARAM)
+        # Validation - cropping must be numbers 0 to 1
+        rv = self.app.put('/api/admin/templates/' + str(new_tmp_id) + '/', data={
+            'name': 'new template', 'description': '', 'template': '''{ "left": "abc" }'''
+        })
+        self.assertEqual(rv.status_code, API_CODES.INVALID_PARAM)
+        rv = self.app.put('/api/admin/templates/' + str(new_tmp_id) + '/', data={
+            'name': 'new template', 'description': '', 'template': '''{ "left": 1.5 }'''
+        })
+        self.assertEqual(rv.status_code, API_CODES.INVALID_PARAM)
+        # Validation - attachment must be a bool
+        rv = self.app.put('/api/admin/templates/' + str(new_tmp_id) + '/', data={
+            'name': 'new template', 'description': '', 'template': '''{ "attachment": 1 }'''
+        })
+        self.assertEqual(rv.status_code, API_CODES.INVALID_PARAM)
+        # Validation - width must be a number
+        rv = self.app.put('/api/admin/templates/' + str(new_tmp_id) + '/', data={
+            'name': 'new template', 'description': '', 'template': '''{ "width": true }'''
+        })
+        self.assertEqual(rv.status_code, API_CODES.INVALID_PARAM)
+        # Validation - invalid JSON should be handled (not throw a 500)
+        rv = self.app.put('/api/admin/templates/' + str(new_tmp_id) + '/', data={
+            'name': 'new template', 'description': '', 'template': '''this isn't JSON'''
+        })
+        self.assertEqual(rv.status_code, API_CODES.INVALID_PARAM)
+        # Correct versions of all the above should save OK
+        # Also most strings should be lower cased on save (but not file paths)
+        rv = self.app.put('/api/admin/templates/' + str(new_tmp_id) + '/', data={
+            'name': 'new template', 'description': '', 'template': '''{
+                "format": "JPG",
+                "fill": "BLUE",
+                "left": 0.1,
+                "attachment": true,
+                "width": 200,
+                "height": 100,
+                "overlay_src": "Mixed Case/Path.png",
+                "colorspace": "GRAY"
+            }'''
+        })
+        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        obj = json.loads(rv.data)['data']
+        self.assertEqual(strip_dict(obj['template']), {
+            'format': 'jpg',
+            'fill': 'blue',
+            'left': 0.1,
+            'attachment': True,
+            'width': 200,
+            'height': 100,
+            'overlay_src': 'Mixed Case/Path.png',
+            'colorspace': 'gray'
+        })
+        # Delete
+        rv = self.app.delete('/api/admin/templates/' + str(new_tmp_id) + '/')
+        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        # Changes should take effect immediately
+        rv = self.app.get('/image?src=test_images/cathedral.jpg&width=200&tmp=new template')
+        self.assertEqual(rv.status_code, 400)
 
     # File admin API - images
     def test_file_api_images(self):
