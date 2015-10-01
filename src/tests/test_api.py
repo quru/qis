@@ -628,7 +628,8 @@ class ImageServerAPITests(BaseTestCase):
     def test_data_api_templates(self):
         # Utility - return dict with None values removed
         def strip_dict(d):
-            return {k: d[k] for k in d if d[k] is not None}
+            # Py2.7: return {k: d[k] for k in d if d[k] is not None}
+            return dict((k, d[k]) for k in d if d[k] is not None)
         # Not logged in - getting details should fail
         rv = self.app.get('/api/admin/templates/1/')
         self.assertEqual(rv.status_code, API_CODES.REQUIRES_AUTH)
