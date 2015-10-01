@@ -23,6 +23,16 @@
 	Last Changed:  $Date$ $Rev$ by $Author$
 */
 
+.list_table {
+	margin-top: 1em;
+	width: auto;
+}
+@media screen and (min-width: 1024px) {
+	.list_table {
+		max-width: 66%;
+	}
+}
+
 .draggable {
 	cursor: pointer;
 	cursor: -webkit-grab;

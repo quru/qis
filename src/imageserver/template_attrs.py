@@ -29,8 +29,7 @@
 # =========  ====  ============================================================
 #
 
-from image_attrs import ImageAttrs
-from util import validate_boolean, validate_number
+from image_attrs import BooleanValidator, RangeValidator, ImageAttrs
 
 
 class TemplateAttrs(object):
@@ -38,9 +37,6 @@ class TemplateAttrs(object):
     Class to hold an image template definition, that is a set of desired image
     attributes together with optional handling settings.
     """
-    # The template fields that are not part of ImageAttrs
-    __attrs = ['expiry_secs', 'attachment', 'record_stats']
-
     def __init__(self, image_attrs, expiry_secs=None, attachment=None, record_stats=None):
         """
         Constructs a new template object.
@@ -69,7 +65,7 @@ class TemplateAttrs(object):
         This is the opposite of from_dict().
         """
         dct = self.image_attrs.to_dict()
-        for attr in TemplateAttrs.__attrs:
+        for attr in TemplateAttrs.validators().iterkeys():
             dct[attr] = getattr(self, "_%s" % attr)
         return dct
 
@@ -81,7 +77,7 @@ class TemplateAttrs(object):
         Raises a ValueError if any of the dictionary values fail validation.
         """
         self.image_attrs.apply_dict(attr_dict, override_values, validate=False)
-        for attr in TemplateAttrs.__attrs:
+        for attr in TemplateAttrs.validators().iterkeys():
             dict_val = attr_dict.get(attr)
             if dict_val is not None and dict_val != '':
                 obj_key = "_%s" % attr
@@ -113,6 +109,20 @@ class TemplateAttrs(object):
         """
         return self._record_stats
 
+    @staticmethod
+    def validators():
+        """
+        Returns a dictionary mapping the internal field names of
+        this class to a validation class and web parameter name.
+        E.g. { "expiry_secs": (RangeValidator(-1, 31536000), "expires"),
+               "attachment": (BooleanValidator(), "attach"), ... }
+        """
+        return {
+            "expiry_secs": (RangeValidator(-1, 31536000), "expires"),
+            "attachment": (BooleanValidator(), "attach"),
+            "record_stats": (BooleanValidator(), "stats")
+        }
+
     def validate(self):
         """
         Validates that all image attributes and handling settings, if they have
@@ -121,14 +131,11 @@ class TemplateAttrs(object):
         """
         self.image_attrs.validate()
         try:
-            field_name = 'expiry_secs'
-            if self._expiry_secs is not None:
-                validate_number(self._expiry_secs, -1, 31536000)
-            field_name = 'attachment'
-            if self._attachment is not None:
-                validate_boolean(self._attachment)
-            field_name = 'record_stats'
-            if self._record_stats is not None:
-                validate_boolean(self._record_stats)
+            field_name = ''
+            for field_name, val_tuple in TemplateAttrs.validators().iteritems():
+                validator = val_tuple[0]
+                val = getattr(self, "_%s" % field_name)
+                if val is not None:
+                    validator(val)
         except ValueError as e:
             raise ValueError('%s: %s' % (field_name, str(e)))

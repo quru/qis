@@ -504,37 +504,37 @@ class ImageAttrs():
         colorspaces = ("", "srgb", "rgb", "cmyk", "gray", "grey")
 
         return {
-            "filename": (LengthValidator(1, 1024), 'src'),
-            "page": (RangeValidator(0, 999999), 'page'),
-            "format": (ChoiceValidator(formats), 'format'),
-            "template": (ChoiceValidator(templates), 'tmp'),
-            "width": (RangeValidator(0, app.config['MAX_IMAGE_DIMENSION']), 'width'),
-            "height": (RangeValidator(0, app.config['MAX_IMAGE_DIMENSION']), 'height'),
-            "align_h": (AlignValidator(("l", "c", "r")), 'halign'),
-            "align_v": (AlignValidator(("t", "c", "b")), 'valign'),
-            "rotation": (RealRangeValidator(-360.0, 360.0), 'angle'),
-            "flip": (ChoiceValidator(("", "h", "v")), 'flip'),
-            "top": (RealRangeValidator(0.0, 1.0), 'top'),
-            "left": (RealRangeValidator(0.0, 1.0), 'left'),
-            "bottom": (RealRangeValidator(0.0, 1.0), 'bottom'),
-            "right": (RealRangeValidator(0.0, 1.0), 'right'),
-            "crop_fit": (BooleanValidator(), 'autocropfit'),
-            "size_fit": (BooleanValidator(), 'autosizefit'),
-            "fill": (LengthValidator(3, 32), 'fill'),
-            "quality": (RangeValidator(1, 100), 'quality'),
-            "sharpen": (RangeValidator(-500, 500), 'sharpen'),
-            "overlay_src": (LengthValidator(1, 1024), 'overlay'),
-            "overlay_pos": (ChoiceValidator(ov_positions), 'ovpos'),
-            "overlay_size": (RealRangeValidator(0.0, 1.0), 'ovsize'),
-            "overlay_opacity": (RealRangeValidator(0.0, 1.0), 'ovopacity'),
-            "icc_profile": (ICCProfileValidator(iccs), 'icc'),
-            "icc_intent": (ChoiceValidator(intents), 'intent'),
-            "icc_bpc": (BooleanValidator(), 'bpc'),
-            "colorspace": (ChoiceValidator(colorspaces), 'colorspace'),
-            "strip": (BooleanValidator(), 'strip'),
-            "dpi_x": (RangeValidator(0, 32000), 'dpi'),
-            "dpi_y": (RangeValidator(0, 32000), 'dpi'),
-            "tile": (TileValidator(app.config['MAX_GRID_TILES']), 'tile')
+            "filename": (LengthValidator(1, 1024), "src"),
+            "page": (RangeValidator(0, 999999), "page"),
+            "format": (ChoiceValidator(formats), "format"),
+            "template": (ChoiceValidator(templates), "tmp"),
+            "width": (RangeValidator(0, app.config["MAX_IMAGE_DIMENSION"]), "width"),
+            "height": (RangeValidator(0, app.config["MAX_IMAGE_DIMENSION"]), "height"),
+            "align_h": (AlignValidator(("l", "c", "r")), "halign"),
+            "align_v": (AlignValidator(("t", "c", "b")), "valign"),
+            "rotation": (RealRangeValidator(-360.0, 360.0), "angle"),
+            "flip": (ChoiceValidator(("", "h", "v")), "flip"),
+            "top": (RealRangeValidator(0.0, 1.0), "top"),
+            "left": (RealRangeValidator(0.0, 1.0), "left"),
+            "bottom": (RealRangeValidator(0.0, 1.0), "bottom"),
+            "right": (RealRangeValidator(0.0, 1.0), "right"),
+            "crop_fit": (BooleanValidator(), "autocropfit"),
+            "size_fit": (BooleanValidator(), "autosizefit"),
+            "fill": (LengthValidator(3, 32), "fill"),
+            "quality": (RangeValidator(1, 100), "quality"),
+            "sharpen": (RangeValidator(-500, 500), "sharpen"),
+            "overlay_src": (LengthValidator(1, 1024), "overlay"),
+            "overlay_pos": (ChoiceValidator(ov_positions), "ovpos"),
+            "overlay_size": (RealRangeValidator(0.0, 1.0), "ovsize"),
+            "overlay_opacity": (RealRangeValidator(0.0, 1.0), "ovopacity"),
+            "icc_profile": (ICCProfileValidator(iccs), "icc"),
+            "icc_intent": (ChoiceValidator(intents), "intent"),
+            "icc_bpc": (BooleanValidator(), "bpc"),
+            "colorspace": (ChoiceValidator(colorspaces), "colorspace"),
+            "strip": (BooleanValidator(), "strip"),
+            "dpi_x": (RangeValidator(0, 32000), "dpi"),
+            "dpi_y": (RangeValidator(0, 32000), "dpi"),
+            "tile": (TileValidator(app.config["MAX_GRID_TILES"]), "tile")
         }
 
     @staticmethod
@@ -585,7 +585,7 @@ class ImageAttrs():
         ValueError if an attribute value is invalid, otherwise returns with no value.
         """
         try:
-            for (attr, validator, web_attr) in self.validators_flat():
+            for (attr, validator, web_attr) in ImageAttrs.validators_flat():
                 val = getattr(self, "_%s" % attr)
                 if val is not None:
                     validator(val)

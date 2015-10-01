@@ -38,7 +38,9 @@ from imageserver.admin import blueprint
 from imageserver.errors import DoesNotExistError
 from imageserver.flask_app import app, data_engine, permissions_engine
 from imageserver.flask_util import render_template
-from imageserver.models import Folder, Group, User
+from imageserver.image_attrs import ImageAttrs
+from imageserver.template_attrs import TemplateAttrs
+from imageserver.models import Folder, Group, ImageTemplate, User
 from imageserver.util import parse_int
 from imageserver.views_util import log_security_error
 
@@ -48,6 +50,15 @@ from imageserver.views_util import log_security_error
 def index():
     return render_template(
         'admin_index.html'
+    )
+
+
+# The template admin list page
+@blueprint.route('/templates/')
+def template_list():
+    return render_template(
+        'admin_template_list.html',
+        templates=data_engine.list_objects(ImageTemplate, order_field=ImageTemplate.name)
     )
 
 
@@ -67,6 +78,30 @@ def group_list():
         'admin_group_list.html',
         groups=data_engine.list_objects(Group, Group.name),
         GROUP_TYPE_SYSTEM=Group.GROUP_TYPE_SYSTEM
+    )
+
+
+# The template admin edit page
+@blueprint.route('/templates/<int:template_id>/')
+def template_edit(template_id):
+    embed = request.args.get('embed', '')
+    template = None
+    err_msg = None
+    try:
+        if template_id > 0:
+            template = data_engine.get_image_template(template_id)
+
+        fields = ImageAttrs.validators().copy()
+        fields.update(TemplateAttrs.validators())
+    except Exception as e:
+        log_security_error(e, request)
+        err_msg = str(e)
+    return render_template(
+        'admin_template_edit.html',
+        fields=fields,
+        embed=embed,
+        template=template,
+        err_msg=err_msg
     )
 
 

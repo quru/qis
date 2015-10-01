@@ -1,0 +1,59 @@
+{% extends "admin_base.html" %}
+
+{% block copyright %}
+<!-- 
+	Document:      admin_template_edit.html
+	Date started:  1 Oct 2015
+	By:            Matt Fozard
+	Purpose:       Quru Image Server Administration - template edit
+	Requires:      
+	Copyright:     Quru Ltd (www.quru.com)
+	
+	Last Changed:  $Date$ $Rev$ by $Author$
+	
+	Notable modifications:
+	Date       By    Details
+	=========  ====  ============================================================
+-->
+{% endblock %}
+
+{% set body_id = 'template_edit' %}
+{% set page_heading = 'Edit template' if user else 'Add template' %}
+
+{% block body %}
+	{{ super() }}
+	<br/>
+	{% if err_msg %}
+		<div class="error">{{ err_msg|newlines }}</div>
+	{% else %}
+		{% set form_method = 'put' if template else 'post' %}
+		{% set form_action = url_for('api.admin.template', template_id=template.id) if template else url_for('api.admin.template') %}
+		{% set allow_edit = is_permitted(SystemPermission.PERMIT_SUPER_USER) %}
+		{% set disabled = 'disabled="disabled"'|safe %}
+		
+		<form id="editform" _method="{{ form_method }}" action="{{ form_action }}">
+			<input type="hidden" name="template_id" value="{{ template.id|default(0) }}" />
+			
+			<div>
+				<label>Template name</label>
+				<input type="text" name="name" size="25" maxlength="120"
+				       {{ disabled if not allow_edit }}
+				       value="{{ template.name }}"/>
+			</div>
+			<div>
+				<label>Description</label>
+				<textarea name="description" cols="25" rows="5"
+				          {{ disabled if not allow_edit }}>{{ template.description }}</textarea>
+			</div>
+			<br/>
+			<h2>Image options</h2>
+			
+			<div>
+				<label></label>
+				<input type="button" id="cancel" value="Cancel">
+				<input type="submit" id="submit" {{ disabled if not allow_edit }}
+				       value="&nbsp;Apply&nbsp;">
+			</div>
+		</form>
+	{% endif %}
+{% endblock %}

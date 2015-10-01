@@ -104,14 +104,8 @@ def setup():
 def teardown():
     # Kill the aux child processes
     # Note: this works on Linux but not on OS X
-    p = subprocess.Popen([
-            'ps',
-            '-o',
-            'pid',
-            '--no-headers',
-            '--ppid',
-            str(os.getpid())
-        ],
+    p = subprocess.Popen(
+        ['ps', '-o', 'pid', '--no-headers', '--ppid', str(os.getpid())],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE
     )
@@ -2870,8 +2864,6 @@ class ImageServerCacheTests(BaseTestCase):
         self.assertIsNone(ret)
 
 
-
-
 class ImageServerTestsWebPages(BaseTestCase):
     @classmethod
     def setUpClass(cls):
@@ -3028,6 +3020,10 @@ class ImageServerTestsWebPages(BaseTestCase):
             self.assertEqual(rv.status_code, expect_code)
             rv = self.app.get('/admin/groups/1/')
             self.assertEqual(rv.status_code, expect_code)
+            rv = self.app.get('/admin/templates/')
+            self.assertEqual(rv.status_code, expect_code)
+            rv = self.app.get('/admin/templates/1/')
+            self.assertEqual(rv.status_code, expect_code)
         # Not logged in
         test_pages(302)
         rv = self.app.get('/account/')
@@ -3043,6 +3039,26 @@ class ImageServerTestsWebPages(BaseTestCase):
         test_pages(200)
         rv = self.app.get('/account/')
         self.assertEqual(rv.status_code, 200)
+
+    # Test the template admin pages
+    def test_template_admin_page(self):
+        # test_system_permission_pages() already tests that the pages work
+        # so here we test that non-super users cannot edit templates
+        setup_user_account('lister', 'admin_files')
+        self.login('lister', 'lister')
+        rv = self.app.get('/admin/templates/')
+        self.assertEqual(rv.status_code, 200)
+        self.assertNotIn('delete', rv.data)
+        rv = self.app.get('/admin/templates/1/')
+        self.assertEqual(rv.status_code, 200)
+        self.assertIn('''id="submit" disabled="disabled"''', rv.data)
+        self.login('admin', 'admin')
+        rv = self.app.get('/admin/templates/')
+        self.assertEqual(rv.status_code, 200)
+        self.assertIn('delete', rv.data)
+        rv = self.app.get('/admin/templates/1/')
+        self.assertEqual(rv.status_code, 200)
+        self.assertNotIn('''id="submit" disabled="disabled"''', rv.data)
 
     # Test that the markdown rendering is working
     def test_markdown_support(self):

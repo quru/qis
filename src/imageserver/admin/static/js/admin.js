@@ -27,6 +27,7 @@
 	Notable modifications:
 	Date       By    Details
 	=========  ====  ============================================================
+	01Oct2015  Matt  Added template admin
 */
 
 "use strict";
@@ -64,6 +65,14 @@ GenericListPage.initDeleteLinks = function(objName) {
 	});
 };
 
+/*** Template list page ***/
+
+var TemplateList = {};
+TemplateList.onInit = function() {
+	GenericListPage.initPopupLinks(575, 650);
+	GenericListPage.initDeleteLinks('template');
+};
+
 /*** User list page ***/
 
 var UserList = {};
@@ -78,6 +87,40 @@ var GroupList = {};
 GroupList.onInit = function() {
 	GenericListPage.initPopupLinks(700, 650);
 	GenericListPage.initDeleteLinks('group');
+};
+
+/*** Template edit page ***/
+
+var TemplateEdit = {};
+TemplateEdit.onInit = function() {
+	GenericPopup.initButtons();
+	setAjaxJsonForm(
+		'editform',
+		TemplateEdit.validate,
+		GenericPopup.defaultSubmitting,
+		GenericPopup.defaultSubmitSuccess,
+		TemplateEdit.onSubmitError
+	);
+};
+TemplateEdit.validate = function() {
+	form_clearErrors('editform');
+	
+	if (validate_isempty('name')) {
+		form_setError('name');
+		alert('You must enter a name for the template.');
+		return false;
+	}
+	return true;
+};
+TemplateEdit.onSubmitError = function(httpStatus, responseText) {
+	GenericPopup.enableButtons();
+	var err = getAPIError(httpStatus, responseText);
+	if (err.status == APICodes.ALREADY_EXISTS) {
+		form_setError('name');
+		alert('A template with this name already exists, please choose another name.');
+	}
+	else
+		alert('Sorry, your changes were not saved.\n\n' + err.message);
 };
 
 /*** User edit page ***/
@@ -476,6 +519,12 @@ function submitParentForm(el) {
 
 function onInit() {
 	switch ($(document.body).id) {
+		case 'template_list':
+			TemplateList.onInit();
+			break;
+		case 'template_edit':
+			TemplateEdit.onInit();
+			break;
 		case 'user_list':
 			UserList.onInit();
 			break;

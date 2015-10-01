@@ -27,15 +27,22 @@
 	Notable modifications:
 	Date       By    Details
 	=========  ====  ============================================================
+	01Oct2015  Matt  Added template admin
 */
 "use strict";
 var GenericListPage={};GenericListPage.initPopupLinks=function(b,c){var a=$$(".popuplink");a.each(function(d){popup_convert_anchor(d,b,c,function(){window.location.reload();
 });});};GenericListPage.initDeleteLinks=function(b){var c=b.substring(0,1).toUpperCase()+b.substring(1);
 var a=$$(".delform");a.each(function(d){setAjaxJsonForm(d,function(){return confirm("Are you sure you want to delete "+b+" '"+d.del_name.value+"'?");
 },null,function(){alert(c+" deleted successfully.");window.location.reload();},function(e,g){var f=getAPIError(e,g);
-alert("Sorry, this "+b+" was not deleted.\n\n"+f.message);});});};var UserList={};UserList.onInit=function(){GenericListPage.initPopupLinks(575,650);
+alert("Sorry, this "+b+" was not deleted.\n\n"+f.message);});});};var TemplateList={};TemplateList.onInit=function(){GenericListPage.initPopupLinks(575,650);
+GenericListPage.initDeleteLinks("template");};var UserList={};UserList.onInit=function(){GenericListPage.initPopupLinks(575,650);
 GenericListPage.initDeleteLinks("user");};var GroupList={};GroupList.onInit=function(){GenericListPage.initPopupLinks(700,650);
-GenericListPage.initDeleteLinks("group");};var UserEdit={};UserEdit.onInit=function(){GenericPopup.initButtons();
+GenericListPage.initDeleteLinks("group");};var TemplateEdit={};TemplateEdit.onInit=function(){GenericPopup.initButtons();
+setAjaxJsonForm("editform",TemplateEdit.validate,GenericPopup.defaultSubmitting,GenericPopup.defaultSubmitSuccess,TemplateEdit.onSubmitError);
+};TemplateEdit.validate=function(){form_clearErrors("editform");if(validate_isempty("name")){form_setError("name");
+alert("You must enter a name for the template.");return false;}return true;};TemplateEdit.onSubmitError=function(a,c){GenericPopup.enableButtons();
+var b=getAPIError(a,c);if(b.status==APICodes.ALREADY_EXISTS){form_setError("name");alert("A template with this name already exists, please choose another name.");
+}else{alert("Sorry, your changes were not saved.\n\n"+b.message);}};var UserEdit={};UserEdit.onInit=function(){GenericPopup.initButtons();
 setAjaxJsonForm("editform",UserEdit.validate,GenericPopup.defaultSubmitting,GenericPopup.defaultSubmitSuccess,UserEdit.onSubmitError);
 };UserEdit.validate=function(){form_clearErrors("editform");if(!validate_isempty("email")&&!validate_email("email")){form_setError("email");
 alert("The user's email address does not appear to be valid.");return false;}if(validate_isempty("username")){form_setError("username");
@@ -104,7 +111,8 @@ FolderPermissions.onFormError=function(a,c){DataMaintenance.enableButtons();var 
 TracePermissions.setLoadingMessage("Please wait...");window.location=b+"&user="+a;};TracePermissions.setLoadingMessage=function(a){$("trace_container").innerHTML=a;
 };function submitParentForm(d){var e=d.getParent();if(e&&(e.tagName.toLowerCase()=="form")){var c=e.retrieve("events");
 if(c&&c.submit){var b=c.submit.keys;for(var a=0;a<b.length;a++){if(b[a]()===false){return false;}}}e.submit();
-}return false;}function onInit(){switch($(document.body).id){case"user_list":UserList.onInit();break;
-case"user_edit":UserEdit.onInit();break;case"group_list":GroupList.onInit();break;case"group_edit":GroupEdit.onInit();
-break;case"data_maintenance":DataMaintenance.onInit();break;case"folder_permissions":FolderPermissions.onInit();
-break;case"trace_permissions":TracePermissions.onInit();break;}}window.addEvent("domready",onInit);
+}return false;}function onInit(){switch($(document.body).id){case"template_list":TemplateList.onInit();
+break;case"template_edit":TemplateEdit.onInit();break;case"user_list":UserList.onInit();break;case"user_edit":UserEdit.onInit();
+break;case"group_list":GroupList.onInit();break;case"group_edit":GroupEdit.onInit();break;case"data_maintenance":DataMaintenance.onInit();
+break;case"folder_permissions":FolderPermissions.onInit();break;case"trace_permissions":TracePermissions.onInit();
+break;}}window.addEvent("domready",onInit);

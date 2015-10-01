@@ -1,0 +1,58 @@
+{% extends "admin_base.html" %}
+
+{% block copyright %}
+<!-- 
+	Document:      admin_template_list.html
+	Date started:  30 Sep 2015
+	By:            Matt Fozard
+	Purpose:       Quru Image Server Administration - template list
+	Requires:      
+	Copyright:     Quru Ltd (www.quru.com)
+	
+	Last Changed:  $Date$ $Rev$ by $Author$
+	
+	Notable modifications:
+	Date       By    Details
+	=========  ====  ============================================================
+-->
+{% endblock %}
+
+{% set body_id = 'template_list' %}
+{% set page_heading = 'Templates' %}
+
+{% block body %}
+	{{ super() }}
+	<div class="smalltext">
+		{{ templates|length }} template{{ templates|length|pluralize }}
+		{% if is_permitted(SystemPermission.PERMIT_SUPER_USER) %}
+		(<a class="popuplink" href="{{ url_for('admin.template_edit', template_id=0, embed=1) }}">add a new template</a>)
+		{% endif %}
+	</div>
+
+	<table class="list_table" summary="Listing of {{ page_heading }}">
+
+		{% set row_class = cycler('even', 'odd') %}
+		<tr class="{{ row_class.next() }} header">
+			<td>Name</td>
+			<td>Description</td>
+			<td>Action</td>
+		</tr>
+
+		{% for template in templates %}
+		{% set edit_url = url_for('admin.template_edit', template_id=template.id, embed=1) %}
+
+		<tr class="{{ row_class.next() }}">
+			<td><a class="popuplink" href="{{ edit_url }}">{{ template.name }}</a></td>
+			<td><a class="popuplink" href="{{ edit_url }}">{{ template.description }}</a></td>
+			<td>
+				{% if is_permitted(SystemPermission.PERMIT_SUPER_USER) %}
+				<form id="delform_{{ template.id }}" class="delform" action="{{ url_for('api.admin.template', template_id=template.id) }}" _method="delete">
+					<input type="hidden" name="del_name" value="{{ template.name }}" />
+					(<a class="action" href="#" onclick="return submitParentForm(this)">delete</a>)
+				</form>
+				{% endif %}
+			</td>
+		</tr>
+		{% endfor %}
+	</table>
+{% endblock %}
