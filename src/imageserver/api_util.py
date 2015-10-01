@@ -95,7 +95,7 @@ def add_parameter_error_handler(f):
             raise errors.ParameterError('Invalid value: ' + str(e))
         except KeyError as e:
             # Try to extract the key info from the Werkzeug exception wrapper
-            info = e.message if hasattr(e, 'message') else str(e)
+            info = getattr(e, 'message', None) or str(e)
             raise errors.ParameterError('Missing parameter: ' + info)
     return decorated_function
 

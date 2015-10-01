@@ -238,7 +238,7 @@ class DataManager(object):
         except IntegrityError as e:
             if _commit:
                 db_session.rollback()  # Prevents InvalidRequestError at session.close()
-            if 'duplicate' in e.message:
+            if u'duplicate' in unicode(e):
                 raise errors.AlreadyExistsError(
                     'Object \'' + str(obj) + '\' contains a duplicate key'
                 )
