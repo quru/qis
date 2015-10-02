@@ -114,6 +114,11 @@ textarea {
 	border: 1px solid gray;
 }
 
+fieldset {
+	/* Firefox fieldsets are padded by default, but this looks better */
+	padding: 0.5em;
+}
+
 /* Standard table style
  */
 table {
@@ -153,18 +158,24 @@ td {
 
 /* Forms
  */
-form label {
+form label,
+fieldset label {
 	display: inline-block;
 	width: 10em;
 	vertical-align: top;
 }
+fieldset,
 form div,
-form fieldset {
+fieldset div {
 	line-height: 1.5em;
 	margin-top: 0.2em;
 	margin-bottom: 0.2em;
 	vertical-align: top;
 	border: none;
+}
+
+.fieldset_merge {
+	margin-top: -1.3em;
 }
 
 /* Common classes
@@ -239,7 +250,7 @@ img.disabled {
 }
 
 .subtlebg {
-	background-color: #fafafa;  /* same as tr.odd */
+	background-color: #f0f0f0;  /* same as tr.odd */
 }
 
 .highlight {

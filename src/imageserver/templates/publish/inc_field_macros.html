@@ -1,0 +1,20 @@
+{#
+  Outputs the HTML form element for an image parameter.
+  Macro parameter "fields" is the output of ImageAttrs.validators() or TemplateAttrs.validators().
+  Macro parameter "key" is a key into "fields".
+#}
+{% macro input(key, default="", placeholder="") %}
+	{% set validator = fields[key][0] %}
+	{% set web_name = fields[key][1] %}
+	{% set typename = validator.__class__.__name__ %}
+	{% include ["publish/input_%s.html" % key,
+	            "publish/input_%s.html" % typename,
+	            "publish/input_default.html"] %}
+{% endmacro %}
+
+{#
+  Outputs the HTML for a help icon.
+#}
+{% macro help(anchor, classes="") %}
+	<img src="{{ url_for('static', filename='images/icon-help.png') }}" class="clickable help {{ classes }}" data-anchor="{{ anchor }}" />
+{% endmacro %}

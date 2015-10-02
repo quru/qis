@@ -85,20 +85,27 @@ def group_list():
 @blueprint.route('/templates/<int:template_id>/')
 def template_edit(template_id):
     embed = request.args.get('embed', '')
+    fields = None
+    field_values = None
     template = None
     err_msg = None
     try:
         if template_id > 0:
             template = data_engine.get_image_template(template_id)
 
+        # See also views_pages.publish
         fields = ImageAttrs.validators().copy()
         fields.update(TemplateAttrs.validators())
+        # ...but here we use the template values as field values
+        field_values = template.template
+
     except Exception as e:
         log_security_error(e, request)
         err_msg = str(e)
     return render_template(
         'admin_template_edit.html',
         fields=fields,
+        field_values=field_values,
         embed=embed,
         template=template,
         err_msg=err_msg

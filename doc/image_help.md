@@ -32,6 +32,7 @@ Software developers can refer to both this and the [API user's guide](/api/help/
 	* [attach](#option_attach)
 	* [xref](#option_xref)
 	* [stats](#option_stats)
+	* [expires](#option_expires)
 	* [tmp](#option_tmp) (template)
 * [Usage notes](#notes)
 * [Accessing the original image](#original)
@@ -618,6 +619,30 @@ but does not affect the system-level statistics.
 
 You may find this option useful to exclude certain images from the "top images" report,
 for example a company logo that appears on every web page.
+
+<a name="option_expires"></a>
+### expires (client caching duration)
+This option can only be set inside [image templates](#option_tmp), not on individual images.
+
+Sets the number of seconds for which a web browser should cache an image locally before
+re-requesting it again from the server. This is only an instruction to the client; it has
+no effect on the caching of images on the server.
+
+For images that are uploaded once and do not change, this value should be set as `31536000`
+(1 year), meaning the web browser should cache the image locally for as long as possible.
+
+For images that may change occasionally, a value of `604800` (7 days) or more is recommended.
+
+A value of `-1` means expire the image immediately, and do not cache it at all. If your
+images are being used on a web site, this will greatly increase the number of requests
+made to your image server, increase the data transferred, and cause your web pages to
+load more slowly.
+
+A value of `0` means do not provide any expiry time to the client. In this case the client
+is free to decide its own caching strategy, and different web browsers will behave in
+different ways. Beware that some may choose not to cache the image.
+
+If you do not specify a value, the image server's default expiry time is used.
 
 <a name="option_tmp"></a>
 ### tmp (template)

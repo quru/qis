@@ -47,6 +47,7 @@ from flask_app import cache_engine, data_engine, image_engine, permissions_engin
 from flask_util import external_url_for, internal_url_for, render_template
 from flask_util import login_point, login_required
 from image_attrs import ImageAttrs
+from template_attrs import TemplateAttrs
 from models import Folder, FolderPermission, Image, ImageHistory, User
 from session_manager import get_session_user, get_session_user_id
 from session_manager import log_in, log_out, logged_in
@@ -411,9 +412,17 @@ def publish():
     src = request.args.get('src', '')
     embed = request.args.get('embed', '')
 
+    # See also admin.views_pages.template_edit
+    fields = ImageAttrs.validators().copy()
+    fields.update(TemplateAttrs.validators())
+    # ...but here we use fixed default field values
+    field_values = {
+        # TODO move defaults from the HTML input() calls to here
+    }
     return render_template(
         'publish.html',
-        fields=ImageAttrs.validators(),
+        fields=fields,
+        field_values=field_values,
         image_info=image_engine.get_image_properties(src, False),
         template_list=image_engine.get_template_list(),
         embed=embed,

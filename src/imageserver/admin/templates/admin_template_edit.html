@@ -1,5 +1,7 @@
 {% extends "admin_base.html" %}
 
+{% from "publish/inc_field_macros.html" import input, help with context %}
+
 {% block copyright %}
 <!-- 
 	Document:      admin_template_edit.html
@@ -15,6 +17,12 @@
 	Date       By    Details
 	=========  ====  ============================================================
 -->
+{% endblock %}
+
+{% block extra_head %}
+	{{ super() }}
+
+	<link rel="stylesheet" href="{{ url_for('static', filename='styles/publish.css') }}" type="text/css" />
 {% endblock %}
 
 {% set body_id = 'template_edit' %}
@@ -46,14 +54,29 @@
 				          {{ disabled if not allow_edit }}>{{ template.description }}</textarea>
 			</div>
 			<br/>
-			<h2>Image options</h2>
-			
 			<div>
 				<label></label>
 				<input type="button" id="cancel" value="Cancel">
 				<input type="submit" id="submit" {{ disabled if not allow_edit }}
 				       value="&nbsp;Apply&nbsp;">
 			</div>
+			
+			<br/>
+			<h2>Template options</h2>
+
+			{% include "publish/inc_common_fields.html" %}
+
+			<fieldset class="fieldset_merge subtlebg">
+				<div>
+					<label>Client caching duration:</label>
+					{{ input('expiry_secs') }} seconds
+					{{ help('option_expires') }}
+					<span class="field_default">
+						Server default: {{ settings.IMAGE_EXPIRY_TIME_DEFAULT }}
+					</span>
+				</div>
+			</fieldset>
+
 		</form>
 	{% endif %}
 {% endblock %}
