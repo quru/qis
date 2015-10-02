@@ -417,12 +417,16 @@ def publish():
     fields.update(TemplateAttrs.validators())
     # ...but here we use fixed default field values
     field_values = {
-        # TODO move defaults from the HTML input() calls to here
+        'page': 1,
+        'fill': '#ffffff',
+        'strip': app.config['IMAGE_STRIP_DEFAULT'],
+        'record_stats': True
     }
     return render_template(
         'publish.html',
         fields=fields,
         field_values=field_values,
+        include_crop_tool=True,
         image_info=image_engine.get_image_properties(src, False),
         template_list=image_engine.get_template_list(),
         embed=embed,

@@ -2,14 +2,15 @@
   Defines the HTML for imaging fields common to the image publisher and the template administration screen.
   Requires inc_field_macros.html to be already included.
   Requires variable "fields" to be the output of ImageAttrs.validators() or TemplateAttrs.validators().
-  Requires variable "field_values" to be a dictionary of initial values.
+  Requires variable "field_values" to be a similar dictionary of initial values.
+  Set "include_crop_tool" to include the cropping tool.
 #}
 
 			<h3>Page</h3>
 			<fieldset class="subtlebg">
 				<div>
 					<label>Page number:</label>
-					{{ input('page', '1') }}
+					{{ input(fields, field_values, 'page') }}
 					{{ help('option_page') }}
 				</div>
 			</fieldset>
@@ -26,7 +27,7 @@
 				</div>
 				<div id="group_width">
 					<label>Width:</label>
-					{{ input('width') }}
+					{{ input(fields, field_values, 'width') }}
 					{{ help('option_width') }}
 					<span class="field_default">
 						{% if image_info and image_info.width %}
@@ -36,7 +37,7 @@
 				</div>
 				<div id="group_height">
 					<label>Height:</label>
-					{{ input('height') }}
+					{{ input(fields, field_values, 'height') }}
 					{{ help('option_height', 'hidden') }}
 					<span class="field_default">
 						{% if image_info and image_info.height %}
@@ -46,7 +47,7 @@
 				</div>
 				<div>
 					<label>DPI:</label>
-					{{ input('dpi_x') }}
+					{{ input(fields, field_values, 'dpi_x') }}
 					{{ help('option_dpi') }}
 					<span class="field_default">
 						Server default: {{ settings.IMAGE_DPI_DEFAULT|default('keep original', True) }}
@@ -58,12 +59,13 @@
 			<fieldset class="subtlebg">
 				<div>
 					<label>Prevent padding:</label>
-					{{ input('size_fit') }}
+					{{ input(fields, field_values, 'size_fit') }}
 					{{ help('option_autosizefit') }}
 				</div>
 				<div id="group_fill">
 					<label>Padding colour:</label>
-					{{ input('fill', '#ffffff') }}  {{ help('option_fill') }}<br>
+					{{ input(fields, field_values, 'fill') }}
+					{{ help('option_fill') }}<br>
 					<label></label>
 					<input type="checkbox" name="autofill" id="publish_field_autofill"
 					       class="publish_field" value="auto" autocomplete="off">
@@ -75,12 +77,12 @@
 				</div>
 				<div>
 					<label>Image position:</label>
-					{{ input("align_h") }}
+					{{ input(fields, field_values, "align_h") }}
 					{{ help('option_halign') }}
 				</div>
 				<div>
 					<label></label>
-					{{ input("align_v") }}
+					{{ input(fields, field_values, "align_v") }}
 				</div>
 			</fieldset>
 
@@ -88,26 +90,29 @@
 			<fieldset class="subtlebg">
 				<div>
 					<label>Flip image:</label>
-					{{ input('flip') }}
+					{{ input(fields, field_values, 'flip') }}
 					{{ help('option_flip') }}
 				</div>
 				<div>
 					<label>Rotate image:</label>
-					{{ input("rotation") }}
+					{{ input(fields, field_values, "rotation") }}
 					{{ help('option_angle') }}
 				</div>
 				<div>
 					<label>Sharpen / blur:</label>
-					{{ input("sharpen") }}
+					{{ input(fields, field_values, "sharpen") }}
 					{{ help('option_sharpen') }}
 				</div>
 			</fieldset>
 			
 			<h3>Cropping</h3>
+			{% if include_crop_tool %}
 			<div class="crop_container">
 				<img id="crop_image" src="{{ url_for('image', src=src, width=320, height=320, format='png', colorspace='srgb', autosizefit=1, stats=0) }}" />
 			</div>
+			{% endif %}
 			<fieldset class="subtlebg">
+				{% if include_crop_tool %}
 				<div>
 					<label>Current aspect ratio:</label>
 					<span id="crop_aspect">&ndash;</span>
@@ -123,26 +128,27 @@
 						<option value="9:16">9:16 (portrait)</option>
 					</select>
 				</div>
+				{% endif %}
 				<div>
 					<label>Left:</label>
-					{{ input('left') }}
+					{{ input(fields, field_values, 'left') }}
 					{{ help('option_top') }}
 				</div>
 				<div>
 					<label>Top:</label>
-					{{ input('top') }}
+					{{ input(fields, field_values, 'top') }}
 				</div>
 				<div>
 					<label>Right:</label>
-					{{ input('right') }}
+					{{ input(fields, field_values, 'right') }}
 				</div>
 				<div>
 					<label>Bottom:</label>
-					{{ input('bottom') }}
+					{{ input(fields, field_values, 'bottom') }}
 				</div>
 				<div>
 					<label>Minimise padding:</label>
-					{{ input('crop_fit') }}
+					{{ input(fields, field_values, 'crop_fit') }}
 					{{ help('option_autocropfit') }}
 				</div>
 			</fieldset>
@@ -156,21 +162,21 @@
 					        >Browse...</button>
 					{{ help('option_overlay') }}<br>
 					<label></label>
-					{{ input('overlay_src', '', '/path/to/your-image.jpg') }}
+					{{ input(fields, field_values, 'overlay_src', '/path/to/your-image.jpg') }}
 				</div>
 				<div>
 					<label>Relative size:</label>
-					{{ input("overlay_size") }}
+					{{ input(fields, field_values, "overlay_size") }}
 					{{ help('option_ovsize') }}
 				</div>
 				<div>
 					<label>Position:</label>
-					{{ input("overlay_pos") }}
+					{{ input(fields, field_values, "overlay_pos") }}
 					{{ help('option_ovpos') }}
 				</div>
 				<div>
 					<label>Opacity:</label>
-					{{ input("overlay_opacity") }}
+					{{ input(fields, field_values, "overlay_opacity") }}
 					{{ help('option_ovopacity') }}
 				</div>
 			</fieldset>
@@ -179,17 +185,17 @@
 			<fieldset class="subtlebg">
 				<div id="group_icc">
 					<label>Colour profile:</label>
-					{{ input("icc_profile") }}
+					{{ input(fields, field_values, "icc_profile") }}
 					{{ help('option_icc') }}
 				</div>
 				<div>
 					<label>Intent:</label>
-					{{ input("icc_intent") }}
+					{{ input(fields, field_values, "icc_intent") }}
 					{{ help('option_intent') }}
 				</div>
 				<div>
 					<label>Black point compensation:</label>
-					{{ input("icc_bpc") }}
+					{{ input(fields, field_values, "icc_bpc") }}
 					{{ help('option_bpc') }}
 				</div>
 			</fieldset>
@@ -198,7 +204,7 @@
 			<fieldset class="subtlebg">
 				<div id="group_strip">
 					<label>Strip meta-data:</label>
-					{{ input("strip", settings.IMAGE_STRIP_DEFAULT) }}
+					{{ input(fields, field_values, "strip") }}
 					{{ help('option_strip') }}
 					<span class="field_default">
 						Server default: {{ settings.IMAGE_STRIP_DEFAULT|lower }}
@@ -206,7 +212,7 @@
 				</div>
 				<div>
 					<label>File format:</label>
-					{{ input("format") }}
+					{{ input(fields, field_values, "format") }}
 					{{ help('option_format') }}
 					<span class="field_default">
 						Server default: {{ settings.IMAGE_FORMAT_DEFAULT|default('keep original', True) }}
@@ -214,7 +220,7 @@
 				</div>
 				<div>
 					<label>JPG quality /<br/>PNG compression:</label>
-					{{ input("quality") }}
+					{{ input(fields, field_values, "quality") }}
 					{{ help('option_quality') }}
 					<span class="field_default">
 						Server default: {{ settings.IMAGE_QUALITY_DEFAULT }}
@@ -222,7 +228,7 @@
 				</div>
 				<div id="group_colorspace">
 					<label>Colour model:</label>
-					{{ input("colorspace") }}
+					{{ input(fields, field_values, "colorspace") }}
 					{{ help('option_colorspace') }}
 					<span class="field_default">
 						Server default: {{ settings.IMAGE_COLORSPACE_DEFAULT|default('keep original', True) }}
@@ -234,12 +240,12 @@
 			<fieldset class="subtlebg">
 				<div>
 					<label>Download file instead of displaying image:</label>
-					{{ input('attachment') }}
+					{{ input(fields, field_values, 'attachment') }}
 					{{ help('option_attach') }}
 				</div>
 				<div>
 					<label>Count requests in server statistics:</label>
-					{{ input('record_stats', True) }}
+					{{ input(fields, field_values, 'record_stats') }}
 					{{ help('option_stats') }}
 				</div>
 			</fieldset>

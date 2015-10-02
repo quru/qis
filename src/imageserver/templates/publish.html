@@ -111,7 +111,7 @@
 			<fieldset class="subtlebg">
 				<div>
 					<label>Base on template:</label>
-					{{ input('template') }}   {# Note that input_template.html requires {{ template_list }} #}
+					{{ input(fields, field_values, 'template') }}   {# Note that input_template.html requires {{ template_list }} #}
 					{{ help('option_tmp') }}
 				</div>
 				<div id="template_fields">

@@ -1,12 +1,14 @@
 {#
   Outputs the HTML form element for an image parameter.
-  Macro parameter "fields" is the output of ImageAttrs.validators() or TemplateAttrs.validators().
-  Macro parameter "key" is a key into "fields".
+  Param "fields" is the output of ImageAttrs.validators() or TemplateAttrs.validators().
+  Param "defaults" is a dictionary of default field values.
+  Param "key" is a key into "fields" and "defaults".
 #}
-{% macro input(key, default="", placeholder="") %}
+{% macro input(fields, defaults, key, placeholder="") %}
 	{% set validator = fields[key][0] %}
 	{% set web_name = fields[key][1] %}
 	{% set typename = validator.__class__.__name__ %}
+	{% set default = defaults[key] %}
 	{% include ["publish/input_%s.html" % key,
 	            "publish/input_%s.html" % typename,
 	            "publish/input_default.html"] %}

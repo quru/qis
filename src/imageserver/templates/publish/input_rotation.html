@@ -1,8 +1,8 @@
 <select name="{{ web_name }}_choices" id="publish_field_{{ key }}_choices" autocomplete="off">
-	<option value="" selected>None</option>
-	<option value="-90">90&deg; left</option>
-	<option value="90">90&deg; right</option>
-	<option value="180">180&deg;</option>
+	<option value=""    {% if not default %}selected{% endif %}>None</option>
+	<option value="-90" {% if default == '-90' %}selected{% endif %}>90&deg; left</option>
+	<option value="90"  {% if default == '90' %}selected{% endif %}>90&deg; right</option>
+	<option value="180" {% if default == '180' %}selected{% endif %}>180&deg;</option>
 </select>
 {% include "publish/input_RealRangeValidator.html" %}
 {% include "publish/input_helper_js.html" %}

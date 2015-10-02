@@ -1,5 +1,5 @@
 <select name="{{ web_name }}" id="publish_field_{{ key }}" class="publish_field" autocomplete="off">
-	<option value=""></option>
+	<option value="" {% if not default %}selected{% endif %}></option>
 	{% for t in template_list %}
 		{% if t.id == default or t.name == default %}
 		<option data-id="{{ t.id }}" value="{{ t.name|lower }}" selected>{{ t.name }}</option>

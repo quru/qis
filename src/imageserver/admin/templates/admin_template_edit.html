@@ -69,7 +69,7 @@
 			<fieldset class="fieldset_merge subtlebg">
 				<div>
 					<label>Client caching duration:</label>
-					{{ input('expiry_secs') }} seconds
+					{{ input(fields, field_values, 'expiry_secs') }} seconds
 					{{ help('option_expires') }}
 					<span class="field_default">
 						Server default: {{ settings.IMAGE_EXPIRY_TIME_DEFAULT }}
