@@ -97,7 +97,10 @@ def template_edit(template_id):
         fields = ImageAttrs.validators().copy()
         fields.update(TemplateAttrs.validators())
         # ...but here we use the template values as field values
-        field_values = template.template if template else {}
+        field_values = template.template if template else {
+            # New template defaults
+            'record_stats': True
+        }
 
     except Exception as e:
         log_security_error(e, request)

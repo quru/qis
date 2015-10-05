@@ -22,6 +22,12 @@
 {% block extra_head %}
 	{{ super() }}
 
+	<script type="text/javascript">
+		var TemplateAdminConfig = {
+			help_url: '{{ url_for('image_help', embed=1) }}'
+		};
+	</script>
+
 	<link rel="stylesheet" href="{{ url_for('static', filename='styles/publish.css') }}" type="text/css" />
 {% endblock %}
 
@@ -41,6 +47,7 @@
 		
 		<form id="editform" _method="{{ form_method }}" action="{{ form_action }}">
 			<input type="hidden" name="template_id" value="{{ template.id|default(0) }}" />
+			<input type="hidden" name="template" id="template" value="" />
 			
 			<div>
 				<label>Template name</label>
@@ -63,6 +70,7 @@
 			
 			<br/>
 			<h2>Template options</h2>
+			All values are optional and can be left blank.
 
 			{% include "publish/inc_common_fields.html" %}
 

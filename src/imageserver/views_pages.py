@@ -418,7 +418,6 @@ def publish():
     # ...but here we use fixed default field values
     field_values = {
         'page': 1,
-        'fill': '#ffffff',
         'strip': app.config['IMAGE_STRIP_DEFAULT'],
         'record_stats': True
     }
@@ -427,6 +426,7 @@ def publish():
         fields=fields,
         field_values=field_values,
         include_crop_tool=True,
+        include_units_tool=True,
         image_info=image_engine.get_image_properties(src, False),
         template_list=image_engine.get_template_list(),
         embed=embed,

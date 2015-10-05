@@ -3,6 +3,7 @@
   Requires inc_field_macros.html to be already included.
   Requires variable "fields" to be the output of ImageAttrs.validators() or TemplateAttrs.validators().
   Requires variable "field_values" to be a similar dictionary of initial values.
+  Set "include_units_tool" to include the sizing units tool.
   Set "include_crop_tool" to include the cropping tool.
 #}
 
@@ -17,6 +18,7 @@
 
 			<h3>Size</h3>
 			<fieldset class="subtlebg">
+				{% if include_units_tool %}
 				<div>
 					<label>Sizing units:</label>
 					<select id="sizing_units" autocomplete="off">
@@ -25,6 +27,7 @@
 						<option value="in">Inches</option>
 					</select>
 				</div>
+				{% endif %}
 				<div id="group_width">
 					<label>Width:</label>
 					{{ input(fields, field_values, 'width') }}
@@ -68,11 +71,13 @@
 					{{ help('option_fill') }}<br>
 					<label></label>
 					<input type="checkbox" name="autofill" id="publish_field_autofill"
-					       class="publish_field" value="auto" autocomplete="off">
+					       class="publish_field" value="auto" autocomplete="off"
+					       {% if field_values.fill == 'auto' %}checked{% endif %}>
 					       <label for="publish_field_autofill">auto</label><br>
 					<label></label>
 					<input type="checkbox" name="transfill" id="publish_field_transfill"
-					       class="publish_field" value="none" autocomplete="off">
+					       class="publish_field" value="none" autocomplete="off"
+					       {% if field_values.fill == 'none' %}checked{% endif %}>
 					       <label for="publish_field_transfill">transparent</label>
 				</div>
 				<div>

@@ -65,9 +65,6 @@ Publisher.init = function() {
 	$$('.publish_field').each(function(el) {
 		addEventEx(el, 'change', Publisher.onChange);
 	});
-	$$('form').each(function(frm) {
-		addEventEx(frm, 'submit', function() { return false; });
-	});
 	// Browser feature detection
 	Publisher.hasOuterHTML = ($('publish_output').outerHTML !== undefined);
 	// Set initial state
@@ -206,13 +203,17 @@ Publisher.onFillChanged = function() {
 };
 
 Publisher.onAutoFillChanged = function() {
-	if (this.checked)
+	if (this.checked) {
 		$('publish_field_transfill').checked = false;
+		$('publish_field_fill').value = '#ffffff';
+	}
 };
 
 Publisher.onTransFillChanged = function() {
-	if (this.checked)
+	if (this.checked) {
 		$('publish_field_autofill').checked = false;
+		$('publish_field_fill').value = '#ffffff';		
+	}
 };
 
 Publisher.onPublishDownload = function() {

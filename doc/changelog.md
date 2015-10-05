@@ -1,3 +1,10 @@
+# v2.0.0-dev.3
+_Changes: Adds image template administration pages_
+
+Update the Python and web code  
+Restart the Apache service
+
+
 # v2.0.0-dev.2
 _Changes: new APIs for administration of image templates_
 

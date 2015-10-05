@@ -8,7 +8,7 @@
 	{% set validator = fields[key][0] %}
 	{% set web_name = fields[key][1] %}
 	{% set typename = validator.__class__.__name__ %}
-	{% set default = defaults[key] %}
+	{% set default = defaults[key] if defaults[key] is not none else '' %}
 	{% include ["publish/input_%s.html" % key,
 	            "publish/input_%s.html" % typename,
 	            "publish/input_default.html"] %}

@@ -101,6 +101,14 @@ TemplateEdit.onInit = function() {
 		GenericPopup.defaultSubmitSuccess,
 		TemplateEdit.onSubmitError
 	);
+	// These are borrowed from publish.js
+	addEventEx('publish_field_fill', 'change', TemplateEdit.onFillChanged);
+	addEventEx('publish_field_autofill', 'change', TemplateEdit.onAutoFillChanged);
+	addEventEx('publish_field_transfill', 'change', TemplateEdit.onTransFillChanged);
+	addEventEx('overlay_src_browse', 'click', TemplateEdit.onBrowseOverlay);
+	$$('img.help').each(function(img) {
+		addEventEx(img, 'click', function() { TemplateEdit.toggleHelp(img); });
+	});
 };
 TemplateEdit.validate = function() {
 	form_clearErrors('editform');
@@ -110,6 +118,17 @@ TemplateEdit.validate = function() {
 		alert('You must enter a name for the template.');
 		return false;
 	}
+	// Ensure numbers are numbers
+	$$('.publish_field').each(function(el) {
+		if ((el.type === "number") && el.value && isNaN(parseFloat(el.value))) {
+			form_setError(el.name);
+			alert('The value for ' + el.name + ' must be a number.');
+			return false;
+		}
+	});
+
+	// Populate the 'template' hidden field and allow form submission to continue
+	TemplateEdit.setTemplateJSON();
 	return true;
 };
 TemplateEdit.onSubmitError = function(httpStatus, responseText) {
@@ -121,6 +140,58 @@ TemplateEdit.onSubmitError = function(httpStatus, responseText) {
 	}
 	else
 		alert('Sorry, your changes were not saved.\n\n' + err.message);
+};
+TemplateEdit.onFileSelected = function(src) {
+	$('publish_field_overlay_src').value = src;	
+};
+TemplateEdit.setTemplateJSON = function() {
+	var values = {};
+	// Get all template field values
+	$$('.publish_field').each(function(el) {
+		var key = el.id.substring(14);  // Strip "publish_field_" from "publish_field_key"
+		if (el.type === "checkbox") {
+			values[key] = el.checked;
+		} else if (el.type === "number") {
+			values[key] = (el.value && !isNaN(parseFloat(el.value))) ? parseFloat(el.value) : null;
+		} else if (el.selectedIndex !== undefined && el.options !== undefined) {
+			values[key] = (el.selectedIndex >= 0) ? el.options[el.selectedIndex].value : null;
+		} else {
+			values[key] = el.value;
+		}
+	});
+	// Special field handling - fill
+	if (values['autofill']) values['fill'] = 'auto';
+	if (values['transfill']) values['fill'] = 'none';
+	delete values['autofill'];
+	delete values['transfill'];
+	// Set template hidden value
+	$('template').value = JSON.stringify(values);
+};
+
+/* These are borrowed from publish.js
+ */
+TemplateEdit.onFillChanged = function() {
+	$('publish_field_autofill').checked = false;
+	$('publish_field_transfill').checked = false;
+};
+TemplateEdit.onAutoFillChanged = function() {
+	if (this.checked) {
+		$('publish_field_transfill').checked = false;
+		$('publish_field_fill').value = '#ffffff';
+	}
+};
+TemplateEdit.onTransFillChanged = function() {
+	if (this.checked) {
+		$('publish_field_autofill').checked = false;
+		$('publish_field_fill').value = '#ffffff';		
+	}
+};
+TemplateEdit.onBrowseOverlay = function() {
+	popup_iframe($(this).getProperty('data-browse-url'), 575, 650);
+	return false;
+};
+TemplateEdit.toggleHelp = function(el) {
+	alert('help');
 };
 
 /*** User edit page ***/
@@ -513,6 +584,15 @@ function submitParentForm(el) {
 		f.submit();
 	}
 	return false;
+}
+
+// Invoked (by the file selection window) when a file is selected
+function onFileSelected(src) {
+	switch ($(document.body).id) {
+		case 'template_edit':
+			TemplateEdit.onFileSelected(src);
+			break;
+	}
 }
 
 /*** Common page initialise ***/
