@@ -25,7 +25,7 @@
 	<div class="smalltext">
 		{{ templates|length }} template{{ templates|length|pluralize }}
 		{% if is_permitted(SystemPermission.PERMIT_SUPER_USER) %}
-		(<a class="popuplink" href="{{ url_for('admin.template_edit', template_id=0, embed=1) }}">add a new template</a>)
+		(<a href="{{ url_for('admin.template_edit', template_id=0) }}">add a new template</a>)
 		{% endif %}
 	</div>
 
@@ -39,11 +39,11 @@
 		</tr>
 
 		{% for template in templates %}
-		{% set edit_url = url_for('admin.template_edit', template_id=template.id, embed=1) %}
+		{% set edit_url = url_for('admin.template_edit', template_id=template.id) %}
 
 		<tr class="{{ row_class.next() }}">
-			<td><a class="popuplink" href="{{ edit_url }}">{{ template.name }}</a></td>
-			<td><a class="popuplink" href="{{ edit_url }}">{{ template.description }}</a></td>
+			<td><a href="{{ edit_url }}">{{ template.name }}</a></td>
+			<td><a href="{{ edit_url }}">{{ template.description }}</a></td>
 			<td>
 				{% if is_permitted(SystemPermission.PERMIT_SUPER_USER) %}
 				<form id="delform_{{ template.id }}" class="delform" action="{{ url_for('api.admin.template', template_id=template.id) }}" _method="delete">

@@ -109,6 +109,12 @@ TemplateEdit.onInit = function() {
 	$$('img.help').each(function(img) {
 		addEventEx(img, 'click', function() { TemplateEdit.toggleHelp(img); });
 	});
+	// Popup help (see preview_popup.js)
+	TemplateEdit.popupHelp = new IframePopup(
+		$$('.preview_popup')[0], true, function() {
+			TemplateEdit.showingHelp = false;
+		}
+	);
 };
 TemplateEdit.validate = function() {
 	form_clearErrors('editform');
@@ -191,7 +197,17 @@ TemplateEdit.onBrowseOverlay = function() {
 	return false;
 };
 TemplateEdit.toggleHelp = function(el) {
-	alert('help');
+	if (TemplateEdit.showingHelp) {
+		TemplateEdit.popupHelp.hide();
+		TemplateEdit.showingHelp = false;
+	}
+	else {
+		var section = $(el).getProperty('data-anchor'),
+		    url = (TemplateAdminConfig.help_url + '#' + section);
+		TemplateEdit.popupHelp.showAt(el, url);
+		TemplateEdit.showingHelp = true;
+	}
+	return false;
 };
 
 /*** User edit page ***/

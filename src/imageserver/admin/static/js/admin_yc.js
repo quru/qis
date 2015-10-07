@@ -41,9 +41,9 @@ GenericListPage.initDeleteLinks("group");};var TemplateEdit={};TemplateEdit.onIn
 setAjaxJsonForm("editform",TemplateEdit.validate,GenericPopup.defaultSubmitting,GenericPopup.defaultSubmitSuccess,TemplateEdit.onSubmitError);
 addEventEx("publish_field_fill","change",TemplateEdit.onFillChanged);addEventEx("publish_field_autofill","change",TemplateEdit.onAutoFillChanged);
 addEventEx("publish_field_transfill","change",TemplateEdit.onTransFillChanged);addEventEx("overlay_src_browse","click",TemplateEdit.onBrowseOverlay);
-$$("img.help").each(function(a){addEventEx(a,"click",function(){TemplateEdit.toggleHelp(a);});});};TemplateEdit.validate=function(){form_clearErrors("editform");
-if(validate_isempty("name")){form_setError("name");alert("You must enter a name for the template.");return false;
-}$$(".publish_field").each(function(a){if((a.type==="number")&&a.value&&isNaN(parseFloat(a.value))){form_setError(a.name);
+$$("img.help").each(function(a){addEventEx(a,"click",function(){TemplateEdit.toggleHelp(a);});});TemplateEdit.popupHelp=new IframePopup($$(".preview_popup")[0],true,function(){TemplateEdit.showingHelp=false;
+});};TemplateEdit.validate=function(){form_clearErrors("editform");if(validate_isempty("name")){form_setError("name");
+alert("You must enter a name for the template.");return false;}$$(".publish_field").each(function(a){if((a.type==="number")&&a.value&&isNaN(parseFloat(a.value))){form_setError(a.name);
 alert("The value for "+a.name+" must be a number.");return false;}});TemplateEdit.setTemplateJSON();return true;
 };TemplateEdit.onSubmitError=function(a,c){GenericPopup.enableButtons();var b=getAPIError(a,c);if(b.status==APICodes.ALREADY_EXISTS){form_setError("name");
 alert("A template with this name already exists, please choose another name.");}else{alert("Sorry, your changes were not saved.\n\n"+b.message);
@@ -55,7 +55,9 @@ delete a.transfill;$("template").value=JSON.stringify(a);};TemplateEdit.onFillCh
 $("publish_field_transfill").checked=false;};TemplateEdit.onAutoFillChanged=function(){if(this.checked){$("publish_field_transfill").checked=false;
 $("publish_field_fill").value="#ffffff";}};TemplateEdit.onTransFillChanged=function(){if(this.checked){$("publish_field_autofill").checked=false;
 $("publish_field_fill").value="#ffffff";}};TemplateEdit.onBrowseOverlay=function(){popup_iframe($(this).getProperty("data-browse-url"),575,650);
-return false;};TemplateEdit.toggleHelp=function(a){alert("help");};var UserEdit={};UserEdit.onInit=function(){GenericPopup.initButtons();
+return false;};TemplateEdit.toggleHelp=function(b){if(TemplateEdit.showingHelp){TemplateEdit.popupHelp.hide();
+TemplateEdit.showingHelp=false;}else{var c=$(b).getProperty("data-anchor"),a=(TemplateAdminConfig.help_url+"#"+c);
+TemplateEdit.popupHelp.showAt(b,a);TemplateEdit.showingHelp=true;}return false;};var UserEdit={};UserEdit.onInit=function(){GenericPopup.initButtons();
 setAjaxJsonForm("editform",UserEdit.validate,GenericPopup.defaultSubmitting,GenericPopup.defaultSubmitSuccess,UserEdit.onSubmitError);
 };UserEdit.validate=function(){form_clearErrors("editform");if(!validate_isempty("email")&&!validate_email("email")){form_setError("email");
 alert("The user's email address does not appear to be valid.");return false;}if(validate_isempty("username")){form_setError("username");

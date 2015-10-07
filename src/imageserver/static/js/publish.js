@@ -67,7 +67,7 @@ Publisher.init = function() {
 	$$('.publish_field').each(function(el) {
 		addEventEx(el, 'change', Publisher.onChange);
 	});
-	// Popup help (see also preview_popup.js)
+	// Popup help (see preview_popup.js)
 	Publisher.popupHelp = new IframePopup(
 		$$('.preview_popup')[0], true, function() {
 			Publisher.showingHelp = false;

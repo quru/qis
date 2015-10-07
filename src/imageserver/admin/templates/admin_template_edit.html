@@ -21,6 +21,7 @@
 
 {% block extra_head %}
 	{{ super() }}
+	<link rel="stylesheet" href="{{ url_for('static', filename='styles/publish.css') }}" type="text/css" />
 
 	<script type="text/javascript">
 		var TemplateAdminConfig = {
@@ -28,7 +29,11 @@
 		};
 	</script>
 
-	<link rel="stylesheet" href="{{ url_for('static', filename='styles/publish.css') }}" type="text/css" />
+	{% if settings.DEBUG %}
+	<script src="{{ url_for('static', filename='js/preview_popup.js') }}" type="text/javascript"></script>
+	{% else %}
+	<script src="{{ url_for('static', filename='js/preview_popup_yc.js') }}" type="text/javascript"></script>
+	{% endif%}
 {% endblock %}
 
 {% set body_id = 'template_edit' %}
@@ -84,7 +89,8 @@
 					</span>
 				</div>
 			</fieldset>
-
 		</form>
+
+		{% include "inc_preview_popup.html" %}
 	{% endif %}
 {% endblock %}
