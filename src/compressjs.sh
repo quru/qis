@@ -14,6 +14,7 @@ java -jar ../lib/yuicompressor-2.4.6.jar --preserve-semi --charset ISO-8859-1 --
 java -jar ../lib/yuicompressor-2.4.6.jar --preserve-semi --charset ISO-8859-1 --line-break 100 -o imageserver/static/js/lib/lassocrop_yc.js imageserver/static/js/lib/lassocrop.js
 java -jar ../lib/yuicompressor-2.4.6.jar --preserve-semi --charset ISO-8859-1 --line-break 100 -o imageserver/static/js/lib/picker_yc.js imageserver/static/js/lib/picker.js
 java -jar ../lib/yuicompressor-2.4.6.jar --preserve-semi --charset ISO-8859-1 --line-break 100 -o imageserver/static/js/list_yc.js imageserver/static/js/list.js
+java -jar ../lib/yuicompressor-2.4.6.jar --preserve-semi --charset ISO-8859-1 --line-break 100 -o imageserver/static/js/preview_popup_yc.js imageserver/static/js/preview_popup.js
 java -jar ../lib/yuicompressor-2.4.6.jar --preserve-semi --charset ISO-8859-1 --line-break 100 -o imageserver/static/js/publish_yc.js imageserver/static/js/publish.js
 java -jar ../lib/yuicompressor-2.4.6.jar --preserve-semi --charset ISO-8859-1 --line-break 100 -o imageserver/static/js/simple_view_yc.js imageserver/static/js/simple_view.js
 java -jar ../lib/yuicompressor-2.4.6.jar --preserve-semi --charset ISO-8859-1 --line-break 100 -o imageserver/static/js/slideshow_view_yc.js imageserver/static/js/slideshow_view.js

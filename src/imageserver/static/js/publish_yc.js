@@ -4,6 +4,7 @@
 	By:            Matt Fozard
 	Purpose:       Quru Image Server image publish wizard
 	Requires:      base.js
+	               preview_popup.js
 	               MooTools More 1.3 - String.QueryString
 	               highlight.js
 	Copyright:     Quru Ltd (www.quru.com)
@@ -27,6 +28,7 @@
 	Notable modifications:
 	Date       By    Details
 	=========  ====  ============================================================
+	06Oct2015  Matt  Refactored help popup JS into preview_popup.js
 */
 "use strict";
 var Publisher={previewImageRC:0,cropImageRC:0,imageSpec:{},previewSpec:{}};Publisher.init=function(){addEventEx("crop_image","load",Publisher.refreshedCropImage);
@@ -38,6 +40,7 @@ addEventEx("publish_field_flip","change",Publisher.onFlipChanged);addEventEx("pu
 addEventEx("sizing_units","change",Publisher.onUnitsChanged);addEventEx("overlay_src_browse","click",Publisher.onBrowseOverlay);
 addEventEx("publish_download","click",Publisher.onPublishDownload);addEventEx("publish_type","change",Publisher.onPublishTypeChanged);
 $$("img.help").each(function(a){addEventEx(a,"click",function(){Publisher.toggleHelp(a);});});$$(".publish_field").each(function(a){addEventEx(a,"change",Publisher.onChange);
+});Publisher.popupHelp=new IframePopup($$(".preview_popup")[0],true,function(){Publisher.showingHelp=false;
 });Publisher.hasOuterHTML=($("publish_output").outerHTML!==undefined);Publisher.initSpecs();Publisher.onUnitsChanged(null,true);
 Publisher.refreshPublishOutput();if($("crop_image").complete){Publisher.initCropping();}};Publisher.initSpecs=function(){var b=$("preview_image").getProperty("src"),a=b.indexOf("?"),c=b.substring(a+1).cleanQueryString().replace(/\+/g," ");
 Publisher.previewURL=b.substring(0,a);Publisher.previewSpec=c.parseQueryString();Publisher.previewSpec.cache="0";
@@ -91,15 +94,9 @@ if($("preview_image").getProperty("src")===j){return Publisher.refreshedPreview(
 $("preview_error").setStyle("display","none");$("preview_mask").setStyle("display","block");$("preview_image").setProperty("src",j);
 };Publisher.refreshedPreview=function(a){$("preview_mask").setStyle("display","none");if(a){$("preview_image").setStyle("display","none");
 $("preview_error").setStyle("display","block");}Publisher.previewImageRC=Math.max(--Publisher.previewImageRC,0);
-if(Publisher.previewImageRC>0){Publisher.previewImageRC=0;Publisher.refreshPreview();}};Publisher.closeHelp=function(){if(Publisher.showingHelp){Publisher.toggleHelp(document.body);
-}};Publisher.toggleHelp=function(c){var f=$(c).getProperty("data-anchor"),a=$("preview_popup"),g=$("preview_popup_left"),b=$("preview_popup_right");
-if(a.getStyle("visibility")=="hidden"){a.fade("hide");}if(Publisher.helpArrowHeight===undefined){Publisher.helpArrowHeight=g.getSize().y;
-}if(Publisher.showingHelp){Publisher.showingHelp=false;a.fade("out");$(document.body).removeEvent("click",Publisher.closeHelp);
-}else{Publisher.showingHelp=true;var i=$(c).getCoordinates(),j=a.getCoordinates(),e=i.right,d=(i.bottom-(i.height/2))-(j.height/2)+1;
-g.setStyle("height",Publisher.helpArrowHeight);if(d<10){var h=10-d;d+=h;g.setStyle("height",Publisher.helpArrowHeight-(h*2));
-}a.setPosition({x:e,y:d});b.empty();b.grab(new Element("iframe",{src:(PublisherConfig.help_url+"#"+f)}));
-a.fade("in");setTimeout(function(){$(document.body).addEvent("click",Publisher.closeHelp);},10);}return false;
-};Publisher.initCropping=function(){if(Publisher.crop!==undefined){$("crop_fix_aspect").removeEvent("change",Publisher.changeAspectRatio);
+if(Publisher.previewImageRC>0){Publisher.previewImageRC=0;Publisher.refreshPreview();}};Publisher.toggleHelp=function(b){if(Publisher.showingHelp){Publisher.popupHelp.hide();
+Publisher.showingHelp=false;}else{var c=$(b).getProperty("data-anchor"),a=(PublisherConfig.help_url+"#"+c);
+Publisher.popupHelp.showAt(b,a);Publisher.showingHelp=true;}return false;};Publisher.initCropping=function(){if(Publisher.crop!==undefined){$("crop_fix_aspect").removeEvent("change",Publisher.changeAspectRatio);
 $("crop_fix_aspect").selectedIndex=0;Publisher.crop.destroy();}var c=$("crop_image").getSize(),b=$("crop_image").getProperty("src"),a=b.indexOf("?"),d=b.substring(a+1).cleanQueryString().replace(/\+/g," ");
 Publisher.cropURL=b.substring(0,a);Publisher.cropSpec=d.parseQueryString();Publisher.cropSize=c;Publisher.crop=new Lasso.Crop("crop_image",{ratio:false,preset:[0,0,c.x,c.y],min:[10,10],handleSize:10,opacity:0.6,color:"#000",border:"../static/images/crop.gif",onResize:Publisher.updateCrop,onComplete:Publisher.endCrop});
 $("crop_fix_aspect").addEvent("change",Publisher.changeAspectRatio);Publisher.onChange();};Publisher.changeAspectRatio=function(){var a=this.options[this.selectedIndex].value;

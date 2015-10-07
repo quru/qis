@@ -4,6 +4,7 @@
 	By:            Matt Fozard
 	Purpose:       Quru Image Server image publish wizard
 	Requires:      base.js
+	               preview_popup.js
 	               MooTools More 1.3 - String.QueryString
 	               highlight.js
 	Copyright:     Quru Ltd (www.quru.com)
@@ -27,6 +28,7 @@
 	Notable modifications:
 	Date       By    Details
 	=========  ====  ============================================================
+	06Oct2015  Matt  Refactored help popup JS into preview_popup.js
 */
 
 "use strict";
@@ -65,6 +67,12 @@ Publisher.init = function() {
 	$$('.publish_field').each(function(el) {
 		addEventEx(el, 'change', Publisher.onChange);
 	});
+	// Popup help (see also preview_popup.js)
+	Publisher.popupHelp = new IframePopup(
+		$$('.preview_popup')[0], true, function() {
+			Publisher.showingHelp = false;
+		}
+	);
 	// Browser feature detection
 	Publisher.hasOuterHTML = ($('publish_output').outerHTML !== undefined);
 	// Set initial state
@@ -472,62 +480,16 @@ Publisher.refreshedPreview = function(error) {
 	}
 };
 
-Publisher.closeHelp = function() {
-	if (Publisher.showingHelp)
-		Publisher.toggleHelp(document.body);
-};
-
 Publisher.toggleHelp = function(el) {
-	var section = $(el).getProperty('data-anchor'),
-	    popupEl = $('preview_popup'),
-	    arrowEl = $('preview_popup_left'),
-	    contentEl = $('preview_popup_right');
-
-	// Init the popup for fading
-	if (popupEl.getStyle('visibility') == 'hidden') {
-		popupEl.fade('hide');
-	}
-	if (Publisher.helpArrowHeight === undefined) {
-		Publisher.helpArrowHeight = arrowEl.getSize().y;
-	}
-
 	if (Publisher.showingHelp) {
+		Publisher.popupHelp.hide();
 		Publisher.showingHelp = false;
-		popupEl.fade('out');
-		$(document.body).removeEvent('click', Publisher.closeHelp);
 	}
 	else {
+		var section = $(el).getProperty('data-anchor'),
+		    url = (PublisherConfig.help_url + '#' + section);
+		Publisher.popupHelp.showAt(el, url);
 		Publisher.showingHelp = true;
-		// Set position of the popup
-		var targetPos = $(el).getCoordinates(),
-		    popupPos = popupEl.getCoordinates(),
-		    xPos = targetPos.right,
-		    yPos = (targetPos.bottom - (targetPos.height / 2)) - (popupPos.height / 2) + 1;
-		// Reset arrow position
-		arrowEl.setStyle('height', Publisher.helpArrowHeight);
-		// Do we need to move it down a bit?
-		if (yPos < 10) {
-			var yBump = 10 - yPos;
-			yPos += yBump;
-			arrowEl.setStyle('height', Publisher.helpArrowHeight - (yBump * 2));
-		}
-		// Do we need to move it up a bit?
-//		if ((yPos + popupPos.height) > (yMax - 10)) {
-//			var yBump = (yPos + popupPos.height) - (yMax - 10);
-//			yPos -= yBump;
-//			arrowEl.setStyle('height', Publisher.helpArrowHeight + (yBump * 2));
-//		}
-		popupEl.setPosition({ x: xPos, y: yPos });
-		// Reset the popup contents
-		contentEl.empty();
-		contentEl.grab(new Element('iframe', {
-			src: (PublisherConfig.help_url + '#' + section)
-		}));
-		popupEl.fade('in');
-		// Add click to close handler after this (click!) event has completed
-		setTimeout(function() {
-			$(document.body).addEvent('click', Publisher.closeHelp);
-		}, 10);
 	}
 	return false;
 };

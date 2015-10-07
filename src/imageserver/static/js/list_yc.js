@@ -4,6 +4,7 @@
 	By:            Matt Fozard
 	Purpose:       Quru Image Server File Browsing helpers
 	Requires:      base.js
+	               preview_popup.js
 	               MooTools Core 1.3 (no compat)
 	               MooTools More 1.3 - Assets, String.QueryString
 	Copyright:     Quru Ltd (www.quru.com)
@@ -33,33 +34,15 @@
 	17Jan2013  Matt  Share with folder_list.html
 	23Jan2013  Matt  Add folder actions menu handling
 	10Feb2015  Matt  Add support for HTTP 202 responses
+	06Oct2015  Matt  Refactored image popup JS into preview_popup.js
 */
-var previewState={hoverEl:null,delayId:null,visible:false,mouseOver:false};
-var previewUI={containerEl:null,waitAnimEl:null,imgAreaEl:null,previewEl:null};function onInit(){var a=$("preview_popup");
-if(a){$$(".image_preview").each(function(b){b.addEvent("mouseenter",function(){onMouseIn(b);});b.addEvent("mouseleave",function(){onMouseOut(b);
-});b.addEvent("click",function(){onClick(b);});});if(a.getStyle("visibility")=="hidden"){a.fade("hide");
-}a.set("tween",{onComplete:onImagePreviewFadeComplete});a.addEvent("mouseenter",onImagePreviewMouseIn);
-a.addEvent("mouseleave",onImagePreviewMouseOut);previewUI.containerEl=a;previewUI.waitAnimEl=$("preview_popup_waitimg");
-previewUI.imgAreaEl=$("preview_popup_right");}GenericPopup.initButtons();$$(".select_folder").each(function(b){b.addEvent("click",function(){onFolderSelectClick(b.getProperty("data-path"));
-return false;});});$$(".select_file").each(function(b){b.addEvent("click",function(){onFileSelectClick(b.getProperty("data-path"));
+"use strict";
+function onInit(){var b=$$(".preview_popup")[0];if(b){var a=new ImagePopup(b);a.attachToElements(".image_preview");
+}GenericPopup.initButtons();$$(".select_folder").each(function(c){c.addEvent("click",function(){onFolderSelectClick(c.getProperty("data-path"));
+return false;});});$$(".select_file").each(function(c){c.addEvent("click",function(){onFileSelectClick(c.getProperty("data-path"));
 return false;});});addEventEx("folder_create","click",onFolderCreateClick);addEventEx("folder_rename","click",onFolderRenameClick);
 addEventEx("folder_move","click",onFolderMoveClick);addEventEx("folder_delete","click",onFolderDeleteClick);
-}function onMouseIn(a){if(previewState.hoverEl&&(previewState.hoverEl!=a)){clearImagePreview();}previewState.hoverEl=a;
-previewState.delayId=doImagePreview.delay(500);}function onMouseOut(a){setTimeout(function(){if(!previewState.mouseOver){clearImagePreview();
-}},5);}function onClick(a){clearImagePreview();}function doImagePreview(){previewState.delayId=null;if(previewState.hoverEl){var a=$(document.body).getCoordinates();
-var e=previewUI.containerEl.getCoordinates();var c=previewState.hoverEl.getCoordinates();var d=c.right+5;
-if((d+e.width)>a.right){d=Math.max(c.left+30,a.right-e.width);}var b=(c.bottom-(c.height/2))-(e.height/2)+1;
-previewUI.containerEl.setPosition({x:d,y:b});previewUI.imgAreaEl.empty();previewUI.imgAreaEl.grab(previewUI.waitAnimEl);
-previewUI.imgAreaEl.grab(new Element("span"));previewUI.previewEl=Asset.image(getPreviewImageURL(previewState.hoverEl),{onLoad:function(){previewUI.imgAreaEl.empty();
-previewUI.imgAreaEl.grab(previewUI.previewEl);previewUI.imgAreaEl.grab(new Element("span"));},onError:function(){previewUI.imgAreaEl.empty();
-}});previewState.visible=true;previewUI.containerEl.fade("in");}}function clearImagePreview(){if(previewState.delayId){clearTimeout(previewState.delayId);
-}if(previewState.visible){previewUI.containerEl.fade("out");}previewState.hoverEl=null;previewState.delayId=null;
-previewState.visible=false;previewState.mouseOver=false;}function onImagePreviewMouseIn(){previewState.mouseOver=true;
-}function onImagePreviewMouseOut(){previewState.mouseOver=false;clearImagePreview();}function onImagePreviewFadeComplete(){if(!previewState.visible){previewUI.containerEl.setPosition({x:1,y:-1000});
-}}function getPreviewImageURL(f){f=$(f);var d=(f.get("tag")=="a")?f:f.getParent("a");if(d==null){return"";
-}var c=d.href.cleanQueryString().replace(/\+/g," ");var b=c.indexOf("?");var a=c.substring(0,b);var e=c.substring(b+1).parseQueryString();
-a=a.replace("details/","image");e.width="200";e.height="200";e.autosizefit="1";e.stats="0";e.strip="1";
-e.format="jpg";e.colorspace="srgb";return a+"?"+Object.toQueryString(e);}function onFolderSelectClick(a){if(window.parent&&window.parent.onFolderSelected){window.parent.onFolderSelected(a);
+}function onFolderSelectClick(a){if(window.parent&&window.parent.onFolderSelected){window.parent.onFolderSelected(a);
 }GenericPopup.closePage();}function onFileSelectClick(a){if(window.parent&&window.parent.onFileSelected){window.parent.onFileSelected(a);
 }GenericPopup.closePage();}function validateFolderName(b){var a=$("path_sep").value,c=b.indexOf(".");
 if(c==0){alert("The folder name cannot start with '.'");return false;}if((b.indexOf(a)!=-1)||(b.indexOf("..")!=-1)){alert("The folder name cannot contain '"+a+"' or '..'");
