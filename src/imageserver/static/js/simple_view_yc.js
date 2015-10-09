@@ -46,10 +46,9 @@ this.containerEl.grab(this.imageEl);this.refresh();}this.imageEl.removeEvents("c
 }.bind(this));}};ImgSimpleView.prototype.reset=function(){this.imageAttrs.width=this.zoomAttrs.orig_width;
 this.imageAttrs.height=this.zoomAttrs.orig_height;this.imageAttrs.top=this.zoomAttrs.orig_top;this.imageAttrs.left=this.zoomAttrs.orig_left;
 this.imageAttrs.bottom=this.zoomAttrs.orig_bottom;this.imageAttrs.right=this.zoomAttrs.orig_right;this.zoomAttrs.level=1;
-this.refresh();};ImgSimpleView.prototype.refresh=function(){if(this.zoomAttrs.level>1){this.imageAttrs.cache=0;
-this.imageAttrs.autocropfit=1;this.imageAttrs.stats=0;}else{delete this.imageAttrs.cache;delete this.imageAttrs.autocropfit;
-delete this.imageAttrs.stats;}this.imageAttrs.format="jpeg";this.imageEl.src=this.baseURL+"?"+Object.toQueryString(this.imageAttrs);
-};ImgSimpleView.prototype.onImageClick=function(i){if((this.imageEl.width>0)&&(this.zoomAttrs.level==1)){if((this.containerSize.width-this.imageEl.width>2)&&(this.containerSize.height-this.imageEl.height>2)){this.zoomAttrs.levels=1;
+this.refresh();};ImgSimpleView.prototype.refresh=function(){if(this.zoomAttrs.level>1){this.imageAttrs.autocropfit=1;
+this.imageAttrs.stats=0;}else{delete this.imageAttrs.autocropfit;delete this.imageAttrs.stats;}this.imageAttrs.format="jpeg";
+this.imageEl.src=this.baseURL+"?"+Object.toQueryString(this.imageAttrs);};ImgSimpleView.prototype.onImageClick=function(i){if((this.imageEl.width>0)&&(this.zoomAttrs.level==1)){if((this.containerSize.width-this.imageEl.width>2)&&(this.containerSize.height-this.imageEl.height>2)){this.zoomAttrs.levels=1;
 }}var g=i.alt?null:!i.shift;if(g!=null){if((g&&this.zoomAttrs.level==this.zoomAttrs.levels)||(!g&&this.zoomAttrs.level==1)){return;
 }if(!g&&this.zoomAttrs.level==2){this.reset();return;}}var f=this.imageEl.getPosition();var h={x:(i.page.x-f.x),y:(i.page.y-f.y)};
 var b=this.imageAttrs.right-this.imageAttrs.left;var d=this.imageAttrs.bottom-this.imageAttrs.top;var j=h.x-(this.containerSize.width/2);

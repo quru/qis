@@ -3,6 +3,9 @@
 
 {% block title %}User's guide{% endblock %}
 
+{% block caching_head %}
+{% endblock %}
+
 {% block extra_head %}
 	<link rel="stylesheet" href="{{ url_for('static', filename='styles/lib/github.css') }}" type="text/css" />
 	<link rel="stylesheet" href="{{ url_for('static', filename='styles/help.css') }}" type="text/css" />

@@ -46,7 +46,8 @@ from flask_app import logger
 from flask_app import data_engine, image_engine, permissions_engine, stats_engine
 from image_attrs import ImageAttrs
 from models import FolderPermission
-from session_manager import get_session_user, logged_in
+from session_manager import get_session_user
+from session_manager import logged_in as session_logged_in
 from util import filepath_parent, invoke_http_async, validate_string
 from util import parse_boolean, parse_colour, parse_float, parse_int, parse_tile_spec
 from util import unicode_to_utf8, etag
@@ -73,7 +74,9 @@ def erez5_compat(): return image()
 def image():
     logger.debug(request.method + ' ' + request.url)
     try:
+        logged_in = session_logged_in()
         args = request.args
+
         # Get URL parameters for the image
         src         = args.get('src', '')
         page        = args.get('page', None)
@@ -109,8 +112,9 @@ def image():
         attach      = args.get('attach', None)
         xref        = args.get('xref', None)
         stats       = args.get('stats', None)
-        cache       = args.get('cache', '1')    # Admin/internal use
-        recache     = args.get('recache', None) # Admin/internal use
+        # Get protected admin/internal parameters
+        cache       = args.get('cache', '1') if logged_in else '1'
+        recache     = args.get('recache', None) if app.config['BENCHMARKING'] else None
 
         # eRez compatibility mode
         src = erez_params_compat(src)
@@ -161,19 +165,20 @@ def image():
                 attach = parse_boolean(attach)
             if xref is not None:
                 validate_string(xref, 0, 1024)
+            if stats is not None:
+                stats = parse_boolean(stats)
+            # Admin/internal options
             if cache is not None:
                 cache = parse_boolean(cache)
             if recache is not None:
                 recache = parse_boolean(recache)
-            if stats is not None:
-                stats = parse_boolean(stats)
         except (ValueError, TypeError) as e:
             raise httpexc.BadRequest(unicode(e))
 
         # Package and validate the parameters
         try:
             # #2694 Enforce public image limits - perform easy parameter checks
-            if not logged_in():
+            if not logged_in:
                 width, height, autosizefit = _public_image_limits_pre_image_checks(
                     width, height, autosizefit, tile, template
                 )
@@ -237,7 +242,7 @@ def image():
 
         # #2694 Enforce public image limits - check the dimensions
         #       of images that passed the initial parameter checks
-        if not logged_in():
+        if not logged_in:
             try:
                 _public_image_limits_post_image_checks(
                     image_attrs.width(),

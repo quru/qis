@@ -19,8 +19,11 @@ APPLICATION_ROOT = "/"
 # Whether to default image URLs to http or https
 PREFERRED_URL_SCHEME = "http"
 
-# Debug mode (do not enable this in production!)
+# Debug mode (do not enable this in production)
 DEBUG = False
+
+# Benchmark mode (do not enable this in production)
+BENCHMARKING = False
 
 # Session encryption key. Set your own in local_settings.py and KEEP IT SECRET!
 SECRET_KEY = "\xc7\x9b\xed9Q\x89\xb0\x19\xad\x80\x85+r\xaat:U#\x9bi\xc9\x99zY"

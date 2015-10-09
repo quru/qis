@@ -581,7 +581,7 @@ class ImageServerTestsRegressions(BaseTestCase):
         try:
             for image in images:
                 jpg = self.app.get(
-                    '/image?src=test_images/%s&format=jpg&width=640&recache=1&quality=100&colorspace=srgb&strip=0' % image
+                    '/image?src=test_images/%s&format=jpg&width=640&quality=100&colorspace=srgb&strip=0' % image
                 )
                 self.assertEqual(jpg.status_code, 200)
                 png = self.app.get(
@@ -811,29 +811,32 @@ class ImageServerTestsFast(BaseTestCase):
 
     # Test simple resize
     def test_resize_image(self):
-        rv = self.app.get('/image?src=test_images/cathedral.jpg&format=png&width=500&cache=0')
+        rv = self.app.get('/image?src=test_images/cathedral.jpg&format=png&width=500')
         assert rv.status_code == 200
         image_dims = get_png_dimensions(rv.data)
         assert image_dims[0] == 500 # Should be 500x375
         assert image_dims[1] == 375
         # Test with and without auto-size-fit
-        rv = self.app.get('/image?src=test_images/cathedral.jpg&format=png&width=500&height=500&cache=0')
+        rv = self.app.get('/image?src=test_images/cathedral.jpg&format=png&width=500&height=500')
         assert rv.status_code == 200
         image_dims = get_png_dimensions(rv.data)
         assert image_dims[0] == 500 # Should be 500x500
         assert image_dims[1] == 500
-        rv = self.app.get('/image?src=test_images/cathedral.jpg&format=png&width=500&height=500&autosizefit=1&cache=0')
+        rv = self.app.get('/image?src=test_images/cathedral.jpg&format=png&width=500&height=500&autosizefit=1')
         assert rv.status_code == 200
         image_dims = get_png_dimensions(rv.data)
         assert image_dims[0] == 500 # Should be 500x375 again
         assert image_dims[1] == 375
-        # 0 is used internally as "keep original size", but make sure this doesn't error
-        rv = self.app.get('/image?src=test_images/cathedral.jpg&width=0&height=0&cache=0')
+        # 0 means "keep original size"
+        rv = self.app.get('/image?src=test_images/cathedral.jpg&format=png&width=0&height=0')
         assert rv.status_code == 200
+        image_dims = get_png_dimensions(rv.data)
+        assert image_dims[0] == 1600
+        assert image_dims[1] == 1200
 
     # v1.24 #2219 http://www.4p8.com/eric.brasseur/gamma.html
     def test_resize_image_gamma(self):
-        rv = self.app.get('/image?src=test_images/gamma_dalai_lama_gray_tft.jpg&format=png&width=150&cache=0')
+        rv = self.app.get('/image?src=test_images/gamma_dalai_lama_gray_tft.jpg&format=png&width=150')
         assert rv.status_code == 200
         self.assertImageMatch(rv.data, 'gamma_dalai_lama_150.png')
 
@@ -1070,25 +1073,46 @@ class ImageServerTestsFast(BaseTestCase):
         assert rv.status_code == 200
 
     # Test cache parameter
+    # v1.34 now only supported when logged in
     def test_cache_param(self):
         test_url = '/image?src=test_images/cathedral.jpg&width=123'
         test_img = auto_sync_existing_file('test_images/cathedral.jpg', dm, tm)
         test_attrs = ImageAttrs(test_img.src, test_img.id, width=123)
+        # v1.34 when not logged in this param should be ignored
+        cm.clear()
         rv = self.app.get(test_url + '&cache=0')
-        assert rv.status_code == 200
-        assert rv.headers['X-From-Cache'] == 'False'
+        self.assertEqual(rv.status_code, 200)
+        cached_image = cm.get(test_attrs.get_cache_key())
+        self.assertIsNotNone(cached_image)
+        # When logged in the param should be respected
+        cm.clear()
+        setup_user_account('kryten', 'none')
+        self.login('kryten', 'kryten')
+        rv = self.app.get(test_url + '&cache=0')
+        self.assertEqual(rv.status_code, 200)
+        self.assertEqual(rv.headers['X-From-Cache'], 'False')
         # Should not yet be in cache
         cached_image = cm.get(test_attrs.get_cache_key())
-        assert cached_image is None, 'Image was cached when cache=0 was specified'
+        self.assertIsNone(cached_image, 'Image was cached when cache=0 was specified')
         # Request with cache=1 (default)
         rv = self.app.get(test_url)
-        assert rv.status_code == 200
+        self.assertEqual(rv.status_code, 200)
         # Should be in cache now
         cached_image = cm.get(test_attrs.get_cache_key())
-        assert cached_image is not None, 'Image was not cached when cache=0 was removed'
+        self.assertIsNotNone(cached_image)
 
     # Test re-cache parameter
+    # v1.34 re-cache is only enabled with BENCHMARKING=True
     def test_recache_param(self):
+        # So in v1.34 the param should be ignored by default
+        url = '/image?src=test_images/dorset.jpg&width=50'
+        rv = self.app.get(url)
+        self.assertEqual(rv.status_code, 200)
+        rv = self.app.get(url + '&recache=1')
+        self.assertEqual(rv.status_code, 200)
+        self.assertEqual(rv.headers['X-From-Cache'], 'True')  # not re-cached
+        # Now enable recache and get on with the test
+        flask_app.config['BENCHMARKING'] = True
         # Create a new test image to use
         src_file = get_abs_path('test_images/cathedral.jpg')
         dst_file = get_abs_path('test_images/test_image.jpg')
@@ -1098,40 +1122,42 @@ class ImageServerTestsFast(BaseTestCase):
             # Get an image
             url = '/image?src=test_images/test_image.jpg&width=500'
             rv = self.app.get(url)
-            assert rv.status_code == 200
-            assert rv.headers['X-From-Cache'] == 'False'
+            self.assertEqual(rv.status_code, 200)
+            self.assertEqual(rv.headers['X-From-Cache'], 'False')
             # Get it again
             rv = self.app.get(url)
-            assert rv.status_code == 200
-            assert rv.headers['X-From-Cache'] == 'True'
+            self.assertEqual(rv.status_code, 200)
+            self.assertEqual(rv.headers['X-From-Cache'], 'True')
             # Get it again with re-cache
             rv = self.app.get(url + '&recache=1')
-            assert rv.status_code == 200
-            assert rv.headers['X-From-Cache'] == 'False'
+            self.assertEqual(rv.status_code, 200)
+            self.assertEqual(rv.headers['X-From-Cache'], 'False')
             # Get it again
             rv = self.app.get(url)
-            assert rv.status_code == 200
-            assert rv.headers['X-From-Cache'] == 'True'
+            self.assertEqual(rv.status_code, 200)
+            self.assertEqual(rv.headers['X-From-Cache'], 'True')
             # Delete the file
             os.remove(dst_file)
             # Get it again (should actually work, returned from cache)
             rv = self.app.get(url)
-            assert rv.status_code == 200
+            self.assertEqual(rv.status_code, 200)
             # Get it again with re-cache (delete should now be detected)
             rv = self.app.get(url + '&recache=1')
-            assert rv.status_code == 404
+            self.assertEqual(rv.status_code, 404)
             # Get it again (check the cache was cleared)
             rv = self.app.get(url)
-            assert rv.status_code == 404
+            self.assertEqual(rv.status_code, 404)
             # Check that the database knows it's deleted
             i = dm.get_image(src='test_images/test_image.jpg', load_history=True)
-            assert i is not None
-            assert i.status == Image.STATUS_DELETED
-            assert len(i.history) > 0
-            assert i.history[-1].action == ImageHistory.ACTION_DELETED
+            self.assertIsNotNone(i)
+            self.assertEqual(i.status, Image.STATUS_DELETED)
+            self.assertGreater(len(i.history), 0)
+            self.assertEqual(i.history[-1].action, ImageHistory.ACTION_DELETED)
         finally:
-            if os.path.exists(dst_file): os.remove(dst_file)
-            if i: dm.delete_image(i, True)
+            if os.path.exists(dst_file):
+                os.remove(dst_file)
+            if i:
+                dm.delete_image(i, True)
 
     # Test no params
     def test_no_src(self):
@@ -1966,28 +1992,27 @@ class ImageServerTestsFast(BaseTestCase):
             except: pass
         # See doc/ICC_tests.txt for more information and expected results
         # Test 1 - picture-cmyk.jpg - convert to sRGB with colorspace parameter
-        # convert images/test_images/picture-cmyk.jpg -quality 95 -intent perceptual -profile icc/sRGB.icc /tmp/qis_icc_image.jpg
-        # using cache=0 to prevent it being used as a base for test 2 (which works fine but changes the expected file size)
-        img_url = '/image?src=test_images/picture-cmyk.jpg&format=jpg&quality=95&strip=0&colorspace=srgb&cache=0'
+        # convert images/test_images/picture-cmyk.jpg -quality 100 -intent perceptual -profile icc/sRGB.icc /tmp/qis_icc_image.jpg
+        img_url = '/image?src=test_images/picture-cmyk.jpg&format=jpg&quality=100&strip=0&colorspace=srgb'
         disk_image = os.path.join(flask_app.config['IMAGES_BASE_DIR'], 'test_images/picture-cmyk.jpg')
         disk_rgb = os.path.join(flask_app.config['ICC_BASE_DIR'], 'sRGB.icc')
         magick_params = [
             disk_image,
-            '-quality', '95',
+            '-quality', '100',
             '-intent', 'perceptual',
             '-profile', disk_rgb,
             tempfile
         ]
         icc_test(img_url, magick_params)
         # Test 2 - picture-cmyk.jpg - convert [inbuilt] to CoatedGRACoL2006 to sRGB
-        # convert images/test_images/picture-cmyk.jpg -quality 95 -intent relative -black-point-compensation -profile icc/CoatedGRACoL2006.icc -sampling-factor 1x1 -intent perceptual -profile icc/sRGB.icc /tmp/qis_icc_image.jpg
-        img_url = "/image?src=test_images/picture-cmyk.jpg&format=jpg&quality=95&strip=0&icc=CoatedGRACoL2006&intent=relative&bpc=1&colorspace=srgb"
+        # convert images/test_images/picture-cmyk.jpg -quality 100 -intent relative -black-point-compensation -profile icc/CoatedGRACoL2006.icc -sampling-factor 1x1 -intent perceptual -profile icc/sRGB.icc /tmp/qis_icc_image.jpg
+        img_url = "/image?src=test_images/picture-cmyk.jpg&format=jpg&quality=100&strip=0&icc=CoatedGRACoL2006&intent=relative&bpc=1&colorspace=srgb"
         disk_image = os.path.join(flask_app.config['IMAGES_BASE_DIR'], 'test_images/picture-cmyk.jpg')
         disk_rgb = os.path.join(flask_app.config['ICC_BASE_DIR'], 'sRGB.icc')
         disk_cmyk = os.path.join(flask_app.config['ICC_BASE_DIR'], 'CoatedGRACoL2006.icc')
         magick_params = [
             disk_image,
-            '-quality', '95',
+            '-quality', '100',
             '-intent', 'relative',
             '-black-point-compensation',
             '-profile', disk_cmyk,
@@ -1998,14 +2023,14 @@ class ImageServerTestsFast(BaseTestCase):
         ]
         icc_test(img_url, magick_params)
         # Test 3 - dorset.jpg - convert to CMYK with UncoatedFOGRA29
-        # convert images/test_images/dorset.jpg -quality 95 -profile icc/sRGB.icc -intent relative -black-point-compensation -profile icc/UncoatedFOGRA29.icc -sampling-factor 1x1 /tmp/qis_icc_image.jpg
-        img_url = "/image?src=test_images/dorset.jpg&format=jpg&quality=95&strip=0&icc=UncoatedFOGRA29&intent=relative&bpc=1"
+        # convert images/test_images/dorset.jpg -quality 100 -profile icc/sRGB.icc -intent relative -black-point-compensation -profile icc/UncoatedFOGRA29.icc -sampling-factor 1x1 /tmp/qis_icc_image.jpg
+        img_url = "/image?src=test_images/dorset.jpg&format=jpg&quality=100&strip=0&icc=UncoatedFOGRA29&intent=relative&bpc=1"
         disk_image = os.path.join(flask_app.config['IMAGES_BASE_DIR'], 'test_images/dorset.jpg')
         disk_rgb = os.path.join(flask_app.config['ICC_BASE_DIR'], 'sRGB.icc')
         disk_cmyk = os.path.join(flask_app.config['ICC_BASE_DIR'], 'UncoatedFOGRA29.icc')
         magick_params = [
             disk_image,
-            '-quality', '95',
+            '-quality', '100',
             '-profile', disk_rgb,
             '-intent', 'relative',
             '-black-point-compensation',
@@ -2015,14 +2040,14 @@ class ImageServerTestsFast(BaseTestCase):
         ]
         icc_test(img_url, magick_params)
         # Test 4 - dorset.jpg - convert to GRAY
-        # convert images/test_images/dorset.jpg -quality 95 -profile icc/sRGB.icc -intent perceptual -profile icc/Greyscale.icm -sampling-factor 1x1 /tmp/qis_icc_image.jpg
-        img_url = "/image?src=test_images/dorset.jpg&format=jpg&quality=95&strip=0&icc=Greyscale&intent=perceptual"
+        # convert images/test_images/dorset.jpg -quality 100 -profile icc/sRGB.icc -intent perceptual -profile icc/Greyscale.icm -sampling-factor 1x1 /tmp/qis_icc_image.jpg
+        img_url = "/image?src=test_images/dorset.jpg&format=jpg&quality=100&strip=0&icc=Greyscale&intent=perceptual"
         disk_image = os.path.join(flask_app.config['IMAGES_BASE_DIR'], 'test_images/dorset.jpg')
         disk_rgb = os.path.join(flask_app.config['ICC_BASE_DIR'], 'sRGB.icc')
         disk_gray = os.path.join(flask_app.config['ICC_BASE_DIR'], 'Greyscale.icm')
         magick_params = [
             disk_image,
-            '-quality', '95',
+            '-quality', '100',
             '-profile', disk_rgb,
             '-intent', 'perceptual',
             '-profile', disk_gray,
@@ -2640,6 +2665,8 @@ class ImageServerTestsFast(BaseTestCase):
         # Run this with a normal cache expiry time
         flask_app.config['IMAGE_EXPIRY_TIME_DEFAULT'] = 604800
         # Setup
+        setup_user_account('kryten', 'none')
+        self.login('kryten', 'kryten')  # Login to allow cache=0
         img_url = '/image?src=test_images/dorset.jpg&width=250&cache=0'
         rv = self.app.get(img_url)
         assert rv.headers['X-From-Cache'] == 'False'

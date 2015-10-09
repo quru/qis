@@ -134,7 +134,10 @@ with app.app_context():
     # Announce startup
     logger.info(__about__.__title__ + ' v' + __about__.__version__ + ' engine startup')
     logger.info('Using settings ' + app.config['_SETTINGS_IN_USE'])
-    logger.info('Debug mode ' + ('*** ENABLED ***' if app.config['DEBUG'] else 'off'))
+    if app.config['DEBUG']:
+        logger.info('*** Debug mode ENABLED ***')
+    if app.config['BENCHMARKING']:
+        logger.info('*** Benchmarking mode ENABLED ***')
 
     # Create the stats recording client
     stats_engine = StatsManager(
