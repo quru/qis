@@ -2028,28 +2028,27 @@ class ImageServerTestsFast(BaseTestCase):
             except: pass
         # See doc/ICC_tests.txt for more information and expected results
         # Test 1 - picture-cmyk.jpg - convert to sRGB with colorspace parameter
-        # convert images/test_images/picture-cmyk.jpg -quality 95 -intent perceptual -profile icc/sRGB.icc /tmp/qis_icc_image.jpg
-        # using cache=0 to prevent it being used as a base for test 2 (which works fine but changes the expected file size)
-        img_url = '/image?src=test_images/picture-cmyk.jpg&format=jpg&quality=95&strip=0&colorspace=srgb'
+        # convert images/test_images/picture-cmyk.jpg -quality 100 -intent perceptual -profile icc/sRGB.icc /tmp/qis_icc_image.jpg
+        img_url = '/image?src=test_images/picture-cmyk.jpg&format=jpg&quality=100&strip=0&colorspace=srgb'
         disk_image = os.path.join(flask_app.config['IMAGES_BASE_DIR'], 'test_images/picture-cmyk.jpg')
         disk_rgb = os.path.join(flask_app.config['ICC_BASE_DIR'], 'sRGB.icc')
         magick_params = [
             disk_image,
-            '-quality', '95',
+            '-quality', '100',
             '-intent', 'perceptual',
             '-profile', disk_rgb,
             tempfile
         ]
         icc_test(img_url, magick_params)
         # Test 2 - picture-cmyk.jpg - convert [inbuilt] to CoatedGRACoL2006 to sRGB
-        # convert images/test_images/picture-cmyk.jpg -quality 95 -intent relative -black-point-compensation -profile icc/CoatedGRACoL2006.icc -sampling-factor 1x1 -intent perceptual -profile icc/sRGB.icc /tmp/qis_icc_image.jpg
-        img_url = "/image?src=test_images/picture-cmyk.jpg&format=jpg&quality=95&strip=0&icc=CoatedGRACoL2006&intent=relative&bpc=1&colorspace=srgb"
+        # convert images/test_images/picture-cmyk.jpg -quality 100 -intent relative -black-point-compensation -profile icc/CoatedGRACoL2006.icc -sampling-factor 1x1 -intent perceptual -profile icc/sRGB.icc /tmp/qis_icc_image.jpg
+        img_url = "/image?src=test_images/picture-cmyk.jpg&format=jpg&quality=100&strip=0&icc=CoatedGRACoL2006&intent=relative&bpc=1&colorspace=srgb"
         disk_image = os.path.join(flask_app.config['IMAGES_BASE_DIR'], 'test_images/picture-cmyk.jpg')
         disk_rgb = os.path.join(flask_app.config['ICC_BASE_DIR'], 'sRGB.icc')
         disk_cmyk = os.path.join(flask_app.config['ICC_BASE_DIR'], 'CoatedGRACoL2006.icc')
         magick_params = [
             disk_image,
-            '-quality', '95',
+            '-quality', '100',
             '-intent', 'relative',
             '-black-point-compensation',
             '-profile', disk_cmyk,
@@ -2060,14 +2059,14 @@ class ImageServerTestsFast(BaseTestCase):
         ]
         icc_test(img_url, magick_params)
         # Test 3 - dorset.jpg - convert to CMYK with UncoatedFOGRA29
-        # convert images/test_images/dorset.jpg -quality 95 -profile icc/sRGB.icc -intent relative -black-point-compensation -profile icc/UncoatedFOGRA29.icc -sampling-factor 1x1 /tmp/qis_icc_image.jpg
-        img_url = "/image?src=test_images/dorset.jpg&format=jpg&quality=95&strip=0&icc=UncoatedFOGRA29&intent=relative&bpc=1"
+        # convert images/test_images/dorset.jpg -quality 100 -profile icc/sRGB.icc -intent relative -black-point-compensation -profile icc/UncoatedFOGRA29.icc -sampling-factor 1x1 /tmp/qis_icc_image.jpg
+        img_url = "/image?src=test_images/dorset.jpg&format=jpg&quality=100&strip=0&icc=UncoatedFOGRA29&intent=relative&bpc=1"
         disk_image = os.path.join(flask_app.config['IMAGES_BASE_DIR'], 'test_images/dorset.jpg')
         disk_rgb = os.path.join(flask_app.config['ICC_BASE_DIR'], 'sRGB.icc')
         disk_cmyk = os.path.join(flask_app.config['ICC_BASE_DIR'], 'UncoatedFOGRA29.icc')
         magick_params = [
             disk_image,
-            '-quality', '95',
+            '-quality', '100',
             '-profile', disk_rgb,
             '-intent', 'relative',
             '-black-point-compensation',
@@ -2077,14 +2076,14 @@ class ImageServerTestsFast(BaseTestCase):
         ]
         icc_test(img_url, magick_params)
         # Test 4 - dorset.jpg - convert to GRAY
-        # convert images/test_images/dorset.jpg -quality 95 -profile icc/sRGB.icc -intent perceptual -profile icc/Greyscale.icm -sampling-factor 1x1 /tmp/qis_icc_image.jpg
-        img_url = "/image?src=test_images/dorset.jpg&format=jpg&quality=95&strip=0&icc=Greyscale&intent=perceptual"
+        # convert images/test_images/dorset.jpg -quality 100 -profile icc/sRGB.icc -intent perceptual -profile icc/Greyscale.icm -sampling-factor 1x1 /tmp/qis_icc_image.jpg
+        img_url = "/image?src=test_images/dorset.jpg&format=jpg&quality=100&strip=0&icc=Greyscale&intent=perceptual"
         disk_image = os.path.join(flask_app.config['IMAGES_BASE_DIR'], 'test_images/dorset.jpg')
         disk_rgb = os.path.join(flask_app.config['ICC_BASE_DIR'], 'sRGB.icc')
         disk_gray = os.path.join(flask_app.config['ICC_BASE_DIR'], 'Greyscale.icm')
         magick_params = [
             disk_image,
-            '-quality', '95',
+            '-quality', '100',
             '-profile', disk_rgb,
             '-intent', 'perceptual',
             '-profile', disk_gray,
