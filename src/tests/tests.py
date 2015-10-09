@@ -344,7 +344,7 @@ class FlaskTestCase(unittest.TestCase):
 class BaseTestCase(FlaskTestCase):
     # "Typical values for the PSNR in lossy image and video compression are between 30 and 50"
     # http://en.wikipedia.org/wiki/Peak_signal-to-noise_ratio
-    def assertImageMatch(self, img_data, match_file, tolerance=50):
+    def assertImageMatch(self, img_data, match_file, tolerance=46):
         if os.path.exists(match_file):
             static_img = match_file
         else:
