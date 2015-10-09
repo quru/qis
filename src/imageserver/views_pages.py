@@ -33,7 +33,7 @@ from datetime import datetime, timedelta
 import os.path
 from time import sleep
 
-from flask import redirect, request, session
+from flask import make_response, redirect, request, session
 
 from errors import DoesNotExistError
 from exif import get_exif_geo_position
@@ -160,7 +160,7 @@ def image_help():
         iccs=available_iccs
     )
 
-    return render_template(
+    response = make_response(render_template(
         'image_help.html',
         embed=embed,
         subs={
@@ -173,7 +173,10 @@ def image_help():
             'View this page from within QIS to see the'
             ' default image settings for your server.': default_settings_html
         }
-    )
+    ))
+    response.cache_control.public = True
+    response.cache_control.max_age = 3600
+    return response
 
 
 # The image uploading form
@@ -690,10 +693,13 @@ def _standard_help_page(template_file):
     server_url_idx = http_server_url.find(':') + 1
     server_url = http_server_url[server_url_idx:]
 
-    return render_template(
+    response = make_response(render_template(
         template_file,
         subs={
             '//images.example.com/': server_url,
             'View this page from within QIS to see a demo.': 'A demo page is [available here](..).'
         }
-    )
+    ))
+    response.cache_control.public = True
+    response.cache_control.max_age = 3600
+    return response
