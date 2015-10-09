@@ -18,11 +18,11 @@ from.
 
 ## Set up
 
-Due to the way the test script re-generates images as it goes, you may encounter
-falsely triggered `HTTP 503 - Server too busy` errors. To prevent these, add
-the following setting to your `local_settings.py` file:
+To suppress HTTP 503 errors and allow the test script to clear cached images
+as it goes, add the following setting to your `local_settings.py` file.
+Remember to remove it when you have finished:
 
-	IMAGE_GENERATION_RAISE_TOO_BUSY = False
+	BENCHMARKING = True
 
 At present you also need to clear the server's cache before each test run,
 by restarting the Memcached service:

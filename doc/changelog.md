@@ -1,3 +1,13 @@
+# v1.34
+_Changes: recache=1 and cache=0 are no longer public_
+
+These undocumented internal image parameters killed performance when used accidentally.
+A new setting is required for running benchmarks, see benchmark.md for details.
+
+Update the Python and web code  
+Restart the Apache service
+
+
 # v1.33
 _Changes: first-run permissions now make images publicly viewable,
 first version licensed under the AGPL_

@@ -108,14 +108,12 @@ ImgSimpleView.prototype.reset = function() {
 
 ImgSimpleView.prototype.refresh = function() {
 	if (this.zoomAttrs.level > 1) {
-		// Don't cache zoomed images, the crop positions are (more or less) unique every time
-		this.imageAttrs.cache = 0;
+		// Zooming in - don't count this as another view in the stats
 		this.imageAttrs.autocropfit = 1;
 		this.imageAttrs.stats = 0;
 	}
 	else {
 		// Fully zoomed out
-		delete this.imageAttrs.cache;
 		delete this.imageAttrs.autocropfit;
 		delete this.imageAttrs.stats;
 	}

@@ -4,6 +4,7 @@
 .pydevproject
 .Python
 .DS_Store
+pip-selfcheck.json
 *.pyc
 *.pyo
 *.o

@@ -352,7 +352,10 @@ class ImageManager(object):
             ret_image_data = self._cache.get(cache_key)
             if ret_image_data is None:
                 self._logger.warn('Timed out waiting for ' + str(image_attrs))
-                if self._settings['IMAGE_GENERATION_RAISE_TOO_BUSY']:
+                if (
+                    self._settings['IMAGE_GENERATION_RAISE_TOO_BUSY'] and
+                    not self._settings['BENCHMARKING']
+                ):
                     # We might have 10 (100!) requests queued up waiting, so an
                     # error now is preferable to letting them all go through
                     raise ServerTooBusyError()
