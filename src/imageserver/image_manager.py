@@ -582,6 +582,8 @@ class ImageManager(object):
         db_session = self._data.db_get_session()
         db_commit = False
         try:
+            self._logger.debug('Resetting image ' + str(image_attrs))
+
             # Sync database with file
             db_image = auto_sync_file(
                 image_attrs.filename(),
