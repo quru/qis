@@ -1485,7 +1485,7 @@ class ImageServerTestsFast(BaseTestCase):
     # Test the identification of suitable base images in cache
     def test_base_image_detection(self):
         image_obj = auto_sync_existing_file('test_images/dorset.jpg', dm, tm)
-        image_id  = image_obj.id
+        image_id = image_obj.id
         # Clean
         orig_attrs = ImageAttrs('test_images/dorset.jpg', image_id)
         im.reset_image(orig_attrs)
@@ -1603,6 +1603,43 @@ class ImageServerTestsFast(BaseTestCase):
         assert base is not None and base.attrs().width() == 500
         # Clean up
         im.reset_image(orig_attrs)
+
+    # There was a bug where "cmyk.jpg&colorspace=rgb" would be used as a base image
+    # for "cmyk.jpg&icc=some_icc&colorspace=rgb" but this was incorrect because the
+    # base image is then RGB instead of CMYK.
+    def test_base_image_colorspaces(self):
+        # Clean
+        image_obj = auto_sync_existing_file('test_images/picture-cmyk.jpg', dm, tm)
+        image_id = image_obj.id
+        orig_attrs = ImageAttrs('test_images/picture-cmyk.jpg', image_id)
+        ie.reset_image(orig_attrs)
+        # Set up tests
+        orig_attrs = ImageAttrs('test_images/picture-cmyk.jpg',
+                                image_id, iformat='jpg', width=500, colorspace='rgb')
+        w200_attrs = ImageAttrs('test_images/picture-cmyk.jpg',
+                                image_id, iformat='jpg', width=200, colorspace='rgb')
+        icc_attrs_1 = ImageAttrs('test_images/picture-cmyk.jpg',
+                                 image_id, iformat='jpg', width=500, icc_profile='CoatedGRACoL2006')
+        icc_attrs_2 = ImageAttrs('test_images/picture-cmyk.jpg',
+                                 image_id, iformat='jpg', width=500, icc_profile='CoatedGRACoL2006',
+                                 colorspace='rgb')
+        cspace_attrs = ImageAttrs('test_images/picture-cmyk.jpg',
+                                  image_id, iformat='jpg', width=500, colorspace='gray')
+        # Get the orig_attrs image
+        rv = self.app.get('/image?src=test_images/picture-cmyk.jpg&format=jpg&width=500&colorspace=rgb')
+        self.assertEqual(rv.status_code, 200)
+        # Now getting a width 200 of that should be OK
+        base = ie._get_base_image(w200_attrs)
+        self.assertIsNotNone(base)
+        # Getting an ICC version should not use the RGB base
+        base = ie._get_base_image(icc_attrs_1)
+        self.assertIsNone(base)
+        # Getting an RGB of the ICC version should not use the RGB base either
+        base = ie._get_base_image(icc_attrs_2)
+        self.assertIsNone(base)
+        # Getting a GRAY version should not use the RGB base
+        base = ie._get_base_image(cspace_attrs)
+        self.assertIsNone(base)
 
     # Test the auto-pyramid generation, which is really a specialist case of test_base_image_detection
     def test_auto_pyramid(self):

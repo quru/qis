@@ -748,7 +748,11 @@ class ImageAttrs():
         if base.icc_profile() is not None and (
             base.icc_profile() != target.icc_profile() or
             base.icc_intent() != target.icc_intent() or
-            base.icc_bpc() != target.icc_bpc()):
+            base.icc_bpc() != target.icc_bpc()
+        ):
+            return 14
+        # If target wants ICC then base can't be colorspaced
+        if target.icc_profile() and base.colorspace():
             return 14
         # If target wants ICC then base can't be stripped either
         if target.icc_profile() and base.strip_info():
