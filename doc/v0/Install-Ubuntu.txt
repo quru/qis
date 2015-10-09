@@ -87,7 +87,7 @@ sudo cp -a ~qis/lib /opt/qis
 sudo cp -a ~qis/licences /opt/qis
 sudo cp -a ~qis/logs /opt/qis
 sudo cp -a ~qis/src /opt/qis
-sudo cp -a ~qis/templates /opt/qis
+<skip this in v2> sudo cp -a ~qis/templates /opt/qis
 
 export SETTINGS_FILE=/opt/qis/conf/local_settings.py
 echo "" > $SETTINGS_FILE

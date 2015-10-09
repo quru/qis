@@ -26,7 +26,7 @@ that the commands, package names and file installation locations may differ slig
 
 This guide will later require that you have 2 QIS package files:
 
-* `Quru Image Server-1.xx.tar.gz` - the main QIS Python web application
+* `Quru Image Server-2.xx.tar.gz` - the main QIS Python web application
 * `dependencies.tar.gz` - the application's Python dependencies,
   including compiled C extensions as platform-specific binaries
 
@@ -144,7 +144,7 @@ Install the required packages and useful utilities:
 	$ sudo yum -y install curl wget openssh-clients pwgen tar zip unzip python-pip
 
 You will next require the 2 QIS distribution files:
-`Quru Image Server-1.xx.tar.gz` and `dependencies.tar.gz`.
+`Quru Image Server-2.xx.tar.gz` and `dependencies.tar.gz`.
 
 Note that the dependencies file is specific to server architecture and Python version,
 and you require the correct version for your operating system. The following commands
@@ -158,7 +158,7 @@ Create the QIS base directory and install the files:
 	$ cd lib/python2.7
 	$ sudo -u qis tar -xvf ~/dependencies.tar.gz
 	$ cd ../..
-	$ sudo -u qis tar --strip-components=1 -xvf ~/Quru\ Image\ Server-1.xx.tar.gz
+	$ sudo -u qis tar --strip-components=1 -xvf ~/Quru\ Image\ Server-2.xx.tar.gz
 
 The installation should look like this:
 
@@ -172,7 +172,6 @@ The installation should look like this:
 	drwxr-xr-x 2 qis apache 4096 May  22 10:27 licences
 	drwxr-xr-x 2 qis apache 4096 May  22 10:27 logs
 	drwxr-xr-x 5 qis apache 4096 May  22 10:27 src
-	drwxr-xr-x 2 qis apache 4096 May  22 10:27 templates
 
 ## Install Apache and friends
 
@@ -410,13 +409,11 @@ run the Apache service:
 and check the QIS log file to see what happened:
 
 	$ cat /opt/qis/logs/qis.log
-	2015-05-22 10:37:54,054 qis_18     INFO     Quru Image Server v1.28.1 engine startup
+	2015-05-22 10:37:54,054 qis_18     INFO     Quru Image Server v2.0.0-dev.4 engine startup
 	2015-05-22 10:37:54,054 qis_18     INFO     Using settings base_settings + local_settings.py
-	2015-05-22 10:37:54,054 qis_18     INFO     Debug mode off
 	2015-05-22 10:37:54,058 qis_18     INFO     Cache usage currently 0 out of 1048576000 bytes (0%), holding 0 objects.
-	2015-05-22 10:37:54,054 qis_19     INFO     Quru Image Server v1.28.1 engine startup
+	2015-05-22 10:37:54,054 qis_19     INFO     Quru Image Server v2.0.0-dev.4 engine startup
 	2015-05-22 10:37:54,055 qis_19     INFO     Using settings base_settings + local_settings.py
-	2015-05-22 10:37:54,055 qis_19     INFO     Debug mode off
 	2015-05-22 10:37:54,071 qis_19     INFO     Cache usage currently 0 out of 1048576000 bytes (0%), holding 0 objects.
 	2015-05-22 10:37:54,309 qis_19     INFO     Cache control database created.
 	2015-05-22 10:37:54,314 qis_19     INFO     Cache control database opened.

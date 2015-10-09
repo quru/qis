@@ -19,7 +19,6 @@
 #   licences/
 #   logs/
 #   src/
-#   templates/
 #
 # Build/Environment variables:
 #   HOSTNAME (Required - the host name for Apache to listen on)
@@ -75,7 +74,6 @@ ADD lib/ /opt/qis/lib/
 ADD licences/ /opt/qis/licences/
 ADD logs/ /opt/qis/logs/
 ADD src/ /opt/qis/src/
-ADD templates/ /opt/qis/templates/
 RUN chmod a+x /opt/qis/run.sh \
     && chown -R qis:apache /opt/qis
 
