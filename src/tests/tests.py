@@ -1612,7 +1612,7 @@ class ImageServerTestsFast(BaseTestCase):
         image_obj = auto_sync_existing_file('test_images/picture-cmyk.jpg', dm, tm)
         image_id = image_obj.id
         orig_attrs = ImageAttrs('test_images/picture-cmyk.jpg', image_id)
-        ie.reset_image(orig_attrs)
+        im.reset_image(orig_attrs)
         # Set up tests
         orig_attrs = ImageAttrs('test_images/picture-cmyk.jpg',
                                 image_id, iformat='jpg', width=500, colorspace='rgb')
@@ -1629,16 +1629,16 @@ class ImageServerTestsFast(BaseTestCase):
         rv = self.app.get('/image?src=test_images/picture-cmyk.jpg&format=jpg&width=500&colorspace=rgb')
         self.assertEqual(rv.status_code, 200)
         # Now getting a width 200 of that should be OK
-        base = ie._get_base_image(w200_attrs)
+        base = im._get_base_image(w200_attrs)
         self.assertIsNotNone(base)
         # Getting an ICC version should not use the RGB base
-        base = ie._get_base_image(icc_attrs_1)
+        base = im._get_base_image(icc_attrs_1)
         self.assertIsNone(base)
         # Getting an RGB of the ICC version should not use the RGB base either
-        base = ie._get_base_image(icc_attrs_2)
+        base = im._get_base_image(icc_attrs_2)
         self.assertIsNone(base)
         # Getting a GRAY version should not use the RGB base
-        base = ie._get_base_image(cspace_attrs)
+        base = im._get_base_image(cspace_attrs)
         self.assertIsNone(base)
 
     # Test the auto-pyramid generation, which is really a specialist case of test_base_image_detection
