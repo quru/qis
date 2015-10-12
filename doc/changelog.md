@@ -1,5 +1,6 @@
 # v2.0.0-dev.4
-_Changes: Merge from v1.34 - recache=1 and cache=0 are no longer public_
+_Changes: Merge from v1.34 - recache=1 and cache=0 are no longer public,
+add html5 responsive image tags to publisher output_
 
 Update the Python and web code  
 Restart the Apache service
@@ -54,7 +55,8 @@ Start the Apache service
 
 
 # v1.34
-_Changes: recache=1 and cache=0 are no longer public_
+_Changes: recache=1 and cache=0 are no longer public,
+add html5 responsive image tags to publisher output_
 
 These undocumented internal image parameters killed performance when used accidentally.
 A new setting is required for running benchmarks, see benchmark.md for details.

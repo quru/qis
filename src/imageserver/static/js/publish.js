@@ -29,6 +29,7 @@
 	Date       By    Details
 	=========  ====  ============================================================
 	06Oct2015  Matt  Refactored help popup JS into preview_popup.js
+	12Oct2015  Matt  Added HTML5 <picture> and <img srcset> outputs
 */
 
 "use strict";
@@ -691,19 +692,33 @@ Publisher.refreshWarnings = function() {
 };
 
 Publisher.refreshPublishOutput = function() {
-	var internalURL = Publisher.previewURL + '?' + Object.toQueryString(Publisher.imageSpec),
-	    externalURL = Publisher.imageURL + '?' + Object.toQueryString(Publisher.imageSpec);
+	var imageSpec = Object.clone(Publisher.imageSpec),
+	    internalURL = Publisher.previewURL + '?' + Object.toQueryString(imageSpec),
+	    externalURL = Publisher.imageURL + '?' + Object.toQueryString(imageSpec);
 
-	// We can unescape %2F back to / for friendlier URLs
-	internalURL = internalURL.replace(/%2F/g, '/');
-	externalURL = externalURL.replace(/%2F/g, '/');
-	// But escape quote chars that would break HTML attrs and JS quoted strings
-	internalURL = internalURL.replace(/"/g, '%22').replace(/'/g, '%27');
-	externalURL = externalURL.replace(/"/g, '%22').replace(/'/g, '%27');
+	function tidyURL(url) {
+		// We can unescape %2F back to / for friendlier URLs
+		url = url.replace(/%2F/g, '/');
+		// But escape quote chars that would break HTML attrs and JS quoted strings
+		return url.replace(/"/g, '%22').replace(/'/g, '%27');
+	}
+	internalURL = tidyURL(internalURL);
+	externalURL = tidyURL(externalURL);
+
+	// Responsive image examples need some kind of sizing
+	var respURLs = {},
+	    respSizes = [480, 800, 1200];
+	for (var i = 0; i < respSizes.length; i++) {
+		var size = respSizes[i];
+		imageSpec.height = 0;
+		imageSpec.width = size;
+		respURLs[size] = Publisher.imageURL + '?' + Object.toQueryString(imageSpec);
+		respURLs[size] = tidyURL(respURLs[size]);
+	}
 
 	// Update download button link
 	$('publish_download').setProperty('data-url', internalURL + '&attach=1');
-	
+
 	// Find and render an output template
 	var pTypeEl = $('publish_type'),
 	    pType = pTypeEl.options[pTypeEl.selectedIndex].value,
@@ -713,6 +728,9 @@ Publisher.refreshPublishOutput = function() {
 	var templateVars = {
 		'server_url': PublisherConfig.external_server_url,
 		'image_url': externalURL,
+		'image_url_480': respURLs[480],
+		'image_url_800': respURLs[800],
+		'image_url_1200': respURLs[1200],
 		'static_url': PublisherConfig.external_static_url
 	};
 
