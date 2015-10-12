@@ -411,6 +411,8 @@
 						<select id="publish_type">
 							<option value="plain">Plain image URL</option>
 							<option value="img_tag">HTML image tag, static</option>
+							<option value="img_srcset_tag">HTML5 image tag, responsive</option>
+							<option value="picture_tag">HTML5 picture tag, responsive</option>
 							<option value="img_tag_zoom">HTML image tag, click to launch zoom</option>
 							<option value="img_tag_gallery">HTML image tag, click to launch gallery</option>
 							<option value="canvas_zoom">Embedded zoomable image</option>
@@ -428,6 +430,8 @@
 		<div class="output_templates">
 			<div id="output_template_plain">{% include "publish/output_plain.html" %}</div>
 			<div id="output_template_img_tag">{% include "publish/output_img_tag.html" %}</div>
+			<div id="output_template_img_srcset_tag">{% include "publish/output_img_srcset_tag.html" %}</div>
+			<div id="output_template_picture_tag">{% include "publish/output_picture_tag.html" %}</div>
 			<div id="output_template_img_tag_zoom">{% include "publish/output_img_tag_zoom.html" %}</div>
 			<div id="output_template_img_tag_gallery">{% include "publish/output_img_tag_gallery.html" %}</div>
 			<div id="output_template_canvas_zoom">{% include "publish/output_canvas_zoom.html" %}</div>

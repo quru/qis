@@ -1,0 +1,11 @@
+{# This is a publisher output template.
+   Escape HTML so that it doesn't run when embedded in the host page.
+   Use {varname} for variable substitution.
+#}
+<!-- These image sizes are only examples; you will need to change them
+     to suit your needs, and perhaps crop the smaller images -->
+&lt;img src="{image_url}"
+     srcset="{image_url_480} 480w,
+             {image_url_800} 800w,
+             {image_url_1200} 1200w"
+     sizes="100vw"&gt;

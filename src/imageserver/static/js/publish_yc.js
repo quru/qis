@@ -27,6 +27,7 @@
 	Notable modifications:
 	Date       By    Details
 	=========  ====  ============================================================
+	12Oct2015  Matt  Added HTML5 <picture> and <img srcset> outputs
 */
 "use strict";
 var Publisher={previewImageRC:0,cropImageRC:0,imageSpec:{},previewSpec:{}};Publisher.init=function(){addEventEx("crop_image","load",Publisher.refreshedCropImage);
@@ -128,12 +129,13 @@ var i=$("publish_field_icc_profile"),d=i.options[i.selectedIndex].getProperty("d
 }if(Publisher.imageSpec.icc){if(d!==n){Publisher.addWarning($("group_colorspace"),PublisherText.warn_icc_colorspace);
 }}}if(k==="1"||k===true){if(Publisher.imageSpec.icc){Publisher.addWarning($("group_strip"),PublisherText.warn_strip);
 }if(d==="cmyk"||n==="cmyk"){Publisher.addWarning($("group_strip"),PublisherText.warn_strip_cmyk);}}if((t==="none"||t==="transparent")&&!c&&!h){Publisher.addWarning($("group_fill"),PublisherText.warn_transparency);
-}};Publisher.refreshPublishOutput=function(){var f=Publisher.previewURL+"?"+Object.toQueryString(Publisher.imageSpec),h=Publisher.imageURL+"?"+Object.toQueryString(Publisher.imageSpec);
-f=f.replace(/%2F/g,"/");h=h.replace(/%2F/g,"/");f=f.replace(/"/g,"%22").replace(/'/g,"%27");h=h.replace(/"/g,"%22").replace(/'/g,"%27");
-$("publish_download").setProperty("data-url",f+"&attach=1");var a=$("publish_type"),c=a.options[a.selectedIndex].value,i="output_template_"+c,b=$(i);
-var e={server_url:PublisherConfig.external_server_url,image_url:h,static_url:PublisherConfig.external_static_url};
-if(b&&Publisher.hasOuterHTML){var l=b.outerHTML,g='<div id="'+i+'">',m="</div>";l=l.substring(g.length,l.length-m.length);
-l=l.replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");for(var d in e){var j=new RegExp("{"+d+"}","g");
-l=l.replace(j,e[d]);}$("publish_output").set("html",l);if(c!=="plain"){hljs.highlightBlock($("publish_output"));
-}}else{$("publish_output").set("text",e.image_url);}};function onFileSelected(a){$("publish_field_overlay_src").value=a;
+}};Publisher.refreshPublishOutput=function(){var e=Object.clone(Publisher.imageSpec),r=Publisher.previewURL+"?"+Object.toQueryString(e),c=Publisher.imageURL+"?"+Object.toQueryString(e);
+function l(i){i=i.replace(/%2F/g,"/");return i.replace(/"/g,"%22").replace(/'/g,"%27");}r=l(r);c=l(c);
+var a={},g=[480,800,1200];for(var q=0;q<g.length;q++){var n=g[q];e.height=0;e.width=n;a[n]=Publisher.imageURL+"?"+Object.toQueryString(e);
+a[n]=l(a[n]);}$("publish_download").setProperty("data-url",r+"&attach=1");var h=$("publish_type"),m=h.options[h.selectedIndex].value,j="output_template_"+m,d=$(j);
+var t={server_url:PublisherConfig.external_server_url,image_url:c,image_url_480:a[480],image_url_800:a[800],image_url_1200:a[1200],static_url:PublisherConfig.external_static_url};
+if(d&&Publisher.hasOuterHTML){var s=d.outerHTML,f='<div id="'+j+'">',b="</div>";s=s.substring(f.length,s.length-b.length);
+s=s.replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");for(var p in t){var o=new RegExp("{"+p+"}","g");
+s=s.replace(o,t[p]);}$("publish_output").set("html",s);if(m!=="plain"){hljs.highlightBlock($("publish_output"));
+}}else{$("publish_output").set("text",t.image_url);}};function onFileSelected(a){$("publish_field_overlay_src").value=a;
 Publisher.onChange();}function onInit(){GenericPopup.initButtons();Publisher.init();}window.addEvent("domready",onInit);

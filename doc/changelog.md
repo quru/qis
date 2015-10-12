@@ -1,5 +1,6 @@
 # v1.34
-_Changes: recache=1 and cache=0 are no longer public_
+_Changes: recache=1 and cache=0 are no longer public,
+add html5 responsive image tags to publisher output_
 
 These undocumented internal image parameters killed performance when used accidentally.
 A new setting is required for running benchmarks, see benchmark.md for details.
