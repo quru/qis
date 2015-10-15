@@ -1,3 +1,24 @@
+# v1.35
+_Changes: bug fix to make usernames case insensitive_
+
+Run the following DDL (SQL) on the database server, QIS management database:
+
+	$ sudo -u qis psql qis-mgmt
+	
+	DROP INDEX idx_us_username;
+	CREATE UNIQUE INDEX idx_us_username ON users (lower(username));
+
+If there are any errors (because of duplicate usernames), you will need to log
+into the admin interface, rename each unwanted user account, and re-run the SQL
+until it succeeds.
+Or if you are comfortable working with the database, you can delete the duplicate
+user accounts by first migrating row values of the `user_id` column in tables:
+`usergroups`, `imagesaudit`, and `tasks`.
+
+Update the Python and web code  
+Restart the Apache service
+
+
 # v1.34
 _Changes: recache=1 and cache=0 are no longer public,
 add html5 responsive image tags to publisher output_

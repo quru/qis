@@ -78,7 +78,7 @@ from imageserver.flask_app import task_engine as tm
 from imageserver.flask_app import permissions_engine as pm
 
 from imageserver.api_util import API_CODES
-from imageserver.errors import DoesNotExistError
+from imageserver.errors import AlreadyExistsError, DoesNotExistError
 from imageserver.filesystem_manager import (
     get_abs_path, copy_file, delete_dir, delete_file
 )
@@ -2869,6 +2869,34 @@ class ImageServerTestsFast(BaseTestCase):
             )
             mocklog.assert_called_once_with(mock.ANY)
             self.assertIn(u'IP 1.2.3.4', mocklog.call_args[0][0])
+
+    # #2799 User names should be case insensitive
+    def test_username_case(self):
+        try:
+            # Get 2 identical user objects, but with username in different case
+            newuser = User(
+                'Jango', 'Fett', 'jango@bountyhunters.info', 'jangofett', 'Tipoca',
+                User.AUTH_TYPE_PASSWORD, False, User.STATUS_ACTIVE
+            )
+            cloneuser = User(
+                'Jango', 'Fett', 'jango@bountyhunters.info', 'JangoFett', 'Tipoca',
+                User.AUTH_TYPE_PASSWORD, False, User.STATUS_ACTIVE
+            )
+            # Create the new user
+            dm.create_user(newuser)
+            # We should be able to read this back with username in any case
+            u = dm.get_user(username='jangofett')
+            self.assertIsNotNone(u)
+            u = dm.get_user(username='JangoFett')
+            self.assertIsNotNone(u)
+            # Creating the clone user should fail
+            self.assertRaises(AlreadyExistsError, dm.create_user, cloneuser)
+        finally:
+            # Tidy up
+            u = dm.get_user(username='jangofett')
+            if u: dm.delete_object(u)
+            u2 = dm.get_user(username='JangoFett')
+            if u2: dm.delete_object(u2)
 
 
 class ImageServerCacheTests(BaseTestCase):

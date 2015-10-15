@@ -236,12 +236,14 @@ class DataManager(object):
                 if refresh:
                     db_session.refresh(obj, ['id'])
             return obj
-        except IntegrityError:
+        except IntegrityError as e:
             if _commit:
                 # Rollback prevents InvalidRequestError
                 # for existing db objects at session.close()
                 db_session.rollback()
-            raise errors.AlreadyExistsError('Object \'' + str(obj) + '\' already exists')
+            raise errors.AlreadyExistsError(
+                'Object \'' + str(obj) + '\' contains a duplicate key'
+            ) if self._is_duplicate_key(e) else e
         except SQLAlchemyError:
             if _commit:
                 db_session.rollback()
@@ -279,7 +281,7 @@ class DataManager(object):
             if load_groups:
                 q = q.options(eagerload('groups'))
             db_user = q.get(user_id) if user_id else \
-                      q.filter(User.username == username).first()
+                      q.filter(func.lower(User.username) == func.lower(username)).first()
             if _detach and db_user:
                 db_session.expunge(db_user)
             return db_user
@@ -414,8 +416,10 @@ class DataManager(object):
                 'Created new user account for username \'' + user.username +
                 '\' with ID ' + str(user.id)
             )
-        except IntegrityError:
-            raise errors.AlreadyExistsError('Username \'' + user.username + '\' already exists')
+        except IntegrityError as e:
+            raise errors.AlreadyExistsError(
+                'Username \'' + user.username + '\' already exists'
+            ) if self._is_duplicate_key(e) else e
         finally:
             if not _db_session:
                 db_session.close()
@@ -440,8 +444,10 @@ class DataManager(object):
                 db_session.commit()
                 db_session.refresh(group, ['id'])  # Avoid DetachedInstanceError after session close
             self._logger.info('Created new group \'' + group.name + '\'')
-        except IntegrityError:
-            raise errors.AlreadyExistsError('Group \'' + group.name + '\' already exists')
+        except IntegrityError as e:
+            raise errors.AlreadyExistsError(
+                'Group \'' + group.name + '\' already exists'
+            ) if self._is_duplicate_key(e) else e
         finally:
             if not _db_session:
                 db_session.close()
@@ -462,8 +468,10 @@ class DataManager(object):
                 db_session.commit()
                 db_session.refresh(folder, ['id'])  # Avoid DetachedInstanceError after session close
             self._logger.info('Created new folder for path: ' + folder.path)
-        except IntegrityError:
-            raise errors.AlreadyExistsError('Folder \'' + folder.path + '\' already exists')
+        except IntegrityError as e:
+            raise errors.AlreadyExistsError(
+                'Folder \'' + folder.path + '\' already exists'
+            ) if self._is_duplicate_key(e) else e
         finally:
             if not _db_session:
                 db_session.close()
@@ -1512,6 +1520,12 @@ class DataManager(object):
         """
         assert target.password, 'User password cannot be empty. ' + \
                                 'Maybe a web request user object is being saved?'
+
+    def _is_duplicate_key(self, exception):
+        """
+        Returns whether an IntegrityError is a duplicate key error.
+        """
+        return u'duplicate' in unicode(exception)
 
     def _enable_sql_time_logging(self):
         """

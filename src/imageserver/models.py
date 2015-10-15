@@ -32,6 +32,7 @@
 
 import os.path
 
+from sqlalchemy import text
 from sqlalchemy import ForeignKey
 from sqlalchemy import BigInteger, Boolean, Column, DateTime, Float, Index
 from sqlalchemy import Integer, LargeBinary, String, Table, Text
@@ -132,7 +133,7 @@ class User(DatabaseModel, IDEqualityMixin):
             Column('status', Integer, nullable=False),
             # Indexes
             # Index('idx_us_id', 'id', unique=True),  # Auto-created from primary_key
-            Index('idx_us_username', 'username', unique=True)
+            Index('idx_us_username', text('lower(username)'), unique=True)
         )
 
     @staticmethod
