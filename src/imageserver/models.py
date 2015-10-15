@@ -132,7 +132,7 @@ class User(Base, BaseMixin, IDEqualityMixin):
 
     __tablename__ = 'users'
     __table_args__ = (
-        Index('idx_us_username', username, unique=True),
+        Index('idx_us_username', func.lower(username), unique=True),
     )
 
     def __init__(self, first_name, last_name, email, username, password,

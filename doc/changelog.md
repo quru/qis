@@ -1,24 +1,17 @@
+# v2.0.0-dev.5
+_Changes: Merge from v1.35 - bug fix to make usernames case insensitive_
+
+If upgrading an existing installation, see the notes for v1.35.
+
 # v2.0.0-dev.4
 _Changes: Merge from v1.34 - recache=1 and cache=0 are no longer public,
 add html5 responsive image tags to publisher output_
 
-Update the Python and web code  
-Restart the Apache service
-
-
 # v2.0.0-dev.3
 _Changes: Adds image template administration pages_
 
-Update the Python and web code  
-Restart the Apache service
-
-
 # v2.0.0-dev.2
 _Changes: new APIs for administration of image templates_
-
-Update the Python and web code  
-Restart the Apache service
-
 
 # v2.0.0-dev.1
 _Breaking change: move image templates into the database_
@@ -43,7 +36,6 @@ instead of name, and returns the complete template object (with `name` and
 compatibility is not being maintained. There will soon be new API functions
 for listing, creating, updating and deleting templates.
 
-
 # v2.0.0-dev.0
 _Changes: upgrade SQLAlchemy to v1, upgrade internal database models_
 
@@ -52,6 +44,27 @@ Update the Python and web code
 Update the Python dependencies  
 Restart the Memcached service  
 Start the Apache service
+
+
+# v1.35
+_Changes: bug fix to make usernames case insensitive_
+
+Run the following DDL (SQL) on the database server, QIS management database:
+
+	$ sudo -u qis psql qis-mgmt
+	
+	DROP INDEX idx_us_username;
+	CREATE UNIQUE INDEX idx_us_username ON users (lower(username));
+
+If there are any errors (because of duplicate usernames), you will need to log
+into the admin interface, rename each unwanted user account, and re-run the SQL
+until it succeeds.
+Or if you are comfortable working with the database, you can delete the duplicate
+user accounts by first migrating row values of the `user_id` column in tables:
+`usergroups`, `imagesaudit`, and `tasks`.
+
+Update the Python and web code  
+Restart the Apache service
 
 
 # v1.34
