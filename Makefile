@@ -1,5 +1,5 @@
 PYTHON := python2.6
-VENV_NAME := qis_venv
+VENV_NAME := qis_v2
 VENV_PATH := ~/.virtualenvs/${VENV_NAME}
 VENV_ACTIVATE := . ${VENV_PATH}/bin/activate
 QISMAGICK_SO := ${VENV_PATH}/lib/${PYTHON}/site-packages/qismagick.so
