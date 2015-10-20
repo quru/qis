@@ -58,7 +58,7 @@ numerical fields.
 
 Image security is not required on all fields, but is relevant to these:
 
-* `width` and `height` - to prevent the download of full size images
+* `width` and `height` - to prevent the serving of full size images
 * `page` - for e.g. PDF or multi-page TIFF files, allow access only to the cover page
 * `overlay` (all) - to prevent tampering when the overlay is used as a watermark
 * `strip` - to prevent the removal of EXIF data (which might contain a copyright notice, etc)

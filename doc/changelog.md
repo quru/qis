@@ -2,6 +2,7 @@
 _Changes: Merge from v1.35 - bug fix to make usernames case insensitive_
 
 If upgrading an existing installation, see the notes for v1.35.
+No SQLAlchemy upgrade is required for the v2 branch.
 
 # v2.0.0-dev.4
 _Changes: Merge from v1.34 - recache=1 and cache=0 are no longer public,
@@ -47,7 +48,8 @@ Start the Apache service
 
 
 # v1.35
-_Changes: bug fix to make usernames case insensitive_
+_Changes: bug fix to make usernames case insensitive,
+bump SQLAlchemy to 0.9.10_
 
 Run the following DDL (SQL) on the database server, QIS management database:
 
@@ -63,6 +65,7 @@ Or if you are comfortable working with the database, you can delete the duplicat
 user accounts by first migrating row values of the `user_id` column in tables:
 `usergroups`, `imagesaudit`, and `tasks`.
 
+Update the Python dependencies  
 Update the Python and web code  
 Restart the Apache service
 
