@@ -388,7 +388,7 @@ no data object is returned.
 
 ### Examples
 
-	$ curl -X POST -u token: -F files=@myimage.jpg -F path_index=-1 -F path=test_images -F overwrite=false 'https://images.example.com/api/v1/upload'
+	$ curl -X POST -u <token>:unused -F files=@myimage.jpg -F path_index=-1 -F path=test_images -F overwrite=false 'https://images.example.com/api/v1/upload'
 	{
 	  "data": {
 	    "myimage.jpg": {
@@ -408,7 +408,7 @@ no data object is returned.
 
 But then running the same command again:
 
-	$ curl -X POST -u token: -F files=@myimage.jpg -F path_index=-1 -F path=test_images -F overwrite=false 'https://images.example.com/api/v1/upload'
+	$ curl -X POST -u <token>:unused -F files=@myimage.jpg -F path_index=-1 -F path=test_images -F overwrite=false 'https://images.example.com/api/v1/upload'
 	{
 	  "data": {
 	    "myimage.jpg": {
@@ -455,7 +455,7 @@ The image's database object.
 
 ### Examples
 
-	$ curl -u token: 'https://images.example.com/api/v1/admin/images/524/'
+	$ curl -u <token>:unused 'https://images.example.com/api/v1/admin/images/524/'
 	{
 	  "data": {
 	    "description": "",
@@ -478,7 +478,7 @@ The image's database object.
 	  "status": 200
 	}
 
-	$ curl -X PUT -u token: -F 'title=my sample image' -F 'description=the updated description of my sample image' 'https://images.example.com/api/v1/admin/images/524/'
+	$ curl -X PUT -u <token>:unused -F 'title=my sample image' -F 'description=the updated description of my sample image' 'https://images.example.com/api/v1/admin/images/524/'
 	{
 	  "data": {
 	    "description": "the updated description of my sample image",
@@ -523,7 +523,7 @@ Values are `null` if the template does not set them.
 
 ### Example
 
-	$ curl -u token: 'https://images.example.com/api/v1/admin/templates/smalljpeg/'
+	$ curl -u <token>:unused 'https://images.example.com/api/v1/admin/templates/smalljpeg/'
 	{
 	  "data": {
 	    "align_h": null,
@@ -600,7 +600,7 @@ A list of user objects (for the list users URL), or a single user object (for al
 
 ### Examples
 
-	$ curl -u token: 'https://images.example.com/api/v1/admin/users/'
+	$ curl -u <token>:unused 'https://images.example.com/api/v1/admin/users/'
 	{
 	  "data": [
 	    {
@@ -628,7 +628,7 @@ A list of user objects (for the list users URL), or a single user object (for al
 	  "status": 200
 	}
 
-	$ curl -u token: 'https://images.example.com/api/v1/admin/users/2/'
+	$ curl -u <token>:unused 'https://images.example.com/api/v1/admin/users/2/'
 	{
 	  "data": {
 	    "allow_api": true,
@@ -644,7 +644,7 @@ A list of user objects (for the list users URL), or a single user object (for al
 	  "status": 200
 	}
 
-	$ curl -X PUT -u token: -F 'first_name=Matthew' -F 'last_name=Fozard' -F 'username=mattfoo' -F 'email=matt@quru.com' -F 'auth_type=1' -F 'allow_api=true' 'https://images.example.com/api/v1/admin/users/2/'
+	$ curl -X PUT -u <token>:unused -F 'first_name=Matthew' -F 'last_name=Fozard' -F 'username=mattfoo' -F 'email=matt@quru.com' -F 'auth_type=1' -F 'allow_api=true' 'https://images.example.com/api/v1/admin/users/2/'
 	{
 	  "data": {
 	    "allow_api": true,
@@ -709,7 +709,7 @@ or nothing (after a delete).
 
 ### Examples
 
-	$ curl -u token: 'https://images.example.com/api/v1/admin/groups/'
+	$ curl -u <token>:unused 'https://images.example.com/api/v1/admin/groups/'
 	{
 	  "data": [
 	    {
@@ -765,7 +765,7 @@ or nothing (after a delete).
 	  "status": 200
 	}
 
-	$ curl -X POST -u token: -F 'name=Website editors' -F 'description=Access to reports and to change any file or folder' -F 'group_type=2' -F 'access_folios=false' -F 'access_reports=true' -F 'access_admin_users=false' -F 'access_admin_files=true' -F 'access_admin_folios=false' -F 'access_admin_permissions=false' -F 'access_admin_all=false' 'https://images.example.com/api/v1/admin/groups/'
+	$ curl -X POST -u <token>:unused -F 'name=Website editors' -F 'description=Access to reports and to change any file or folder' -F 'group_type=2' -F 'access_folios=false' -F 'access_reports=true' -F 'access_admin_users=false' -F 'access_admin_files=true' -F 'access_admin_folios=false' -F 'access_admin_permissions=false' -F 'access_admin_all=false' 'https://images.example.com/api/v1/admin/groups/'
 	{
 	  "data": {
 	    "description": "Access to reports and to change any file or folder",
@@ -788,7 +788,7 @@ or nothing (after a delete).
 	  "status": 200
 	}
 	
-	$ curl -X DELETE -u token: 'https://images.example.com/api/v1/admin/groups/7/'
+	$ curl -X DELETE -u <token>:unused 'https://images.example.com/api/v1/admin/groups/7/'
 	{
 	  "data": null,
 	  "message": "OK",
@@ -823,7 +823,7 @@ No return value.
 
 ### Example
 
-	$ curl -u token: 'https://images.example.com/api/v1/admin/groups/4/'
+	$ curl -u <token>:unused 'https://images.example.com/api/v1/admin/groups/4/'
 	{
 	  "data": {
 	    "description": "Those that are editing the web pages and managing the /web directory of this instance",
@@ -867,14 +867,14 @@ No return value.
 	  "status": 200
 	}
 	
-	$ curl -X DELETE -u token: 'https://images.example.com/api/v1/admin/groups/4/members/2/'
+	$ curl -X DELETE -u <token>:unused 'https://images.example.com/api/v1/admin/groups/4/members/2/'
 	{
 	  "data": null,
 	  "message": "OK",
 	  "status": 200
 	}
 	
-	$ curl -u token: 'https://images.example.com/api/v1/admin/groups/4/'
+	$ curl -u <token>:unused 'https://images.example.com/api/v1/admin/groups/4/'
 	{
 	  "data": {
 	    "description": "Those that are editing the web pages and managing the /web directory of this instance",
@@ -957,7 +957,7 @@ A list of folder permission objects (for the list URL), a single folder permissi
 
 ### Examples
 
-	$ curl -u token: 'https://images.example.com/api/v1/admin/permissions/'
+	$ curl -u <token>:unused 'https://images.example.com/api/v1/admin/permissions/'
 	{
 	  "data": [
 	    {
@@ -985,7 +985,7 @@ A list of folder permission objects (for the list URL), a single folder permissi
 
 Allow any logged in user to upload images by default:
 
-	$ curl -X PUT -u token: -F 'group_id=2' -F 'folder_id=1' -F 'access=40' 'https://images.example.com/api/v1/admin/permissions/2/'
+	$ curl -X PUT -u <token>:unused -F 'group_id=2' -F 'folder_id=1' -F 'access=40' 'https://images.example.com/api/v1/admin/permissions/2/'
 	{
 	  "data": {
 	    "access": 40,
@@ -1028,7 +1028,7 @@ The image's updated database object.
 
 ### Example
 
-	$ curl -u token: 'https://images.example.com/api/v1/admin/images/524/'
+	$ curl -u <token>:unused 'https://images.example.com/api/v1/admin/images/524/'
 	{
 	  "data": {
 	    "description": "the description of my sample image",
@@ -1053,7 +1053,7 @@ The image's updated database object.
 
 To move this image to the `web` folder:
 
-	$ curl -X PUT -u token: -F 'path=/web/Image0007.jpg' 'https://images.example.com/api/v1/admin/filesystem/images/524/'
+	$ curl -X PUT -u <token>:unused -F 'path=/web/Image0007.jpg' 'https://images.example.com/api/v1/admin/filesystem/images/524/'
 	{
 	  "data": {
 	    "description": "the description of my sample image",
@@ -1117,7 +1117,7 @@ status `202` and a task object that you can track using the [system tasks](#api_
 
 ### Example
 
-	$ curl -u token: -F 'path=/test_images/mynewfolder/' 'https://images.example.com/api/v1/admin/filesystem/folders/'
+	$ curl -u <token>:unused -F 'path=/test_images/mynewfolder/' 'https://images.example.com/api/v1/admin/filesystem/folders/'
 	{
 	  "data": {
 	    "id": 63,
@@ -1137,7 +1137,7 @@ status `202` and a task object that you can track using the [system tasks](#api_
 	  "status": 200
 	}
 
-	$ curl -X PUT -u token: -F 'path=/renamed-large-folder' 'https://images.example.com/api/v1/admin/filesystem/folders/23/'
+	$ curl -X PUT -u <token>:unused -F 'path=/renamed-large-folder' 'https://images.example.com/api/v1/admin/filesystem/folders/23/'
 	{
 	  "data": {
 	    "error_log_level": "error",
@@ -1218,7 +1218,7 @@ after which a status `404` will be returned when that task is requested.
 
 ### Example
 
-	$ curl -u token: 'https://images.example.com/api/v1/admin/tasks/301/'
+	$ curl -u <token>:unused 'https://images.example.com/api/v1/admin/tasks/301/'
 	{
 	  "data": {
 	    "error_log_level": "error",
@@ -1253,7 +1253,7 @@ after which a status `404` will be returned when that task is requested.
 
 Then after a few seconds:
 
-	$ curl -u token: 'https://images.example.com/api/v1/admin/tasks/301/'
+	$ curl -u <token>:unused 'https://images.example.com/api/v1/admin/tasks/301/'
 	{
 	  "data": null,
 	  "message": "The requested item was not found (301)",
