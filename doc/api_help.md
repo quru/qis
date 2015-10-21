@@ -11,8 +11,8 @@ that return data in the [JSON](http://www.json.org/) format.
 * [About JSON](#json)
 * [Using the API](#usage)
 * [Public web services](#api_public)
-	* [list - lists the images in a folder](#api_list)
-	* [details - retrieve image information](#api_details)
+	* [list - lists the images in a folder path](#api_list)
+	* [details - retrieve image information by path](#api_details)
 * [Protected web services](#api_private)
 	* [token - obtain an API authentication token](#api_token)
 	* [upload - upload an image](#api_upload)
@@ -165,14 +165,16 @@ The following status codes may be returned:
 <a name="api_public"></a>
 # Public web services
 
-These web services can be called from an anonymous (not logged in) session, and do not require
-an [API authentication token](#api_token) to be provided.
+For publicly accessible images, these web services can be called from an anonymous
+(not logged in) session without requiring an [API authentication token](#api_token).
+For images with a [folder permission](#api_data_permissions) in place,
+a token is still required however.
 
 <a name="api_list"></a>
 ## list
-Retrieves a list of the images within a folder, returning the filename, a URL to display the
-image, and optionally additional image attributes. To avoid performance issues, this function
-currently returns a maximum of 1,000 images.
+Retrieves the list of the images within a folder path, returning the filename, a URL to display
+the image, and optionally additional image attributes. This function returns a maximum of 1,000
+images by default.
 
 ### URL
 * `/api/v1/list`
@@ -185,6 +187,8 @@ currently returns a maximum of 1,000 images.
 * `attributes` - Optional, boolean - When true, adds the unique ID, title, description, width and
 	height fields from the image database to the returned objects. Set to false for improved
 	performance if these fields are not required.
+* `limit` - Optional, integer - The maximum number of results to return, default `1000`. Or set to
+    `0` to specify no limit.
 * _`[any]`_ - Optional, mixed - Any additional parameters are appended to the returned image URLs so
 	that for example the required image sizes can be specified
 
@@ -234,7 +238,7 @@ An array of 0 or more objects.
 
 <a name="api_details"></a>
 ## details
-Retrieves the attributes of a single image.
+Retrieves the attributes of a single image from its path.
 
 ### URL
 * `/api/v1/details`
@@ -350,7 +354,7 @@ with the same name.
 	* If -1, you must specify the destination folder in the `path` parameter. 
 * `path` - Optional, text - The destination folder path used when `path_index` is -1.
   This folder path must already exist. You can use the [disk folder](#api_disk_folders) API
-  to create new folders.
+  to find or create a folder.
 * `overwrite` - Mandatory, boolean - Whether to overwrite existing files if they already
   exist with the same name in the destination folder
 

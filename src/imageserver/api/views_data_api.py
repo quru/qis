@@ -54,7 +54,7 @@ from imageserver.util import validate_number, validate_string
 
 class ImageAPI(MethodView):
     """
-    Provides the REST admin API to get, update or delete image database records.
+    Provides the REST admin API to get or update image database records.
 
     Required access:
     - View access to the image's folder for GET
@@ -134,8 +134,8 @@ class ImageAPI(MethodView):
     @add_parameter_error_handler
     def _get_validated_object_parameters(self, data_dict):
         params = {
-            'title': data_dict.get('title', ''),
-            'description': data_dict.get('description', '')
+            'title': data_dict['title'].strip(),
+            'description': data_dict['description'].strip()
         }
         validate_string(params['title'], 0, 255)
         validate_string(params['description'], 0, 10000)
@@ -251,10 +251,10 @@ class UserAPI(MethodView):
     @add_parameter_error_handler
     def _get_validated_object_parameters(self, data_dict, require_password):
         params = {
-            'first_name': data_dict.get('first_name', ''),
-            'last_name': data_dict.get('last_name', ''),
-            'email': data_dict.get('email', ''),
-            'username': data_dict.get('username', '').strip(),
+            'first_name': data_dict['first_name'],
+            'last_name': data_dict['last_name'],
+            'email': data_dict['email'],
+            'username': data_dict['username'].strip(),
             'password': data_dict.get('password', ''),
             'auth_type': parse_int(data_dict['auth_type']),
             'allow_api': parse_boolean(data_dict.get('allow_api', ''))
@@ -382,8 +382,8 @@ class GroupAPI(MethodView):
     @add_parameter_error_handler
     def _get_validated_object_parameters(self, data_dict):
         params = {
-            'name': data_dict.get('name', '').strip(),
-            'description': data_dict.get('description', ''),
+            'name': data_dict['name'].strip(),
+            'description': data_dict['description'],
             'group_type': parse_int(data_dict['group_type']),
             'access_folios': parse_boolean(data_dict.get('access_folios', '')),
             'access_reports': parse_boolean(data_dict.get('access_reports', '')),
@@ -632,7 +632,8 @@ _dapi_image_views = api_permission_required(ImageAPI.as_view('admin.image'))
 api_add_url_rules(
     [url_version_prefix + '/admin/images/<int:image_id>/',
      '/admin/images/<int:image_id>/'],
-    view_func=_dapi_image_views
+    view_func=_dapi_image_views,
+    methods=['GET', 'PUT']
 )
 
 _dapi_user_views = _user_api_permission_required(UserAPI.as_view('admin.user'))
