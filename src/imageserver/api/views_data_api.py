@@ -220,9 +220,9 @@ class TemplateAPI(MethodView):
     @add_parameter_error_handler
     def _get_validated_object_parameters(self, data_dict):
         params = {
-            'name': data_dict.get('name', '').strip(),
-            'description': data_dict.get('description', ''),
-            'template': data_dict.get('template', '')
+            'name': data_dict['name'].strip(),
+            'description': data_dict['description'],
+            'template': data_dict['template']
         }
         validate_string(params['name'], 1, 120)
         validate_string(params['description'], 0, 5 * 1024)

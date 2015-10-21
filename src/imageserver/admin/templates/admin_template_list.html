@@ -25,7 +25,7 @@
 	<div class="smalltext">
 		{{ templates|length }} template{{ templates|length|pluralize }}
 		{% if is_permitted(SystemPermission.PERMIT_SUPER_USER) %}
-		(<a href="{{ url_for('admin.template_edit', template_id=0) }}">add a new template</a>)
+		(<a href="{{ url_for('admin.template_edit', template_id=0, onClose='backrefresh') }}">add a new template</a>)
 		{% endif %}
 	</div>
 
@@ -39,7 +39,7 @@
 		</tr>
 
 		{% for template in templates %}
-		{% set edit_url = url_for('admin.template_edit', template_id=template.id) %}
+		{% set edit_url = url_for('admin.template_edit', template_id=template.id, onClose='backrefresh') %}
 
 		<tr class="{{ row_class.next() }}">
 			<td><a href="{{ edit_url }}">{{ template.name }}</a></td>
