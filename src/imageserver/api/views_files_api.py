@@ -126,13 +126,14 @@ class FolderAPI(MethodView):
                 permissions_engine,
                 logger
             )
+            # Return a "fresh" object (without relationships loaded) to match PUT, DELETE
+            db_folder = data_engine.get_folder(db_folder.id)
+            return make_api_success_response(object_to_dict(db_folder))
         except ValueError as e:
             if type(e) is ValueError:
                 raise ParameterError(str(e))
             else:
                 raise  # Sub-classes of ValueError
-        # Return new folder
-        return make_api_success_response(object_to_dict(db_folder))
 
     @add_api_error_handler
     def put(self, folder_id):

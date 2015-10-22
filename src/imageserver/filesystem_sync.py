@@ -713,7 +713,7 @@ def move_folder(db_folder, target_path, user_account, data_manager, permissions_
     disk), operations already performed are not rolled back, and the database
     may become out of sync with the file system.
 
-    Returns the updated folder object.
+    Returns the updated folder object, including all affected sub-folders.
 
     Raises a DoesNotExistError if the source folder does not exist.
     Raises an AlreadyExistsError if the target path already exists.
@@ -871,7 +871,7 @@ def delete_folder(db_folder, user_account, data_manager, permissions_manager, lo
     disk), operations already performed are not rolled back, and the database
     may become out of sync with the file system.
 
-    Returns the updated folder object.
+    Returns the updated folder object, including all affected sub-folders.
 
     Raises a ValueError if the source folder is the root folder.
     Raises an OSError on error deleting disk files or folders.

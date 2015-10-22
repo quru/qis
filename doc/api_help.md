@@ -1117,25 +1117,33 @@ status `202` and a task object that you can track using the [system tasks](#api_
 
 ### Example
 
-	$ curl -u <token>:unused -F 'path=/test_images/mynewfolder/' 'https://images.example.com/api/v1/admin/filesystem/folders/'
+	$ curl -X POST -u <token>:unused -F 'path=/test_images/mynewfolder/' 'https://images.example.com/api/v1/admin/filesystem/folders/'
 	{
 	  "data": {
-	    "id": 63,
+	    "id": 3,
 	    "name": "/test_images/mynewfolder",
-	    "parent": {
-	      "id": 3,
-	      "name": "/test_images",
-	      "parent_id": 1,
-	      "path": "/test_images",
-	      "status": 1
-	    },
-	    "parent_id": 3,
+	    "parent_id": 2,
 	    "path": "/test_images/mynewfolder",
 	    "status": 1
 	  },
 	  "message": "OK",
 	  "status": 200
 	}
+
+	$ curl -X DELETE -u <token>:unused 'https://images.example.com/api/v1/admin/filesystem/folders/3/'
+	{
+	  "data": {
+	    "id": 3,
+	    "name": "/test_images/mynewfolder",
+	    "parent_id": 2,
+	    "path": "/test_images/mynewfolder",
+	    "status": 0
+	  },
+	  "message": "OK",
+	  "status": 200
+	}
+
+If the operation takes more than 30 seconds, status `202` and an ongoing task object are returned:
 
 	$ curl -X PUT -u <token>:unused -F 'path=/renamed-large-folder' 'https://images.example.com/api/v1/admin/filesystem/folders/23/'
 	{
