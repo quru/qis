@@ -35,6 +35,7 @@ import os
 import signal
 import sys
 import threading
+import traceback
 from datetime import datetime, timedelta
 from multiprocessing import Process
 from socket import socket
@@ -47,7 +48,7 @@ from imageserver.models import Task
 import imageserver.tasks as tasks
 
 
-def run_task(thread_id, task, logger, data_engine):
+def run_task(thread_id, task, logger, data_engine, debug_mode):
     """
     Performs the given task.
     """
@@ -81,10 +82,12 @@ def run_task(thread_id, task, logger, data_engine):
             task_log('Task \'%s\' completed' % task.name)
 
     except Exception as e:
+        task.result = e
         task_error_log(
             'Task ID %d \'%s\' failed with error: %s' % (task.id, task.name, str(e))
         )
-        task.result = e
+        if debug_mode:
+            traceback.print_exc()
     finally:
         try:
             # Always mark the task as finished
@@ -178,7 +181,7 @@ def _run_server(debug_mode):
                         t = threading.Thread(
                             target=run_task,
                             name='task_thread_%d' % thread_id,
-                            args=(thread_id, task, logger, data_engine)
+                            args=(thread_id, task, logger, data_engine, debug_mode)
                         )
                         t.daemon = False
                         threads.append(t)
