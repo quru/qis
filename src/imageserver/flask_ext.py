@@ -194,6 +194,19 @@ class TimedTokenBasicAuthentication(BaseHttpAuthentication):
                 auth_obj = self.decode_auth_token(token)
                 if auth_obj:
                     self.set_authenticated(auth_obj)
+                    return
+
+            # The token was missing/invalid and g.csrf_exempt has not been set.
+            # Now if this is an API PUT/POST, we want a JSON 401 response and
+            # not an HTML 400 CSRF message. If the user has no web session,
+            # they're not logged in, so we should be able to assume that any
+            # "interesting" actions will be blocked anyway, and skip the CSRF
+            # so that the correct response can be returned.
+            # I don't like this bit and would welcome a better alternative.
+            # Also, sorry for the leakage of application logic into here.
+            api_call = request.path.startswith('/api/')
+            if api_call and not flask.session:
+                flask.g.csrf_exempt = self.disable_csrf
 
 
 class ExtraJSONEncoder(JSONEncoder):

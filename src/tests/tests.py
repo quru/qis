@@ -3032,6 +3032,8 @@ class ImageServerAPITests(BaseTestCase):
             'Authorization': 'Basic ' + creds
         })
         self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        obj = json.loads(rv.data)
+        self.assertEqual(obj['status'], rv.status_code)
 
     # API token login - account disabled
     def test_token_login_user_disabled(self):
@@ -3057,10 +3059,14 @@ class ImageServerAPITests(BaseTestCase):
             'Authorization': 'Basic ' + creds
         })
         self.assertEqual(rv.status_code, API_CODES.UNAUTHORISED)
+        obj = json.loads(rv.data)
+        self.assertEqual(obj['status'], rv.status_code)
 
     # Test that tokens expire
     def test_token_expiry(self):
         old_expiry = flask_app.config['API_TOKEN_EXPIRY_TIME']
+        # Enable CSRF - there have been bugs with this overring API responses
+        flask_app.config['TESTING'] = False
         try:
             setup_user_account('kryten', 'admin_users', allow_api=True)
             # Get a 1 second token
@@ -3072,6 +3078,8 @@ class ImageServerAPITests(BaseTestCase):
                 'Authorization': 'Basic ' + creds
             })
             self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+            obj = json.loads(rv.data)
+            self.assertEqual(obj['status'], rv.status_code)
             # That 1 second expiry is anything from 1 to 2s in reality
             time.sleep(2)
             # Token should now be expired
@@ -3079,27 +3087,53 @@ class ImageServerAPITests(BaseTestCase):
                 'Authorization': 'Basic ' + creds
             })
             self.assertEqual(rv.status_code, API_CODES.REQUIRES_AUTH)
+            obj = json.loads(rv.data)
+            self.assertEqual(obj['status'], rv.status_code)
+            # Also test a POST as this could (but shouldn't) trigger CSRF
+            rv = self.app.post('/api/admin/users/', headers={
+                'Authorization': 'Basic ' + creds
+            })
+            self.assertEqual(rv.status_code, API_CODES.REQUIRES_AUTH)
+            obj = json.loads(rv.data)
+            self.assertEqual(obj['status'], rv.status_code)
         finally:
             flask_app.config['API_TOKEN_EXPIRY_TIME'] = old_expiry
+            flask_app.config['TESTING'] = True
 
     # Test you cannot authenticate with a bad token
     def test_bad_token(self):
-        setup_user_account('kryten', 'admin_users', allow_api=True)
-        token = self.api_login('kryten', 'kryten')
-        # Tampered token
-        token = ('0' + token[1:]) if token[0] != '0' else ('1' + token[1:])
-        creds = base64.b64encode(token + ':password')
-        rv = self.app.get('/api/admin/users/1/', headers={
-            'Authorization': 'Basic ' + creds
-        })
-        self.assertEqual(rv.status_code, API_CODES.REQUIRES_AUTH)
-        # Blank token
-        token = ''
-        creds = base64.b64encode(token + ':password')
-        rv = self.app.get('/api/admin/users/1/', headers={
-            'Authorization': 'Basic ' + creds
-        })
-        self.assertEqual(rv.status_code, API_CODES.REQUIRES_AUTH)
+        # Enable CSRF - there have been bugs with this overring API responses
+        flask_app.config['TESTING'] = False
+        try:
+            setup_user_account('kryten', 'admin_users', allow_api=True)
+            token = self.api_login('kryten', 'kryten')
+            # Tampered token
+            token = ('0' + token[1:]) if token[0] != '0' else ('1' + token[1:])
+            creds = base64.b64encode(token + ':password')
+            rv = self.app.get('/api/admin/users/1/', headers={
+                'Authorization': 'Basic ' + creds
+            })
+            self.assertEqual(rv.status_code, API_CODES.REQUIRES_AUTH)
+            obj = json.loads(rv.data)
+            self.assertEqual(obj['status'], rv.status_code)
+            # Blank token
+            token = ''
+            creds = base64.b64encode(token + ':password')
+            rv = self.app.get('/api/admin/users/1/', headers={
+                'Authorization': 'Basic ' + creds
+            })
+            self.assertEqual(rv.status_code, API_CODES.REQUIRES_AUTH)
+            obj = json.loads(rv.data)
+            self.assertEqual(obj['status'], rv.status_code)
+            # Also test a POST as this could (but shouldn't) trigger CSRF
+            rv = self.app.post('/api/admin/users/', headers={
+                'Authorization': 'Basic ' + creds
+            })
+            self.assertEqual(rv.status_code, API_CODES.REQUIRES_AUTH)
+            obj = json.loads(rv.data)
+            self.assertEqual(obj['status'], rv.status_code)
+        finally:
+            flask_app.config['TESTING'] = True
 
     # Folder list
     def test_api_list(self):
