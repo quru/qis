@@ -176,6 +176,7 @@ def imagelist():
                         _db_session=db_session
                     )
                     entry['id'] = db_entry.id if db_entry else 0
+                    entry['folder_id'] = db_entry.folder_id if db_entry else 0
                     entry['title'] = db_entry.title if db_entry else ''
                     entry['description'] = db_entry.description if db_entry else ''
                     entry['width'] = db_entry.width if db_entry else 0
@@ -324,6 +325,7 @@ def _image_dict(db_image, can_download=None):
         'src': db_image.src,
         'url': external_url_for('image', src=db_image.src),
         'id': db_image.id,
+        'folder_id': db_image.folder_id,
         'title': db_image.title,
         'description': db_image.description,
         'width': db_image.width,

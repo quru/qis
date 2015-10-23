@@ -101,7 +101,10 @@ def move_folder(**kwargs):
         'debug', 'warn',
         10
     )
-    return db_folder
+
+    # #2476 db_folder now has the 'children' attribute fully populated, a sub-tree
+    #       that might be huge. Return instead the basic object to store in the db.
+    return app.data_engine.get_folder(folder_id)
 
 
 def delete_folder(**kwargs):
@@ -153,7 +156,10 @@ def delete_folder(**kwargs):
         'debug', 'warn',
         10
     )
-    return db_folder
+
+    # #2476 db_folder now has the 'children' attribute fully populated, a sub-tree
+    #       that might be huge. Return instead the basic object to store in the db.
+    return app.data_engine.get_folder(folder_id)
 
 
 def delete_folder_data(**kwargs):

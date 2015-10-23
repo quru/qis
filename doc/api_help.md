@@ -11,8 +11,8 @@ that return data in the [JSON](http://www.json.org/) format.
 * [About JSON](#json)
 * [Using the API](#usage)
 * [Public web services](#api_public)
-	* [list - lists the images in a folder](#api_list)
-	* [details - retrieve image information](#api_details)
+	* [list - lists the images in a folder path](#api_list)
+	* [details - retrieve image information by path](#api_details)
 * [Protected web services](#api_private)
 	* [token - obtain an API authentication token](#api_token)
 	* [upload - upload an image](#api_upload)
@@ -165,14 +165,16 @@ The following status codes may be returned:
 <a name="api_public"></a>
 # Public web services
 
-These web services can be called from an anonymous (not logged in) session, and do not require
-an [API authentication token](#api_token) to be provided.
+For publicly accessible images, these web services can be called from an anonymous
+(not logged in) session without requiring an [API authentication token](#api_token).
+For images with a [folder permission](#api_data_permissions) in place,
+a token is still required however.
 
 <a name="api_list"></a>
 ## list
-Retrieves a list of the images within a folder, returning the filename, a URL to display the
-image, and optionally additional image attributes. To avoid performance issues, this function
-currently returns a maximum of 1,000 images.
+Retrieves the list of the images within a folder path, returning the filename, a URL to display
+the image, and optionally additional image attributes. This function returns a maximum of 1,000
+images by default.
 
 ### URL
 * `/api/v1/list`
@@ -185,6 +187,8 @@ currently returns a maximum of 1,000 images.
 * `attributes` - Optional, boolean - When true, adds the unique ID, title, description, width and
 	height fields from the image database to the returned objects. Set to false for improved
 	performance if these fields are not required.
+* `limit` - Optional, integer - The maximum number of results to return, default `1000`. Or set to
+    `0` to specify no limit.
 * _`[any]`_ - Optional, mixed - Any additional parameters are appended to the returned image URLs so
 	that for example the required image sizes can be specified
 
@@ -195,14 +199,35 @@ currently returns a maximum of 1,000 images.
 ### Returns
 An array of 0 or more objects.
 
-### Example
+### Examples
+
+	$ curl 'http://images.example.com/api/v1/list?path=myfolder'
+	{
+	  "data": [
+	    {
+	      "filename": "image1.jpg",
+	      "url": "http://images.example.com/image?src=myfolder/image1.jpg" 
+        },
+	    {
+	      "filename": "image2.jpg",
+	      "url": "http://images.example.com/image?src=myfolder/image2.jpg"
+	    },
+	    {
+	      "filename": "image3.jpg",
+	      "url": "http://images.example.com/image?src=myfolder/image3.jpg"
+	    }
+	  ],
+	  "message": "OK",
+	  "status": 200
+	}
 
 	$ curl 'http://images.example.com/api/v1/list?path=myfolder&attributes=1&tmp=Thumbnail'
 	{
 	  "data": [
 	    {
-	      "url": "http://images.example.com/image?tmp=Thumbnail&src=myfolder%2Fimage1.jpg", 
+	      "url": "http://images.example.com/image?tmp=Thumbnail&src=myfolder/image1.jpg", 
 	      "id": 1000, 
+	      "folder_id": 5,
 	      "title": "", 
 	      "description": "", 
 	      "height": 1200, 
@@ -210,8 +235,9 @@ An array of 0 or more objects.
 	      "filename": "image1.jpg"
         },
 	    {
-	      "url": "http://images.example.com/image?tmp=Thumbnail&src=myfolder%2Fimage2.jpg", 
+	      "url": "http://images.example.com/image?tmp=Thumbnail&src=myfolder/image2.jpg", 
 	      "id": 1001, 
+	      "folder_id": 5,
 	      "title": "", 
 	      "description": "", 
 	      "height": 1200, 
@@ -219,8 +245,9 @@ An array of 0 or more objects.
 	      "filename": "image2.jpg"
 	    },
 	    {
-	      "url": "http://images.example.com/image?tmp=Thumbnail&src=myfolder%2Fimage3.jpg", 
+	      "url": "http://images.example.com/image?tmp=Thumbnail&src=myfolder/image3.jpg", 
 	      "id": 1002, 
+	      "folder_id": 5,
 	      "title": "", 
 	      "description": "", 
 	      "height": 3000, 
@@ -234,7 +261,7 @@ An array of 0 or more objects.
 
 <a name="api_details"></a>
 ## details
-Retrieves the attributes of a single image.
+Retrieves the attributes of a single image from its path.
 
 ### URL
 * `/api/v1/details`
@@ -261,6 +288,7 @@ An object containing image attributes, as shown below.
 	    "title": "",
 	    "description": "",
 	    "download": true,
+	    "folder_id": 5,
 	    "height": 1200,
 	    "src": "myfolder/myimage.jpg",
 	    "url": "http://images.example.com/image?src=myfolder/myimage.jpg",
@@ -350,7 +378,7 @@ with the same name.
 	* If -1, you must specify the destination folder in the `path` parameter. 
 * `path` - Optional, text - The destination folder path used when `path_index` is -1.
   This folder path must already exist. You can use the [disk folder](#api_disk_folders) API
-  to create new folders.
+  to find or create a folder.
 * `overwrite` - Mandatory, boolean - Whether to overwrite existing files if they already
   exist with the same name in the destination folder
 
@@ -384,7 +412,7 @@ no data object is returned.
 
 ### Examples
 
-	$ curl -X POST -u token: -F files=@myimage.jpg -F path_index=-1 -F path=test_images -F overwrite=false 'https://images.example.com/api/v1/upload'
+	$ curl -X POST -u <token>:unused -F files=@myimage.jpg -F path_index=-1 -F path=test_images -F overwrite=false 'https://images.example.com/api/v1/upload'
 	{
 	  "data": {
 	    "myimage.jpg": {
@@ -392,6 +420,7 @@ no data object is returned.
 	      "title": "",
 	      "description": "",
 	      "download": true,
+	      "folder_id": 3,
 	      "height": 1200,
 	      "src": "test_images/myimage.jpg",
 	      "url": "http://images.example.com/image?src=test_images/myimage.jpg",
@@ -404,7 +433,7 @@ no data object is returned.
 
 But then running the same command again:
 
-	$ curl -X POST -u token: -F files=@myimage.jpg -F path_index=-1 -F path=test_images -F overwrite=false 'https://images.example.com/api/v1/upload'
+	$ curl -X POST -u <token>:unused -F files=@myimage.jpg -F path_index=-1 -F path=test_images -F overwrite=false 'https://images.example.com/api/v1/upload'
 	{
 	  "data": {
 	    "myimage.jpg": {
@@ -448,10 +477,11 @@ Gets or updates image metadata in the image database.
 
 ### Returns
 The image's database object.
+The image `status` field has value `1` for active, or `0` for deleted.
 
 ### Examples
 
-	$ curl -u token: 'https://images.example.com/api/v1/admin/images/524/'
+	$ curl -u <token>:unused 'https://images.example.com/api/v1/admin/images/524/'
 	{
 	  "data": {
 	    "description": "",
@@ -474,7 +504,7 @@ The image's database object.
 	  "status": 200
 	}
 
-	$ curl -X PUT -u token: -F 'title=my sample image' -F 'description=the updated description of my sample image' 'https://images.example.com/api/v1/admin/images/524/'
+	$ curl -X PUT -u <token>:unused -F 'title=my sample image' -F 'description=the updated description of my sample image' 'https://images.example.com/api/v1/admin/images/524/'
 	{
 	  "data": {
 	    "description": "the updated description of my sample image",
@@ -542,7 +572,7 @@ more recent versions of the software.
 
 ### Example
 
-	$ curl -u token: 'https://images.example.com/api/v1/admin/templates/1/'
+	$ curl -u <token>:unused 'https://images.example.com/api/v1/admin/templates/1/'
 	{
 	  "data": {
 	    "description": "Defines a 200x200 JPG image that would be suitable for use as a thumbnail image on a web site.",
@@ -587,7 +617,7 @@ more recent versions of the software.
 	  "status": 200
 	}
 
-	$ curl -X POST -u token: -F 'name=grey-thumb' \
+	$ curl -X POST -u <token>:unused -F 'name=grey-thumb' \
 	       -F 'description=Defines a greyscale thumbnail with a black fill' \
 	       -F 'template={ "colorspace":"grey", "width":400, "height":400, "fill":"black" }' \
 	       'https://images.example.com/api/v1/admin/templates/'
@@ -635,7 +665,7 @@ more recent versions of the software.
 	  "status": 200
 	}
 
-	$ curl -X DELETE -u token: 'https://images.example.com/api/v1/admin/templates/3/'
+	$ curl -X DELETE -u <token>:unused 'https://images.example.com/api/v1/admin/templates/3/'
 	{
 	  "data": null,
 	  "message": "OK",
@@ -674,10 +704,11 @@ Lists all user accounts, or gets, creates, updates, or deletes a single user acc
 
 ### Returns
 A list of user objects (for the list users URL), or a single user object (for all other URLs).
+The user `status` field has value `1` for active, or `0` for deleted.
 
 ### Examples
 
-	$ curl -u token: 'https://images.example.com/api/v1/admin/users/'
+	$ curl -u <token>:unused 'https://images.example.com/api/v1/admin/users/'
 	{
 	  "data": [
 	    {
@@ -705,7 +736,7 @@ A list of user objects (for the list users URL), or a single user object (for al
 	  "status": 200
 	}
 
-	$ curl -u token: 'https://images.example.com/api/v1/admin/users/2/'
+	$ curl -u <token>:unused 'https://images.example.com/api/v1/admin/users/2/'
 	{
 	  "data": {
 	    "allow_api": true,
@@ -721,7 +752,7 @@ A list of user objects (for the list users URL), or a single user object (for al
 	  "status": 200
 	}
 
-	$ curl -X PUT -u token: -F 'first_name=Matthew' -F 'last_name=Fozard' -F 'username=mattfoo' -F 'email=matt@quru.com' -F 'auth_type=1' -F 'allow_api=true' 'https://images.example.com/api/v1/admin/users/2/'
+	$ curl -X PUT -u <token>:unused -F 'first_name=Matthew' -F 'last_name=Fozard' -F 'username=mattfoo' -F 'email=matt@quru.com' -F 'auth_type=1' -F 'allow_api=true' 'https://images.example.com/api/v1/admin/users/2/'
 	{
 	  "data": {
 	    "allow_api": true,
@@ -786,7 +817,7 @@ or nothing (after a delete).
 
 ### Examples
 
-	$ curl -u token: 'https://images.example.com/api/v1/admin/groups/'
+	$ curl -u <token>:unused 'https://images.example.com/api/v1/admin/groups/'
 	{
 	  "data": [
 	    {
@@ -842,7 +873,7 @@ or nothing (after a delete).
 	  "status": 200
 	}
 
-	$ curl -X POST -u token: -F 'name=Website editors' -F 'description=Access to reports and to change any file or folder' -F 'group_type=2' -F 'access_folios=false' -F 'access_reports=true' -F 'access_admin_users=false' -F 'access_admin_files=true' -F 'access_admin_folios=false' -F 'access_admin_permissions=false' -F 'access_admin_all=false' 'https://images.example.com/api/v1/admin/groups/'
+	$ curl -X POST -u <token>:unused -F 'name=Website editors' -F 'description=Access to reports and to change any file or folder' -F 'group_type=2' -F 'access_folios=false' -F 'access_reports=true' -F 'access_admin_users=false' -F 'access_admin_files=true' -F 'access_admin_folios=false' -F 'access_admin_permissions=false' -F 'access_admin_all=false' 'https://images.example.com/api/v1/admin/groups/'
 	{
 	  "data": {
 	    "description": "Access to reports and to change any file or folder",
@@ -865,7 +896,7 @@ or nothing (after a delete).
 	  "status": 200
 	}
 	
-	$ curl -X DELETE -u token: 'https://images.example.com/api/v1/admin/groups/7/'
+	$ curl -X DELETE -u <token>:unused 'https://images.example.com/api/v1/admin/groups/7/'
 	{
 	  "data": null,
 	  "message": "OK",
@@ -898,9 +929,9 @@ to list the members of a group.
 ### Returns
 No return value.
 
-### Example
+### Examples
 
-	$ curl -u token: 'https://images.example.com/api/v1/admin/groups/4/'
+	$ curl -u <token>:unused 'https://images.example.com/api/v1/admin/groups/4/'
 	{
 	  "data": {
 	    "description": "Those that are editing the web pages and managing the /web directory of this instance",
@@ -944,14 +975,14 @@ No return value.
 	  "status": 200
 	}
 	
-	$ curl -X DELETE -u token: 'https://images.example.com/api/v1/admin/groups/4/members/2/'
+	$ curl -X DELETE -u <token>:unused 'https://images.example.com/api/v1/admin/groups/4/members/2/'
 	{
 	  "data": null,
 	  "message": "OK",
 	  "status": 200
 	}
 	
-	$ curl -u token: 'https://images.example.com/api/v1/admin/groups/4/'
+	$ curl -u <token>:unused 'https://images.example.com/api/v1/admin/groups/4/'
 	{
 	  "data": {
 	    "description": "Those that are editing the web pages and managing the /web directory of this instance",
@@ -1034,7 +1065,7 @@ A list of folder permission objects (for the list URL), a single folder permissi
 
 ### Examples
 
-	$ curl -u token: 'https://images.example.com/api/v1/admin/permissions/'
+	$ curl -u <token>:unused 'https://images.example.com/api/v1/admin/permissions/'
 	{
 	  "data": [
 	    {
@@ -1062,7 +1093,7 @@ A list of folder permission objects (for the list URL), a single folder permissi
 
 Allow any logged in user to upload images by default:
 
-	$ curl -X PUT -u token: -F 'group_id=2' -F 'folder_id=1' -F 'access=40' 'https://images.example.com/api/v1/admin/permissions/2/'
+	$ curl -X PUT -u <token>:unused -F 'group_id=2' -F 'folder_id=1' -F 'access=40' 'https://images.example.com/api/v1/admin/permissions/2/'
 	{
 	  "data": {
 	    "access": 40,
@@ -1103,9 +1134,9 @@ audit trail. Use the [upload](#api_upload) API to create a new file.
 ### Returns
 The image's updated database object.
 
-### Example
+### Examples
 
-	$ curl -u token: 'https://images.example.com/api/v1/admin/images/524/'
+	$ curl -u <token>:unused 'https://images.example.com/api/v1/admin/images/524/'
 	{
 	  "data": {
 	    "description": "the description of my sample image",
@@ -1130,7 +1161,7 @@ The image's updated database object.
 
 To move this image to the `web` folder:
 
-	$ curl -X PUT -u token: -F 'path=/web/Image0007.jpg' 'https://images.example.com/api/v1/admin/filesystem/images/524/'
+	$ curl -X PUT -u <token>:unused -F 'path=/web/Image0007.jpg' 'https://images.example.com/api/v1/admin/filesystem/images/524/'
 	{
 	  "data": {
 	    "description": "the description of my sample image",
@@ -1155,23 +1186,27 @@ To move this image to the `web` folder:
 
 <a name="api_disk_folders"></a>
 ## disk folders
-Creates, moves, renames, or deletes a disk folder, and updates the associated metadata.
+Finds a folder by path or database ID.
+Or creates, moves, renames, or deletes a disk folder, and updates the associated metadata.
 
 Moving, renaming or deleting a folder is a recursive operation that also affects all the
 sub-folders and files it contains, and can therefore take a long time. In the same way note
 that if you rename a folder, this changes the paths of all the images contained within.
 
 ### URL
-* `/api/v1/admin/filesystem/folders/` for `POST`
-* `/api/v1/admin/filesystem/folders/[folder id]/` for `PUT` and `DELETE`
+* `/api/v1/admin/filesystem/folders/` for `GET` (by path) and `POST`
+* `/api/v1/admin/filesystem/folders/[folder id]/` for `GET`, `PUT` and `DELETE`
 
 ### Supported methods
+* `GET`
 * `POST`
 * `PUT`
 * `DELETE`
 
 ### Parameters
-* None for `DELETE`
+* None for `GET` and `DELETE` (by ID)
+* For `GET` (by path):
+	* `path` - Mandatory, text - the path of a disk folder to retrieve.
 * For `POST` and `PUT`:
 	* `path` - Mandatory, text - the new path for the disk folder. If the parent part of the
 	  folder path changes, the folder will be moved. If only the folder's own name changes,
@@ -1179,6 +1214,7 @@ that if you rename a folder, this changes the paths of all the images contained 
 
 ### Permissions required
 * Either file administration permission or
+* For `GET`, view permission for the requested folder
 * For `POST`, create sub-folder permission for the nearest existing parent folder
 * For `PUT` when renaming, create sub-folder permission for the parent folder
 * For `PUT` when moving, full delete permission for the current parent folder,
@@ -1186,27 +1222,60 @@ that if you rename a folder, this changes the paths of all the images contained 
 * For `DELETE`, full delete permission for the parent folder
 
 ### Returns
+For `GET`, returns the folder's database object including one level of sub-folders
+in the `children` attribute.
+The folder `status` field has value `1` for active, or `0` for deleted.
+
 For `POST`, returns the new folder's database object.
 
 For `PUT` and `DELETE`, if the function completes in less than 30 seconds, returns the
 folder's updated database object. If however the function is ongoing after 30 seconds, returns
 status `202` and a task object that you can track using the [system tasks](#api_tasks) API.
 
-### Example
+### Examples
 
-	$ curl -u token: -F 'path=/test_images/mynewfolder/' 'https://images.example.com/api/v1/admin/filesystem/folders/'
+	$ curl -u <token>:unused 'https://images.example.com/api/v1/admin/filesystem/folders/?path=/search/path'
 	{
 	  "data": {
-	    "id": 63,
-	    "name": "/test_images/mynewfolder",
+	    "children": [
+	      {
+	        "id": 49,
+	        "name": "/search/path/child1",
+	        "parent_id": 44,
+	        "path": "/search/path/child1",
+	        "status": 0
+	      },
+	      {
+	        "id": 45,
+	        "name": "/search/path/child2",
+	        "parent_id": 44,
+	        "path": "/search/path/child2",
+	        "status": 1
+	      }
+	    ],
+	    "id": 44,
+	    "name": "/search/path",
 	    "parent": {
-	      "id": 3,
-	      "name": "/test_images",
+	      "id": 42,
+	      "name": "/search",
 	      "parent_id": 1,
-	      "path": "/test_images",
+	      "path": "/search",
 	      "status": 1
 	    },
-	    "parent_id": 3,
+	    "parent_id": 42,
+	    "path": "/search/path",
+	    "status": 1
+	  },
+	  "message": "OK",
+	  "status": 200
+	}
+
+	$ curl -X POST -u <token>:unused -F 'path=/test_images/mynewfolder/' 'https://images.example.com/api/v1/admin/filesystem/folders/'
+	{
+	  "data": {
+	    "id": 3,
+	    "name": "/test_images/mynewfolder",
+	    "parent_id": 2,
 	    "path": "/test_images/mynewfolder",
 	    "status": 1
 	  },
@@ -1214,7 +1283,22 @@ status `202` and a task object that you can track using the [system tasks](#api_
 	  "status": 200
 	}
 
-	$ curl -X PUT -u token: -F 'path=/renamed-large-folder' 'https://images.example.com/api/v1/admin/filesystem/folders/23/'
+	$ curl -X DELETE -u <token>:unused 'https://images.example.com/api/v1/admin/filesystem/folders/3/'
+	{
+	  "data": {
+	    "id": 3,
+	    "name": "/test_images/mynewfolder",
+	    "parent_id": 2,
+	    "path": "/test_images/mynewfolder",
+	    "status": 0
+	  },
+	  "message": "OK",
+	  "status": 200
+	}
+
+If the operation takes more than 30 seconds, status `202` and an ongoing task object are returned:
+
+	$ curl -X PUT -u <token>:unused -F 'path=/renamed-large-folder' 'https://images.example.com/api/v1/admin/filesystem/folders/23/'
 	{
 	  "data": {
 	    "error_log_level": "error",
@@ -1250,7 +1334,7 @@ status `202` and a task object that you can track using the [system tasks](#api_
 
 <a name="api_tasks"></a>
 ## system tasks
-Initiates or polls the status of an ongoing system task.
+Initiates or polls the status of a background system task.
 
 ### URL
 * `/api/v1/admin/tasks/[function name]/` for `POST`
@@ -1277,7 +1361,8 @@ Initiates or polls the status of an ongoing system task.
 		  _deleted_ database records. Specify the root folder `/` to purge everything.
 
 ### Permissions required
-* Super user
+* Either super user or
+* For `GET`, the user that owns the task
 
 ### Returns
 The task object, including its status.
@@ -1295,7 +1380,7 @@ after which a status `404` will be returned when that task is requested.
 
 ### Example
 
-	$ curl -u token: 'https://images.example.com/api/v1/admin/tasks/301/'
+	$ curl -u <token>:unused 'https://images.example.com/api/v1/admin/tasks/301/'
 	{
 	  "data": {
 	    "error_log_level": "error",
@@ -1330,7 +1415,7 @@ after which a status `404` will be returned when that task is requested.
 
 Then after a few seconds:
 
-	$ curl -u token: 'https://images.example.com/api/v1/admin/tasks/301/'
+	$ curl -u <token>:unused 'https://images.example.com/api/v1/admin/tasks/301/'
 	{
 	  "data": null,
 	  "message": "The requested item was not found (301)",

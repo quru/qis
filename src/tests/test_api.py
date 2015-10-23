@@ -116,6 +116,8 @@ class ImageServerAPITests(BaseTestCase):
             'Authorization': 'Basic ' + creds
         })
         self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        obj = json.loads(rv.data)
+        self.assertEqual(obj['status'], rv.status_code)
 
     # API token login - account disabled
     def test_token_login_user_disabled(self):
@@ -141,10 +143,14 @@ class ImageServerAPITests(BaseTestCase):
             'Authorization': 'Basic ' + creds
         })
         self.assertEqual(rv.status_code, API_CODES.UNAUTHORISED)
+        obj = json.loads(rv.data)
+        self.assertEqual(obj['status'], rv.status_code)
 
     # Test that tokens expire
     def test_token_expiry(self):
         old_expiry = flask_app.config['API_TOKEN_EXPIRY_TIME']
+        # Enable CSRF - there have been bugs with this overring API responses
+        flask_app.config['TESTING'] = False
         try:
             setup_user_account('kryten', 'admin_users', allow_api=True)
             # Get a 1 second token
@@ -156,6 +162,8 @@ class ImageServerAPITests(BaseTestCase):
                 'Authorization': 'Basic ' + creds
             })
             self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+            obj = json.loads(rv.data)
+            self.assertEqual(obj['status'], rv.status_code)
             # That 1 second expiry is anything from 1 to 2s in reality
             time.sleep(2)
             # Token should now be expired
@@ -163,27 +171,53 @@ class ImageServerAPITests(BaseTestCase):
                 'Authorization': 'Basic ' + creds
             })
             self.assertEqual(rv.status_code, API_CODES.REQUIRES_AUTH)
+            obj = json.loads(rv.data)
+            self.assertEqual(obj['status'], rv.status_code)
+            # Also test a POST as this could (but shouldn't) trigger CSRF
+            rv = self.app.post('/api/admin/users/', headers={
+                'Authorization': 'Basic ' + creds
+            })
+            self.assertEqual(rv.status_code, API_CODES.REQUIRES_AUTH)
+            obj = json.loads(rv.data)
+            self.assertEqual(obj['status'], rv.status_code)
         finally:
             flask_app.config['API_TOKEN_EXPIRY_TIME'] = old_expiry
+            flask_app.config['TESTING'] = True
 
     # Test you cannot authenticate with a bad token
     def test_bad_token(self):
-        setup_user_account('kryten', 'admin_users', allow_api=True)
-        token = self.api_login('kryten', 'kryten')
-        # Tampered token
-        token = ('0' + token[1:]) if token[0] != '0' else ('1' + token[1:])
-        creds = base64.b64encode(token + ':password')
-        rv = self.app.get('/api/admin/users/1/', headers={
-            'Authorization': 'Basic ' + creds
-        })
-        self.assertEqual(rv.status_code, API_CODES.REQUIRES_AUTH)
-        # Blank token
-        token = ''
-        creds = base64.b64encode(token + ':password')
-        rv = self.app.get('/api/admin/users/1/', headers={
-            'Authorization': 'Basic ' + creds
-        })
-        self.assertEqual(rv.status_code, API_CODES.REQUIRES_AUTH)
+        # Enable CSRF - there have been bugs with this overring API responses
+        flask_app.config['TESTING'] = False
+        try:
+            setup_user_account('kryten', 'admin_users', allow_api=True)
+            token = self.api_login('kryten', 'kryten')
+            # Tampered token
+            token = ('0' + token[1:]) if token[0] != '0' else ('1' + token[1:])
+            creds = base64.b64encode(token + ':password')
+            rv = self.app.get('/api/admin/users/1/', headers={
+                'Authorization': 'Basic ' + creds
+            })
+            self.assertEqual(rv.status_code, API_CODES.REQUIRES_AUTH)
+            obj = json.loads(rv.data)
+            self.assertEqual(obj['status'], rv.status_code)
+            # Blank token
+            token = ''
+            creds = base64.b64encode(token + ':password')
+            rv = self.app.get('/api/admin/users/1/', headers={
+                'Authorization': 'Basic ' + creds
+            })
+            self.assertEqual(rv.status_code, API_CODES.REQUIRES_AUTH)
+            obj = json.loads(rv.data)
+            self.assertEqual(obj['status'], rv.status_code)
+            # Also test a POST as this could (but shouldn't) trigger CSRF
+            rv = self.app.post('/api/admin/users/', headers={
+                'Authorization': 'Basic ' + creds
+            })
+            self.assertEqual(rv.status_code, API_CODES.REQUIRES_AUTH)
+            obj = json.loads(rv.data)
+            self.assertEqual(obj['status'], rv.status_code)
+        finally:
+            flask_app.config['TESTING'] = True
 
     # Folder list
     def test_api_list(self):
@@ -925,6 +959,8 @@ class ImageServerAPITests(BaseTestCase):
             # Not logged in - folder ops should fail
             rv = self.app.post('/api/admin/filesystem/folders/', data={'path': temp_folder})
             assert rv.status_code == API_CODES.REQUIRES_AUTH, str(rv)
+            rv = self.app.get('/api/admin/filesystem/folders/1/')
+            assert rv.status_code == API_CODES.REQUIRES_AUTH, str(rv)
             rv = self.app.put('/api/admin/filesystem/folders/1/', data={'path': temp_folder})
             assert rv.status_code == API_CODES.REQUIRES_AUTH, str(rv)
             rv = self.app.delete('/api/admin/filesystem/folders/1/')
@@ -932,7 +968,10 @@ class ImageServerAPITests(BaseTestCase):
             # Log in as a standard user
             setup_user_account('kryten', 'none')
             self.login('kryten', 'kryten')
-            # Folder ops should still fail
+            # v1.40 Viewable folder should be readable
+            rv = self.app.get('/api/admin/filesystem/folders/?path=test_images')
+            assert rv.status_code == API_CODES.SUCCESS, str(rv)
+            # Other ops should still fail
             active_folder = dm.get_folder(folder_path='test_images')
             assert active_folder is not None
             rv = self.app.post('/api/admin/filesystem/folders/', data={'path': temp_folder})
@@ -955,6 +994,16 @@ class ImageServerAPITests(BaseTestCase):
             assert path_exists(temp_folder + '/a/b', require_directory=True)
             db_folder_a = dm.get_folder(folder_path=temp_folder + '/a/')
             assert db_folder_a is not None
+            # v1.40 New GET methods should return 1 level of sub-tree
+            rv = self.app.get('/api/admin/filesystem/folders/?path=' + temp_folder)
+            assert rv.status_code == API_CODES.SUCCESS, str(rv)
+            obj = json.loads(rv.data)
+            assert 'parent' in obj['data']
+            assert obj['data']['parent']['path'] == os.path.sep
+            assert 'children' in obj['data']
+            assert len(obj['data']['children']) == 1               # should have "a"
+            assert 'children' not in obj['data']['children'][0]    # but not "b"
+            assert 'parent' not in obj['data']['children'][0]      # and no link back/recursion
             # Things that shouldn't be allowed (TTSBA) - create a duplicate folder
             rv = self.app.post('/api/admin/filesystem/folders/', data={'path': '/test_images/'})
             assert rv.status_code == API_CODES.ALREADY_EXISTS, str(rv)
@@ -995,6 +1044,8 @@ class ImageServerAPITests(BaseTestCase):
             assert rv.status_code == API_CODES.SUCCESS, str(rv)
             obj = json.loads(rv.data)
             assert obj['data']['path'] == renamed_folder
+            assert 'children' not in obj['data']  # v1.40 Do not return sub-trees any more
+            assert 'parent' not in obj['data']    # v1.40 Do not return sub-trees any more
             assert path_exists(temp_folder + '/a/') == False
             assert path_exists(renamed_folder) == True
             db_folder_a = dm.get_folder(folder_id=db_folder_a.id)
@@ -1025,6 +1076,8 @@ class ImageServerAPITests(BaseTestCase):
             obj = json.loads(rv.data)
             assert obj['data']['id'] == db_folder_a.id
             assert obj['data']['status'] == Folder.STATUS_DELETED
+            assert 'children' not in obj['data']  # v1.40 Do not return sub-trees any more
+            assert 'parent' not in obj['data']    # v1.40 Do not return sub-trees any more
             db_folder_a = dm.get_folder(folder_id=db_folder_a.id)
             assert db_folder_a.status == Folder.STATUS_DELETED
             assert path_exists(db_folder_a.path) == False
@@ -1093,13 +1146,31 @@ class ImageServerAPITests(BaseTestCase):
             rv = self.app.post(purge_url, data={'path': ''})
             self.assertEqual(rv.status_code, API_CODES.REQUIRES_AUTH)
 
-            # Logged in as admin (non superuser) user - cannot run tasks
+            # Logged in as admin (non superuser) user - cannot run tasks with API
             setup_user_account('kryten', 'admin_files')
             self.login('kryten', 'kryten')
             rv = self.app.post(purge_url, data={'path': ''})
             self.assertEqual(rv.status_code, API_CODES.UNAUTHORISED)
 
-            # Logged in as superuser - task should launch
+            # Have the system start a task owned by the user though
+            user_task = tm.add_task(
+                dm.get_user(username='kryten'),
+                'Testing user task access',
+                'uncache_image',
+                {'image_id': 1},
+                Task.PRIORITY_NORMAL,
+                'debug', 'error', 1
+            )
+            # A user can query their own task
+            rv = self.app.get(task_url + str(user_task.id) + '/')
+            self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+            # Another (non super) user cannot query it
+            setup_user_account('taskuser', 'admin_files')
+            self.login('taskuser', 'taskuser')
+            rv = self.app.get(task_url + str(user_task.id) + '/')
+            self.assertEqual(rv.status_code, API_CODES.UNAUTHORISED)
+
+            # Logged in as superuser - task should launch with API
             setup_user_account('kryten', 'admin_all')
             self.login('kryten', 'kryten')
             rv = self.app.post(purge_url, data={'path': ''})

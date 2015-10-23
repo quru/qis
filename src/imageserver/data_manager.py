@@ -308,7 +308,8 @@ class DataManager(object):
                 db_session.close()
 
     @db_operation
-    def get_folder(self, folder_id=0, folder_path=None, _db_session=None):
+    def get_folder(self, folder_id=0, folder_path=None,
+                   load_parent=False, load_children=False, _db_session=None):
         """
         Returns the Folder object with the given ID or path,
         or None if there is no match in the database.
@@ -318,6 +319,10 @@ class DataManager(object):
             if not folder_id and folder_path is None:
                 raise ValueError('Folder ID or path must be provided')
             q = db_session.query(Folder)
+            if load_parent:
+                q = q.options(eagerload('parent'))
+            if load_children:
+                q = q.options(eagerload('children'))
             if folder_id:
                 return q.get(folder_id)
             else:
