@@ -199,14 +199,35 @@ images by default.
 ### Returns
 An array of 0 or more objects.
 
-### Example
+### Examples
+
+	$ curl 'http://images.example.com/api/v1/list?path=myfolder'
+	{
+	  "data": [
+	    {
+	      "filename": "image1.jpg",
+	      "url": "http://images.example.com/image?src=myfolder/image1.jpg" 
+        },
+	    {
+	      "filename": "image2.jpg",
+	      "url": "http://images.example.com/image?src=myfolder/image2.jpg"
+	    },
+	    {
+	      "filename": "image3.jpg",
+	      "url": "http://images.example.com/image?src=myfolder/image3.jpg"
+	    }
+	  ],
+	  "message": "OK",
+	  "status": 200
+	}
 
 	$ curl 'http://images.example.com/api/v1/list?path=myfolder&attributes=1&tmp=Thumbnail'
 	{
 	  "data": [
 	    {
-	      "url": "http://images.example.com/image?tmp=Thumbnail&src=myfolder%2Fimage1.jpg", 
+	      "url": "http://images.example.com/image?tmp=Thumbnail&src=myfolder/image1.jpg", 
 	      "id": 1000, 
+	      "folder_id": 5,
 	      "title": "", 
 	      "description": "", 
 	      "height": 1200, 
@@ -214,8 +235,9 @@ An array of 0 or more objects.
 	      "filename": "image1.jpg"
         },
 	    {
-	      "url": "http://images.example.com/image?tmp=Thumbnail&src=myfolder%2Fimage2.jpg", 
+	      "url": "http://images.example.com/image?tmp=Thumbnail&src=myfolder/image2.jpg", 
 	      "id": 1001, 
+	      "folder_id": 5,
 	      "title": "", 
 	      "description": "", 
 	      "height": 1200, 
@@ -223,8 +245,9 @@ An array of 0 or more objects.
 	      "filename": "image2.jpg"
 	    },
 	    {
-	      "url": "http://images.example.com/image?tmp=Thumbnail&src=myfolder%2Fimage3.jpg", 
+	      "url": "http://images.example.com/image?tmp=Thumbnail&src=myfolder/image3.jpg", 
 	      "id": 1002, 
+	      "folder_id": 5,
 	      "title": "", 
 	      "description": "", 
 	      "height": 3000, 
@@ -265,6 +288,7 @@ An object containing image attributes, as shown below.
 	    "title": "",
 	    "description": "",
 	    "download": true,
+	    "folder_id": 5,
 	    "height": 1200,
 	    "src": "myfolder/myimage.jpg",
 	    "url": "http://images.example.com/image?src=myfolder/myimage.jpg",
@@ -396,6 +420,7 @@ no data object is returned.
 	      "title": "",
 	      "description": "",
 	      "download": true,
+	      "folder_id": 3,
 	      "height": 1200,
 	      "src": "test_images/myimage.jpg",
 	      "url": "http://images.example.com/image?src=test_images/myimage.jpg",
