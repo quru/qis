@@ -38,10 +38,10 @@ from imageserver.api import api_add_url_rules, url_version_prefix
 from imageserver.api_util import add_api_error_handler, add_parameter_error_handler
 from imageserver.api_util import make_api_success_response
 from imageserver.errors import AlreadyExistsError, DoesNotExistError, ParameterError
-from imageserver.flask_app import data_engine, task_engine
+from imageserver.flask_app import data_engine, permissions_engine, task_engine
 from imageserver.flask_util import api_permission_required
 from imageserver.models import SystemPermissions, Task
-from imageserver.session_manager import get_session_user
+from imageserver.session_manager import get_session_user, get_session_user_id
 from imageserver.util import object_to_dict, parse_iso_date, validate_string
 
 import imageserver.tasks as tasks
@@ -52,7 +52,8 @@ class TaskAPI(MethodView):
     Provides the REST admin API to invoke and poll system tasks.
 
     Required access:
-    - Super user
+    - Be the task owner for GET
+    - Otherwise super user
     """
     @add_api_error_handler
     def get(self, task_id):
@@ -60,6 +61,11 @@ class TaskAPI(MethodView):
         if not db_task:
             raise DoesNotExistError(str(task_id))
         else:
+            # Requires super user or task owner
+            if not db_task.user or db_task.user.id != get_session_user_id():
+                permissions_engine.ensure_permitted(
+                    SystemPermissions.PERMIT_SUPER_USER, get_session_user()
+                )
             tdict = object_to_dict(db_task)
             if tdict.get('user') is not None:
                 # Do not give out anything password related
@@ -72,6 +78,10 @@ class TaskAPI(MethodView):
         # Validate function name
         if getattr(tasks, function_name, None) is None:
             raise DoesNotExistError(function_name)
+        # Requires super user
+        permissions_engine.ensure_permitted(
+            SystemPermissions.PERMIT_SUPER_USER, get_session_user()
+        )
         # API parameters depend on the function
         params = self._get_validated_parameters(function_name, request.form)
         # Set remaining parameters for the task
@@ -149,8 +159,7 @@ class TaskAPI(MethodView):
 
 # Add URL routing and minimum required system permissions
 
-_tapi_task_views = api_permission_required(TaskAPI.as_view('admin.task'),
-                                           SystemPermissions.PERMIT_SUPER_USER)
+_tapi_task_views = api_permission_required(TaskAPI.as_view('admin.task'))
 api_add_url_rules(
     [url_version_prefix + '/admin/tasks/<int:task_id>/',
      '/admin/tasks/<int:task_id>/'],

@@ -3933,13 +3933,31 @@ class ImageServerAPITests(BaseTestCase):
             rv = self.app.post(purge_url, data={'path': ''})
             self.assertEqual(rv.status_code, API_CODES.REQUIRES_AUTH)
 
-            # Logged in as admin (non superuser) user - cannot run tasks
+            # Logged in as admin (non superuser) user - cannot run tasks with API
             setup_user_account('kryten', 'admin_files')
             self.login('kryten', 'kryten')
             rv = self.app.post(purge_url, data={'path': ''})
             self.assertEqual(rv.status_code, API_CODES.UNAUTHORISED)
 
-            # Logged in as superuser - task should launch
+            # Have the system start a task owned by the user though
+            user_task = tm.add_task(
+                dm.get_user(username='kryten'),
+                'Testing user task access',
+                'uncache_image',
+                {'image_id': 1},
+                Task.PRIORITY_NORMAL,
+                'debug', 'error', 1
+            )
+            # A user can query their own task
+            rv = self.app.get(task_url + str(user_task.id) + '/')
+            self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+            # Another (non super) user cannot query it
+            setup_user_account('taskuser', 'admin_files')
+            self.login('taskuser', 'taskuser')
+            rv = self.app.get(task_url + str(user_task.id) + '/')
+            self.assertEqual(rv.status_code, API_CODES.UNAUTHORISED)
+
+            # Logged in as superuser - task should launch with API
             setup_user_account('kryten', 'admin_all')
             self.login('kryten', 'kryten')
             rv = self.app.post(purge_url, data={'path': ''})

@@ -1280,7 +1280,8 @@ Initiates or polls the status of a background system task.
 		  _deleted_ database records. Specify the root folder `/` to purge everything.
 
 ### Permissions required
-* Super user
+* Either super user or
+* For `GET`, the user that owns the task
 
 ### Returns
 The task object, including its status.
