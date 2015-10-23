@@ -256,7 +256,7 @@ class PermissionsManager(object):
         db_commit = False
         try:
             # Get the folder and public group objects
-            db_folder = folder if hasattr(folder, 'path') else \
+            db_folder = db_session.merge(folder, load=False) if hasattr(folder, 'path') else \
                         auto_sync_folder(folder, self._db, self._tasks, _db_session=db_session)
             db_public_group = self._db.get_group(
                 group_id=Group.ID_PUBLIC,

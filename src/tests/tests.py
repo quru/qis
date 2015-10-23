@@ -3746,6 +3746,8 @@ class ImageServerAPITests(BaseTestCase):
             # Not logged in - folder ops should fail
             rv = self.app.post('/api/admin/filesystem/folders/', data={ 'path': temp_folder })
             assert rv.status_code == API_CODES.REQUIRES_AUTH, str(rv)
+            rv = self.app.get('/api/admin/filesystem/folders/1/')
+            assert rv.status_code == API_CODES.REQUIRES_AUTH, str(rv)
             rv = self.app.put('/api/admin/filesystem/folders/1/', data={ 'path': temp_folder })
             assert rv.status_code == API_CODES.REQUIRES_AUTH, str(rv)
             rv = self.app.delete('/api/admin/filesystem/folders/1/')
@@ -3753,7 +3755,10 @@ class ImageServerAPITests(BaseTestCase):
             # Log in as a standard user
             setup_user_account('kryten', 'none')
             self.login('kryten', 'kryten')
-            # Folder ops should still fail
+            # v1.40 Viewable folder should be readable
+            rv = self.app.get('/api/admin/filesystem/folders/?path=test_images')
+            assert rv.status_code == API_CODES.SUCCESS, str(rv)
+            # Other ops should still fail
             active_folder = dm.get_folder(folder_path='test_images')
             assert active_folder is not None
             rv = self.app.post('/api/admin/filesystem/folders/', data={ 'path': temp_folder })
@@ -3776,6 +3781,16 @@ class ImageServerAPITests(BaseTestCase):
             assert path_exists(temp_folder + '/a/b', require_directory=True)
             db_folder_a = dm.get_folder(folder_path=temp_folder + '/a/')
             assert db_folder_a is not None
+            # v1.40 New GET methods should return 1 level of sub-tree
+            rv = self.app.get('/api/admin/filesystem/folders/?path=' + temp_folder)
+            assert rv.status_code == API_CODES.SUCCESS, str(rv)
+            obj = json.loads(rv.data)
+            assert 'parent' in obj['data']
+            assert obj['data']['parent']['path'] == os.path.sep
+            assert 'children' in obj['data']
+            assert len(obj['data']['children']) == 1               # should have "a"
+            assert 'children' not in obj['data']['children'][0]    # but not "b"
+            assert 'parent' not in obj['data']['children'][0]      # and no link back/recursion
             # Things that shouldn't be allowed (TTSBA) - create a duplicate folder
             rv = self.app.post('/api/admin/filesystem/folders/', data={ 'path': '/test_images/'  })
             assert rv.status_code == API_CODES.ALREADY_EXISTS, str(rv)
@@ -3816,6 +3831,8 @@ class ImageServerAPITests(BaseTestCase):
             assert rv.status_code == API_CODES.SUCCESS, str(rv)
             obj = json.loads(rv.data)
             assert obj['data']['path'] == renamed_folder
+            assert 'children' not in obj['data']  # v1.40 Do not return sub-trees any more
+            assert 'parent' not in obj['data']    # v1.40 Do not return sub-trees any more
             assert path_exists(temp_folder + '/a/') == False
             assert path_exists(renamed_folder) == True
             db_folder_a = dm.get_folder(folder_id=db_folder_a.id)
@@ -3846,6 +3863,8 @@ class ImageServerAPITests(BaseTestCase):
             obj = json.loads(rv.data)
             assert obj['data']['id'] == db_folder_a.id
             assert obj['data']['status'] == Folder.STATUS_DELETED
+            assert 'children' not in obj['data']  # v1.40 Do not return sub-trees any more
+            assert 'parent' not in obj['data']    # v1.40 Do not return sub-trees any more
             db_folder_a = dm.get_folder(folder_id=db_folder_a.id)
             assert db_folder_a.status == Folder.STATUS_DELETED
             assert path_exists(db_folder_a.path) == False

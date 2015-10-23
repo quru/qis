@@ -452,6 +452,7 @@ Gets or updates image metadata in the image database.
 
 ### Returns
 The image's database object.
+The image `status` field has value `1` for active, or `0` for deleted.
 
 ### Examples
 
@@ -597,6 +598,7 @@ Lists all user accounts, or gets, creates, updates, or deletes a single user acc
 
 ### Returns
 A list of user objects (for the list users URL), or a single user object (for all other URLs).
+The user `status` field has value `1` for active, or `0` for deleted.
 
 ### Examples
 
@@ -821,7 +823,7 @@ to list the members of a group.
 ### Returns
 No return value.
 
-### Example
+### Examples
 
 	$ curl -u <token>:unused 'https://images.example.com/api/v1/admin/groups/4/'
 	{
@@ -1026,7 +1028,7 @@ audit trail. Use the [upload](#api_upload) API to create a new file.
 ### Returns
 The image's updated database object.
 
-### Example
+### Examples
 
 	$ curl -u <token>:unused 'https://images.example.com/api/v1/admin/images/524/'
 	{
@@ -1078,23 +1080,27 @@ To move this image to the `web` folder:
 
 <a name="api_disk_folders"></a>
 ## disk folders
-Creates, moves, renames, or deletes a disk folder, and updates the associated metadata.
+Finds a folder by path or database ID.
+Or creates, moves, renames, or deletes a disk folder, and updates the associated metadata.
 
 Moving, renaming or deleting a folder is a recursive operation that also affects all the
 sub-folders and files it contains, and can therefore take a long time. In the same way note
 that if you rename a folder, this changes the paths of all the images contained within.
 
 ### URL
-* `/api/v1/admin/filesystem/folders/` for `POST`
-* `/api/v1/admin/filesystem/folders/[folder id]/` for `PUT` and `DELETE`
+* `/api/v1/admin/filesystem/folders/` for `GET` (by path) and `POST`
+* `/api/v1/admin/filesystem/folders/[folder id]/` for `GET`, `PUT` and `DELETE`
 
 ### Supported methods
+* `GET`
 * `POST`
 * `PUT`
 * `DELETE`
 
 ### Parameters
-* None for `DELETE`
+* None for `GET` and `DELETE` (by ID)
+* For `GET` (by path):
+	* `path` - Mandatory, text - the path of a disk folder to retrieve.
 * For `POST` and `PUT`:
 	* `path` - Mandatory, text - the new path for the disk folder. If the parent part of the
 	  folder path changes, the folder will be moved. If only the folder's own name changes,
@@ -1102,6 +1108,7 @@ that if you rename a folder, this changes the paths of all the images contained 
 
 ### Permissions required
 * Either file administration permission or
+* For `GET`, view permission for the requested folder
 * For `POST`, create sub-folder permission for the nearest existing parent folder
 * For `PUT` when renaming, create sub-folder permission for the parent folder
 * For `PUT` when moving, full delete permission for the current parent folder,
@@ -1109,13 +1116,53 @@ that if you rename a folder, this changes the paths of all the images contained 
 * For `DELETE`, full delete permission for the parent folder
 
 ### Returns
+For `GET`, returns the folder's database object including one level of sub-folders
+in the `children` attribute.
+The folder `status` field has value `1` for active, or `0` for deleted.
+
 For `POST`, returns the new folder's database object.
 
 For `PUT` and `DELETE`, if the function completes in less than 30 seconds, returns the
 folder's updated database object. If however the function is ongoing after 30 seconds, returns
 status `202` and a task object that you can track using the [system tasks](#api_tasks) API.
 
-### Example
+### Examples
+
+	$ curl -u <token>:unused 'https://images.example.com/api/v1/admin/filesystem/folders/?path=/search/path'
+	{
+	  "data": {
+	    "children": [
+	      {
+	        "id": 49,
+	        "name": "/search/path/child1",
+	        "parent_id": 44,
+	        "path": "/search/path/child1",
+	        "status": 0
+	      },
+	      {
+	        "id": 45,
+	        "name": "/search/path/child2",
+	        "parent_id": 44,
+	        "path": "/search/path/child2",
+	        "status": 1
+	      }
+	    ],
+	    "id": 44,
+	    "name": "/search/path",
+	    "parent": {
+	      "id": 42,
+	      "name": "/search",
+	      "parent_id": 1,
+	      "path": "/search",
+	      "status": 1
+	    },
+	    "parent_id": 42,
+	    "path": "/search/path",
+	    "status": 1
+	  },
+	  "message": "OK",
+	  "status": 200
+	}
 
 	$ curl -X POST -u <token>:unused -F 'path=/test_images/mynewfolder/' 'https://images.example.com/api/v1/admin/filesystem/folders/'
 	{
@@ -1181,7 +1228,7 @@ If the operation takes more than 30 seconds, status `202` and an ongoing task ob
 
 <a name="api_tasks"></a>
 ## system tasks
-Initiates or polls the status of an ongoing system task.
+Initiates or polls the status of a background system task.
 
 ### URL
 * `/api/v1/admin/tasks/[function name]/` for `POST`
