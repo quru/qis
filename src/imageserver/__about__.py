@@ -30,7 +30,7 @@ __summary__ = "A high performance dynamic image server"
 __uri__ = "https://quru.com/qis/"
 __source_uri__ = "https://github.com/quru/qis"
 
-__version__ = "1.35"
+__version__ = "1.40"
 
 __author__ = "Quru Ltd"
 __email__ = "info@quru.com"
