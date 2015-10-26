@@ -8,7 +8,7 @@ sudo apt-get upgrade
 sudo apt-get install git curl wget libldap-2.4-2 libldap2-dev imagemagick libmagick++-dev \
                      python python-pip python-virtualenv python-dev python2.7-dev \
                      memcached postgresql-9.3 postgresql-server-dev-9.3 ghostscript \
-                     libsasl2-dev pwgen apache2 libapache2-mod-wsgi 
+                     libsasl2-dev pwgen apache2 libapache2-mod-wsgi libmemcached10
 
 sudo useradd --comment "QIS Build User" --home-dir /home/qis/ --create-home --shell /bin/bash qis
 
