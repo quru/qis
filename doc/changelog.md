@@ -4,7 +4,8 @@ _Changes: REST API bug fixes, additions, and improvements to consistency_
 The JSON output of the folder management API has changed, and no longer returns
 the parent and children attributes when adding, moving, and deleting a folder.
 There are 2 new functions for retrieving a folder by ID or path, which do return
-parent and children.
+the parent and children.
+
 When moving or deleting a folder and a task object is returned, the caller can
 now query the task status without requiring _super user_ permission.
 
