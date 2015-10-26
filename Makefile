@@ -8,8 +8,7 @@ QISMAGICK_WHEEL := $(wildcard /tmp/qismagick/*.whl)
 distribute:
 	./package_deps.sh ${PYTHON}
 	. build/venv/bin/activate ; python setup.py sdist
-	mkdir -p /tmp/qis/
-	cp dist/* /tmp/qis/
+	echo 'Application and platform dependencies are now in the "dist" folder'
 
 jenkins: test distribute
 
