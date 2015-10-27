@@ -5,7 +5,9 @@
 	* We are affected by a deadlock bug in < 2.6.5
 * PostgreSQL 9.2 or above (due to use of JSON data type)
 * Memcached 1.2.8 or above
-* libmemcached 1.0.16 (0.32 or above is required)
+* libmemcached 1.0.10 / 1.0.16 (0.32 or above is required)
+    * 1.0.8 shipping in Ubuntu 14.04.3 has a set_socket_options() bug
+      https://bugs.launchpad.net/libmemcached/+bug/1021819
 * Membase 1.7.1 (note: Membase support is untested since 2011)
 * Apache 2.2.17 or above
 * mod_wsgi 3.2.7 or above

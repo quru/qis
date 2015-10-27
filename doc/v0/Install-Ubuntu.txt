@@ -1,14 +1,28 @@
 QIS install process on Ubuntu 14.04.2 LTS
 Based on the Fedora Dockerfile
 
-
 sudo apt-get update
 sudo apt-get upgrade
 
-sudo apt-get install git curl wget libldap-2.4-2 libldap2-dev imagemagick libmagick++-dev \
-                     python python-pip python-virtualenv python-dev python2.7-dev \
-                     memcached postgresql-9.3 postgresql-server-dev-9.3 ghostscript \
-                     libsasl2-dev pwgen apache2 libapache2-mod-wsgi 
+sudo apt-get install curl wget libldap-2.4-2 imagemagick libmagickwand5 python python-pip \
+                     memcached postgresql-9.3 libpq5 ghostscript \
+                     libsasl2-2 pwgen apache2 libapache2-mod-wsgi libmemcached10
+
+Also if you need a build environment:
+
+sudo apt-get install git libldap2-dev libmagickwand-dev python-virtualenv python-dev \
+                     python2.7-dev postgresql-server-dev-9.3 libpq-dev libsasl2-dev
+
+For the build environment, depending on Ubuntu version, install libmemcached-dev.
+Ubuntu 14.04 ships with libmemcached 1.08, which is affected by this bug:
+https://bugs.launchpad.net/libmemcached/+bug/1021819
+when installing the Python dependencies. In this case, install libmemcached 1.10
+(or above) from source and run ldconfig afterwards.
+
+sudo apt-get install libmemcached-dev
+or
+install libmemcached from source (configure, make, sudo make install, sudo ldconfig)
+
 
 sudo useradd --comment "QIS Build User" --home-dir /home/qis/ --create-home --shell /bin/bash qis
 
@@ -46,6 +60,11 @@ psql -h localhost -U postgres -d postgres -c "CREATE ROLE $PGUSER WITH LOGIN PAS
 
 createdb -h localhost -U postgres --owner $PGUSER qis-cache
 createdb -h localhost -U postgres --owner $PGUSER qis-mgmt
+
+Also if you need a build/test environment:
+
+createdb -h localhost -U postgres --owner $PGUSER qis-cache-test
+createdb -h localhost -U postgres --owner $PGUSER qis-mgmt-test
 
 sudo update-rc.d postgresql defaults
 sudo service postgresql restart
