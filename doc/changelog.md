@@ -1,3 +1,6 @@
+# v2.0.0-dev.7
+_Changes: Merge from v1.41 - updated qismagick.so to flatten XCF/PSD files_
+
 # v2.0.0-dev.6
 _Changes: Merge from v1.40 - REST API bug fixes and improvements_
 
@@ -49,6 +52,18 @@ Update the Python dependencies
 Restart the Memcached service  
 Optional: drop the `cachectl` table
 Start the Apache service
+
+
+# v1.41
+_Changes: Bug fix to flatten XCF/PSD files_
+
+Requires an updated `qismagick.so`.
+The opacity of merged layers may be incorrect in ImageMagick < 6.9.1-4.
+There remains an issue of content being incorrectly clipped in overlapping areas.
+
+Update the Python dependencies  
+Update the Python and web code  
+Restart the Apache service
 
 
 # v1.40

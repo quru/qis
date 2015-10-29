@@ -30,6 +30,7 @@
 	* Avoid 6.8.7-4 to 6.8.7-9 with optional OpenCL enabled due to bugs
 	* 6.8.8-0 has stable OpenCL acceleration for resize, sharpen, blur
 	* 6.9.0-2 fixes "numerous buffer overflows" and a TIFF crash
+	* 6.9.1-4 fixes layer masks when flattening XCF/PSD files
 
 # Known good versions of dependencies of the dependencies
 
