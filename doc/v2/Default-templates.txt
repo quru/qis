@@ -20,7 +20,7 @@ flags to the template that specify whether each parameter can be overridden.
 So change the template JSON from:
 
 	{
-	  "width": 1000,
+	  "width": 500,
 	  "overlay": "/path/to/logo.jpg"
 	}
 
@@ -28,8 +28,9 @@ to:
 
 	{
 	  "width": {
-		"value": 1000,
-		"override": "lte"
+		"value": 500,
+		"override": "lte",
+		"override_limit": 1000
 	  },
 	  "overlay": {
 	    "value": "/path/to/logo.jpg",
@@ -41,8 +42,9 @@ And in the future we will be able to add further enhancements such as:
 
 	{
 	  "width": {
-		"value": 1000,
+		"value": 500,
 		"override": "lte",
+		"override_limit": 1000,
 		"user_notes": "All thumbnails are < 1000, don't serve anything larger"
 	  },
 	  "overlay": {
@@ -52,9 +54,9 @@ And in the future we will be able to add further enhancements such as:
 	  }
 	}
 
-The `override` flag can have values: `yes | no | lte | gte`, with the latter
-values meaning "less than or equal" and "greater than or equal", to be used with
-numerical fields.
+The `override` flag can have values: `yes | no | lte | gte`. The latter values
+mean "less than or equal" and "greater than or equal", to be used for numerical
+fields alongside an override limit.
 
 Image security is not required on all fields, but is relevant to these:
 
@@ -76,12 +78,61 @@ template means we can delete 2 further system settings:
 
 * `PUBLIC_MAX_IMAGE_WIDTH, PUBLIC_MAX_IMAGE_HEIGHT`
 * These had a very narrow use-case, and the functionality is duplicated and
-  better replaced by the more generic security mechanism being described here
+  better replaced by the more generic mechanism being described here
 
-So far so good then. But while you may want to restrict the public to seeing a small
-watermarked image, you might want to allow registered users to view the full
-undecorated image. Also, you probably want to treat some images differently from
-others. QIS already has a mechanism for defining access rules by user group and
+Phase 1
+=======
+Implement the above, with 2 global default templates:
+
+* Public default template
+* Logged-in default template
+
+to replace the old `IMAGE_foo_DEFAULT` and `PUBLIC_MAX_foo` settings.
+These should be applied in the same way as before, unless an override flag is
+`no`, `lte` or `gte`. TODO for an image with "tmp=foo" in the URL how do we
+treat the override flags from foo vs the flags from the default template?
+
+This fulfils the basic original brief discussed at the top of this document.
+It also allows public images to be "locked down" while registered users can
+(if the logged-in default template allows) have more freedom of access.
+
+Code changes - Phase 1
+
+* v1 to v2 template import routine - change to new JSON format
+* Initial template data - change to new JSON format
+* Add initial data for the 2 new system default templates
+* TemplateAttrs - add a piggy-back dict to hold per-field extras
+  (just the override rules for now)
+  * TODO consider other options, this doesn't feel very neat
+* ImageAttrs / TemplateAttrs - apply default settings based on new override flags
+  * TODO should a denied override be silently ignored or throw an error?
+* Admin page to set the default templates
+* Do not allow deletion of templates that are in use as a default template
+* Template API - get and set the override definitions
+* Template admin page - add the override definitions to the fields that offer security
+* Template manager - new method to return the appropriate default template
+* Image publisher - display the system default template if no specific template
+  is selected, indicate which fields cannot be overridden
+* Image API help page - list the defaults from the default templates instead of the
+  old system settings, remove the section about public limits, document the
+  new field override limits
+* Upgrade affected unit tests
+* Add new tests to validate the override behaviour
+
+
+Phase 2
+=======
+So far so good then. But phase 1 does not deliver a great deal of flexibility;
+you probably want to protect some images differently from others. Even for the
+same image it is reasonable to want the ability to serve a plain small thumbnail
+while enforcing a watermark on large versions of it.
+
+TODO all the rest is still open for discussion / subject to change
+
+TODO decide whether "tmp=foo" in the URL should override (again) the default
+template or replace it entirely. The latter seems easier to understand.
+
+QIS already has a mechanism for defining access rules by user group and
 folder - the folder permissions. Since this is where we define whether a user
 (in reality a group) can view an image, it seems reasonable to define the image
 field security in the same place. Then when the folder permissions say that `view`
@@ -91,20 +142,18 @@ you can view the image in its entirety, for example. To achieve this we need onl
 add one new field to the `FolderPermissions` table, so that it becomes:
 
 * `id`
-* `folder_id` - 
-* `group_id` -
-* `access` -  
-* New field `template_id` - 
+* `folder_id` - Mandatory link to folder
+* `group_id` - Mandatory link to group
+* `access` - Mandatory access level
+* New field `default_template_id` - Optional link to default image template
 
 This provides the ability to assign a default image template to a group and
-folder combination. The field will be optional, and blank by default.
+folder combination. The new field will be optional, and blank by default.
 
 QIS will ship with a default template for the `public` group and `root` folder,
-to act as the global "system default" template, and fulfil the original brief
-discussed at the top of this document.
-
-Installations that do not require fine-grained view control will not need to
-define anything new beyond the standard folder permissions.
+to act as the global "system default" template. Installations that do not require
+fine-grained view control will not need to define anything new beyond the standard
+folder permissions.
 
 
 More thoughts
@@ -121,12 +170,7 @@ That would establish the correct default template.
 [14/10/2015 10:36:49] Roland Whitehead: If you have download permission then the /original or /details commands ignore any templates... However, /image should still stick to the template rules...
 [14/10/2015 10:37:13] Roland Whitehead: Sounds sensible that you need the download permission to use the publisher.
 [14/10/2015 10:37:42] Roland Whitehead: If you have upload permission, do you also automatically have the download permission? Could we have a situation where someone can upload an image but not download it?
-[14/10/2015 10:38:33] Roland Whitehead sent a file to this group:
-Quru certificate of registration.pdf
 [14/10/2015 10:39:21] Matt Fozard: Currently, upload permission includes download permission. So if you can upload you would always be able to download.
-[14/10/2015 10:41:03] Matt Fozard: Hmm was the Quru certificate for me?
-[14/10/2015 10:41:08] Roland Whitehead: Oops, that file was for Walli - ignore it...
-[14/10/2015 10:41:17] Roland Whitehead: Two skype conversations running at the same time...
 [14/10/2015 10:41:59] Roland Whitehead: So yes, the publish option should only be available for people with download...
 
 
@@ -139,22 +183,25 @@ terminology to describe these new concepts. Proposed are:
 * Default template?  Image field security?  
 
 
-Code changes
+Code changes - Phase 2
 
-* v1 to v2 template import routine - change to new JSON format
-* default template data - change to new JSON format
-* TemplateAttrs - add a piggy-back dict to hold per-field extras
-  (just the override flag for now)
-  * TODO consider other options, this doesn't feel very neat
-* Do not allow deletion of templates that are in use as a default template
-* TODO permissions manager - new method to return default template
-  * This isn't nice for users with multiple groups
+* TODO Move default template getter from template manager into permissions manager?
+  This would (possibly) make sense if it is also based on folder + group
+* TODO permissions manager - alter the default template function to take
+  into account folder and group
+  * TODO This isn't nice for users with multiple groups
     * Roland suggested ranking the groups and taking just the highest ranking group
       for the current folder (or nearest parent with a default folder defined)
     * Group ranking would need a new db field and admin UI
     * Should group ranking then be used for folder permissions?
       Currently we use the most permissive of all the groups.
       This would be a breaking change.
+    * --> Not keen on group ranking
 
 Documentation
 
+* Write a new guide to setting up the permissions
+  * Scenario - all images public by default, require login to download or more
+  * Scenario - all images private by default, selective view, selective downloads
+  * Scenario - watermark all the images in a folder
+  * Scenario - watermark images > 1000px, max size < 2000px
