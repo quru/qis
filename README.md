@@ -178,7 +178,7 @@ To see the default values and other settings you can override, see the
 You will need to [request a copy of the `qismagick` package](#qismagick.so)
 for your development platform, and install it:
 
-	$ pip install qismagick-1.25.0-cp27-none-macosx_10_10_intel.whl
+	$ pip install qismagick-1.41.0-cp27-none-macosx_10_10_intel.whl
 
 Then run the server in development mode with:
 

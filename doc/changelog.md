@@ -1,3 +1,15 @@
+# v1.41
+_Changes: Bug fix to flatten XCF/PSD files_
+
+Requires an updated `qismagick.so`.
+The opacity of merged layers may be incorrect in ImageMagick < 6.9.1-4.
+There remains an issue of content being incorrectly clipped in overlapping areas.
+
+Update the Python dependencies  
+Update the Python and web code  
+Restart the Apache service
+
+
 # v1.40
 _Changes: REST API bug fixes, additions, and improvements to consistency_
 
