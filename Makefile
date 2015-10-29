@@ -33,7 +33,7 @@ ${VENV_PATH}/bin/activate: doc/requirements.txt
 	${VENV_ACTIVATE} ; pip install --upgrade pip ; pip install --upgrade setuptools
 	${VENV_ACTIVATE} ; pip install -r doc/requirements.txt
 
-${QISMAGICK_SO}:
+${QISMAGICK_SO} setup.py:
 	${VENV_ACTIVATE} ; pip install --upgrade --force-reinstall $(QISMAGICK_WHEEL)
 
 runserver: venv ${QISMAGICK_SO}
