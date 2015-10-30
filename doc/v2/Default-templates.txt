@@ -1,21 +1,23 @@
-QIS v2.0 Replace default image settings with default templates, add image security
+QIS v2.1 Replace default image settings with default templates, add image security
 ==================================================================================
 
 This change follows the move of image templates from being flat text files to
 being entities in the database. It starts with a simple observation:
 
-* We should replace the system settings: `IMAGE_FORMAT_DEFAULT, IMAGE_QUALITY_DEFAULT,
-  IMAGE_COLORSPACE_DEFAULT, IMAGE_DPI_DEFAULT, IMAGE_STRIP_DEFAULT, IMAGE_EXPIRY_TIME_DEFAULT`
-  ... with a single "system default" image template instead.
-* This simplifies the system settings, allows any of the image parameters to have a
-  default value (instead of a select few), and allows the defaults to be changed within
-  the admin interface without requiring a system re-start.
+* We should replace these individual system settings: `IMAGE_FORMAT_DEFAULT,
+  IMAGE_QUALITY_DEFAULT, IMAGE_COLORSPACE_DEFAULT, IMAGE_DPI_DEFAULT,
+  IMAGE_STRIP_DEFAULT, IMAGE_EXPIRY_TIME_DEFAULT` with a single "system default"
+  image template instead.
+* This simplifies the system settings, allows any of the image parameters to have
+  a default value (instead of just those few), and allows the defaults to be changed
+  within the admin interface and without requiring a system re-start.
 
-This is a neat improvement to the system architecture, but delivers little new functionality.
-Enter perhaps the biggest problem remaining from QIS v1, that any user can change
-an image URL to serve the image at any size, change or remove an overlay, etc. With the
-default template change described above, we can introduce image security by adding new
-flags to the template that specify whether each parameter can be overridden.
+This is a neat improvement to the system architecture, but delivers little new
+functionality. Enter perhaps the biggest problem remaining from QIS v1, that any
+user can change an image URL to serve the image at any size, change or remove an
+overlay, etc. With a default template as described above, we can introduce a new
+image security feature by adding new flags to the template that specify whether
+each parameter is allowed to be overridden.
 
 So change the template JSON from:
 
@@ -50,7 +52,8 @@ And in the future we will be able to add further enhancements such as:
 	  "overlay": {
 	    "value": "/path/to/logo.jpg",
 	    "override": "no",
-		"user_notes": "Force the logo as a watermark"
+		"user_notes": "Force the logo as a watermark",
+		"some_future_feature": true
 	  }
 	}
 
@@ -65,7 +68,7 @@ Image security is not required on all fields, but is relevant to these:
 * `overlay` (all) - to prevent tampering when the overlay is used as a watermark
 * `strip` - to prevent the removal of EXIF data (which might contain a copyright notice, etc)
 
-The cropping fields have been also considered but excluded from this change because:
+The cropping fields have also been considered, but excluded from this change, because:
 
 * Cropping is usually applied per-image rather than in bulk with a template
 * Cropping occurs after `flip` and `rotate`, meaning these parameters would also
@@ -73,51 +76,154 @@ The cropping fields have been also considered but excluded from this change beca
 * Cropping is intended to be used for art direction, not redaction
 * Different sizes of the same image often have different cropping requirements
 
-However being able to restrict the width and height of an image using the default
-template means we can delete 2 further system settings:
+However, having the ability to restrict the width and height of an image using a
+default template means we can delete 2 further system settings:
 
 * `PUBLIC_MAX_IMAGE_WIDTH, PUBLIC_MAX_IMAGE_HEIGHT`
 * These had a very narrow use-case, and the functionality is duplicated and
   better replaced by the more generic mechanism being described here
 
+User-defined (named) templates
+==============================
+So far this document has described the addition of a system default template,
+together with new flags to define what is allowed to be changed. For existing
+user-defined templates we should also add these new override controls. This
+will be required to support a common scenario:
+
+* `/image?src=myimage.jpg` - no template specified - system uses the new
+  default template, which adds a watermark along with override flag `no`
+* `/image?src=myimage.jpg&overlay=` - blocked - this request attempts to
+  change or remove the watermark, which will not be allowed
+
+* `/image?src=myimage.jpg&tmp=thumbnail` - returns a small copy of the image,
+  without a watermark, but with override flags `no` for width and height
+* `/image?src=myimage.jpg&tmp=thumbnail&width=5000` - blocked - this request
+  attempts to return a large copy of the image without a watermarked, which
+  will not be allowed
+
+For this to work, the override rules in the user-defined template `thumbnail` must
+**replace** those in the default template, otherwise it would not be possible to
+produce the thumbnail image without a watermark.
+
+Having a named template replace the default template has the further advantage
+that it is easier to understand and administer, avoiding the scenario that would
+otherwise occur of having to merge together multiple levels of parameters and
+override rules.
+
+Changes to system behaviour
+===========================
+As a consequence of these changes, templates will become much more prominent in
+QIS v2 than they were in v1. In v1, templates were entirely optional. In v2, an
+image request will always "pass through" a template - if not a named template
+then the default template.
+
+There will also be a change in the behaviour of how final image parameters are
+calculated. In QIS v1 there were up to 3 levels that determined the final value
+of a parameter such as `dpi`:
+
+1) From an image URL parameter (`...&dpi=300`)
+2) From a named template (`...&tmp=print`)
+3) From a `DEFAULT` system setting (`IMAGE_DPI_DEFAULT = 300`)
+
+In QIS v2 there will only be 2 levels:
+
+1) From an image URL parameter
+2) From a named template or - if none is specified - from the default template
+
+And level (1) may be disallowed, depending on the override flags in the template.
+
+When a URL parameter is disallowed, QIS will return an HTTP error 400 "bad
+parameter" response along with an error message describing which parameter was
+rejected and by which template. The alternative approach of silently ignoring the
+disallowed parameter would result in a public API is not consistent in its responses,
+and could therefore lead to undetected problems.
+
+This change to reject URL parameters for width, height and strip (depending on
+templates) has the potential to cause runtime errors in these public-facing utilities:
+
+* Image zoomer - strips and requests full width and height
+* Gallery - creates thumbnails with strip
+* Slideshow - requests variable width and height
+* Benchmark script - requests variable width and height
+
+and these areas of the QIS admin interface:
+
+* Image previews - upload complete, details page, folder list
+* Image publisher - preview image, also the potential to generate broken URLs
+
+Users of the public-facing utilities will have to ensure either that their default
+template allows the full range of parameters required, or that they create a
+named template to exempt the function from the default rules. For example adding
+`...&tmp=zoomable` to images that can be zoomed, where the `zoomable` template
+might allow any width and height but also add a watermark to a corner of the image.
+
+We can prevent the public-facing default template rules from affecting the admin
+interface by having 2 default templates initially - one for public requests and
+one for logged-in requests. The default template for logged-in requests can then
+be configured separately to be less restrictive.
+
 Phase 1
 =======
-Implement the above, with 2 global default templates:
+Implement the above with 2 global default templates:
 
 * Public default template
 * Logged-in default template
 
-to replace the old `IMAGE_foo_DEFAULT` and `PUBLIC_MAX_foo` settings.
-These should be applied in the same way as before, unless an override flag is
-`no`, `lte` or `gte`. TODO for an image with "tmp=foo" in the URL how do we
-treat the override flags from foo vs the flags from the default template?
+to replace the old `IMAGE_x_DEFAULT` and `PUBLIC_MAX_x` settings. When first
+created, both of these will have the same initial values as the old settings
+they replace, and allow everything to be overridden.
 
 This fulfils the basic original brief discussed at the top of this document.
-It also allows public images to be "locked down" while registered users can
-(if the logged-in default template allows) have more freedom of access.
+It also allows public images to be "locked down" by default while registered
+users can (if the logged-in default template allows) have more freedom of access.
+
+In phase 1 all user-defined templates will remain accessible to all users.
+This will not be ideal in some situations. For example, one use case may call for
+a template that allows large images to be downloaded without a watermark. It would
+be preferable then if this template is only available to certain users, such as
+only to system administrators. This would require new access controls around the
+template list, additional work that will be covered in phase 2.
 
 Code changes - Phase 1
 
 * v1 to v2 template import routine - change to new JSON format
-* Initial template data - change to new JSON format
-* Add initial data for the 2 new system default templates
+* Initial template data - change to new JSON format,
+  add 2 new pre-defined templates to act as the defaults
+* Template admin API - change to new JSON format, get and set the override flags,
+  add override flags into API unit tests, update the API documentation
 * TemplateAttrs - add a piggy-back dict to hold per-field extras
   (just the override rules for now)
   * TODO consider other options, this doesn't feel very neat
-* ImageAttrs / TemplateAttrs - apply default settings based on new override flags
-  * TODO should a denied override be silently ignored or throw an error?
-* Admin page to set the default templates
+* ImageAttrs / TemplateAttrs - apply the named or default template based on new
+  rules and override flags. Raise an error if an ImageAttrs field has been
+  overridden in violation of the template override rules.
+* Delete the old system settings and migrate all occurrences
+  (in the documentation too)
+* Delete the 2x weird functions that used to enforce the `PUBLIC_MAX` settings
+* Add an admin function to choose the default templates
+  * Any named template can be chosen as the default, they don't need to be fixed
+* Template admin page - add the override controls to the fields that offer security
 * Do not allow deletion of templates that are in use as a default template
-* Template API - get and set the override definitions
-* Template admin page - add the override definitions to the fields that offer security
-* Template manager - new method to return the appropriate default template
-* Image publisher - display the system default template if no specific template
-  is selected, indicate which fields cannot be overridden
+* Template manager - add new method to return the appropriate default template
+  (public or logged in) from cache
+* Image manager - ensure that the image caching still works correctly after a
+  default template has been changed (i.e. the image caching must still work
+  independently of templates and template content)
+* Image publisher - auto-select the system default template if no other template
+  is selected, replace "system default value" helper text with the values from the
+  default/selected template, indicate which fields cannot be overridden
 * Image API help page - list the defaults from the default templates instead of the
-  old system settings, remove the section about public limits, document the
-  new field override limits
-* Upgrade affected unit tests
-* Add new tests to validate the override behaviour
+  old system settings, remove or clarify the section about public limits, document
+  the new field override limits. Move template param to be first, describe new
+  behaviour of getting either the specified template or the default template.
+  Describe new behaviour of how the final image parameters are determined.
+* TODO Possibly - upgrade the public JS utilities to detect / handle their
+  own added URL parameters breaking the override rules
+* Benchmark - upgrade as necessary, or perhaps disable the override flag checking
+  when `BENCHMARKING` is true
+* Benchmark (running) - ensure performance has remained the same or better
+* Upgrade all affected unit tests
+* Add new tests to validate the correctness of the override controls
 
 
 Phase 2
@@ -127,10 +233,12 @@ you probably want to protect some images differently from others. Even for the
 same image it is reasonable to want the ability to serve a plain small thumbnail
 while enforcing a watermark on large versions of it.
 
-TODO all the rest is still open for discussion / subject to change
+TODO all the rest below is still open for discussion / subject to change
 
-TODO decide whether "tmp=foo" in the URL should override (again) the default
-template or replace it entirely. The latter seems easier to understand.
+TODO Main topics:
+- Having default templates at different folder levels (instead of root)
+- Having different default templates for different groups (and different folders?)
+- Restricting access to all templates
 
 QIS already has a mechanism for defining access rules by user group and
 folder - the folder permissions. Since this is where we define whether a user
@@ -173,7 +281,6 @@ That would establish the correct default template.
 [14/10/2015 10:39:21] Matt Fozard: Currently, upload permission includes download permission. So if you can upload you would always be able to download.
 [14/10/2015 10:41:59] Roland Whitehead: So yes, the publish option should only be available for people with download...
 
-
 Terminology
 
 To avoid ambiguity and confusion, the system requires the use of some standard
@@ -181,7 +288,6 @@ terminology to describe these new concepts. Proposed are:
 
 * TODO
 * Default template?  Image field security?  
-
 
 Code changes - Phase 2
 
@@ -200,8 +306,10 @@ Code changes - Phase 2
 
 Documentation
 
-* Write a new guide to setting up the permissions
+* Write a new guide to setting up the permissions - folder permissions,
+  default templates, and template field override flags
   * Scenario - all images public by default, require login to download or more
   * Scenario - all images private by default, selective view, selective downloads
   * Scenario - watermark all the images in a folder
   * Scenario - watermark images > 1000px, max size < 2000px
+  * How to define rules that work with the zoomer / carousel / etc

@@ -1,26 +1,34 @@
-# v2.0.0-dev.7
+# v2.1.0-dev
+_Breaking change: remove default image settings, add default image templates,
+add image parameter override controls (phase 1)_
+
+TODO
+
+For a full discussion of this change, see [v2/Default-templates.txt](./v2/Default-templates.txt).
+
+# v2.0.7-dev
 _Changes: Merge from v1.41 - updated qismagick.so to flatten XCF/PSD files_
 
-# v2.0.0-dev.6
+# v2.0.6-dev
 _Changes: Merge from v1.40 - REST API bug fixes and improvements_
 
-# v2.0.0-dev.5
+# v2.0.5-dev
 _Changes: Merge from v1.35 - bug fix to make usernames case insensitive_
 
 If upgrading an existing installation, see the notes for v1.35.
 No SQLAlchemy upgrade is required for the v2 branch.
 
-# v2.0.0-dev.4
+# v2.0.4-dev
 _Changes: Merge from v1.34 - recache=1 and cache=0 are no longer public,
 add html5 responsive image tags to publisher output_
 
-# v2.0.0-dev.3
+# v2.0.3-dev
 _Changes: Adds image template administration pages_
 
-# v2.0.0-dev.2
+# v2.0.2-dev
 _Changes: new APIs for administration of image templates_
 
-# v2.0.0-dev.1
+# v2.0.1-dev
 _Breaking change: move image templates into the database_
 
 Update the Python and web code  
@@ -43,7 +51,7 @@ instead of name, and returns the complete template object (with `name` and
 compatibility is not being maintained. There will soon be new API functions
 for listing, creating, updating and deleting templates.
 
-# v2.0.0-dev.0
+# v2.0.0-dev
 _Changes: upgrade SQLAlchemy to v1, upgrade internal database models_
 
 Stop the Apache service  
