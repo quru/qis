@@ -75,6 +75,7 @@ def image():
     logger.debug(request.method + ' ' + request.url)
     try:
         logged_in = session_logged_in()
+        allow_uncache = app.config['BENCHMARKING'] or app.config['DEBUG']
         args = request.args
 
         # Get URL parameters for the image
@@ -113,12 +114,8 @@ def image():
         xref        = args.get('xref', None)
         stats       = args.get('stats', None)
         # Get protected admin/internal parameters
-        cache       = args.get('cache', '1') if (
-            app.config['BENCHMARKING'] or logged_in
-        ) else '1'
-        recache     = args.get('recache', None) if (
-            app.config['BENCHMARKING'] or app.config['DEBUG']
-        ) else None
+        cache       = args.get('cache', '1') if logged_in or allow_uncache else '1'
+        recache     = args.get('recache', None) if allow_uncache else None
 
         # eRez compatibility mode
         src = erez_params_compat(src)
