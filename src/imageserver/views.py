@@ -113,7 +113,9 @@ def image():
         xref        = args.get('xref', None)
         stats       = args.get('stats', None)
         # Get protected admin/internal parameters
-        cache       = args.get('cache', '1') if logged_in else '1'
+        cache       = args.get('cache', '1') if (
+            app.config['BENCHMARKING'] or logged_in
+        ) else '1'
         recache     = args.get('recache', None) if (
             app.config['BENCHMARKING'] or app.config['DEBUG']
         ) else None
