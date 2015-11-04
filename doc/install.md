@@ -332,8 +332,12 @@ You can check this with `sestatus`:
 If the SELinux status is `disabled` or the current mode is not `enforcing`,
 you can skip the rest of this section.
 
-Otherwise, install the QIS security policy, and allow the Apache service
-to write to the QIS logs and images directories:
+Otherwise, see if the `semanage` command is available, and if not install it:
+ 
+	$ sudo yum install -y policycoreutils-python
+
+Install the QIS security policy, and allow the Apache service to write to the
+QIS logs and images directories:
 
 	$ sudo semodule --install=/opt/qis/deploy/fedora20/qis.pp
 	$ sudo semanage fcontext --add --type httpd_log_t "/opt/qis/logs(/.*)?"
