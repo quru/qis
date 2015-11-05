@@ -1,10 +1,10 @@
 #
 # Quru Image Server
 #
-# Document:      import_templates.py
+# Document:      v2_upgrade.py
 # Date started:  07 Sep 2015
 # By:            Matt Fozard
-# Purpose:       QIS v1 to v2 template converter
+# Purpose:       QIS v1 to v2 upgrade script
 # Requires:
 # Copyright:     Quru Ltd (www.quru.com)
 # Licence:
@@ -27,11 +27,11 @@
 # Notable modifications:
 # Date       By    Details
 # =========  ====  ============================================================
-#
+# 05Nov2015  Matt  Change from template upgrade to whole version upgrade
 #
 # Notes:
 #
-# Usage: sudo -u qis python import_templates.py
+# Usage: sudo -u qis python v2_upgrade.py
 #
 
 import ConfigParser
@@ -39,6 +39,7 @@ import glob
 import os
 import signal
 import site
+import shutil
 
 
 # Utility to allow no value for a config file option
@@ -50,11 +51,20 @@ def _config_get(cp, get_fn, section, option, lower_case=False):
         return None
 
 
-def import_templates():
-    log('\nThis utility imports QIS v1 image templates into the QIS v2 database')
-    raw_input('Press [Enter] to continue, or Ctrl-C to exit now.\n')
-
+def upgrade_cache_table():
     log('Loading QIS engine...')
+    from imageserver.flask_app import cache_engine
+    try:
+        log('Upgrading cache tracking database table')
+        cache_engine.clear()
+        cache_engine._drop_db_schema()
+        cache_engine._create_db_schema()
+        log('Cache tracking database table upgraded OK')
+    except Exception as e:
+        log('Warning: failed to upgrade cache database table: ' + unicode(e))
+
+
+def import_templates():
     from imageserver.flask_app import app, data_engine
     from imageserver.image_attrs import ImageAttrs
     from imageserver.models import ImageTemplate
@@ -63,8 +73,13 @@ def import_templates():
 
     # Find *.cfg
     num_files = 0
-    cfg_files = glob.glob(unicode(os.path.join(app.config['INSTALL_DIR'], 'templates', '*.cfg')))
-    log('')
+    num_errors = 0
+    num_skipped = 0
+    template_dir_path = app.config['TEMPLATES_BASE_DIR'] \
+        if 'TEMPLATES_BASE_DIR' in app.config else \
+        os.path.join(app.config['INSTALL_DIR'], 'templates')
+    cfg_files = glob.glob(unicode(os.path.join(template_dir_path, '*.cfg')))
+    log('Starting image templates import')
     for cfg_file_path in cfg_files:
         num_files += 1
         (template_name, _) = os.path.splitext(filepath_filename(cfg_file_path))
@@ -136,12 +151,31 @@ def import_templates():
                     template_attrs.to_dict()
                 ))
             else:
-                log('Skipped template \'%s\' as it already seems to be imported' % template_name)
+                log('Skipped template \'%s\' as it already exists' % template_name)
+                num_skipped += 1
 
         except Exception as e:
             log('Failed to import template \'%s\' due to: %s' % (template_name, str(e)))
+            num_errors += 1
 
-    log('Import complete, %d file(s) processed' % num_files)
+    log('Template import complete, %d file(s) found, '
+        '%d errors, %d skipped.' % (num_files, num_errors, num_skipped))
+
+    deleted = False
+    if num_errors == 0 and os.path.exists(template_dir_path):
+        conf = raw_input('The old template files are no longer required. ' +
+                         'Do you want to remove them now? Y/N\n')
+        if conf in ['y', 'Y']:
+            log('Removing directory ' + template_dir_path)
+            try:
+                shutil.rmtree(template_dir_path)
+                log('Old templates removed OK')
+                deleted = True
+            except Exception as e:
+                log('Warning: failed to delete directory: ' + unicode(e))
+
+    if num_files > 0 and not deleted:
+        log('Info: Old template files remain in ' + template_dir_path)
 
 
 def log(astr):
@@ -154,18 +188,28 @@ if __name__ == '__main__':
         site.addsitedir('../..')
         site.addsitedir('../../../lib/python2.6/site-packages')
         site.addsitedir('../../../lib/python2.7/site-packages')
+        # Get confirmation
+        print 'This utility will upgrade your QIS v1.x installation to v2.'
+        conf = raw_input('To proceed, type Y and press [Enter].\n')
+        if conf not in ['y', 'Y']:
+            print 'Cancelled'
+            exit(1)
         # Go
+        upgrade_cache_table()
         import_templates()
+        print 'Upgrade complete. Review the messages above for any errors or warnings.'
         exit(0)
 
     except KeyboardInterrupt:
         print '\nCancelled'
         exit(1)
     except Exception as e:
-        print 'Utility exited with error:\n' + str(e)
-        print 'Ensure you are using the correct user account, ' \
-              'and (optionally) set the QIS_SETTINGS environment variable.'
+        print 'Utility exited with error:\n' + unicode(e)
+        print 'Common issues:'
+        print 'Are you running as the qis user?'
+        print 'Do you need to set the QIS_SETTINGS environment variable?'
     finally:
         # Also stop any background processes we started
         signal.signal(signal.SIGTERM, lambda a, b: None)
         os.killpg(os.getpgid(0), signal.SIGTERM)
+        print ''

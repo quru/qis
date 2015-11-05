@@ -165,12 +165,15 @@ The installation should look like this:
 	$ ls -l /opt/qis/
 	total 40
 	drwxr-xr-x 2 qis apache 4096 May  22 10:27 conf
+	drwxr-xr-x 2 qis apache 4096 May  22 10:27 deploy
 	drwxr-xr-x 2 qis apache 4096 May  22 10:27 doc
 	drwxr-xr-x 2 qis apache 4096 May  22 10:27 icc
 	drwxr-xr-x 3 qis apache 4096 May  22 10:27 images
 	drwxr-xr-x 3 qis apache 4096 May  22 10:27 lib
 	drwxr-xr-x 2 qis apache 4096 May  22 10:27 licences
 	drwxr-xr-x 2 qis apache 4096 May  22 10:27 logs
+	-rw-r--r-- 1 qis apache  440 May  22 10:27 setup.cfg
+	-rw-r--r-- 1 qis apache 1076 May  22 10:27 setup.py
 	drwxr-xr-x 5 qis apache 4096 May  22 10:27 src
 
 ## Install Apache and friends

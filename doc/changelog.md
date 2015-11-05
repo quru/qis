@@ -33,15 +33,10 @@ _Breaking change: move image templates into the database_
 
 Update the Python and web code  
 Update the Python dependencies  
-If there are any user-defined image templates (apart from the defaults
-_Precache_ and _SmallJpeg_), import these into the database:
+Import the existing image templates into the database:
 
 	cd src/imageserver/scripts
-	sudo -u qis python import_templates.py
-
-Delete the local template files:
-
-	sudo -u qis rm -rf /opt/qis/templates
+	sudo -u qis python v2_upgrade.py
 
 From `local_settings.py`, delete the setting `TEMPLATES_BASE_DIR` (if present)
 
@@ -58,7 +53,7 @@ Stop the Apache service
 Update the Python and web code  
 Update the Python dependencies  
 Restart the Memcached service  
-Optional: drop the `cachectl` table
+Optional: drop the `cachectl` table [note! v2_upgrade.py will do this]
 Start the Apache service
 
 
