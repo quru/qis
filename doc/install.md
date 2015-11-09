@@ -188,8 +188,8 @@ process by adding a few lines to the file `/etc/sysconfig/httpd`:
 
 	# These entries resolve Python error "ascii codec can't decode byte"
 	# when dealing with files and directories that contain non-ascii characters
-	export LANG="en_GB.UTF-8"
-	export LC_ALL="en_GB.UTF-8"
+	LANG=en_GB.UTF-8
+	LC_ALL=en_GB.UTF-8
 
 Create Apache configuration files to run QIS:
 
