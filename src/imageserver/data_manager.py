@@ -1708,13 +1708,12 @@ class DataManager(object):
                         'SmallJpeg',
                         'Defines a 200x200 JPG image that would be suitable for '
                         'use as a thumbnail image on a web site.', {
-                            'filename': 'SmallJpeg',
-                            'format': 'jpg',
-                            'quality': 80,
-                            'width': 200,
-                            'height': 200,
-                            'strip': True,
-                            'colorspace': 'rgb'
+                            'format': {'value': 'jpg'},
+                            'quality': {'value': 80},
+                            'width': {'value': 200},
+                            'height': {'value': 200},
+                            'strip': {'value': True},
+                            'colorspace': {'value': 'rgb'}
                         }
                     ))
                     # Create sample Precache template
@@ -1725,11 +1724,10 @@ class DataManager(object):
                         'the pre-cache utility to warm the cache with smaller versions '
                         'of images so that e.g. thumbnails are faster to produce from then '
                         'on.', {
-                            'filename': 'Precache',
-                            'width': 800,
-                            'height': 600,
-                            'size_fit': True,
-                            'record_stats': False
+                            'width': {'value': 800},
+                            'height': {'value': 600},
+                            'size_fit': {'value': True},
+                            'record_stats': {'value': False}
                         }
                     ))
                     self.save_object(Property(Property.IMAGE_TEMPLATES_VERSION, '1'))

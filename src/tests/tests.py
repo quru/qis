@@ -1927,32 +1927,33 @@ class ImageServerTestsFast(BaseTestCase):
         self.assertEqual(rv.status_code, 200)
         self.assertIn('image/jpeg', rv.headers['Content-Type'])
         # Test format from template
-        update_db_template(db_template, {'format': 'png'})
+        update_db_template(db_template, {'format': {'value': 'png'}})
         self.assertIn(template, im.get_template_names())
         rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template)
         self.assertEqual(rv.status_code, 200)
         self.assertIn('image/png', rv.headers['Content-Type'])
         original_len = len(rv.data)
         # Test cropping from template makes it smaller
-        update_db_template(db_template, {'top': 0.1, 'left': 0.1, 'bottom': 0.9, 'right': 0.9})
+        update_db_template(db_template, {'top': {'value': 0.1}, 'left': {'value': 0.1},
+                                         'bottom': {'value': 0.9}, 'right': {'value': 0.9}})
         rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template)
         self.assertEqual(rv.status_code, 200)
         cropped_len = len(rv.data)
         self.assertLess(cropped_len, original_len)
         # Test stripping the EXIF data makes it smaller again 2
-        update_db_template(db_template, {'strip': True})
+        update_db_template(db_template, {'strip': {'value': True}})
         rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template)
         self.assertEqual(rv.status_code, 200)
         stripped_len = len(rv.data)
         self.assertLess(stripped_len, cropped_len)
         # Test resizing it small makes it smaller again 3
-        update_db_template(db_template, {'width': 500, 'height': 500})
+        update_db_template(db_template, {'width': {'value': 500}, 'height': {'value': 500}})
         rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template)
         self.assertEqual(rv.status_code, 200)
         resized_len = len(rv.data)
         self.assertLess(resized_len, stripped_len)
         # And that auto-fitting the crop then makes it slightly larger
-        update_db_template(db_template, {'crop_fit': True})
+        update_db_template(db_template, {'crop_fit': {'value': True}})
         rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template)
         self.assertEqual(rv.status_code, 200)
         autofit_crop_len = len(rv.data)
@@ -1962,11 +1963,11 @@ class ImageServerTestsFast(BaseTestCase):
         rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template)
         self.assertEqual(rv.headers.get('Expires'), http_date(int(time.time() + 99)))
         # Test expiry settings from template
-        update_db_template(db_template, {'expiry_secs': -1})
+        update_db_template(db_template, {'expiry_secs': {'value': -1}})
         rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template)
         self.assertEqual(rv.headers.get('Expires'), http_date(0))
         # Test attachment settings from template
-        update_db_template(db_template, {'attachment': True})
+        update_db_template(db_template, {'attachment': {'value': True}})
         rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template)
         self.assertIsNotNone(rv.headers.get('Content-Disposition'))
         self.assertIn('attachment', rv.headers['Content-Disposition'])
@@ -3253,45 +3254,45 @@ class UtilityTests(unittest.TestCase):
 
     def test_template_attrs_serialisation(self):
         # Test the standard constructor
-        ta = TemplateAttrs(
-            ImageAttrs('abcdef', -1, width=1000, height=1000),
-            expiry_secs=50000,
-            record_stats=True
-        )
-        ta_dict = ta.to_dict()
+        ta = TemplateAttrs('abcdef', {
+            'width': {'value': 1000},
+            'height': {'value': 1000},
+            'expiry_secs': {'value': 50000},
+            'record_stats': {'value': True}
+        })
+        self.assertEqual(ta.name(), 'abcdef')
+        self.assertEqual(ta.get_image_attrs().filename(), 'abcdef')
+        self.assertEqual(ta.expiry_secs(), 50000)
+        self.assertEqual(ta.record_stats(), True)
+        self.assertIsNone(ta.attachment())
+        # Test values dict
+        ta_dict = ta.get_values_dict()
         self.assertEqual(ta_dict['filename'], 'abcdef')
         self.assertEqual(ta_dict['width'], 1000)
         self.assertEqual(ta_dict['expiry_secs'], 50000)
         self.assertEqual(ta_dict['record_stats'], True)
-        rev = TemplateAttrs.from_dict('abcdef', ta_dict)
-        rev_dict = rev.to_dict()
-        self.assertEqual(ta_dict, rev_dict)
-        # Test the dictionary constructor
-        good_dict = {
-            'filename': 'abcdef',
-            'expiry_secs': 50000,
-            'record_stats': True
-        }
-        ta = TemplateAttrs.from_dict('abcdef', good_dict)
-        self.assertEqual(ta.image_attrs.filename(), 'abcdef')
-        self.assertEqual(ta.expiry_secs(), 50000)
-        self.assertEqual(ta.record_stats(), True)
-        self.assertIsNone(ta.attachment())
 
     def test_template_attrs_bad_serialisation(self):
+        # Old dict format
         bad_dict = {
             'filename': 'some/path',
-            'expiry_secs': -2
+            'expiry_secs': 50000
         }
-        self.assertRaises(ValueError, TemplateAttrs.from_dict, '', bad_dict)
+        self.assertRaises(ValueError, TemplateAttrs, 'badtemplate', bad_dict)
+        # New dict format, bad values
         bad_dict = {
-            'filename': 'some/path',
-            'expiry_secs': 'not an int'
+            'filename': {'value': 'some/path'},
+            'expiry_secs': {'value': -2}
         }
-        self.assertRaises(ValueError, TemplateAttrs.from_dict, '', bad_dict)
+        self.assertRaises(ValueError, TemplateAttrs, 'badtemplate', bad_dict)
         bad_dict = {
-            'filename': 'some/path',
-            'expiry_secs': 50000,
-            'record_stats': 'not a bool'
+            'filename': {'value': 'some/path'},
+            'expiry_secs': {'value': 'not an int'}
         }
-        self.assertRaises(ValueError, TemplateAttrs.from_dict, '', bad_dict)
+        self.assertRaises(ValueError, TemplateAttrs, 'badtemplate', bad_dict)
+        bad_dict = {
+            'filename': {'value': 'some/path'},
+            'expiry_secs': {'value': 50000},
+            'record_stats': {'value': 'not a bool'}
+        }
+        self.assertRaises(ValueError, TemplateAttrs, 'badtemplate', bad_dict)

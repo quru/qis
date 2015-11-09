@@ -48,10 +48,11 @@ alert("The value for "+a.name+" must be a number.");return false;}});TemplateEdi
 };TemplateEdit.onSubmitError=function(a,c){GenericPopup.enableButtons();var b=getAPIError(a,c);if(b.status==APICodes.ALREADY_EXISTS){form_setError("name");
 alert("A template with this name already exists, please choose another name.");}else{alert("Sorry, your changes were not saved.\n\n"+b.message);
 }};TemplateEdit.onFileSelected=function(a){$("publish_field_overlay_src").value=a;};TemplateEdit.setTemplateJSON=function(){var a={};
-$$(".publish_field").each(function(c){var b=c.id.substring(14);if(c.type==="checkbox"){a[b]=c.checked;
-}else{if(c.type==="number"){a[b]=(c.value&&!isNaN(parseFloat(c.value)))?parseFloat(c.value):null;}else{if(c.selectedIndex!==undefined&&c.options!==undefined){a[b]=(c.selectedIndex>=0)?c.options[c.selectedIndex].value:null;
-}else{a[b]=c.value;}}}});if(a.autofill){a.fill="auto";}if(a.transfill){a.fill="none";}delete a.autofill;
-delete a.transfill;$("template").value=JSON.stringify(a);};TemplateEdit.onFillChanged=function(){$("publish_field_autofill").checked=false;
+$$(".publish_field").each(function(d){var b=d.id.substring(14);if(d.type==="checkbox"){a[b]={value:d.checked};
+}else{if(d.type==="number"){var e=(d.value&&!isNaN(parseFloat(d.value)))?parseFloat(d.value):null;a[b]={value:e};
+}else{if(d.selectedIndex!==undefined&&d.options!==undefined){var c=(d.selectedIndex>=0)?d.options[d.selectedIndex].value:null;
+a[b]={value:c};}else{a[b]={value:d.value};}}}});if(a.autofill["value"]){a.fill["value"]="auto";}if(a.transfill["value"]){a.fill["value"]="none";
+}delete a.autofill;delete a.transfill;$("template").value=JSON.stringify(a);};TemplateEdit.onFillChanged=function(){$("publish_field_autofill").checked=false;
 $("publish_field_transfill").checked=false;};TemplateEdit.onAutoFillChanged=function(){if(this.checked){$("publish_field_transfill").checked=false;
 $("publish_field_fill").value="#ffffff";}};TemplateEdit.onTransFillChanged=function(){if(this.checked){$("publish_field_autofill").checked=false;
 $("publish_field_fill").value="#ffffff";}};TemplateEdit.onBrowseOverlay=function(){popup_iframe($(this).getProperty("data-browse-url"),575,650);

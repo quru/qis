@@ -549,10 +549,10 @@ as described in the [imaging guide](image_help.md#option_tmp).
 * For `POST` and `PUT`:
 	* `name` - Mandatory, text - A unique name for the template
 	* `description` - Mandatory, text - A description for the template
-	* `template` - Mandatory, JSON text - A set of field/value pairs containing the
-	    imaging operations that define the template. See the examples below for
-	    the list of possible field names. Values to remain unchanged can either
-	    be set to `null` or omitted from the JSON.
+	* `template` - Mandatory, JSON text - A set of field/value-object pairs
+	    that define the preset imaging operations. See the examples below for
+	    the list of possible field names. Fields to remain unchanged can either
+	    have their values set to `null` or simply be omitted from the JSON.
 
 ### Permissions required
 * None for `GET`
@@ -579,38 +579,38 @@ more recent versions of the software.
 	    "id": 1,
 	    "name": "SmallJpeg",
 	    "template": {
-	      "align_h": null,
-	      "align_v": null,
-	      "attachment": null,
-	      "bottom": null,
-	      "colorspace": "rgb",
-	      "crop_fit": null,
-	      "dpi_x": null,
-	      "dpi_y": null,
-	      "expiry_secs": null,
-	      "fill": null,
-	      "flip": null,
-	      "format": "jpg",
-	      "height": 200,
-	      "icc_bpc": null,
-	      "icc_intent": null,
-	      "icc_profile": null,
-	      "left": null,
-	      "overlay_opacity": null,
-	      "overlay_pos": null,
-	      "overlay_size": null,
-	      "overlay_src": null,
-	      "page": null,
-	      "quality": 80,
-	      "record_stats": null,
-	      "right": null,
-	      "rotation": null,
-	      "sharpen": null,
-	      "size_fit": null,
-	      "strip": true,
-	      "tile": null,
-	      "top": null,
-	      "width": 200
+	      "align_h": { "value": "C0.5" },
+	      "align_v": { "value": "C0.5" },
+	      "attachment": { "value": false },
+	      "bottom": { "value": null },
+	      "colorspace": { "value": "rgb" },
+	      "crop_fit": { "value": false },
+	      "dpi_x": { "value": null },
+	      "dpi_y": { "value": null },
+	      "expiry_secs": { "value": null },
+	      "fill": { "value": "#ffffff" },
+	      "flip": { "value": "" },
+	      "format": { "value": "jpg" },
+	      "height": { "value": 200 },
+	      "icc_bpc": { "value": false },
+	      "icc_intent": { "value": "" },
+	      "icc_profile": { "value": "" },
+	      "left": { "value": null },
+	      "overlay_opacity": { "value": null },
+	      "overlay_pos": { "value": "" },
+	      "overlay_size": { "value": null },
+	      "overlay_src": { "value": "" },
+	      "page": { "value": null },
+	      "quality": { "value": 80 },
+	      "record_stats": { "value": false },
+	      "right": { "value": null },
+	      "rotation": { "value": null },
+	      "sharpen": { "value": null },
+	      "size_fit": { "value": false },
+	      "strip": { "value": true },
+	      "tile": { "value": null },
+	      "top": { "value": null },
+	      "width": { "value": 200 }
 	    }
 	  },
 	  "message": "OK",
@@ -619,7 +619,7 @@ more recent versions of the software.
 
 	$ curl -X POST -u <token>:unused -F 'name=grey-thumb' \
 	       -F 'description=Defines a greyscale thumbnail with a black fill' \
-	       -F 'template={ "colorspace":"grey", "width":400, "height":400, "fill":"black" }' \
+	       -F 'template={ "colorspace":{"value":"grey"}, "width":{"value":400}, "height":{"value":400}, "fill":{"value":"black"} }' \
 	       'https://images.example.com/api/v1/admin/templates/'
 	{
 	  "data": {
@@ -627,38 +627,10 @@ more recent versions of the software.
 	    "id": 3,
 	    "name": "grey-thumb",
 	    "template": {
-	      "align_h": null,
-	      "align_v": null,
-	      "attachment": null,
-	      "bottom": null,
-	      "colorspace": "gray",
-	      "crop_fit": null,
-	      "dpi_x": null,
-	      "dpi_y": null,
-	      "expiry_secs": null,
-	      "fill": "black",
-	      "flip": null,
-	      "format": null,
-	      "height": 400,
-	      "icc_bpc": null,
-	      "icc_intent": null,
-	      "icc_profile": null,
-	      "left": null,
-	      "overlay_opacity": null,
-	      "overlay_pos": null,
-	      "overlay_size": null,
-	      "overlay_src": null,
-	      "page": null,
-	      "quality": null,
-	      "record_stats": null,
-	      "right": null,
-	      "rotation": null,
-	      "sharpen": null,
-	      "size_fit": null,
-	      "strip": null,
-	      "tile": null,
-	      "top": null,
-	      "width": 400
+	      "colorspace": { "value": "grey" },
+	      "fill": { "value": "black" },
+	      "height": { "value": 400 },
+	      "width": { "value": 400 }
 	    }
 	  },
 	  "message": "OK",

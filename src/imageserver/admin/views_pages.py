@@ -87,20 +87,24 @@ def template_edit(template_id):
     embed = request.args.get('embed', '')
     fields = None
     field_values = None
-    template = None
+    db_template = None
     err_msg = None
     try:
         if template_id > 0:
-            template = data_engine.get_image_template(template_id)
+            db_template = data_engine.get_image_template(template_id)
 
         # See also views_pages.publish
         fields = ImageAttrs.validators().copy()
         fields.update(TemplateAttrs.validators())
         # ...but here we use the template values as field values
-        field_values = template.template if template else {
+        if db_template:
+            template = TemplateAttrs(db_template.name, db_template.template)
+            field_values = template.get_values_dict()
+        else:
             # New template defaults
-            'record_stats': True
-        }
+            field_values = {
+                'record_stats': True
+            }
 
     except Exception as e:
         log_security_error(e, request)
@@ -110,7 +114,7 @@ def template_edit(template_id):
         fields=fields,
         field_values=field_values,
         embed=embed,
-        template=template,
+        template=db_template,
         err_msg=err_msg
     )
 

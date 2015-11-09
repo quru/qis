@@ -1,10 +1,17 @@
-# v2.1.0-dev
+# v2.1.x-dev
 _Breaking change: remove default image settings, add default image templates,
 add image parameter override controls (phase 1)_
 
 TODO
 
-For a full discussion of this change, see [v2/Default-templates.txt](./v2/Default-templates.txt).
+For a full discussion of this change,
+see [v2/Default-templates.txt](./v2/Default-templates.txt).
+
+# v2.1.0-dev
+_Changes: change template storage JSON format_
+
+Templates created since 2.0.1-dev will need to be re-created or re-imported
+with `v2_upgrade.py`.
 
 # v2.0.7-dev
 _Changes: Merge from v1.41 - updated qismagick.so to flatten XCF/PSD files_

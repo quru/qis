@@ -101,9 +101,11 @@ class ImageManager(object):
         # Apply template values if required, using override False
         # so that web params take precedence over template values
         if image_attrs.template():
-            template_dict = self._templates.get_template_dict(image_attrs.template())
-            if template_dict:
-                image_attrs.apply_dict(template_dict, False, False, False)
+            template_attrs = self._templates.get_template(image_attrs.template())
+            if template_attrs:
+                image_attrs.apply_dict(
+                    template_attrs.get_values_dict(), False, False, False
+                )
         # Apply system default values for anything still not set
         self._apply_defaults(image_attrs)
         # Lastly wipe any redundant values so we get more consistent cache keys
@@ -303,7 +305,7 @@ class ImageManager(object):
             ImageAttrs(image_attrs.filename(), image_attrs.database_id()),
             False,
             self.get_image_original_modified_time(image_attrs),
-            self._get_expiry_secs(image_attrs)
+            self._get_expiry_secs(None)
         )
 
     def get_image(self, image_attrs, cache_result=True):
@@ -452,10 +454,14 @@ class ImageManager(object):
             modified_time = time.time()
             self._cache_image_metadata(image_attrs, modified_time)
 
+        # Get default handling options from template (if any) else system defaults
+        template_attrs = self.get_template(image_attrs.template()) \
+            if image_attrs.template() else None
+        expiry_secs = self._get_expiry_secs(template_attrs)
+        attachment = self._get_attachment_setting(template_attrs)
+        do_stats = self._get_stats_setting(template_attrs)
+
         # Return the requested image
-        expiry_secs = self._get_expiry_secs(image_attrs)
-        attachment = self._get_attachment_setting(image_attrs)
-        do_stats = self._get_stats_setting(image_attrs)
         return ImageWrapper(
             ret_image_data,
             image_attrs,
@@ -1048,39 +1054,36 @@ class ImageManager(object):
             # There are no attributes to change
             return base_image_data
 
-    def _get_expiry_secs(self, image_attrs):
+    def _get_expiry_secs(self, template_attrs):
         """
         Returns the HTTP expiry / cache control time in seconds for an image.
         This value is determined by the image template if there is one and the
         expiry value is set, else by the image server global setting.
         """
-        if image_attrs.template():
-            template = self.get_template(image_attrs.template())
-            template_expiry = template.expiry_secs()
+        if template_attrs:
+            template_expiry = template_attrs.expiry_secs()
             if template_expiry is not None:
                 return template_expiry
         return self._settings['IMAGE_EXPIRY_TIME_DEFAULT']
 
-    def _get_attachment_setting(self, image_attrs):
+    def _get_attachment_setting(self, template_attrs):
         """
-        Returns True if the image attributes specify a template with the
-        attachment setting enabled, otherwise False.
+        Returns True if the image template has the attachment setting enabled,
+        otherwise False.
         """
-        if image_attrs.template():
-            template = self.get_template(image_attrs.template())
-            if template.attachment():
-                return True
+        if template_attrs and template_attrs.attachment():
+            return True
         return False
 
-    def _get_stats_setting(self, image_attrs):
+    def _get_stats_setting(self, template_attrs):
         """
-        Returns True unless the image attributes specify a template with the
-        stats setting disabled.
+        Returns the stats setting from the image template if there is one,
+        otherwise True.
         """
-        if image_attrs.template():
-            template = self.get_template(image_attrs.template())
-            if template.record_stats() is not None:
-                return template.record_stats()
+        if template_attrs:
+            template_stats = template_attrs.record_stats()
+            if template_stats is not None:
+                return template_stats
         return True
 
     def _apply_defaults(self, image_attrs):

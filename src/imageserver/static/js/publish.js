@@ -349,19 +349,17 @@ Publisher.refreshTemplateInfo = function(el, jsonObj) {
 	
 	// If this data is for the currently selected template
 	if (t && (tObj.id === parseInt(tempVal))) {
-		// Remove any fields we don't want to show
-		delete t.filename;
 		// Show the list of key:value items in the template
 		el.empty();
 		for (var attr in t) {
-			if (t[attr] !== null) {
+			if (t[attr] && t[attr].value !== null && t[attr].value !== '') {
 				var attr_name = PublisherText[attr];
 				if (attr_name === undefined)
 					attr_name = attr.charAt(0).toUpperCase() + attr.substring(1);
 				el.grab(new Element('div', {
 					'id': 'template_field_' + attr,
-					'data-value': t[attr],
-					'text': attr_name + ': ' + t[attr]
+					'data-value': t[attr].value,
+					'text': attr_name + ': ' + t[attr].value
 				}));
 			}
 		}

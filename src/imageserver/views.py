@@ -485,7 +485,10 @@ def make_304_response(image_attrs, is_original, last_modified_time):
         response,
         image_attrs,
         last_modified_time,
-        image_engine._get_expiry_secs(image_attrs)
+        image_engine._get_expiry_secs(
+            image_engine.get_template(image_attrs.template())
+            if image_attrs.template() else None
+        )
     )
 
     if app.config['DEBUG']:
@@ -575,8 +578,8 @@ def _public_image_limits_pre_image_checks(req_width, req_height, req_autosizefit
         if req_template:
             try:
                 templ = image_engine.get_template(req_template)
-                template_w = templ.image_attrs.width() or 0
-                template_h = templ.image_attrs.height() or 0
+                template_w = templ.get_image_attrs().width() or 0
+                template_h = templ.get_image_attrs().height() or 0
             except ValueError:
                 # Validation (yet to come) will reject the bad template name
                 pass

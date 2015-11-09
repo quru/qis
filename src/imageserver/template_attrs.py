@@ -27,6 +27,7 @@
 # Notable modifications:
 # Date       By    Details
 # =========  ====  ============================================================
+# 05Nov2015  Matt  v2 Change template values to be expandable objects
 #
 
 from image_attrs import BooleanValidator, RangeValidator, ImageAttrs
@@ -34,57 +35,102 @@ from image_attrs import BooleanValidator, RangeValidator, ImageAttrs
 
 class TemplateAttrs(object):
     """
-    Class to hold an image template definition, that is a set of desired image
-    attributes together with optional handling settings.
+    Class to hold an image template definition,
+    that is a reusable set of image attributes, handling options, and meta data.
+    The attribute names are the same as those defined for ImageAttrs,
+    plus extra handling fields:
+
+      expiry_secs - suggested HTTP caching period
+      attachment - whether to flag as HTTP download instead of inline
+      record_stats - whether to record image level usage stats
+
+    The expected dictionary format is currently:
+    {
+        "width": { "value": 800 },
+        "flip": { "value": "v" },
+        "attachment": { "value": False },
+    }
+    Later versions are expected to add new elements alongside "value".
     """
-    def __init__(self, image_attrs, expiry_secs=None, attachment=None, record_stats=None):
+    def __init__(self, name, template_dict=None):
         """
-        Constructs a new template object.
-        See the ImageAttrs class and this class's methods for allowed parameter values.
-        """
-        self.image_attrs = image_attrs
-        self.image_attrs.normalise_values()
-        self._expiry_secs = expiry_secs
-        self._attachment = attachment
-        self._record_stats = record_stats
-
-    @staticmethod
-    def from_dict(name, attr_dict):
-        """
-        Returns a new TemplateAttrs, populated from the given dictionary
-        and validated. This is the opposite of to_dict().
+        Constructs a new template object,
+        optionally populated from the given dictionary and validated.
         Raises a ValueError if any of the dictionary values fail validation.
         """
-        new_obj = TemplateAttrs(ImageAttrs(name))
-        new_obj.apply_dict(attr_dict, True, True)
-        return new_obj
+        self._name = name
+        if template_dict:
+            self._set_template_dict(template_dict)
+        else:
+            self._template = {}
+            self._image_attrs = ImageAttrs(name)
+            self._memo_values = None
 
-    def to_dict(self):
+    def _set_template_dict(self, template_dict):
         """
-        Returns a dictionary of fields and values represented by this object.
-        This is the opposite of from_dict().
+        Sets this template from the content of a dictionary as described in the
+        class documentation. Raises a ValueError if any of the dictionary
+        values fail validation.
         """
-        dct = self.image_attrs.to_dict()
-        for attr in TemplateAttrs.validators().iterkeys():
-            dct[attr] = getattr(self, "_%s" % attr)
-        return dct
+        # Start with provisional values
+        self._template = template_dict.copy()
+        self._image_attrs = ImageAttrs(self._name)
+        self._memo_values = None
+        try:
+            # We need to populate our ImageAttrs from a raw key/value dict
+            raw_dict = dict((k, v['value']) for (k, v) in self._template.iteritems())
+        except (KeyError, TypeError):
+            raise ValueError('Bad template dictionary format (refer to TemplateAttrs)')
+        # Set normalise=False so that we keep all assigned template values
+        #     otherwise e.g. fill=white, page=1 would be removed
+        self._image_attrs.apply_dict(raw_dict, True, validate=False, normalise=False)
+        # Now ImageAttrs did round the floats and lower case (many of) the strings.
+        # A few places rely on this, so we need to copy the changed values back again.
+        raw_dict = self.get_values_dict()
+        for (k, v) in raw_dict.iteritems():
+            if k in self._template:
+                self._template[k]['value'] = v
+            elif v is not None:
+                self._template[k] = {'value': v}
+        # Finally validate the result
+        self.validate()
 
-    def apply_dict(self, attr_dict, override_values=True, validate=True):
+    def get_template_dict(self):
         """
-        Applies a set template attributes to this object from a dictionary.
-        If override_values is False, each new attribute value will only
-        be applied if there is no existing value for that attribute.
-        Raises a ValueError if any of the dictionary values fail validation.
+        Returns the full template definition as a dictionary as described in
+        the class documentation. This may differ from the dictionary originally
+        provided in the constructor, e.g. by containing "blank" entries and
+        normalised values. Do not modify the returned object.
         """
-        self.image_attrs.apply_dict(attr_dict, override_values, validate=False)
-        for attr in TemplateAttrs.validators().iterkeys():
-            dict_val = attr_dict.get(attr)
-            if dict_val is not None and dict_val != '':
-                obj_key = "_%s" % attr
-                if override_values or getattr(self, obj_key) is None:
-                    setattr(self, obj_key, dict_val)
-        if validate:
-            self.validate()
+        return self._template
+
+    def get_values_dict(self):
+        """
+        Returns a dictionary of the field/value pairs defined by this template.
+        This dictionary is compatible with the to_dict() and from_dict() methods
+        of ImageAttrs, but also includes the additional fields described in the
+        class documentation. Do not modify the returned object.
+        """
+        if self._memo_values is None:
+            dct = self._image_attrs.to_dict()
+            for attr in TemplateAttrs.validators().iterkeys():
+                dct[attr] = self._get_value(attr, False)
+            self._memo_values = dct
+        return self._memo_values
+
+    def get_image_attrs(self):
+        """
+        Returns an ImageAttrs object containing only the image attributes and values
+        specified by this template. The extra template-only fields are not included.
+        Do not modify the returned object.
+        """
+        return self._image_attrs
+
+    def name(self):
+        """
+        Returns this template's name.
+        """
+        return self._name
 
     def expiry_secs(self):
         """
@@ -92,7 +138,7 @@ class TemplateAttrs(object):
         (0 for default handling, -1 to never cache), or None if the template
         does not specify a value.
         """
-        return self._expiry_secs
+        return self._get_value('expiry_secs', False)
 
     def attachment(self):
         """
@@ -100,20 +146,31 @@ class TemplateAttrs(object):
         the Save File As dialog in a web browser), False if the image should be
         served inline (the default), or None if the template does not specify a value.
         """
-        return self._attachment
+        return self._get_value('attachment', False)
 
     def record_stats(self):
         """
         Returns True if the image should be included in system statistics,
         False if not, or None if the template does not specify a value.
         """
-        return self._record_stats
+        return self._get_value('record_stats', False)
+
+    def _get_value(self, field_name, lowercase):
+        """
+        Returns a single field value from the template dictionary,
+        or None if the field name is not present.
+        """
+        tv = self._template.get(field_name)
+        val = tv['value'] if tv else None
+        if val and lowercase:
+            val = val.lower()
+        return val
 
     @staticmethod
     def validators():
         """
         Returns a dictionary mapping the internal field names of
-        this class to a validation class and web parameter name.
+        this class to a value validation class and web parameter name.
         E.g. { "expiry_secs": (RangeValidator(-1, 31536000), "expires"),
                "attachment": (BooleanValidator(), "attach"), ... }
         """
@@ -129,12 +186,12 @@ class TemplateAttrs(object):
         been given a value, are within allowed limits. This method raises a
         ValueError if a value is invalid, otherwise returns with no value.
         """
-        self.image_attrs.validate()
+        self._image_attrs.validate()
         try:
             field_name = ''
             for field_name, val_tuple in TemplateAttrs.validators().iteritems():
                 validator = val_tuple[0]
-                val = getattr(self, "_%s" % field_name)
+                val = self._get_value(field_name, False)
                 if val is not None:
                     validator(val)
         except ValueError as e:

@@ -156,18 +156,20 @@ TemplateEdit.setTemplateJSON = function() {
 	$$('.publish_field').each(function(el) {
 		var key = el.id.substring(14);  // Strip "publish_field_" from "publish_field_key"
 		if (el.type === "checkbox") {
-			values[key] = el.checked;
+			values[key] = {'value': el.checked};
 		} else if (el.type === "number") {
-			values[key] = (el.value && !isNaN(parseFloat(el.value))) ? parseFloat(el.value) : null;
+			var nval = (el.value && !isNaN(parseFloat(el.value))) ? parseFloat(el.value) : null;
+			values[key] = {'value': nval};
 		} else if (el.selectedIndex !== undefined && el.options !== undefined) {
-			values[key] = (el.selectedIndex >= 0) ? el.options[el.selectedIndex].value : null;
+			var sval = (el.selectedIndex >= 0) ? el.options[el.selectedIndex].value : null;
+			values[key] = {'value': sval};
 		} else {
-			values[key] = el.value;
+			values[key] = {'value': el.value};
 		}
 	});
 	// Special field handling - fill
-	if (values['autofill']) values['fill'] = 'auto';
-	if (values['transfill']) values['fill'] = 'none';
+	if (values['autofill']['value']) values['fill']['value'] = 'auto';
+	if (values['transfill']['value']) values['fill']['value'] = 'none';
 	delete values['autofill'];
 	delete values['transfill'];
 	// Set template hidden value

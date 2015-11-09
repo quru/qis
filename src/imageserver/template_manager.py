@@ -123,14 +123,6 @@ class ImageTemplateManager(object):
         tdata = self._template_cache.get(name.lower())
         return tdata['db_obj'] if tdata is not None else None
 
-    def get_template_dict(self, name):
-        """
-        Returns a dictionary representing the TemplateAttrs object with the given
-        name (case insensitive), or None if no template matches the name.
-        """
-        db_template = self.get_template_db_obj(name)
-        return db_template.template if db_template else None
-
     def reset(self):
         """
         Invalidates the cached template data by incrementing the database data
@@ -157,7 +149,7 @@ class ImageTemplateManager(object):
         for db_template in db_templates:
             try:
                 # Create a TemplateAttrs (this also validates the template values)
-                template_attrs = TemplateAttrs.from_dict(
+                template_attrs = TemplateAttrs(
                     db_template.name,
                     db_template.template
                 )

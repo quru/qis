@@ -226,7 +226,7 @@ class TemplateAPI(MethodView):
         }
         validate_string(params['name'], 1, 120)
         validate_string(params['description'], 0, 5 * 1024)
-        validate_string(params['template'], 2, 10 * 1024)
+        validate_string(params['template'], 2, 100 * 1024)
         # Validate the JSON syntax
         try:
             template_dict = json.loads(params['template'])
@@ -234,9 +234,9 @@ class TemplateAPI(MethodView):
             raise ValueError(u'template: ' + unicode(e))
         # Validate the JSON data values
         self._del_keys(template_dict, TemplateAPI.HIDE_FIELDS)
-        template_attrs = TemplateAttrs.from_dict(params['name'], template_dict)
+        template_attrs = TemplateAttrs(params['name'], template_dict)
         # Return the template as a validated dict
-        params['template'] = template_attrs.to_dict()
+        params['template'] = template_attrs.get_template_dict()
         return params
 
     def _del_keys(self, dct, keys_list):

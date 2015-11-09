@@ -312,7 +312,7 @@ class ImageAttrs():
 
     def template(self):
         """
-        Returns the template attribute if it was supplied, or None
+        Returns the template name attribute if it was supplied, or None
         """
         return self._template
 
@@ -586,7 +586,7 @@ class ImageAttrs():
         """
         try:
             for (attr, validator, web_attr) in ImageAttrs.validators_flat():
-                val = getattr(self, "_%s" % attr)
+                val = getattr(self, "_" + attr)
                 if val is not None:
                     validator(val)
         except ValueError as e:
@@ -996,7 +996,7 @@ class ImageAttrs():
         """
         dct = {}
         for attr, _, _ in ImageAttrs.validators_flat():
-            dct[attr] = getattr(self, "_%s" % attr)
+            dct[attr] = getattr(self, "_" + attr)
         return dct
 
     def apply_dict(self, attr_dict, override_values=True, validate=True, normalise=True):
@@ -1009,7 +1009,7 @@ class ImageAttrs():
         for attr, _, _ in ImageAttrs.validators_flat():
             dict_val = attr_dict.get(attr)
             if dict_val is not None and dict_val != '':
-                obj_key = "_%s" % attr
+                obj_key = "_" + attr
                 if override_values or getattr(self, obj_key) is None:
                     setattr(self, obj_key, dict_val)
         self._normalise_strings()

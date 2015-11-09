@@ -131,12 +131,21 @@ def import_templates():
 
             # Get handling options and create the TemplateAttrs object
             section = 'BrowserOptions'
-            template_attrs = TemplateAttrs(
-                t_image_attrs,
-                _config_get(cp, cp.getint, section, 'expiry'),
-                _config_get(cp, cp.getboolean, section, 'attach'),
-                t_stats
-            )
+            t_expiry = _config_get(cp, cp.getint, section, 'expiry')
+            t_attach = _config_get(cp, cp.getboolean, section, 'attach')
+
+            # Create the TemplateAttrs object
+            template_dict = {
+                'expiry_secs': {'value': t_expiry},
+                'attachment': {'value': t_attach},
+                'record_stats': {'value': t_stats}
+            }
+            ia_dict = t_image_attrs.to_dict()
+            template_dict.update(dict(
+                (k, {'value': v}) for k, v in ia_dict.iteritems()
+                if k not in ['filename', 'template']
+            ))
+            template_attrs = TemplateAttrs(template_name, template_dict)
 
             # Validate
             template_attrs.validate()
@@ -148,7 +157,7 @@ def import_templates():
                 data_engine.save_object(ImageTemplate(
                     template_name,
                     'Imported template',
-                    template_attrs.to_dict()
+                    template_attrs.get_template_dict()
                 ))
             else:
                 log('Skipped template \'%s\' as it already exists' % template_name)
