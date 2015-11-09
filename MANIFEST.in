@@ -9,3 +9,4 @@ include templates/*.cfg
 recursive-include src/imageserver *.css *.js *.png *.gif *.bmp *.ico *.jpg *.jpeg *.sass *.scss *.html *.htm *.txt
 recursive-exclude src/tests *
 include src/wsgi/*
+exclude MANIFEST.in

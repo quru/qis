@@ -163,14 +163,18 @@ Create the QIS base directory and install the files:
 The installation should look like this:
 
 	$ ls -l /opt/qis/
-	total 40
+	total 52
 	drwxr-xr-x 2 qis apache 4096 May  22 10:27 conf
+	drwxr-xr-x 2 qis apache 4096 May  22 10:27 deploy
 	drwxr-xr-x 2 qis apache 4096 May  22 10:27 doc
 	drwxr-xr-x 2 qis apache 4096 May  22 10:27 icc
 	drwxr-xr-x 3 qis apache 4096 May  22 10:27 images
 	drwxr-xr-x 3 qis apache 4096 May  22 10:27 lib
 	drwxr-xr-x 2 qis apache 4096 May  22 10:27 licences
 	drwxr-xr-x 2 qis apache 4096 May  22 10:27 logs
+	-rw-r--r-- 1 qis apache  311 May  22 10:27 PKG-INFO
+	-rw-r--r-- 1 qis apache  522 May  22 10:27 setup.cfg
+	-rw-r--r-- 1 qis apache 1077 May  22 10:27 setup.py	
 	drwxr-xr-x 5 qis apache 4096 May  22 10:27 src
 	drwxr-xr-x 2 qis apache 4096 May  22 10:27 templates
 

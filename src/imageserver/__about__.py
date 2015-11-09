@@ -27,8 +27,11 @@
 __tag__ = "QIS"
 __title__ = "Quru Image Server"
 __summary__ = "A high performance dynamic image server"
+__description__ = ("To learn more about Quru Image Server, "
+                   "please visit the project home page on GitHub or quru.com")
 __uri__ = "https://quru.com/qis/"
 __source_uri__ = "https://github.com/quru/qis"
+__platforms__ = ["Linux", "Unix", "Mac OSX"]
 
 __version__ = "1.41"
 
