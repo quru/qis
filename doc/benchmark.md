@@ -19,9 +19,10 @@ from.
 ## Set up
 
 To suppress HTTP 503 errors and allow the test script to clear cached images
-as it goes, add the following setting to your `local_settings.py` file.
+as it goes, add the `BENCHMARKING` setting to your `local_settings.py` file.
 Remember to remove it when you have finished:
 
+	DEBUG = False
 	BENCHMARKING = True
 
 At present you also need to clear the server's cache before each test run,

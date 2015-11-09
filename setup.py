@@ -12,9 +12,11 @@ setup(
     version=about["__version__"],
 
     description=about["__summary__"],
+    long_description=about["__description__"],
     license=about["__license__"],
     url=about["__uri__"],
     download_url=about["__source_uri__"],
+    platforms=about["__platforms__"],
 
     author=about["__author__"],
     author_email=about["__email__"],
