@@ -2498,8 +2498,8 @@ class ImageServerTestsFast(BaseTestCase):
         # We expect SQL:
         # 1) Cache miss looking for an exact cached version (issues a delete)
         # 2) Cache search looking for a base image to resize (issues a select)
-        # 3) Cache addition of the resized version (issues an insert)
-        EXPECT_SQL = 3
+        # 3) Cache addition of the resized version (issues a select then an insert)
+        EXPECT_SQL = 4
         assert sql_info['count'] == last_sql_count + EXPECT_SQL
         last_sql_count = sql_info['count']
         # Viewing that again should use cached data with no SQL

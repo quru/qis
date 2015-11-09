@@ -353,22 +353,7 @@ class CacheManager(object):
             db_session = self._db.Session()
             db_committed = False
             try:
-                # Try for an add
-                db_session.add(entry)
-                db_session.commit()
-                db_committed = True
-            except IntegrityError:
-                # Duplicate key, perform an update instead
-                db_session.rollback()
-                db_session.query(CacheEntry).filter(CacheEntry.key==entry.key).update({
-                    'valuesize': entry.valuesize,
-                    'searchfield1': entry.searchfield1,
-                    'searchfield2': entry.searchfield2,
-                    'searchfield3': entry.searchfield3,
-                    'searchfield4': entry.searchfield4,
-                    'searchfield5': entry.searchfield5,
-                    'metadata': entry.metadata
-                }, synchronize_session=False)
+                db_session.merge(entry)
                 db_session.commit()
                 db_committed = True
             finally:
