@@ -1,0 +1,121 @@
+Various code snippets to test the single process single thread performance
+of the QIS sub-systems.
+To be run from the application's root folder.
+Times below are with a default QIS config, all running locally over localhost TCP loopback.
+
+Setup:
+
+$ export PYTHONPATH=src:lib/python2.7/site-packages:lib64/python2.7/site-packages
+$ python
+
+Code snippets:
+
+###############################################################################
+
+# Test memcached raw get/set
+#
+import timeit
+number = 100000
+secs = timeit.timeit("""
+cache_engine.raw_put('testkey', value)
+assert cache_engine.raw_get('testkey') == value
+""", setup="""
+from imageserver.flask_app import cache_engine
+value = 1024*'A'
+""", number=number)
+print '%d read+write ops per second' % (number / secs)
+
+>>> 9578 read+write ops per second (Macbook Pro 2.7.10)
+>>> 15314 read+write ops per second (Power8 Python 2.7.5 gcc)
+>>> 15648 read+write ops per second (Power8 Python 2.7.10 gcc)
+>>> 15460 read+write ops per second (Power8 Python 2.7.10 IBM AT)
+
+###############################################################################
+
+# Test memcached managed get/set
+#
+import timeit
+number = 10000
+secs = timeit.timeit("""
+cache_engine.put('testkey', value)
+assert cache_engine.get('testkey') == value
+""", setup="""
+from imageserver.flask_app import cache_engine
+value = 1024*'A'
+""", number=number)
+print '%d read+write ops per second' % (number / secs)
+
+>>> 577 read+write ops per second (Macbook Pro 2.7.10)
+>>> 590 read+write ops per second (Power8 Python 2.7.5 gcc)
+>>> 673 read+write ops per second (Power8 Python 2.7.10 gcc)
+>>> 659 read+write ops per second (Power8 Python 2.7.10 IBM AT)
+
+###############################################################################
+
+# Test Postgres queries via SQLAlchemy SQL
+#
+import timeit
+number = 50000
+secs = timeit.timeit("""
+result = session.execute('select * from images where id=:idval', {'idval': id})
+row = result.first()
+assert row is not None
+id += 1
+if id > 5: id = 1
+""", setup="""
+from imageserver.flask_app import data_engine
+session = data_engine.db_get_session()
+id = 1
+""", number=number)
+print '%d reads per second' % (number / secs)
+
+>>> 3051 reads per second (Macbook Pro 2.7.10)
+>>> 3560 reads per second (Power8 Python 2.7.5 gcc)
+>>> 4081 reads per second (Power8 Python 2.7.10 gcc)
+>>> 4019 reads per second (Power8 Python 2.7.10 IBM AT)
+
+###############################################################################
+
+# Test Postgres queries via SQLAlchemy ORM
+# Note: not equivalent to SQL above because this also eager-loads image.folder
+#
+import timeit
+number = 10000
+secs = timeit.timeit("""
+image = data_engine.get_image(id, _db_session=session)
+assert image is not None
+id += 1
+if id > 5: id = 1
+""", setup="""
+from imageserver.flask_app import data_engine
+session = data_engine.db_get_session()
+id = 1
+""", number=number)
+print '%d object reads per second' % (number / secs)
+
+>>> 347 object reads per second (Macbook Pro 2.7.10)
+>>> 360 object reads per second (Power8 Python 2.7.5 gcc)
+>>> 424 object reads per second (Power8 Python 2.7.10 gcc)
+>>> 403 object reads per second (Power8 Python 2.7.10 IBM AT)
+
+###############################################################################
+
+# Test thumbnail image generation via qismagick/ImageMagick
+#
+import timeit
+number = 500
+secs = timeit.timeit("""
+thumb_data = imagemagick_adjust_image(image_data, 1, 'jpg', 300, 300, True, strip_info=True)
+assert thumb_data is not None
+""", setup="""
+from imageserver.flask_app import image_engine
+from imageserver.filesystem_manager import get_file_data
+from imageserver.imagemagick import imagemagick_adjust_image
+image_data = get_file_data('test_images/bear.jpg')
+""", number=number)
+print '%f image resizes per second' % (number / secs)
+
+>>> 3.330589 image resizes per second (Macbook Pro 2.7.10)
+>>> 3.971419 image resizes per second (Power8 Python 2.7.5 gcc)
+>>> 3.993531 image resizes per second (Power8 Python 2.7.10 gcc)
+>>> 4.070627 image resizes per second (Power8 Python 2.7.10 IBM AT)

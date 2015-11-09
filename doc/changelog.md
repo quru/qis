@@ -516,8 +516,8 @@ Specify the Python LANG to use under mod_wsgi, in either `/etc/sysconfig/httpd` 
 	# QIS
 	# These lines are required to avoid "ascii codec can't decode byte" errors
 	# when dealing with files and directories that contain non-ascii characters
-	export LANG="en_GB.UTF-8"
-	export LC_ALL="en_GB.UTF-8"
+	LANG=en_GB.UTF-8
+	LC_ALL=en_GB.UTF-8
 
 Update the Python and web code from SVN.  
 Stop the QIS service.  
