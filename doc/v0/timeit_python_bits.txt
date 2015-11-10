@@ -27,8 +27,8 @@ print '%d read+write ops per second' % (number / secs)
 
 >>> 9578 read+write ops per second (Macbook Pro 2.7.10)
 >>> 15314 read+write ops per second (Power8 Python 2.7.5 gcc)
->>> 15648 read+write ops per second (Power8 Python 2.7.10 gcc)
->>> 15460 read+write ops per second (Power8 Python 2.7.10 IBM AT)
+>>> 15649 read+write ops per second (Power8 Python 2.7.10 gcc)
+>>> 15594 read+write ops per second (Power8 Python 2.7.10 IBM AT)
 
 ###############################################################################
 
@@ -46,8 +46,8 @@ value = 1024*'A'
 print '%d read+write ops per second' % (number / secs)
 
 >>> 577 read+write ops per second (Macbook Pro 2.7.10)
->>> 590 read+write ops per second (Power8 Python 2.7.5 gcc)
->>> 673 read+write ops per second (Power8 Python 2.7.10 gcc)
+>>> 599 read+write ops per second (Power8 Python 2.7.5 gcc)
+>>> 674 read+write ops per second (Power8 Python 2.7.10 gcc)
 >>> 659 read+write ops per second (Power8 Python 2.7.10 IBM AT)
 
 ###############################################################################
@@ -70,9 +70,9 @@ id = 1
 print '%d reads per second' % (number / secs)
 
 >>> 3051 reads per second (Macbook Pro 2.7.10)
->>> 3560 reads per second (Power8 Python 2.7.5 gcc)
->>> 4081 reads per second (Power8 Python 2.7.10 gcc)
->>> 4019 reads per second (Power8 Python 2.7.10 IBM AT)
+>>> 3569 reads per second (Power8 Python 2.7.5 gcc)
+>>> 4096 reads per second (Power8 Python 2.7.10 gcc)
+>>> 4028 reads per second (Power8 Python 2.7.10 IBM AT)
 
 ###############################################################################
 
@@ -95,8 +95,8 @@ print '%d object reads per second' % (number / secs)
 
 >>> 347 object reads per second (Macbook Pro 2.7.10)
 >>> 360 object reads per second (Power8 Python 2.7.5 gcc)
->>> 424 object reads per second (Power8 Python 2.7.10 gcc)
->>> 403 object reads per second (Power8 Python 2.7.10 IBM AT)
+>>> 427 object reads per second (Power8 Python 2.7.10 gcc)
+>>> 416 object reads per second (Power8 Python 2.7.10 IBM AT)
 
 ###############################################################################
 
@@ -116,6 +116,6 @@ image_data = get_file_data('test_images/bear.jpg')
 print '%f image resizes per second' % (number / secs)
 
 >>> 3.330589 image resizes per second (Macbook Pro 2.7.10)
->>> 3.971419 image resizes per second (Power8 Python 2.7.5 gcc)
->>> 3.993531 image resizes per second (Power8 Python 2.7.10 gcc)
->>> 4.070627 image resizes per second (Power8 Python 2.7.10 IBM AT)
+>>> 4.063333 image resizes per second (Power8 Python 2.7.5 gcc)
+>>> 4.077407 image resizes per second (Power8 Python 2.7.10 gcc)
+>>> 4.159938 image resizes per second (Power8 Python 2.7.10 IBM AT)
