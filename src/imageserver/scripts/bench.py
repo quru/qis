@@ -32,12 +32,15 @@
 # Note: this script stands alone and can be run from anywhere that has Python
 #
 
-import multiprocessing
 import urllib2
 import os
 import sys
 import time
 
+from multiprocessing.pool import Pool, ThreadPool
+
+
+_PoolType = Pool  # or ThreadPool
 _vb = False
 
 RETURN_OK = 0
@@ -311,7 +314,7 @@ def make_requests(server_url, num_requests, cache_pct, num_clients,
 
     # Run the tests
     log('Creating clients, running tests')
-    pool = multiprocessing.Pool(num_clients)
+    pool = _PoolType(num_clients)
     start_time = time.time()
     results = pool.map(single_request, url_list)
     pool.close()
