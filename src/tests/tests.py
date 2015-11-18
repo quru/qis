@@ -993,19 +993,13 @@ class ImageServerTestsFast(BaseTestCase):
         assert len(rv.data) != page_1_len
         self.assertImageMatch(rv.data, 'multi-page-2.png')
 
-    # Test change of format and basic caching
+    # Test change of format
     def test_format_image(self):
         test_url = '/image?src=test_images/cathedral.jpg&width=500&format=png'
         rv = self.app.get(test_url)
         assert rv.status_code == 200
         assert 'image/png' in rv.headers['Content-Type'], 'HTTP headers do not specify image/png'
         self.assertImageMatch(rv.data, 'width-500.png')
-        def get_from_cache():
-            self.app.get(test_url)
-        t = timeit.Timer(get_from_cache).timeit(1)
-        assert t < 0.050, 'Cached png took more than 50ms to return'
-        rv = self.app.get(test_url)
-        assert rv.headers['X-From-Cache'] == 'True', 'Cached png did not return X-From-Cache = True'
 
     # Progressive JPG tests
     def test_pjpeg_format(self):
@@ -1093,6 +1087,26 @@ class ImageServerTestsFast(BaseTestCase):
         # Angle just makes fill apply
         rv = self.app.get('/image?src=test_images/cathedral.jpg&angle=45&width=&height=&fill=&left=&right=&bottom=&top=')
         assert rv.status_code == 200
+
+    # Test basic caching
+    def test_basic_caching(self):
+        test_url = '/image?src=test_images/cathedral.jpg&width=413&format=png'
+        rv = self.app.get(test_url)
+        self.assertEqual(rv.status_code, 200)
+        self.assertEqual(rv.headers['X-From-Cache'], 'False')
+        t1 = float(rv.headers['X-Time-Taken'])
+        def get_from_cache():
+            self.app.get(test_url)
+        t2 = timeit.Timer(get_from_cache).timeit(1)
+        self.assertLess(t2, 0.050, 'Cached png took more than 50ms to return')
+        rv = self.app.get(test_url)
+        self.assertEqual(rv.status_code, 200)
+        self.assertEqual(rv.headers['X-From-Cache'], 'True')
+        t3 = float(rv.headers['X-Time-Taken'])
+        # Cached internal time should be quicker than generated internal time
+        self.assertLess(t3, t1)
+        # Internal time taken (cached) should be lte total request time (cached)
+        self.assertLessEqual(t3, t2)
 
     # Test cache parameter
     # v1.34 now only supported when logged in
