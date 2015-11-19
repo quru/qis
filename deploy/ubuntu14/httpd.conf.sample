@@ -7,9 +7,9 @@
     # ServerAlias images
 
     # Request: host, time, requested path
-    # Response: status code, content length, seconds (in app), seconds (in total), image from cache
+    # Response: status code, content length, seconds (in app), microseconds (in total), image from cache
     # Extra: browser/agent, web page or request origin
-    LogFormat "%h %t \"%r\" %>s %B %{X-Time-Taken}o %T %{X-From-Cache}o \"%{User-Agent}i\" \"%{Referer}i\"" imaging
+    LogFormat "%h %t \"%r\" %>s %B %{X-Time-Taken}o %D %{X-From-Cache}o \"%{User-Agent}i\" \"%{Referer}i\"" imaging
 
     # Log requests, or append "env=DISABLED" to disable logging
     CustomLog /var/log/apache2/qis_access_log imaging

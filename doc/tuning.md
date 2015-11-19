@@ -496,7 +496,7 @@ to:
 
 with each entry appearing as follows:
 
-	80.219.81.177 [29/May/2015:16:31:21 -0100] "GET /image?src=2013-09/19/7255252-121-1.jpg&width=250 HTTP/1.1" 200 13512 0.033620 0.059528 False "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.9; rv:28.0) Gecko/20100101 Firefox/28.0" "http://www.example.com/contact/"
+	80.219.81.177 [29/May/2015:16:31:21 -0100] "GET /image?src=2013-09/19/7255252-121-1.jpg&width=250 HTTP/1.1" 200 13512 0.033620 59528 False "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.9; rv:28.0) Gecko/20100101 Firefox/28.0" "http://www.example.com/contact/"
 
 where:
 
@@ -507,7 +507,7 @@ where:
 * `13512` is the size of the returned image (page, JS, CSS) file in bytes
 * `0.033620` is the time taken in seconds to service the request in the QIS
   application
-* `0.059528` is the time taken in seconds to service the request in Apache.
+* `59528` is the time taken in microseconds to service the request in Apache.
   This value includes, and is therefore always larger than the above value.
   It adds the time the request was queued for, and the time taken to send the
   image data back to the network.

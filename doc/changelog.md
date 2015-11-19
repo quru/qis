@@ -4,10 +4,10 @@ _Changes: New performance monitoring metrics_
 Adds the X-Time-Taken HTTP header to all responses.
 Optional: update the Apache conf files with the new logging format:
 
-	# Request: host, time, requested path
-	# Response: status code, content length, seconds (in app), seconds (in total), image from cache
-	# Extra: browser/agent, web page or request origin
-	LogFormat "%h %t \"%r\" %>s %B %{X-Time-Taken}o %T %{X-From-Cache}o \"%{User-Agent}i\" \"%{Referer}i\"" imaging
+    # Request: host, time, requested path
+    # Response: status code, content length, seconds (in app), microseconds (in total), image from cache
+    # Extra: browser/agent, web page or request origin
+    LogFormat "%h %t \"%r\" %>s %B %{X-Time-Taken}o %D %{X-From-Cache}o \"%{User-Agent}i\" \"%{Referer}i\"" imaging
 
 Update the Python and web code  
 Restart the Apache service
