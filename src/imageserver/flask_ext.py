@@ -72,13 +72,23 @@ def fix_bad_query_strings(app):
     app.request_class = FixQueryStringRequest
 
 
-def time_requests(app):
+def time_requests(app, add_http_header=False):
     """
-    Installs a request hook to store the start time of the request on flask.g.
+    Installs a request hook to store the start time of the request on flask.g
+    and optionally set an HTTP header containing the time taken in microseconds
+    from request start to the return of the response.
     """
     @app.before_request
     def start_request_stats():
         flask.g.request_started = time.time()
+
+    if add_http_header:
+        @app.after_request
+        def end_request_stats(response):
+            response.headers['X-Time-Taken'] = '%d' % (
+                (time.time() - flask.g.request_started) * 1000000
+            )
+            return response
 
 
 def enhance_json_encoder(app):

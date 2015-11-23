@@ -27,17 +27,20 @@
 # Notable modifications:
 # Date       By    Details
 # =========  ====  ============================================================
-#
+# 18Nov2015  Matt  v1.42 Indicate server processing time vs total request time
 #
 # Note: this script stands alone and can be run from anywhere that has Python
 #
 
-import multiprocessing
 import urllib2
 import os
 import sys
 import time
 
+from multiprocessing.pool import Pool, ThreadPool
+
+
+_PoolType = Pool  # or ThreadPool
 _vb = False
 
 RETURN_OK = 0
@@ -226,25 +229,27 @@ def single_request(url):
     req.add_header('Referer', REFERRER)
     status = 0
     from_cache = None
+    app_taken_usec = 0
     start_time = time.time()
     try:
         handler = urllib2.urlopen(req)
         status = handler.getcode()
         if status == 200:
             from_cache = handler.info().get('X-From-Cache')
+            app_taken_usec = int(handler.info().get('X-Time-Taken', 0))
     except urllib2.HTTPError as e:
         error(str(e))
         status = e.code
     except Exception as e:
         error(str(e))
         status = 0
-    end_time = time.time()
+    total_taken = time.time() - start_time
     if _vb:
         fc_flag = 'Cache' if from_cache == 'True' else \
                   'Gen  ' if from_cache == 'False' else \
                   '-    '
         log('%d %s %s' % (status, fc_flag, url))
-    return status, from_cache, (end_time - start_time)
+    return status, from_cache, total_taken, app_taken_usec / 1000000.0
 
 
 def make_requests(server_url, num_requests, cache_pct, num_clients,
@@ -311,7 +316,7 @@ def make_requests(server_url, num_requests, cache_pct, num_clients,
 
     # Run the tests
     log('Creating clients, running tests')
-    pool = multiprocessing.Pool(num_clients)
+    pool = _PoolType(num_clients)
     start_time = time.time()
     results = pool.map(single_request, url_list)
     pool.close()
@@ -326,22 +331,26 @@ def make_requests(server_url, num_requests, cache_pct, num_clients,
     ok_time_total = 0
     cached_count = 0
     cached_time_total = 0
+    cached_time_app = 0
     cached_time_worst = 0
     gen_count = 0
     gen_time_total = 0
+    gen_time_app = 0
     gen_time_worst = 0
-    for status, from_cache, wait_time in results:
+    for status, from_cache, wait_time, app_time in results:
         if status == 200:
             ok_count += 1
             ok_time_total += wait_time
             if from_cache == 'True':
                 cached_count += 1
                 cached_time_total += wait_time
+                cached_time_app += app_time
                 if wait_time > cached_time_worst:
                     cached_time_worst = wait_time
             else:
                 gen_count += 1
                 gen_time_total += wait_time
+                gen_time_app += app_time
                 if wait_time > gen_time_worst:
                     gen_time_worst = wait_time
         else:
@@ -358,15 +367,23 @@ def make_requests(server_url, num_requests, cache_pct, num_clients,
     if ok_count != 0:
         print 'Average response %f seconds' % (ok_time_total / ok_count)
         if gen_count != 0:
-            print '  * %d non-cached, average response %f seconds, worst %f seconds' % (
-                gen_count, gen_time_total / gen_count, gen_time_worst
-            )
+            gen_avg_total = gen_time_total / gen_count
+            gen_avg_app = gen_time_app / gen_count
+            print '  * %d non-cached responses' % gen_count
+            if gen_avg_app > 0:
+                print '      * Average app time %f seconds' % gen_avg_app
+            print '      * Average response %f seconds' % gen_avg_total
+            print '      * Worst response %f seconds' % gen_time_worst
         else:
             print '  * 0 non-cached responses'
         if cached_count != 0:
-            print '  * %d from cache, average response %f seconds, worst %f seconds' % (
-                cached_count, cached_time_total / cached_count, cached_time_worst
-            )
+            cached_avg_total = cached_time_total / cached_count
+            cached_avg_app = cached_time_app / cached_count
+            print '  * %d cached responses' % cached_count
+            if cached_avg_app > 0:
+                print '      * Average app time %f seconds' % cached_avg_app
+            print '      * Average response %f seconds' % cached_avg_total
+            print '      * Worst response %f seconds' % cached_time_worst
         else:
             print '  * 0 from cache'
     print ''

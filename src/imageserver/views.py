@@ -32,10 +32,15 @@
 # 25 Mar 15  Matt  v1.27 Raise HTTP 503 for unresponsive image requests
 #
 
+try:
+    import cStringIO as StringIO
+except:
+    import StringIO
+
 import time
 
 import flask
-from flask import make_response, request
+from flask import make_response, request, send_file
 import werkzeug.exceptions as httpexc
 
 from errors import DBError, DoesNotExistError, ImageError, SecurityError, ServerTooBusyError
@@ -52,6 +57,12 @@ from util import filepath_parent, invoke_http_async, validate_string
 from util import parse_boolean, parse_colour, parse_float, parse_int, parse_tile_spec
 from util import unicode_to_utf8, etag
 from views_util import log_security_error
+
+
+# Requires "EnableSendfile On" in the Apache conf, but hasn't (yet) been seen
+# to deliver any performance improvement. Also the use of StringIO to create
+# a "file" is something of a hack. Cleaner would be Python 3's BytesIO.
+_USE_SENDFILE = False
 
 
 # eRez compatibility URLs for raw image serving
@@ -427,8 +438,14 @@ def make_image_response(image_wrapper, is_original, stats=None, as_attachment=No
         handle_image_xref(xref)
 
     # Create the HTTP response
-    response = make_response(image_wrapper.data())
-    response.mimetype = image_attrs.mime_type()
+    if _USE_SENDFILE:
+        response = send_file(
+            StringIO.StringIO(image_wrapper.data()),
+            image_attrs.mime_type()
+        )
+    else:
+        response = make_response(image_wrapper.data())
+        response.mimetype = image_attrs.mime_type()
 
     # Set the browser caching headers
     _add_http_caching_headers(

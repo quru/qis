@@ -5,8 +5,16 @@ Times below are with a default QIS config, all running locally over localhost TC
 
 Setup:
 
-$ export PYTHONPATH=src:lib/python2.7/site-packages:lib64/python2.7/site-packages
-$ python
+$ cd /opt/qis
+$ sudo -u qis bash -c 'echo "export PYTHONPATH=src:lib/python2.7/site-packages:lib64/python2.7/site-packages" > timeits.sh'
+$ sudo -u qis bash -c 'echo "python" >> timeits.sh'
+$ sudo -u qis chmod a+x timeits.sh
+$ sudo -u qis ./timeits.sh
+
+Cleanup:
+
+$ sudo -u qis kill `ps aux | grep "timeits.sh" | grep -v grep | awk '{print $2}'`
+$ sudo -u qis rm timeits.sh
 
 Code snippets:
 
@@ -25,10 +33,11 @@ value = 1024*'A'
 """, number=number)
 print '%d read+write ops per second' % (number / secs)
 
->>> 9578 read+write ops per second (Macbook Pro 2.7.10)
->>> 15314 read+write ops per second (Power8 Python 2.7.5 gcc)
->>> 15648 read+write ops per second (Power8 Python 2.7.10 gcc)
->>> 15460 read+write ops per second (Power8 Python 2.7.10 IBM AT)
+>>> 9578 read+write ops per second (Macbook Pro i7 2.7.10)
+>>> 13880 read+write ops per second (Intel X5670 Python 2.6.6)
+>>> 15248 read+write ops per second (Power8 Python 2.7.5 gcc)
+>>> 15405 read+write ops per second (Power8 Python 2.7.10 gcc)
+>>> 15369 read+write ops per second (Power8 Python 2.7.10 IBM AT)
 
 ###############################################################################
 
@@ -45,10 +54,11 @@ value = 1024*'A'
 """, number=number)
 print '%d read+write ops per second' % (number / secs)
 
->>> 577 read+write ops per second (Macbook Pro 2.7.10)
->>> 590 read+write ops per second (Power8 Python 2.7.5 gcc)
->>> 673 read+write ops per second (Power8 Python 2.7.10 gcc)
->>> 659 read+write ops per second (Power8 Python 2.7.10 IBM AT)
+>>> 577 read+write ops per second (Macbook Pro i7 2.7.10)
+>>> 569 read+write ops per second (Intel X5670 Python 2.6.6)
+>>> 602 read+write ops per second (Power8 Python 2.7.5 gcc)
+>>> 637 read+write ops per second (Power8 Python 2.7.10 gcc)
+>>> 616 read+write ops per second (Power8 Python 2.7.10 IBM AT)
 
 ###############################################################################
 
@@ -69,10 +79,11 @@ id = 1
 """, number=number)
 print '%d reads per second' % (number / secs)
 
->>> 3051 reads per second (Macbook Pro 2.7.10)
->>> 3560 reads per second (Power8 Python 2.7.5 gcc)
->>> 4081 reads per second (Power8 Python 2.7.10 gcc)
->>> 4019 reads per second (Power8 Python 2.7.10 IBM AT)
+>>> 3051 reads per second (Macbook Pro i7 2.7.10) Postgres 9.3
+>>> 2664 reads per second (Intel X5670 Python 2.6.6) Postgres 8.4
+>>> 3564 reads per second (Power8 Python 2.7.5 gcc) Postgres 9.2
+>>> 3739 reads per second (Power8 Python 2.7.10 gcc) Postgres 9.2
+>>> 3695 reads per second (Power8 Python 2.7.10 IBM AT) Postgres 9.2
 
 ###############################################################################
 
@@ -93,10 +104,11 @@ id = 1
 """, number=number)
 print '%d object reads per second' % (number / secs)
 
->>> 347 object reads per second (Macbook Pro 2.7.10)
->>> 360 object reads per second (Power8 Python 2.7.5 gcc)
->>> 424 object reads per second (Power8 Python 2.7.10 gcc)
->>> 403 object reads per second (Power8 Python 2.7.10 IBM AT)
+>>> 347 object reads per second (Macbook Pro i7 2.7.10) Postgres 9.3
+>>> 343 object reads per second (Intel X5670 Python 2.6.6) Postgres 8.4
+>>> 360 object reads per second (Power8 Python 2.7.5 gcc) Postgres 9.2
+>>> 383 object reads per second (Power8 Python 2.7.10 gcc) Postgres 9.2
+>>> 374 object reads per second (Power8 Python 2.7.10 IBM AT) Postgres 9.2
 
 ###############################################################################
 
@@ -115,7 +127,8 @@ image_data = get_file_data('test_images/bear.jpg')
 """, number=number)
 print '%f image resizes per second' % (number / secs)
 
->>> 3.330589 image resizes per second (Macbook Pro 2.7.10)
->>> 3.971419 image resizes per second (Power8 Python 2.7.5 gcc)
->>> 3.993531 image resizes per second (Power8 Python 2.7.10 gcc)
->>> 4.070627 image resizes per second (Power8 Python 2.7.10 IBM AT)
+>>> 3.330589 image resizes per second (Macbook Pro i7 2.7.10)
+>>> 8.205050 image resizes per second (Intel X5670 Python 2.6.6)
+>>> 4.014269 image resizes per second (Power8 Python 2.7.5 gcc)
+>>> 4.059186 image resizes per second (Power8 Python 2.7.10 gcc)
+>>> 4.118182 image resizes per second (Power8 Python 2.7.10 IBM AT)

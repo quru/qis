@@ -64,6 +64,22 @@ Optional: drop the `cachectl` table [note! v2_upgrade.py will do this]
 Start the Apache service
 
 
+# v1.42
+_Changes: New performance monitoring metrics_
+
+Adds the X-Time-Taken HTTP header to all responses.
+Benchmark script reports time spent inside the app separately from total request time.
+Optional: update the Apache conf files with the new logging format:
+
+    # Request: host, time, requested path
+    # Response: status code, content length, microseconds (in app), microseconds (in total), image from cache
+    # Extra: browser/agent, web page or request origin
+    LogFormat "%h %t \"%r\" %>s %B %{X-Time-Taken}o %D %{X-From-Cache}o \"%{User-Agent}i\" \"%{Referer}i\"" imaging
+
+Update the Python and web code  
+Restart the Apache service
+
+
 # v1.41
 _Changes: Bug fix to flatten XCF/PSD files_
 

@@ -241,7 +241,7 @@ Machine and software spec:
 * ImageMagick 6.8.8-10 Q16 x86_64
 * Memcached 1.4.5
 * PostgreSQL 9.3.3
-* QIS v1.29
+* QIS v1.42
 
 Setup (every time):
 
@@ -251,53 +251,68 @@ Setup (every time):
 Default test:
 
 	$ python src/imageserver/scripts/bench.py http://localhost:5000/ 1000 90 1
-	LOG   1952 - Checking connectivity to http://localhost:5000/
-	LOG   1952 - Building request list
-	LOG   1952 - Pre-warming the image cache
-	LOG   1952 - Creating clients, running tests
-	LOG   1952 - Complete
+	LOG   1215 - Checking connectivity to http://localhost:5000/
+	LOG   1215 - Building request list
+	LOG   1215 - Pre-warming the image cache
+	LOG   1215 - Creating clients, running tests
+	LOG   1215 - Complete
 	
 	Results
 	=======
 	1000 successful requests, 0 errors.
-	Run time 43.828747 seconds = 22.816075 requests/sec.
+	Run time 43.417782 seconds = 23.032038 requests/sec.
 	
-	Average response 0.043662 seconds
-	  * 189 non-cached, average response 0.213789 seconds, worst 1.316623 seconds
-	  * 811 from cache, average response 0.004015 seconds, worst 0.006723 seconds
+	Average response 0.043298 seconds
+	  * 189 non-cached responses
+	      * Average app time 0.213764 seconds
+	      * Average response 0.215583 seconds
+	      * Worst response 1.270284 seconds
+	  * 811 cached responses
+	      * Average app time 0.001396 seconds
+	      * Average response 0.003148 seconds
+	      * Worst response 0.005541 seconds
 
 All cached test:
 
 	$ python src/imageserver/scripts/bench.py http://localhost:5000/ 1000 100 1
-	LOG   2006 - Checking connectivity to http://localhost:5000/
-	LOG   2006 - Building request list
-	LOG   2006 - Pre-warming the image cache
-	LOG   2006 - Creating clients, running tests
-	LOG   2006 - Complete
+	LOG   1194 - Checking connectivity to http://localhost:5000/
+	LOG   1194 - Building request list
+	LOG   1194 - Pre-warming the image cache
+	LOG   1194 - Creating clients, running tests
+	LOG   1194 - Complete
 	
 	Results
 	=======
 	1000 successful requests, 0 errors.
-	Run time 4.259380 seconds = 234.775961 requests/sec.
+	Run time 3.747544 seconds = 266.841426 requests/sec.
 	
-	Average response 0.004065 seconds
-	  * 98 non-cached, average response 0.004965 seconds, worst 0.008766 seconds
-	  * 902 from cache, average response 0.003967 seconds, worst 0.006667 seconds
+	Average response 0.003579 seconds
+	  * 98 non-cached responses
+	      * Average app time 0.003428 seconds
+	      * Average response 0.005341 seconds
+	      * Worst response 0.014927 seconds
+	  * 902 cached responses
+	      * Average app time 0.001516 seconds
+	      * Average response 0.003388 seconds
+	      * Worst response 0.007123 seconds
 
 Heavy processing test:
 
 	$ python src/imageserver/scripts/bench.py http://localhost:5000/ 100 0 1
-	LOG   2107 - Checking connectivity to http://localhost:5000/
-	LOG   2107 - Building request list
-	LOG   2107 - NOTE! You need to manually clear your image cache if you have previously run these tests.
-	LOG   2107 - Creating clients, running tests
-	LOG   2107 - Complete
+	LOG   1301 - Checking connectivity to http://localhost:5000/
+	LOG   1301 - Building request list
+	LOG   1301 - NOTE! You need to manually clear your image cache if you have previously run these tests.
+	LOG   1301 - Creating clients, running tests
+	LOG   1301 - Complete
 	
 	Results
 	=======
 	100 successful requests, 0 errors.
-	Run time 38.964349 seconds = 2.566449 requests/sec.
+	Run time 39.537110 seconds = 2.529269 requests/sec.
 	
-	Average response 0.389276 seconds
-	  * 100 non-cached, average response 0.389276 seconds, worst 1.240587 seconds
+	Average response 0.394726 seconds
+	  * 100 non-cached responses
+	      * Average app time 0.392478 seconds
+	      * Average response 0.394726 seconds
+	      * Worst response 1.068507 seconds
 	  * 0 from cache

@@ -50,7 +50,7 @@ def extend_app(app):
     # Enhanced JSON support for the API
     flask_ext.enhance_json_encoder(app)
     # We'll measure request times for our stats
-    flask_ext.time_requests(app)
+    flask_ext.time_requests(app, True)
     # We need HTTP authentication for the API
     flask_ext.install_http_authentication(app, app.config['API_AUTHENTICATION_CLASS'])
     # And CSRF protection for the web pages (this needs to be after the http auth)

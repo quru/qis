@@ -353,6 +353,20 @@ class CacheManager(object):
                 db_session.merge(entry)
                 db_session.commit()
                 db_committed = True
+            except IntegrityError:
+                # Rarely, 2 threads merging (adding) the same key causes a duplicate key error
+                db_session.rollback()
+                db_session.query(CacheEntry).filter(CacheEntry.key==entry.key).update({
+                    'valuesize': entry.valuesize,
+                    'searchfield1': entry.searchfield1,
+                    'searchfield2': entry.searchfield2,
+                    'searchfield3': entry.searchfield3,
+                    'searchfield4': entry.searchfield4,
+                    'searchfield5': entry.searchfield5,
+                    'metadata': entry.metadata
+                }, synchronize_session=False)
+                db_session.commit()
+                db_committed = True
             finally:
                 try:
                     if not db_committed:
