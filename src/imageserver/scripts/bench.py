@@ -27,7 +27,7 @@
 # Notable modifications:
 # Date       By    Details
 # =========  ====  ============================================================
-# 18Nov2015  Matt  v1.41 Indicate server processing time vs total request time
+# 18Nov2015  Matt  v1.42 Indicate server processing time vs total request time
 #
 # Note: this script stands alone and can be run from anywhere that has Python
 #
@@ -229,14 +229,14 @@ def single_request(url):
     req.add_header('Referer', REFERRER)
     status = 0
     from_cache = None
-    app_taken = 0
+    app_taken_usec = 0
     start_time = time.time()
     try:
         handler = urllib2.urlopen(req)
         status = handler.getcode()
         if status == 200:
             from_cache = handler.info().get('X-From-Cache')
-            app_taken = float(handler.info().get('X-Time-Taken', 0))
+            app_taken_usec = int(handler.info().get('X-Time-Taken', 0))
     except urllib2.HTTPError as e:
         error(str(e))
         status = e.code
@@ -249,7 +249,7 @@ def single_request(url):
                   'Gen  ' if from_cache == 'False' else \
                   '-    '
         log('%d %s %s' % (status, fc_flag, url))
-    return status, from_cache, total_taken, app_taken
+    return status, from_cache, total_taken, app_taken_usec / 1000000.0
 
 
 def make_requests(server_url, num_requests, cache_pct, num_clients,

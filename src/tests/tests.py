@@ -1094,7 +1094,7 @@ class ImageServerTestsFast(BaseTestCase):
         rv = self.app.get(test_url)
         self.assertEqual(rv.status_code, 200)
         self.assertEqual(rv.headers['X-From-Cache'], 'False')
-        t1 = float(rv.headers['X-Time-Taken'])
+        t1_usec = int(rv.headers['X-Time-Taken'])
         def get_from_cache():
             self.app.get(test_url)
         t2 = timeit.Timer(get_from_cache).timeit(1)
@@ -1102,11 +1102,11 @@ class ImageServerTestsFast(BaseTestCase):
         rv = self.app.get(test_url)
         self.assertEqual(rv.status_code, 200)
         self.assertEqual(rv.headers['X-From-Cache'], 'True')
-        t3 = float(rv.headers['X-Time-Taken'])
+        t3_usec = int(rv.headers['X-Time-Taken'])
         # Cached internal time should be quicker than generated internal time
-        self.assertLess(t3, t1)
+        self.assertLess(t3_usec, t1_usec)
         # Internal time taken (cached) should be lte total request time (cached)
-        self.assertLessEqual(t3, t2)
+        self.assertLessEqual(t3_usec / 1000000.0, t2)
 
     # Test cache parameter
     # v1.34 now only supported when logged in

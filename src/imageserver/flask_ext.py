@@ -75,7 +75,7 @@ def fix_bad_query_strings(app):
 def time_requests(app, add_http_header=False):
     """
     Installs a request hook to store the start time of the request on flask.g
-    and optionally set an HTTP header containing the time taken in seconds
+    and optionally set an HTTP header containing the time taken in microseconds
     from request start to the return of the response.
     """
     @app.before_request
@@ -85,8 +85,8 @@ def time_requests(app, add_http_header=False):
     if add_http_header:
         @app.after_request
         def end_request_stats(response):
-            response.headers['X-Time-Taken'] = '%f' % (
-                time.time() - flask.g.request_started
+            response.headers['X-Time-Taken'] = '%d' % (
+                (time.time() - flask.g.request_started) * 1000000
             )
             return response
 
