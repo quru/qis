@@ -42,9 +42,9 @@ def authenticate_user(username, password, data_engine, logger):
     Authenticates the given user credentials, returning the associated User
     object on success, or None if either the username or password is incorrect.
 
-    If LDAP integration is enabled and LDAP_AUTO_CREATE_USER_ACCOUNTS is set,
-    a new image server user account will be created if there is no existing
-    account but the username and password are valid on the LDAP server.
+    If LDAP integration is enabled, a new image server user account will be
+    created if there is no existing account but the username and password are
+    valid on the LDAP server.
 
     An AuthenticationError is raised if an error occurrs performing the
     authentication process.
@@ -73,7 +73,7 @@ def authenticate_user(username, password, data_engine, logger):
             return user if auth else None
         else:
             # The username is not known locally
-            if app.config['LDAP_INTEGRATION'] and app.config['LDAP_AUTO_CREATE_USER_ACCOUNTS']:
+            if app.config['LDAP_INTEGRATION']:
                 logger.debug('Checking LDAP server for unknown user \'' + username + '\'')
                 auth, user_attrs = _authenticate_ldap(username, password, logger)
                 if auth:
@@ -143,12 +143,15 @@ def _authenticate_ldap(username, password, logger):
         raise AuthenticationError('LDAP authentication has not been configured')
     if not ldap_client.ldap_installed:
         raise AuthenticationError('LDAP support is not installed')
+    if app.config['LDAP_SECURE'] and not ldap_client.ldap_tls_installed:
+        raise AuthenticationError('TLS support for LDAP is not installed (e.g. OpenSSL)')
 
     try:
         # Get LDAP config
         ldap_type = app.config['LDAP_SERVER_TYPE'].lower()
         ldap_config = ldap_client.LDAP_Settings(
             app.config['LDAP_SERVER'],
+            app.config['LDAP_SECURE'],
             app.config['LDAP_QUERY_BASE'],
             app.config['LDAP_BIND_USER_DN'],
             app.config['LDAP_BIND_PASSWORD']

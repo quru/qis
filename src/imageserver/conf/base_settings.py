@@ -244,26 +244,28 @@ API_TOKEN_EXPIRY_TIME = 60 * 60
 # server's default installation of Ghostscript.
 GHOSTSCRIPT_PATH = "gs"
 
-# Whether to integrate with an LDAP or Active Directory server for the provision
-# of user accounts and login authentication.
-# All other LDAP settings are ignored when set to False.
+# Whether to integrate with an LDAP or Active Directory server
+# for the provision of user accounts and login authentication.
+# All other LDAP settings are ignored when LDAP_INTEGRATION is False.
 LDAP_INTEGRATION = False
+# The directory service type, one from:
+# "OpenLDAPPosix", "OpenLDAPOrganizational", "Apple", "ActiveDirectory".
+LDAP_SERVER_TYPE = ""
 # The LDAP/AD server's name or IP address
 LDAP_SERVER = ""
-# The directory service type, one from:
-# "OpenLDAPPosix", "OpenLDAPOrganization", "Apple", "ActiveDirectory".
-LDAP_SERVER_TYPE = ""
+# Whether to use a secure connection with TLS / LDAPS.
+# Requires OpenSSL, GnuTLS or MozNSS (and possibly further configuration there).
+LDAP_SECURE = False
 # The base tree level to use when querying the directory.
-# E.g. "cn=users,dc=ldap,dc=mycompany,dc=com"
+# E.g. LDAP            "cn=users,dc=ldap,dc=mycompany,dc=com"
+# E.g. ActiveDirectory "dc=mycompany,dc=com"
 LDAP_QUERY_BASE = ""
 # The distinguished name and password of an LDAP user account to use for
 # querying the directory (only required for Active Directory).
-# E.g. "uid=myuser,cn=users,dc=ldap,dc=mycompany,dc=com"
+# E.g. LDAP            "uid=myuser,cn=users,dc=ldap,dc=mycompany,dc=com"
+# E.g. ActiveDirectory "myuser@mycompany.com"
 LDAP_BIND_USER_DN = ""
 LDAP_BIND_PASSWORD = ""
-# Whether to automatically create new image server
-# user accounts for authenticated LDAP user accounts
-LDAP_AUTO_CREATE_USER_ACCOUNTS = True
 
 # Destination for sending anonymous usage data
 USAGE_DATA_URL = 'https://qis.quru.com/collectstats'
