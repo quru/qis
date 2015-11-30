@@ -99,6 +99,12 @@ from imageserver.util import strip_sep, unicode_to_utf8
 from imageserver.scripts.cache_util import delete_image_ids
 
 
+# http://www.imagemagick.org/script/changelog.php
+# "2011-11-07 6.7.3-4 RotateImage() now uses distorts rather than shears."
+# Note: based on the change log, this number is a guess rather than a known fact
+MAGICK_ROTATION_VERSION = 673
+
+
 # For nose
 def setup():
     reset_databases()
@@ -1043,8 +1049,8 @@ class ImageServerTestsFast(BaseTestCase):
         assert rv.status_code == 200
         # convert dorset.jpg -rotate 45 -quality 75 dorset-45.png
         # convert dorset-45.png -gravity center -crop x60% output.png
-        if imagemagick_version() <= 654:
-            # On RHEL 6, IM 654 gives a blurry old thing
+        if imagemagick_version() < MAGICK_ROTATION_VERSION:
+            # On RHEL 6, IM 654 to 672 gives a blurry old thing
             self.assertImageMatch(rv.data, 'rotate-crop-im654.png')
         else:
             # Produced with IM 684, sharp
@@ -1058,7 +1064,7 @@ class ImageServerTestsFast(BaseTestCase):
         assert rv.status_code == 200
         # Given dorset.jpg rotated at 45 deg (see above)...
         # convert dorset-45.png -gamma 0.454545 -gravity center -crop x60% -resize 450x450 -extent 450x450 -gamma 2.2 output.png
-        if imagemagick_version() <= 654:
+        if imagemagick_version() < MAGICK_ROTATION_VERSION:
             self.assertImageMatch(rv.data, 'rotate-crop-450-im654.png')
         else:
             self.assertImageMatch(rv.data, 'rotate-crop-450.png')
@@ -1077,7 +1083,7 @@ class ImageServerTestsFast(BaseTestCase):
         rv = self.app.get(test_url)
         assert rv.status_code == 200
         # Check the result is what we expect (same as for test_crop_and_rotate_and_resize)
-        if imagemagick_version() <= 654:
+        if imagemagick_version() < MAGICK_ROTATION_VERSION:
             self.assertImageMatch(rv.data, 'rotate-crop-450-im654.png')
         else:
             self.assertImageMatch(rv.data, 'rotate-crop-450.png')
