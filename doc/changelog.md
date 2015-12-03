@@ -64,6 +64,18 @@ Optional: drop the `cachectl` table [note! v2_upgrade.py will do this]
 Start the Apache service
 
 
+# v1.43
+_Changes: Bug fix to Active Directory integration, adds basic support for LDAPS_
+
+Adds the `LDAP_SECURE` system setting.
+
+Removes the `LDAP_AUTO_CREATE_USER_ACCOUNTS` system setting,
+as the Active Directory / LDAP integration required it to always be True.
+
+Update the Python and web code  
+Restart the Apache service
+
+
 # v1.42
 _Changes: New performance monitoring metrics_
 

@@ -27,13 +27,17 @@
 # Notable modifications:
 # Date       By    Details
 # =========  ====  ============================================================
+# 30Nov2015  Matt  Added ldap.OPT_REFERRALS = 0 for Active Directory,
+#                  support for TLS / ldaps
 #
 
-# Set a flag for whether LDAP support is available
+# Set flags for whether LDAP support is available
 ldap_installed = False
+ldap_tls_installed = False
 try:
     import ldap
     ldap_installed = True
+    ldap_tls_installed = ldap.TLS_AVAIL
 except:
     pass
 
@@ -70,24 +74,31 @@ class LDAP_Settings(object):
     Holds connection settings and optionally bind credentials for an LDAP
     client connection.
     """
-    def __init__(self, host, base, bind_dn=None, bind_pwd=None):
+    def __init__(self, host, use_tls, base, bind_dn=None, bind_pwd=None):
         """
         Creates a set of connection settings for querying an LDAP server.
 
         host - the LDAP server's host name or IP address
+        use_tls - boolean whether to connect as LDAPS (use TLS)
         base - the search base to use when performing all LDAP queries,
-               e.g. "dc=server,dc=company,dc=com"
-        bind_dn - an optional distinguished name of a user account to use to query
-                  the LDAP server, e.g. "uid=username,cn=users,dc=server,dc=company,dc=com"
+            e.g. LDAP "cn=users,dc=server,dc=company,dc=com"
+            e.g. AD   "dc=company,dc=com"
+        bind_dn - an optional distinguished name of a user account to use to
+                  query the LDAP server,
+            e.g. LDAP "uid=username,cn=users,dc=server,dc=company,dc=com"
+            e.g. AD   "username@company.com"
         bind_pwd - the password to use with bind_dn
 
         The use of a bind dn and password is required for Microsoft Active Directory.
         """
-        self.f_uri = "ldap://" + host
+        self.f_uri = "ldap%s://%s" % ("s" if use_tls else "", host)
         self.f_base = base
         self.f_bind_dn = bind_dn
         self.f_bind_password = bind_pwd
         self.f_scope = ldap.SCOPE_SUBTREE
+
+        if use_tls and not ldap_tls_installed:
+            raise ValueError('Secure LDAP requested but TLS is not available')
 
 
 class _LDAP_Client(object):
@@ -108,6 +119,7 @@ class _LDAP_Client(object):
             return
         try:
             self.f_connection = ldap.initialize(self.f_settings.f_uri)
+            self.f_connection.set_option(ldap.OPT_REFERRALS, 0)
             if self.f_settings.f_bind_dn:
                 # Bind with credentials
                 self.f_connection.simple_bind_s(
@@ -133,6 +145,7 @@ class _LDAP_Client(object):
 
         On success, a list of tuples is returned, with the format
           [ (dn, { attr_name: [attr_value, ...], ... }), ... ]
+
         An LDAP_Error is raised on failure.
         """
         self.connect()
