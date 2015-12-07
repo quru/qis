@@ -12,6 +12,10 @@
 * Apache 2.2.17 or above
 * mod_wsgi 3.2.7 or above
 * OpenLDAP 2.4.21
+* Ghostscript 8.62 but...
+	* 9.04 or above for downscaling support (much higher quality results), but...
+	* 9.05 or above to fix indexed color space bugs that cause corrupt pages, so...
+	* 9.06 or above is recommended
 * ImageMagick is a minefield
 	* See http://www.imagemagick.org/script/changelog.php
 	* 6.5.4 causes rotate + crop PNG unit tests to fail, due to blurry PNG output
@@ -30,16 +34,8 @@
 	* Avoid 6.8.7-4 to 6.8.7-9 with optional OpenCL enabled due to bugs
 	* 6.8.8-0 has stable OpenCL acceleration for resize, sharpen, blur
 	* 6.9.0-2 fixes "numerous buffer overflows" and a TIFF crash
+	* 6.9.0-5 fixes defaults for RAW file decoding when missing delegates.xml
 	* 6.9.1-4 fixes layer masks when flattening XCF/PSD files
-
-# Known good versions of dependencies of the dependencies
-
-* lcms (little CMS) 2.1
-* libevent 1.4.14
-* Ghostscript 8.62 but...
-	* 9.04 or above for downscaling support (much higher quality results), but...
-	* 9.05 or above to fix indexed color space bugs that cause corrupt pages, so...
-	* 9.06 is recommended
 
 # Python libraries
 

@@ -104,6 +104,9 @@ from imageserver.scripts.cache_util import delete_image_ids
 # Note: based on the change log, this number is a guess rather than a known fact
 MAGICK_ROTATION_VERSION = 673
 
+# At some point from 9.14 to 9.16 Ghostscript draws thicker lines
+GS_LINES_VERSION = 914
+
 
 # For nose
 def setup():
@@ -268,6 +271,13 @@ def imagemagick_version():
     import imageserver.imagemagick as magick
     # Assumes format "ImageMagick version: 654, Ghostscript delegate: 9.10"
     return int(magick.imagemagick_get_version_info()[21:24])
+
+
+# Utility - returns the Ghostscript application version as an integer, e.g. 910 for v9.10
+def gs_version():
+    import imageserver.imagemagick as magick
+    # Assumes format "ImageMagick version: 654, Ghostscript delegate: 9.10"
+    return int(float(magick.imagemagick_get_version_info()[-4:]) * 100)
 
 
 def compare_images(img_path1, img_path2):
@@ -580,7 +590,12 @@ class ImageServerTestsSlow(BaseTestCase):
             # Check page 27 exists and looks like we expect
             rv = self.app.get('/original?src=' + burst_path + '/page-00027.png')
             assert rv.status_code == 200
-            self.assertImageMatch(rv.data, 'pdf-page-27-%d.png' % expect[0])
+            # There is a thicker line in gs 9.16 than there was in 9.10
+            p27_test_filename = 'pdf-page-27-%d%s.png' % (
+                expect[0],
+                '' if gs_version() < GS_LINES_VERSION else '-gs-916'
+            )
+            self.assertImageMatch(rv.data, p27_test_filename)
             # Check page 27 dimensions in the database
             rv = self.app.get('/api/details?src=' + burst_path + '/page-00027.png')
             assert rv.status_code == API_CODES.SUCCESS
