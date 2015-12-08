@@ -104,7 +104,7 @@ from imageserver.scripts.cache_util import delete_image_ids
 # Note: based on the change log, this number is a guess rather than a known fact
 MAGICK_ROTATION_VERSION = 673
 
-# At some point from 9.14 to 9.16 Ghostscript draws thicker lines
+# At some point from 9.14 to 9.16 Ghostscript draws thicker lines than before
 GS_LINES_VERSION = 914
 
 
@@ -1970,6 +1970,12 @@ class ImageServerTestsFast(BaseTestCase):
         rv = self.app.get('/image?src=/test_images/quru470.png&format=jpg&quality=100&overlay=/test_images/picture-cmyk.jpg&ovsize=1&ovopacity=0.5')
         self.assertEqual(rv.status_code, 200)
         self.assertImageMatch(rv.data, 'cmyk-on-rgb.jpg')
+
+    # Test SVG overlays (requires ImageMagick compiled with librsvg)
+    def test_svg_overlay(self):
+        rv = self.app.get('/image?src=/test_images/blue bells.jpg&strip=0&format=png&width=800&overlay=/test_images/car.svg&ovsize=0.7&ovpos=s')
+        self.assertEqual(rv.status_code, 200)
+        self.assertImageMatch(rv.data, 'svg-overlay.png')
 
     # Test image templates
     def test_templates(self):
