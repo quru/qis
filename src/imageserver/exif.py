@@ -36,6 +36,7 @@
 # Notable modifications:
 # Date       By    Details
 # =========  ====  ============================================================
+# 10Dec2015  Matt  TIFF fields should be case insensitive
 #
 
 import re
@@ -174,6 +175,7 @@ def _gps_position_to_decimal(dms_str, direction):
     except:
         return None
 
+
 # Regex to identify "1, 2, 3" type strings
 CHAR_LIST_REGEX = re.compile('[0-9]+[\s]?,[\s]?')
 
@@ -193,9 +195,27 @@ DATA_TYPES = {
     15: 'Digits'         # IPTC   4
 }
 
+# Ignore these tags when processing
+IGNORE_TAGS = (
+    'MakerNote', 'PrintImageMatching', 'NativeDigest',
+    'JPEGInterchangeFormat', 'JPEGInterchangeFormatLength',
+    'Interoperability IFD Pointer', 'InteroperabilityOffset',
+    'ExifOffset', 'ExifImageLength'
+)
+
+
+# Base properties class
+class BaseProps(object):
+    TagsCaseSensitive = True
+    Tags = []
+    Types = []
+    TagDisplay = {}
+    TagOptions = {}
+
 
 # TIFF properties
-class TiffProps:
+class TiffProps(BaseProps):
+    TagsCaseSensitive = False
     Tags  = ["ImageWidth", "ImageLength", "BitsPerSample", "Compression", "PhotometricInterpretation", "ImageDescription", "Make", "Model", "StripOffsets", "Orientation", "SamplesPerPixel", "RowsPerStrip", "StripByteCounts", "XResolution", "YResolution", "PlanarConfiguration", "PageName", "ResolutionUnit", "TransferFunction", "Software", "DateTime", "Artist", "WhitePoint", "PrimaryChromaticities", "JPEGInterchangeFormat", "JPEGInterchangeFormatLength", "YCbCrCoefficients", "YCbCrSubSampling", "YCbCrPositioning", "ReferenceBlackWhite", "IPTC-NAA", "Copyright"]
     Types = [      4,            4,               3,           3,                       3,                      2,            2,      2,            4,            3,                3,              4,               4,                 5,             5,                3,               2,              3,                3,               2,          2,         2,         5,                  5,                    4,                          4,                            5,                  3,                  3,                 5,                 7,          2]
     TagDisplay = {
@@ -265,7 +285,7 @@ class TiffProps:
 
 
 # EXIF properties
-class ExifProps:
+class ExifProps(BaseProps):
     Tags  = ["ExposureTime", "FNumber", "ExposureProgram", "SpectralSensitivity", "ISOSpeedRatings", "OECF", "ExifVersion", "DateTimeOriginal", "DateTimeDigitized", "ComponentsConfiguration", "CompressedBitsPerPixel", "ShutterSpeedValue", "ApertureValue", "BrightnessValue", "ExposureBiasValue", "MaxApertureValue", "SubjectDistance", "MeteringMode", "LightSource", "Flash", "FocalLength", "SubjectArea", "MakerNote", "UserComment", "SubSecTime", "SubSecTimeOriginal", "SubSecTimeDigitized", "FlashpixVersion", "FlashPixVersion", "ColorSpace", "PixelXDimension", "PixelYDimension", "RelatedSoundFile", "InteroperabilityVersion", "Interoperability IFD Pointer", "FlashEnergy", "SpatialFrequencyResponse", "FocalPlaneXResolution", "FocalPlaneYResolution", "FocalPlaneResolutionUnit", "SubjectLocation", "ExposureIndex", "SensingMethod", "FileSource", "SceneType", "CFAPattern", "CustomRendered", "ExposureMode", "WhiteBalance", "DigitalZoomRatio", "FocalLengthIn35mmFilm", "SceneCaptureType", "GainControl", "Contrast", "Saturation", "Sharpness", "DeviceSettingDescription", "SubjectDistanceRange", "ImageUniqueID"]
     Types = [        5,           5,            3,                   2,                   3,            7,         7,                2,                   2,                      7,                         5,                     10,                5,               10,                 10,                   5,                 5,              3,               3,         3,          5,              3,           7,            7,            2,                 2,                    2,                   7,                 7,              3,              4,                 4,                 2,                        7,                           4,                     5,                    7,                        5,                      5,                         3,                     3,                5,               3,             7,            7,             7,             3,               3,              3,                5,                     3,                     3,             5,            3,           3,            3,                    7,                     3,                   2]
     TagDisplay = {
@@ -436,7 +456,7 @@ class ExifProps:
 
 
 # GPS properties
-class GpsProps:
+class GpsProps(BaseProps):
     Tags = ["GPSVersionID", "GPSLatitudeRef", "GPSLatitude", "GPSLongitudeRef", "GPSLongitude", "GPSAltitudeRef", "GPSAltitude", "GPSTimeStamp", "GPSSatellites", "GPSStatus", "GPSMeasureMode", "GPSDOP", "GPSSpeedRef", "GPSSpeed", "GPSTrackRef", "GPSTrack", "GPSImgDirectionRef", "GPSImgDirection", "GPSMapDatum", "GPSDestLatitudeRef", "GPSDestLatitude", "GPSDestLongitudeRef", "GPSDestLongitude", "GPSDestBearingRef", "GPSDestBearing", "GPSDestDistanceRef", "GPSDestDistance", "GPSProcessingMethod", "GPSAreaInformation", "GPSDateStamp", "GPSDifferential"]
     Types = [1, 2, 5, 2, 5, 1, 5, 5, 2, 2, 2, 5, 2, 5, 2, 5, 2, 5, 2, 2, 5, 2, 5, 2, 5, 2, 5, 7, 7, 2, 3]
     TagDisplay = {
@@ -455,7 +475,7 @@ class GpsProps:
 
 
 # IPTC envelope properties
-class IptcEnvProps:
+class IptcEnvProps(BaseProps):
     Tags = ["EnvelopeRecordVersion", "Destination", "FileFormat", "FileVersion", "ServiceIdentifier", "EnvelopeNumber", "ProductID", "EnvelopePriority", "DateSent", "TimeSent", "CodedCharacterSet", "UniqueObjectName", "ARMIdentifier", "ARMVersion"]
     Types = [3, 2, 3, 3, 2, 15, 2, 15, 15, 2, 2, 2, 3, 3]
     TagDisplay = {}
@@ -463,7 +483,7 @@ class IptcEnvProps:
 
 
 # IPTC application properties
-class IptcAppProps:
+class IptcAppProps(BaseProps):
     Tags = ["ApplicationRecordVersion", "ObjectTypeReference", "ObjectAttributeReference", "ObjectName", "EditStatus", "EditorialUpdate", "Urgency", "SubjectReference", "Category", "SupplementalCategories", "FixtureIdentifier", "Keywords", "ContentLocationCode", "ContentLocationName", "ReleaseDate", "ReleaseTime", "ExpirationDate", "ExpirationTime", "SpecialInstructions", "ActionAdvised", "ReferenceService", "ReferenceDate", "ReferenceNumber", "DateCreated", "TimeCreated", "DigitalCreationDate", "DigitalCreationTime", "OriginatingProgram", "ProgramVersion", "ObjectCycle", "By-line", "By-lineTitle", "City", "Sub-location", "Province-State", "Country-PrimaryLocationCode", "Country-PrimaryLocationName", "OriginalTransmissionReference", "Headline", "Credit", "Source", "CopyrightNotice", "Contact", "Caption-Abstract", "LocalCaption", "Writer-Editor", "RasterizedCaption", "ImageType", "ImageOrientation", "LanguageIdentifier", "AudioType", "AudioSamplingRate", "AudioSamplingResolution", "AudioDuration", "AudioOutcue", "JobID", "MasterDocumentID", "ShortDocumentID", "UniqueDocumentID", "OwnerID", "ObjectPreviewFileFormat", "ObjectPreviewFileVersion", "ObjectPreviewData", "ClassifyState", "SimilarityIndex", "DocumentNotes", "DocumentHistory", "ExifCameraInfo"]
     Types = [3, 2, 2, 2, 2, 15, 15, 2, 2, 2, 2, 2, 2, 2, 15, 2, 15, 2, 2, 15, 2, 15, 15, 15, 2, 15, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 15, 15, 15, 2, 2, 2, 2, 2, 2, 3, 3, 2, 2, 2, 2, 2, 2]
     TagDisplay = {}
@@ -471,20 +491,11 @@ class IptcAppProps:
 
 
 # IPTC news photo properties
-class IptcPhotoProps:
+class IptcPhotoProps(BaseProps):
     Tags = ["NewsPhotoVersion", "IPTCPictureNumber", "IPTCImageWidth", "IPTCImageHeight", "IPTCPixelWidth", "IPTCPixelHeight", "SupplementalType", "ColorRepresentation", "InterchangeColorSpace", "ColorSequence", "ICC_Profile", "ColorCalibrationMatrix", "LookupTable", "NumIndexEntries", "ColorPalette", "IPTCBitsPerSample", "SampleStructure", "ScanningDirection", "IPTCImageRotation", "DataCompressionMethod", "QuantizationMethod", "EndPoints", "ExcursionTolerance", "BitsPerComponent", "MaximumDensityRange", "GammaCompensatedValue"]
     Types = [3, 2, 3, 3, 3, 3, 1, 3, 1, 1, None, None, None, 3, None, 1, 1, 1, 1, 4, 1, None, 1, 1, 3, 3]
     TagDisplay = {}
     TagOptions = {}
-
-
-# Ignore these tags when processing
-IGNORE_TAGS = (
-    'MakerNote', 'PrintImageMatching', 'NativeDigest',
-    'JPEGInterchangeFormat', 'JPEGInterchangeFormatLength',
-    'Interoperability IFD Pointer', 'InteroperabilityOffset',
-    'ExifOffset', 'ExifImageLength'
-)
 
 
 # Ratio object that reduces itself to lowest common denominator for printing
@@ -521,7 +532,7 @@ def _get_prop_val(prop_handlers, prop_val):
     prop_handlers (use _get_prop_handlers to obtain this object)
     """
     try:
-        (field_type, print_fn, field_options) = prop_handlers
+        (_, field_type, print_fn, field_options) = prop_handlers
 
         # Check for empty values
         if not prop_val:
@@ -565,59 +576,74 @@ def _get_prop_val(prop_handlers, prop_val):
 
 def _get_prop_handlers(profile, prop_name):
     """
-    Returns a tuple containing (type_number, handler_function, value_options) for
-    the property name prop_name belonging to profile 'TIFF', 'EXIF' or 'IPTC'.
-    Returns None if the profile name is invalid or the property name is not
-    recognised for the profile.
+    Returns a tuple containing (prop_name, type_number, handler_function, value_options)
+    for the property name prop_name belonging to profile 'TIFF', 'EXIF' or 'IPTC'.
+    Returns None if the profile name is invalid or the property name is not recognised
+    for the profile. The returned prop_name may be different to the supplied prop_name
+    for profiles with case insensitive properties.
     """
+    def _get_field_index(field_class, field_name):
+        """
+        Returns the numeric index of field_name in field_class.Tags,
+        or raises a ValueError if the field was not found. The field
+        name can be in any case if field_class.TagsCaseSensitive is False.
+        """
+        if field_class.TagsCaseSensitive:
+            return field_class.Tags.index(field_name)
+        else:
+            if not hasattr(field_class, 'TagsLC'):
+                field_class.TagsLC = [t.lower() for t in field_class.Tags]
+            return field_class.TagsLC.index(field_name.lower())
+
     field_idx = -1
-    field_parent = None
+    field_class = None
 
     if profile == 'EXIF':
         try:
             if prop_name.startswith('GPS'):
-                field_parent = GpsProps
-                field_idx = field_parent.Tags.index(prop_name)
+                field_class = GpsProps
+                field_idx = _get_field_index(field_class, prop_name)
             else:
-                field_parent = ExifProps
-                field_idx = field_parent.Tags.index(prop_name)
+                field_class = ExifProps
+                field_idx = _get_field_index(field_class, prop_name)
         except ValueError:
             # The TIFF and EXIF tags seem to overlap a bit, so try TIFF
             try:
-                field_parent = TiffProps
-                field_idx = field_parent.Tags.index(prop_name)
+                field_class = TiffProps
+                field_idx = _get_field_index(field_class, prop_name)
             except ValueError:
                 # Give up
                 pass
     elif profile == 'TIFF':
         try:
-            field_parent = TiffProps
-            field_idx = field_parent.Tags.index(prop_name)
+            field_class = TiffProps
+            field_idx = _get_field_index(field_class, prop_name)
         except ValueError:
             # Give up
             pass
     elif profile == 'IPTC':
         try:
-            field_parent = IptcEnvProps
-            field_idx = field_parent.Tags.index(prop_name)
+            field_class = IptcEnvProps
+            field_idx = _get_field_index(field_class, prop_name)
         except ValueError:
             try:
-                field_parent = IptcAppProps
-                field_idx = field_parent.Tags.index(prop_name)
+                field_class = IptcAppProps
+                field_idx = _get_field_index(field_class, prop_name)
             except ValueError:
                 try:
-                    field_parent = IptcPhotoProps
-                    field_idx = field_parent.Tags.index(prop_name)
+                    field_class = IptcPhotoProps
+                    field_idx = _get_field_index(field_class, prop_name)
                 except ValueError:
                     # Give up
                     pass
 
     # Return result
-    if field_parent and field_idx >= 0:
-        type_number = field_parent.Types[field_idx]
-        handlerfn = field_parent.TagDisplay.get(prop_name, None)
-        options = field_parent.TagOptions.get(prop_name, None)
-        return (type_number, handlerfn, options)
+    if field_class and field_idx >= 0:
+        proper_name = field_class.Tags[field_idx]
+        type_number = field_class.Types[field_idx]
+        handlerfn = field_class.TagDisplay.get(prop_name, None)
+        options = field_class.TagOptions.get(prop_name, None)
+        return (proper_name, type_number, handlerfn, options)
     else:
         return None
 
@@ -654,6 +680,7 @@ def raw_list_to_dict(props_list, return_unknown_profiles, return_unknown_propert
                 field_info = _get_prop_handlers(profile, name)
                 if field_info is not None:
                     # Return known property
+                    name = field_info[0]       # E.g. "make" --> "Make"
                     if name.startswith('GPS'):
                         profile = 'GPS'
                     if profile not in ret_dict:
