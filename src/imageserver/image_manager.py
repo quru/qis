@@ -490,17 +490,39 @@ class ImageManager(object):
 
     def get_image_properties(self, filepath, return_unknown=True):
         """
-        Reads the image dimensions and embedded image profile properties (EXIF,
-        IPTC, TIFF, etc) from an image file. The original image file is always
-        used, so that the value of the IMAGE_STRIP_DEFAULT setting does not affect
-        this function.
+        Reads the image dimensions and embedded image profile properties
+        (EXIF, IPTC, TIFF, etc) from an image file.
+
+        The original image file is always used, so that the value of the
+        IMAGE_STRIP_DEFAULT setting does not affect this function.
+
+        See get_image_data_properties() for the return values.
+
+        This function additionally raises a SecurityError if the file path
+        requested attempts to read outside of the images directory.
+        """
+        file_data = get_file_data(filepath)
+        if file_data is None:
+            return {}
+
+        props = self.get_image_data_properties(file_data, return_unknown)
+        if not props:
+            self._logger.error('Failed to read image properties for %s' % filepath)
+        return props
+
+    def get_image_data_properties(self, image_data, return_unknown=True):
+        """
+        Reads the image dimensions and embedded image profile properties
+        (EXIF, IPTC, TIFF, etc) from raw image data.
 
         On success, a dictionary is returned containing the image width and height,
         and entries for the embedded data profile names, each containing a list of
         property names and values. For example:
-        { 'width': 3000, 'height': 2000,
+        { 'width': 3000,
+          'height': 2000,
           'TIFF': [ ('Maker': 'Canon'), ('Model': '300D') ],
-          'EXIF': [ ('Flash': 'Off'), ('ExposureMode': 'Auto') ] }
+          'EXIF': [ ('Flash': 'Off'), ('ExposureMode': 'Auto') ]
+        }
         where both the profile names and the properties will vary from image to image.
 
         By default, unrecognised properties are returned with their values in a raw
@@ -509,24 +531,17 @@ class ImageManager(object):
 
         An empty dictionary is returned if the file could not be read or there
         was an error reading the image.
-
-        Raises a SecurityError if the file path requested attempts to read outside
-        of the images directory.
         """
-        # Get original file
-        file_data = get_file_data(filepath)
-        if file_data is None:
-            return {}
-        # Get image info
         try:
-            (width, height) = imagemagick_get_image_dimensions(file_data)
-            file_properties = imagemagick_get_image_profile_data(file_data)
+            (width, height) = imagemagick_get_image_dimensions(image_data)
+            file_properties = imagemagick_get_image_profile_data(image_data)
         except Exception as e:
-            self._logger.error('Error reading image properties for %s: %s' % (filepath, str(e)))
+            self._logger.error('Error reading image properties: %s' % str(e))
             return {}
+
         # Convert to the promised return structure
-        props = {'width': width, 'height': height}
-        props.update(exif.raw_list_to_dict(file_properties, False, return_unknown))
+        props = exif.raw_list_to_dict(file_properties, False, return_unknown)
+        props.update({'width': width, 'height': height})
         return props
 
     @staticmethod
