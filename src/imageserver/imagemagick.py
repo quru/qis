@@ -37,6 +37,8 @@
 # 06May2013  Matt  Pass through DPI value for init() and burst_pdf()
 # 13Jun2013  Matt  Added image overlay parameters to adjust_image
 # 22Aug2013  Matt  Added align parameters to adjust_image
+# 10Dec2015  Matt  qismagick 2.0 - pass through data formats for identification
+#                  of ambiguous file types (plain TIFF vs RAW TIFF)
 #
 
 # TODO Change DPI to _dpi_x and _dpi_y, support x,y format in templates, web params, PDF handling
@@ -58,24 +60,27 @@ def imagemagick_init(gs_path, temp_files_path, pdf_default_dpi):
     qismagick.init(gs_path, temp_files_path, pdf_default_dpi)
 
 
-def imagemagick_adjust_image(image_data,
-            page=1, iformat='jpg',
-            new_width=0, new_height=0, size_auto_fit=False,
-            align_h=None, align_v=None, rotation=0.0, flip=None,
-            crop_top=0.0, crop_left=0.0, crop_bottom=1.0, crop_right=1.0, crop_auto_fit=False,
-            fill_colour='#ffffff', rquality=3, cquality=75, sharpen=0,
-            dpi=0, strip_info=False,
-            overlay_data=None, overlay_size=1.0, overlay_pos=None, overlay_opacity=1.0,
-            icc_profile=None, icc_intent=None, icc_bpc=False,
-            colorspace=None, tile_spec=(0, 0)):
+def imagemagick_adjust_image(
+        filename, image_data,
+        page=1, iformat='jpg',
+        new_width=0, new_height=0, size_auto_fit=False,
+        align_h=None, align_v=None, rotation=0.0, flip=None,
+        crop_top=0.0, crop_left=0.0, crop_bottom=1.0, crop_right=1.0, crop_auto_fit=False,
+        fill_colour='#ffffff', rquality=3, cquality=75, sharpen=0,
+        dpi=0, strip_info=False,
+        overlay_data=None, overlay_size=1.0, overlay_pos=None, overlay_opacity=1.0,
+        icc_profile=None, icc_intent=None, icc_bpc=False,
+        colorspace=None, tile_spec=(0, 0)
+    ):
     """
     Alters a raw image in any of the following ways, returning a new raw image:
     Resize, rotate, crop, change format, change compression, sharpen or blur,
     adjust colour profile.
 
+    filename    - the image's filename
     image_data  - the raw image data
     page        - the page number to return (for multi-page images), default 1
-    iformat     - the image format to return, default "jpg"
+    iformat     - the lower case image format to return, default "jpg"
     new_width   - the new image width, or 0 to proportion the image by its new height
     new_height  - the new image height, or 0 to proportion the image by its new width
     size_auto_fit - whether to adjust the requested width and height to retain the
@@ -142,6 +147,7 @@ def imagemagick_adjust_image(image_data,
     bottom right. The tile is generated last, after all other adjustments.
     """
     return qismagick.adjust_image(
+        filename,
         image_data,
         page,
         new_width,
@@ -198,10 +204,11 @@ def imagemagick_burst_pdf(pdf_data, dest_dir, dpi):
     return qismagick.burst_pdf(pdf_data, dest_dir, dpi)
 
 
-def imagemagick_get_image_profile_data(image_data):
+def imagemagick_get_image_profile_data(filename, image_data):
     """
     Reads and returns all EXIF / IPTC / XMP / etc profile data from an image.
 
+    filename   - the image's filename
     image_data - the raw image data
 
     Returns a list of tuples with format (profile, property, value)
@@ -210,21 +217,22 @@ def imagemagick_get_image_profile_data(image_data):
 
     Raises an ValueError if the supplied data is not a supported image.
     """
-    return qismagick.get_image_profile_data(image_data)
+    return qismagick.get_image_profile_data(filename, image_data)
 
 
-def imagemagick_get_image_dimensions(image_data):
+def imagemagick_get_image_dimensions(filename, image_data):
     """
     Obtains the pixel dimensions an image in an efficient way,
     avoiding the need to decode the image.
 
+    filename   - the image's filename
     image_data - the raw image data
 
     Returns a tuple with format (width, height)
 
     Raises an ValueError if the supplied data is not a supported image.
     """
-    return qismagick.get_image_dimensions(image_data)
+    return qismagick.get_image_dimensions(filename, image_data)
 
 
 def imagemagick_get_version_info():

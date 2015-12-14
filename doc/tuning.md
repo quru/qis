@@ -224,6 +224,9 @@ Run configure with:
 
 	$ ./configure --with-quantum-depth 8 <your-other-options>
 
+Note that Q16 (or Q32) is required for working with RAW image files from digital
+cameras.
+
 ## QIS settings
 
 The following settings, which you can override in your `local_settings.py` file,

@@ -1879,6 +1879,55 @@ class ImageServerTestsFast(BaseTestCase):
         self.assertImageMatch(rv.data, tempfile)
         pdf_reset()
 
+    # Test support for reading digital camera RAW files
+    # Requires qismagick v2.0.0+
+    def test_nef_raw_file_support(self):
+        def check_exif_dict(props):
+            self.assertIn('TIFF', props)
+            self.assertIn('EXIF', props)
+            self.assertEqual(props['TIFF']['Model'], 'NIKON D3')
+            self.assertEqual(props['EXIF']['FNumber'], '3.2')
+        # Get an 800w PNG copy
+        rv = self.app.get('/image?src=test_images/nikon_raw.nef&format=png&width=800&strip=0')
+        self.assertEqual(rv.status_code, 200)
+        # Check expected result - actual (ImageMagick would only return the 160 x 120 jpeg preview)
+        dims = get_png_dimensions(rv.data)
+        self.assertEqual(dims[0], 800)
+        self.assertImageMatch(rv.data, 'nikon-raw-800.png')
+        # The image dimensions are really 2000 x 3008
+        props = ie.get_image_properties('test_images/nikon_raw.nef', True)
+        self.assertEqual(props['width'], 2000)
+        self.assertEqual(props['height'], 3008)
+        # EXIF data should be readable
+        check_exif_dict(props)
+        # EXIF should also be preserved for strip=0 derivatives
+        props2 = ie.get_image_data_properties('nikon_raw.nef', rv.data, True)
+        check_exif_dict(props2)
+
+    # Test support for reading digital camera RAW files
+    def test_cr2_raw_file_support(self):
+        def check_exif_dict(props):
+            self.assertIn('TIFF', props)
+            self.assertIn('EXIF', props)
+            self.assertEqual(props['TIFF']['Model'], 'Canon EOS 500D')
+            self.assertEqual(props['EXIF']['FNumber'], '4.0')
+        # Get a full size PNG copy
+        rv = self.app.get('/image?src=test_images/canon_raw.cr2&format=png&strip=0')
+        self.assertEqual(rv.status_code, 200)
+        # Check expected dimensions - actual
+        dims = get_png_dimensions(rv.data)
+        self.assertEqual(dims[0], 4770)
+        self.assertEqual(dims[0], 3178)
+        # Check expected dimensions - original file
+        props = ie.get_image_properties('test_images/canon_raw.cr2', True)
+        self.assertEqual(props['width'], 4770)
+        self.assertEqual(props['height'], 3178)
+        # EXIF data should be readable too
+        check_exif_dict(props)
+        # EXIF should also be preserved for strip=0 derivatives
+        props2 = ie.get_image_data_properties('canon_raw.cr2', rv.data, True)
+        check_exif_dict(props2)
+
     # Test watermarks, overlays - opacity 0
     def test_overlays_blank(self):
         # Get blank test image as reference

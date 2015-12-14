@@ -279,6 +279,7 @@ def image():
                     image_attrs.width(),
                     image_attrs.height(),
                     image_attrs.template(),
+                    image_wrapper.attrs().filename(with_path=False),
                     image_wrapper.data()
                 )
             except ValueError as e:
@@ -643,7 +644,8 @@ def _public_image_limits_pre_image_checks(req_width, req_height, req_autosizefit
     return req_width, req_height, req_autosizefit
 
 
-def _public_image_limits_post_image_checks(req_width, req_height, req_template, image_data):
+def _public_image_limits_post_image_checks(req_width, req_height, req_template,
+                                           image_filename, image_data):
     """
     To be called when no one is logged in, checks that the image actually
     generated conforms to the limits defined by the PUBLIC_MAX_IMAGE_WIDTH
@@ -668,7 +670,9 @@ def _public_image_limits_post_image_checks(req_width, req_height, req_template, 
         if (limit_w and not limit_h and req_height and not req_width) or \
            (limit_h and not limit_w and req_width and not req_height):
             logger.debug('Public image limits, checking generated image dimensions')
-            image_w, image_h = image_engine.get_image_data_dimensions(image_data)
+            image_w, image_h = image_engine.get_image_data_dimensions(
+                image_filename, image_data
+            )
             logger.debug('Public image limits, generated image is %d x %d' % (image_w, image_h))
             if image_w and image_h:
                 if limit_w and image_w > limit_w:

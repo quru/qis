@@ -501,16 +501,17 @@ class ImageManager(object):
         This function additionally raises a SecurityError if the file path
         requested attempts to read outside of the images directory.
         """
+        file_name = filepath_filename(filepath)
         file_data = get_file_data(filepath)
         if file_data is None:
             return {}
 
-        props = self.get_image_data_properties(file_data, return_unknown)
+        props = self.get_image_data_properties(file_name, file_data, return_unknown)
         if not props:
             self._logger.error('Failed to read image properties for %s' % filepath)
         return props
 
-    def get_image_data_properties(self, image_data, return_unknown=True):
+    def get_image_data_properties(self, image_filename, image_data, return_unknown=True):
         """
         Reads the image dimensions and embedded image profile properties
         (EXIF, IPTC, TIFF, etc) from raw image data.
@@ -533,8 +534,8 @@ class ImageManager(object):
         was an error reading the image.
         """
         try:
-            (width, height) = imagemagick_get_image_dimensions(image_data)
-            file_properties = imagemagick_get_image_profile_data(image_data)
+            (width, height) = imagemagick_get_image_dimensions(image_filename, image_data)
+            file_properties = imagemagick_get_image_profile_data(image_filename, image_data)
         except Exception as e:
             self._logger.error('Error reading image properties: %s' % str(e))
             return {}
@@ -556,19 +557,20 @@ class ImageManager(object):
         Raises a SecurityError if the file path requested attempts to read
         outside of the images directory.
         """
+        file_name = filepath_filename(filepath)
         file_data = get_file_data(filepath)
         return (0, 0) if file_data is None else \
-            ImageManager.get_image_data_dimensions(file_data)
+            ImageManager.get_image_data_dimensions(file_name, file_data)
 
     @staticmethod
-    def get_image_data_dimensions(image_data):
+    def get_image_data_dimensions(image_filename, image_data):
         """
         Reads the image dimensions from raw image data, without decoding the
         image if possible. Returns a tuple containing the image width and height,
         or (0, 0) if the image type is unsupported or could not be read.
         """
         try:
-            return imagemagick_get_image_dimensions(image_data)
+            return imagemagick_get_image_dimensions(image_filename, image_data)
         except:
             return (0, 0)
 
@@ -871,7 +873,10 @@ class ImageManager(object):
             )
             return
         # Is image large enough to meet the threshold?
-        (w, h) = imagemagick_get_image_dimensions(original_data)
+        (w, h) = imagemagick_get_image_dimensions(
+            image_attrs.filename(with_path=False),
+            original_data
+        )
         if (w * h) < self._settings["AUTO_PYRAMID_THRESHOLD"]:
             self._logger.debug(
                 'Image below threshold, will not pyramid image %s' % image_attrs.filename()
@@ -1033,6 +1038,7 @@ class ImageManager(object):
 
             try:
                 return imagemagick_adjust_image(
+                    base_image_attrs.filename(with_path=False),
                     base_image_data,
                     page, iformat,
                     width, height, autosizefit,
