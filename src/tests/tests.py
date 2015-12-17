@@ -1903,7 +1903,7 @@ class ImageServerTestsFast(BaseTestCase):
         # EXIF data should be readable
         check_exif_dict(props)
         # EXIF should also be preserved for strip=0 derivatives
-        props2 = ie.get_image_data_properties('nikon_raw.nef', rv.data, True)
+        props2 = ie.get_image_data_properties(rv.data, 'nef', True)
         check_exif_dict(props2)
 
     # Test support for reading digital camera RAW files
@@ -1929,7 +1929,7 @@ class ImageServerTestsFast(BaseTestCase):
         # EXIF data should be readable too
         check_exif_dict(props)
         # EXIF should also be preserved for strip=0 derivatives
-        props2 = ie.get_image_data_properties('canon_raw.cr2', rv.data, True)
+        props2 = ie.get_image_data_properties(rv.data, 'cr2',  True)
         check_exif_dict(props2)
 
     # Test watermarks, overlays - opacity 0

@@ -61,7 +61,7 @@ def imagemagick_init(gs_path, temp_files_path, pdf_default_dpi):
 
 
 def imagemagick_adjust_image(
-        filename, image_data,
+        image_data, data_type,
         page=1, iformat='jpg',
         new_width=0, new_height=0, size_auto_fit=False,
         align_h=None, align_v=None, rotation=0.0, flip=None,
@@ -77,8 +77,8 @@ def imagemagick_adjust_image(
     Resize, rotate, crop, change format, change compression, sharpen or blur,
     adjust colour profile.
 
-    filename    - the image's filename
     image_data  - the raw image data
+    data_type   - optional type (file extension) of the image data
     page        - the page number to return (for multi-page images), default 1
     iformat     - the lower case image format to return, default "jpg"
     new_width   - the new image width, or 0 to proportion the image by its new height
@@ -147,8 +147,8 @@ def imagemagick_adjust_image(
     bottom right. The tile is generated last, after all other adjustments.
     """
     return qismagick.adjust_image(
-        filename,
         image_data,
+        data_type,
         page,
         new_width,
         new_height,
@@ -204,12 +204,12 @@ def imagemagick_burst_pdf(pdf_data, dest_dir, dpi):
     return qismagick.burst_pdf(pdf_data, dest_dir, dpi)
 
 
-def imagemagick_get_image_profile_data(filename, image_data):
+def imagemagick_get_image_profile_data(image_data, data_type):
     """
     Reads and returns all EXIF / IPTC / XMP / etc profile data from an image.
 
-    filename   - the image's filename
-    image_data - the raw image data
+    image_data  - the raw image data
+    data_type   - optional type (file extension) of the image data
 
     Returns a list of tuples with format (profile, property, value)
     E.g. [('exif', 'Make', 'Canon'), ('exif', 'Model', '300D')]
@@ -217,22 +217,22 @@ def imagemagick_get_image_profile_data(filename, image_data):
 
     Raises an ValueError if the supplied data is not a supported image.
     """
-    return qismagick.get_image_profile_data(filename, image_data)
+    return qismagick.get_image_profile_data(image_data, data_type)
 
 
-def imagemagick_get_image_dimensions(filename, image_data):
+def imagemagick_get_image_dimensions(image_data, data_type):
     """
     Obtains the pixel dimensions an image in an efficient way,
     avoiding the need to decode the image.
 
-    filename   - the image's filename
-    image_data - the raw image data
+    image_data  - the raw image data
+    data_type   - optional type (file extension) of the image data
 
     Returns a tuple with format (width, height)
 
     Raises an ValueError if the supplied data is not a supported image.
     """
-    return qismagick.get_image_dimensions(filename, image_data)
+    return qismagick.get_image_dimensions(image_data, data_type)
 
 
 def imagemagick_get_version_info():
