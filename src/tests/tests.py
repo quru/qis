@@ -1887,19 +1887,21 @@ class ImageServerTestsFast(BaseTestCase):
         def check_exif_dict(props):
             self.assertIn('TIFF', props)
             self.assertIn('EXIF', props)
-            self.assertEqual(props['TIFF']['Model'], 'NIKON D3')
-            self.assertEqual(props['EXIF']['FNumber'], '3.2')
+            tiffdict = dict(props['TIFF'])
+            exifdict = dict(props['EXIF'])
+            self.assertEqual(tiffdict['Model'], 'NIKON D50')
+            self.assertEqual(exifdict['FNumber'], '4.2')
         # Get an 800w PNG copy
         rv = self.app.get('/image?src=test_images/nikon_raw.nef&format=png&width=800&strip=0')
         self.assertEqual(rv.status_code, 200)
-        # Check expected result - actual (ImageMagick would only return the 160 x 120 jpeg preview)
+        # Check expected result - actual (ImageMagick would only return the 160x120 jpeg preview)
         dims = get_png_dimensions(rv.data)
         self.assertEqual(dims[0], 800)
         self.assertImageMatch(rv.data, 'nikon-raw-800.png')
-        # The image dimensions are really 2000 x 3008
+        # The image dimensions are really 2000x3008 (Mac Preview) or 2014x3039 (LibRaw)
         props = ie.get_image_properties('test_images/nikon_raw.nef', True)
-        self.assertEqual(props['width'], 2000)
-        self.assertEqual(props['height'], 3008)
+        self.assertEqual(props['width'], 2014)
+        self.assertEqual(props['height'], 3039)
         # EXIF data should be readable
         check_exif_dict(props)
         # EXIF should also be preserved for strip=0 derivatives
@@ -1913,15 +1915,17 @@ class ImageServerTestsFast(BaseTestCase):
         def check_exif_dict(props):
             self.assertIn('TIFF', props)
             self.assertIn('EXIF', props)
-            self.assertEqual(props['TIFF']['Model'], 'Canon EOS 500D')
-            self.assertEqual(props['EXIF']['FNumber'], '4.0')
+            tiffdict = dict(props['TIFF'])
+            exifdict = dict(props['EXIF'])
+            self.assertEqual(tiffdict['Model'], 'Canon EOS 500D')
+            self.assertEqual(exifdict['FNumber'], '4.0')
         # Get a full size PNG copy
         rv = self.app.get('/image?src=test_images/canon_raw.cr2&format=png&strip=0')
         self.assertEqual(rv.status_code, 200)
         # Check expected dimensions - actual
         dims = get_png_dimensions(rv.data)
         self.assertEqual(dims[0], 4770)
-        self.assertEqual(dims[0], 3178)
+        self.assertEqual(dims[1], 3178)
         # Check expected dimensions - original file
         props = ie.get_image_properties('test_images/canon_raw.cr2', True)
         self.assertEqual(props['width'], 4770)

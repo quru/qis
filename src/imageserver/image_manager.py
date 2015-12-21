@@ -525,8 +525,8 @@ class ImageManager(object):
         property names and values. For example:
         { 'width': 3000,
           'height': 2000,
-          'TIFF': [ ('Maker': 'Canon'), ('Model': '300D') ],
-          'EXIF': [ ('Flash': 'Off'), ('ExposureMode': 'Auto') ]
+          'TIFF': [ ('Maker', 'Canon'), ('Model', '300D') ],
+          'EXIF': [ ('Flash', 'Off'), ('ExposureMode', 'Auto') ]
         }
         where both the profile names and the properties will vary from image to image.
 
