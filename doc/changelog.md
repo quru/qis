@@ -1,8 +1,8 @@
 # v1.50
 _Changes: Add RAW file support, bug fixes to SVG support_
 
-Requires `qismagick.so` v2.0.0, which unlike most releases is not backwards-
-compatible with older releases of QIS.
+Requires `qismagick.so` v2.0.0, which unlike most releases,
+is not backwards-compatible with older releases of QIS.
 
 Common RAW file types are now enabled by default in `base_settings.py`;
 support for these can be customised by redefining `IMAGE_FORMATS`
