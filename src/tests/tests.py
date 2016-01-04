@@ -2042,7 +2042,12 @@ class ImageServerTestsFast(BaseTestCase):
     def test_svg_overlay(self):
         rv = self.app.get('/image?src=/test_images/blue bells.jpg&strip=0&format=png&width=800&overlay=/test_images/car.svg&ovsize=0.7&ovpos=s')
         self.assertEqual(rv.status_code, 200)
-        self.assertImageMatch(rv.data, 'svg-overlay.png')
+        # Different versions of rsvg (or maybe libcairo?) produce different output
+        # There's no easy way of querying the library versions so try both known variations
+        try:
+            self.assertImageMatch(rv.data, 'svg-overlay-1.png')
+        except AssertionError:
+            self.assertImageMatch(rv.data, 'svg-overlay-2.png')
 
     # Test image templates
     def test_templates(self):
