@@ -243,10 +243,6 @@ API_TOKEN_EXPIRY_TIME = 60 * 60
 # This can be simply "gs" to use the server's default installation.
 GHOSTSCRIPT_PATH = "gs"
 
-# The path to the dcraw command to use for digital camera RAW file processing.
-# This can be simply "dcraw" to use the server's default installation.
-DCRAW_PATH = "dcraw"
-
 # Whether to integrate with an LDAP or Active Directory server
 # for the provision of user accounts and login authentication.
 # All other LDAP settings are ignored when LDAP_INTEGRATION is False.
