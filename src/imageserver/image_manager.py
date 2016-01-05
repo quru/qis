@@ -401,7 +401,9 @@ class ImageManager(object):
                         # Disk file read failed
                         return None
                     # See whether to auto-pyramid the original image for the future
-                    self._auto_pyramid_image(file_data, image_attrs)
+                    self._auto_pyramid_image(
+                        file_data, get_file_extension(image_attrs.filename()), image_attrs
+                    )
                     # Set the original image from disk as the base image
                     file_attrs = ImageAttrs(image_attrs.filename(), image_attrs.database_id())
                     base_image = ImageWrapper(file_data, file_attrs)
@@ -411,7 +413,9 @@ class ImageManager(object):
                     # If the base image found is the full size,
                     # see whether to auto-pyramid the original image for the future
                     if not base_image.attrs().width() and not base_image.attrs().height():
-                        self._auto_pyramid_image(base_image.data(), image_attrs)
+                        self._auto_pyramid_image(
+                            base_image.data(), base_image.attrs().format(), image_attrs
+                        )
 
                 # Generate a new custom image
                 try:
@@ -503,17 +507,40 @@ class ImageManager(object):
 
     def get_image_properties(self, filepath, return_unknown=True):
         """
-        Reads the image dimensions and embedded image profile properties (EXIF,
-        IPTC, TIFF, etc) from an image file. The original image file is always
-        used, so that the value of the IMAGE_STRIP_DEFAULT setting does not affect
-        this function.
+        Reads the image dimensions and embedded image profile properties
+        (EXIF, IPTC, TIFF, etc) from an image file.
+
+        The original image file is always used, so that the value of the
+        IMAGE_STRIP_DEFAULT setting does not affect this function.
+
+        See get_image_data_properties() for the return values.
+
+        This function additionally raises a SecurityError if the file path
+        requested attempts to read outside of the images directory.
+        """
+        file_type = get_file_extension(filepath)
+        file_data = get_file_data(filepath)
+        if file_data is None:
+            return {}
+
+        props = self.get_image_data_properties(file_data, file_type, return_unknown)
+        if not props:
+            self._logger.error('Failed to read image properties for %s' % filepath)
+        return props
+
+    def get_image_data_properties(self, image_data, image_format=None, return_unknown=True):
+        """
+        Reads the image dimensions and embedded image profile properties
+        (EXIF, IPTC, TIFF, etc) from raw image data.
 
         On success, a dictionary is returned containing the image width and height,
         and entries for the embedded data profile names, each containing a list of
         property names and values. For example:
-        { 'width': 3000, 'height': 2000,
-          'TIFF': [ ('Maker': 'Canon'), ('Model': '300D') ],
-          'EXIF': [ ('Flash': 'Off'), ('ExposureMode': 'Auto') ] }
+        { 'width': 3000,
+          'height': 2000,
+          'TIFF': [ ('Maker', 'Canon'), ('Model', '300D') ],
+          'EXIF': [ ('Flash', 'Off'), ('ExposureMode', 'Auto') ]
+        }
         where both the profile names and the properties will vary from image to image.
 
         By default, unrecognised properties are returned with their values in a raw
@@ -522,24 +549,17 @@ class ImageManager(object):
 
         An empty dictionary is returned if the file could not be read or there
         was an error reading the image.
-
-        Raises a SecurityError if the file path requested attempts to read outside
-        of the images directory.
         """
-        # Get original file
-        file_data = get_file_data(filepath)
-        if file_data is None:
-            return {}
-        # Get image info
         try:
-            (width, height) = imagemagick_get_image_dimensions(file_data)
-            file_properties = imagemagick_get_image_profile_data(file_data)
+            (width, height) = imagemagick_get_image_dimensions(image_data, image_format)
+            file_properties = imagemagick_get_image_profile_data(image_data, image_format)
         except Exception as e:
-            self._logger.error('Error reading image properties for %s: %s' % (filepath, str(e)))
+            self._logger.error('Error reading image properties: %s' % str(e))
             return {}
+
         # Convert to the promised return structure
-        props = {'width': width, 'height': height}
-        props.update(exif.raw_list_to_dict(file_properties, False, return_unknown))
+        props = exif.raw_list_to_dict(file_properties, False, return_unknown)
+        props.update({'width': width, 'height': height})
         return props
 
     @staticmethod
@@ -554,19 +574,22 @@ class ImageManager(object):
         Raises a SecurityError if the file path requested attempts to read
         outside of the images directory.
         """
+        file_type = get_file_extension(filepath)
         file_data = get_file_data(filepath)
-        return (0, 0) if file_data is None else \
-            ImageManager.get_image_data_dimensions(file_data)
+        return (
+            (0, 0) if file_data is None else
+            ImageManager.get_image_data_dimensions(file_data, file_type)
+        )
 
     @staticmethod
-    def get_image_data_dimensions(image_data):
+    def get_image_data_dimensions(image_data, image_format=None):
         """
         Reads the image dimensions from raw image data, without decoding the
         image if possible. Returns a tuple containing the image width and height,
         or (0, 0) if the image type is unsupported or could not be read.
         """
         try:
-            return imagemagick_get_image_dimensions(image_data)
+            return imagemagick_get_image_dimensions(image_data, image_format)
         except:
             return (0, 0)
 
@@ -846,7 +869,7 @@ class ImageManager(object):
             # though - as noted above this is really only a defensive measure.
             self._cache.raw_put(gen_flag, 'DONE', expiry_secs=600)
 
-    def _auto_pyramid_image(self, original_data, image_attrs):
+    def _auto_pyramid_image(self, original_data, original_type, image_attrs):
         """
         Checks the supplied image, and if it exceeds a certain size, meets
         certain criteria, and if the operation has not already been performed,
@@ -875,7 +898,10 @@ class ImageManager(object):
             )
             return
         # Is image large enough to meet the threshold?
-        (w, h) = imagemagick_get_image_dimensions(original_data)
+        (w, h) = imagemagick_get_image_dimensions(
+            original_data,
+            original_type
+        )
         if (w * h) < self._settings["AUTO_PYRAMID_THRESHOLD"]:
             self._logger.debug(
                 'Image below threshold, will not pyramid image %s' % image_attrs.filename()
@@ -1038,6 +1064,7 @@ class ImageManager(object):
             try:
                 return imagemagick_adjust_image(
                     base_image_data,
+                    base_image_attrs.format(),
                     page, iformat,
                     width, height, autosizefit,
                     align_h, align_v, rotation, flip,

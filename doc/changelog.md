@@ -1,4 +1,4 @@
-# v2.1.x-dev
+# v2.2.x-dev
 _Breaking change: remove default image settings, add default image templates,
 add image parameter override controls (phase 1)_
 
@@ -6,6 +6,10 @@ TODO
 
 For a full discussion of this change,
 see [v2/Default-templates.txt](./v2/Default-templates.txt).
+
+# v2.1.1-dev
+_Changes: Merge from v1.50 - qismagick.so v2.0 upgrade to better support
+SVG and digital camera RAW files_
 
 # v2.1.0-dev
 _Changes: change template storage JSON format_
@@ -64,6 +68,21 @@ Optional: drop the `cachectl` table [note! v2_upgrade.py will do this]
 Start the Apache service
 
 
+# v1.50
+_Changes: Add RAW file support, bug fixes to SVG support_
+
+Requires `qismagick.so` v2.0.0, which unlike most releases,
+is not backwards-compatible with older releases of QIS.
+
+Common RAW file types are now enabled by default in `base_settings.py`;
+support for these can be customised by redefining `IMAGE_FORMATS`
+in your `local_settings.py` file.
+
+Update the Python dependencies  
+Update the Python and web code  
+Restart the Apache service
+
+
 # v1.43
 _Changes: Bug fix to Active Directory integration, adds basic support for LDAPS_
 
@@ -95,8 +114,8 @@ Restart the Apache service
 # v1.41
 _Changes: Bug fix to flatten XCF/PSD files_
 
-Requires an updated `qismagick.so`.
-The opacity of merged layers may be incorrect in ImageMagick < 6.9.1-4.
+Requires an updated `qismagick.so`.  
+The opacity of merged layers may be incorrect in ImageMagick < 6.9.1-4.  
 There remains an issue of content being incorrectly clipped in overlapping areas.
 
 Update the Python dependencies  
@@ -624,7 +643,8 @@ Start the QIS service.
 # v1.0.887 to 1.12.1142
 _Changes: Enhanced admin, adds groups and permissions, better PDF handling, file system syncing, bg tasks engine, nostats op renamed to stats, slideshow viewer, new housekeeping tasks, folder permission tables_
 
-Consider upgrading Ghostscript to v9.04 or above. Conversion for some catalogues requires v9.05 or above for indexed color space bug fixes.
+Consider upgrading Ghostscript to v9.04 or above.
+Conversion for some PDFs requires v9.05 or above for indexed color space bug fixes.
 
 On production servers:  
 Back up the Apache conf files, QIS templates, wsgi bootstrap and conf files  

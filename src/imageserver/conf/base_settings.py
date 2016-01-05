@@ -33,7 +33,6 @@ SECRET_KEY = "\xc7\x9b\xed9Q\x89\xb0\x19\xad\x80\x85+r\xaat:U#\x9bi\xc9\x99zY"
 # formats are actually supported.
 IMAGE_FORMATS = {
     "bmp": ("Bitmap image", "image/bmp"),
-    "cr2": ("Canon RAW image", "image/cr2"),
     "dcm": ("DICOM image", "application/dicom"),
     "gif": ("GIF image", "image/gif"),
     "eps": ("Encapsulated PostScript", "application/postscript"),
@@ -43,6 +42,7 @@ IMAGE_FORMATS = {
     "pjpeg": ("Progressive JPEG image", "image/jpeg"),
     "pdf": ("PDF file", "application/pdf"),
     "png": ("PNG image", "image/png"),
+    "ppm": ("Portable PixMap image", "image/x-portable-pixmap"),
     "psd": ("Photoshop image", "image/psd"),
     "svg": ("SVG image", "image/svg+xml"),
     "tga": ("Truevision TARGA image", "image/tga"),
@@ -50,16 +50,16 @@ IMAGE_FORMATS = {
     "tiff": ("TIFF image", "image/tiff"),
     "xcf": ("GIMP image", "image/xcf"),
 
-    # These require ufraw / ufraw-batch
-    # "arw": ("Sony Alpha RAW image", "image/arw"),
-    # "mrw": ("Minolta RAW image", "image/mrw"),
-    # "nef": ("Nikon RAW image", "image/nef"),
-    # "nrw": ("Nikon RAW image", "image/nrw"),
-    # "orf": ("Olympus RAW image", "image/orf"),
-    # "rw2": ("Panasonic RAW image", "image/rw2"),
-    # "raw": ("Panasonic RAW image", "image/raw"),
-    # "raf": ("Fuji RAW image", "image/raf"),
-    # "x3f": ("Sigma RAW image", "image/x3f"),
+    "arw": ("Sony Alpha RAW image", "image/arw"),
+    "cr2": ("Canon RAW image", "image/cr2"),
+    "mrw": ("Minolta RAW image", "image/mrw"),
+    "nef": ("Nikon RAW image", "image/nef"),
+    "nrw": ("Nikon RAW image", "image/nrw"),
+    "orf": ("Olympus RAW image", "image/orf"),
+    "rw2": ("Panasonic RAW image", "image/rw2"),
+    "raw": ("Panasonic RAW image", "image/raw"),
+    "raf": ("Fuji RAW image", "image/raf"),
+    "x3f": ("Sigma RAW image", "image/x3f"),
 }
 
 # Resize algorithm (1 fast/good, 2 better, 3 slow/best)
@@ -238,9 +238,8 @@ API_AUTHENTICATION_CLASS = "TimedTokenBasicAuthentication"
 # The API token expiry time in seconds.
 API_TOKEN_EXPIRY_TIME = 60 * 60
 
-# The path to the Ghostscript gs command (or compatible equivalent)
-# to use for PDF file processing. This can be simply "gs" to use the
-# server's default installation of Ghostscript.
+# The path to the Ghostscript command to use for PDF file processing.
+# This can be simply "gs" to use the server's default installation.
 GHOSTSCRIPT_PATH = "gs"
 
 # Whether to integrate with an LDAP or Active Directory server

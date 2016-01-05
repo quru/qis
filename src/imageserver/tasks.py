@@ -306,7 +306,7 @@ def delete_old_temp_files(**kwargs):
     import stat
     from flask_app import app
 
-    temp_file_patterns = ['magick*', 'img-libpdf*']
+    temp_file_patterns = ['magick*', 'libpdf*', 'libraw*']
     delete_before_time = datetime.now() - timedelta(days=1)
     tf_count = 0
     tf_removed = 0
