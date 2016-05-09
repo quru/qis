@@ -36,6 +36,8 @@
 	* 6.9.0-2 fixes "numerous buffer overflows" and a TIFF crash
 	* 6.9.0-5 fixes defaults for RAW file decoding when missing delegates.xml
 	* 6.9.1-4 fixes layer masks when flattening XCF/PSD files
+	* 6.9.3-9 - 6.9.4-0 fixes several security vulnerabilities and closes
+	      some possibly exploitable loopholes
 
 # Python libraries
 
