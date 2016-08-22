@@ -598,6 +598,7 @@ class Property(Base, BaseMixin):
     """
     FOLDER_PERMISSION_VERSION = 'fp_version'
     IMAGE_TEMPLATES_VERSION = 'template_version'
+    DEFAULT_TEMPLATE = 'pubimage_default_template'
 
     key = Column(String(50), nullable=False, unique=True, primary_key=True)
     value = Column(Text, nullable=True)

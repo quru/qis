@@ -1,4 +1,4 @@
-QIS v2.1 Replace default image settings with default templates, add image security
+QIS v2.2 Replace default image settings with default templates, add image security
 ==================================================================================
 
 This change follows the move of image templates from being flat text files to
@@ -135,11 +135,12 @@ And level (1) may be disallowed, depending on the override flags in the template
 When a URL parameter is disallowed, QIS will return an HTTP error 400 "bad
 parameter" response along with an error message describing which parameter was
 rejected and by which template. The alternative approach of silently ignoring the
-disallowed parameter would result in a public API is not consistent in its responses,
-and could therefore lead to undetected problems.
+disallowed parameter would result in a public API that is not consistent in its
+responses, and could therefore lead to undetected problems.
 
 This change to reject URL parameters for width, height and strip (depending on
-templates) has the potential to cause runtime errors in these public-facing utilities:
+templates) has the potential to cause runtime errors in these public-facing
+utilities:
 
 * Image zoomer - strips and requests full width and height
 * Gallery - creates thumbnails with strip

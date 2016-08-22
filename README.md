@@ -112,7 +112,7 @@ Web interface - image publisher
 QIS depends on the following open source tools and applications:
 
 * Linux operating system
-* Python 2.x - to run the QIS application code
+* Python 2.6 or 2.7 - to run the QIS application code
 * Apache 2.2 or 2.4 - the web server
 * mod_wsgi Apache module - to run the QIS Python application inside Apache
 * ImageMagick - to provide the image processing capabilities

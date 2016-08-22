@@ -28,6 +28,7 @@
 # Date       By    Details
 # =========  ====  ============================================================
 # 05Nov2015  Matt  Change from template upgrade to whole version upgrade
+# 17Aug2016  Matt  v2.2 Move IMAGE_DEFAULT settings into a default template
 #
 # Notes:
 #
@@ -75,9 +76,10 @@ def import_templates():
     num_files = 0
     num_errors = 0
     num_skipped = 0
-    template_dir_path = app.config['TEMPLATES_BASE_DIR'] \
-        if 'TEMPLATES_BASE_DIR' in app.config else \
+    template_dir_path = app.config.get(
+        'TEMPLATES_BASE_DIR',
         os.path.join(app.config['INSTALL_DIR'], 'templates')
+    )
     cfg_files = glob.glob(unicode(os.path.join(template_dir_path, '*.cfg')))
     log('Starting image templates import')
     for cfg_file_path in cfg_files:
@@ -187,6 +189,44 @@ def import_templates():
         log('Info: Old template files remain in ' + template_dir_path)
 
 
+def create_default_template():
+    from imageserver.flask_app import app, data_engine
+    from imageserver.models import ImageTemplate, Property
+
+    log('Creating default image template')
+
+    existing_obj = data_engine.get_image_template(tempname='Default')
+    if existing_obj is None:
+        data_engine.save_object(ImageTemplate(
+            'Default',
+            'Defines the system defaults for image generation if the '
+            'image does not specify a template or specific parameter value', {
+                'format': {'value': app.config.get('IMAGE_FORMAT_DEFAULT', '')},
+                'quality': {'value': app.config.get('IMAGE_QUALITY_DEFAULT', 80)},
+                'strip': {'value': app.config.get('IMAGE_STRIP_DEFAULT', True)},
+                'colorspace': {'value': app.config.get('IMAGE_COLORSPACE_DEFAULT', 'RGB')},
+                'dpi_x': {'value': app.config.get('IMAGE_DPI_DEFAULT', None)},
+                'dpi_y': {'value': app.config.get('IMAGE_DPI_DEFAULT', None)},
+                'expiry_secs': {'value': app.config.get('IMAGE_EXPIRY_TIME_DEFAULT',
+                                                        60 * 60 * 24 * 7)}
+            }
+        ))
+        log(
+            'Info: Default image generation settings have been moved into a '
+            'new template called \'Default\'.'
+        )
+    else:
+        log('Skipped creation of a \'Default\' template as it already exists.')
+
+    data_engine.save_object(Property(Property.DEFAULT_TEMPLATE, 'default'))
+    log(
+        'If you have any of the following settings in your local_settings.py '
+        'file, they can now be deleted:\n\n'
+        'IMAGE_FORMAT_DEFAULT\nIMAGE_QUALITY_DEFAULT\nIMAGE_STRIP_DEFAULT\n'
+        'IMAGE_COLORSPACE_DEFAULT\nIMAGE_DPI_DEFAULT\nIMAGE_EXPIRY_TIME_DEFAULT\n'
+    )
+
+
 def log(astr):
     print astr
 
@@ -206,7 +246,9 @@ if __name__ == '__main__':
         # Go
         upgrade_cache_table()
         import_templates()
-        print 'Upgrade complete. Review the messages above for any errors or warnings.'
+        create_default_template()
+        print 'Upgrade complete. Review the messages above for any errors, ' + \
+              'warnings, or manual changes required.'
         exit(0)
 
     except KeyboardInterrupt:

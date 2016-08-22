@@ -40,7 +40,7 @@ from imageserver.flask_app import app, data_engine, permissions_engine
 from imageserver.flask_util import render_template
 from imageserver.image_attrs import ImageAttrs
 from imageserver.template_attrs import TemplateAttrs
-from imageserver.models import Folder, Group, ImageTemplate, User
+from imageserver.models import Folder, Group, ImageTemplate, Property, User
 from imageserver.util import parse_int
 from imageserver.views_util import log_security_error
 
@@ -56,9 +56,12 @@ def index():
 # The template admin list page
 @blueprint.route('/templates/')
 def template_list():
+    db_default_template = data_engine.get_object(Property, Property.DEFAULT_TEMPLATE)
     return render_template(
         'admin_template_list.html',
-        templates=data_engine.list_objects(ImageTemplate, order_field=ImageTemplate.name)
+        templates=data_engine.list_objects(ImageTemplate, order_field=ImageTemplate.name),
+        system_template_key=db_default_template.key,
+        system_template_value=db_default_template.value
     )
 
 

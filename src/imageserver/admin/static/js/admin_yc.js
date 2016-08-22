@@ -35,7 +35,11 @@ var GenericListPage={};GenericListPage.initPopupLinks=function(b,c){var a=$$(".p
 var a=$$(".delform");a.each(function(d){setAjaxJsonForm(d,function(){return confirm("Are you sure you want to delete "+b+" '"+d.del_name.value+"'?");
 },null,function(){alert(c+" deleted successfully.");window.location.reload();},function(e,g){var f=getAPIError(e,g);
 alert("Sorry, this "+b+" was not deleted.\n\n"+f.message);});});};var TemplateList={};TemplateList.onInit=function(){GenericListPage.initPopupLinks(575,650);
-GenericListPage.initDeleteLinks("template");};var UserList={};UserList.onInit=function(){GenericListPage.initPopupLinks(575,650);
+GenericListPage.initDeleteLinks("template");setAjaxJsonForm("deftemplform",TemplateList.changeDefaultTemplate,TemplateList.onDefTemplSubmit,TemplateList.onDefTemplSuccess,TemplateList.onDefTemplError);
+};TemplateList.changeDefaultTemplate=function(){return confirm("Are you sure you want to change the default image template?\n\nSome or all of your images may need to be re-generated.");
+};TemplateList.onDefTemplSubmit=function(){DataMaintenance.disableButtons();};TemplateList.onDefTemplSuccess=function(){DataMaintenance.enableButtons();
+window.location.reload();};TemplateList.onDefTemplError=function(a,c){DataMaintenance.enableButtons();
+var b=getAPIError(a,c);alert("Sorry, your changes were not saved.\n\n"+b.message);};var UserList={};UserList.onInit=function(){GenericListPage.initPopupLinks(575,650);
 GenericListPage.initDeleteLinks("user");};var GroupList={};GroupList.onInit=function(){GenericListPage.initPopupLinks(700,650);
 GenericListPage.initDeleteLinks("group");};var TemplateEdit={};TemplateEdit.onInit=function(){GenericPopup.initButtons();
 setAjaxJsonForm("editform",TemplateEdit.validate,GenericPopup.defaultSubmitting,GenericPopup.defaultSubmitSuccess,TemplateEdit.onSubmitError);

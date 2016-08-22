@@ -71,6 +71,29 @@ var TemplateList = {};
 TemplateList.onInit = function() {
 	GenericListPage.initPopupLinks(575, 650);
 	GenericListPage.initDeleteLinks('template');
+	setAjaxJsonForm(
+		'deftemplform',
+		TemplateList.changeDefaultTemplate,
+		TemplateList.onDefTemplSubmit,
+		TemplateList.onDefTemplSuccess,
+		TemplateList.onDefTemplError
+	);
+};
+TemplateList.changeDefaultTemplate = function() {
+	return confirm('Are you sure you want to change the default image template?\n\n' +
+	               'Some or all of your images may need to be re-generated.');
+};
+TemplateList.onDefTemplSubmit = function() {
+	DataMaintenance.disableButtons();
+};
+TemplateList.onDefTemplSuccess = function() {
+	DataMaintenance.enableButtons();
+	window.location.reload();
+};
+TemplateList.onDefTemplError = function(httpStatus, responseText) {
+	DataMaintenance.enableButtons();
+	var err = getAPIError(httpStatus, responseText);
+	alert('Sorry, your changes were not saved.\n\n' + err.message);
 };
 
 /*** User list page ***/

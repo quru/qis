@@ -1,6 +1,5 @@
 # v2.2.x-dev
-_Breaking change: remove default image settings, add default image templates,
-add image parameter override controls (phase 1)_
+_Breaking change: remove default image settings, add default image templates_
 
 TODO
 

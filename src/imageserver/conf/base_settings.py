@@ -85,6 +85,8 @@ PUBLIC_MAX_IMAGE_HEIGHT = 0
 # Values below 1000000 (1 megapixel) will be ignored and disable this feature.
 AUTO_PYRAMID_THRESHOLD = 10000000
 
+# TODO delete the _DEFAULT settings
+
 # Default return image format (as a file extension, e.g. "jpg").
 # Use an empty string "" to return images in their original format.
 # These values can be overridden using image templates.

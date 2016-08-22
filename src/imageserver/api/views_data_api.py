@@ -44,7 +44,7 @@ from imageserver.errors import DoesNotExistError, ParameterError, SecurityError
 from imageserver.flask_app import data_engine, image_engine, permissions_engine
 from imageserver.flask_util import api_permission_required, _check_internal_request
 from imageserver.models import Group, ImageHistory, ImageTemplate, User
-from imageserver.models import FolderPermission, SystemPermissions
+from imageserver.models import FolderPermission, Property, SystemPermissions
 from imageserver.session_manager import get_session_user, get_session_user_id
 from imageserver.session_manager import log_out
 from imageserver.template_attrs import TemplateAttrs
@@ -213,6 +213,9 @@ class TemplateAPI(MethodView):
         template_info = data_engine.get_image_template(template_id)
         if template_info is None:
             raise DoesNotExistError(str(template_id))
+        db_default_template = data_engine.get_object(Property, Property.DEFAULT_TEMPLATE)
+        if template_info.name.lower() == db_default_template.value.lower():
+            raise ParameterError('The system default template cannot be deleted')
         data_engine.delete_object(template_info)
         image_engine.reset_templates()
         return make_api_success_response()
@@ -657,6 +660,42 @@ class FolderPermissionAPI(MethodView):
         return params
 
 
+class PropertyAPI(MethodView):
+    """
+    Provides the REST admin API to get or update system properties.
+    This API is not intended for general consumption, but any super user can use it.
+
+    Required access:
+    - Super user
+    """
+    @add_api_error_handler
+    def get(self, property_id):
+        db_prop = data_engine.get_object(Property, property_id)
+        if db_prop is None:
+            raise DoesNotExistError(str(property_id))
+        return make_api_success_response(object_to_dict(db_prop))
+
+    @add_api_error_handler
+    def put(self, property_id):
+        params = self._get_validated_object_parameters(request.form)
+        db_prop = data_engine.get_object(Property, property_id)
+        if db_prop is None:
+            raise DoesNotExistError(str(property_id))
+        db_prop.value = params['value']
+        data_engine.save_object(db_prop)
+        if property_id == Property.DEFAULT_TEMPLATE:
+            image_engine.reset_templates()
+        return make_api_success_response(object_to_dict(db_prop))
+
+    @add_parameter_error_handler
+    def _get_validated_object_parameters(self, data_dict):
+        params = {
+            'value': data_dict['value']
+        }
+        validate_string(params['value'], 0, 10000)
+        return params
+
+
 def _user_api_permission_required(f):
     """
     A decorator that replaces api_permission_required() to implement custom
@@ -803,4 +842,13 @@ api_add_url_rules(
      '/admin/templates/<int:template_id>/'],
     view_func=_dapi_template_views,
     methods=['GET', 'PUT', 'DELETE']
+)
+
+_dapi_property_views = api_permission_required(PropertyAPI.as_view('admin.property'),
+                                               SystemPermissions.PERMIT_SUPER_USER)
+api_add_url_rules(
+    [url_version_prefix + '/admin/properties/<property_id>/',
+     '/admin/properties/<property_id>/'],
+    view_func=_dapi_property_views,
+    methods=['GET', 'PUT']
 )

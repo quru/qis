@@ -357,6 +357,8 @@ class DataManager(object):
         """
         Returns the ImageTemplate object with the given ID or name,
         or None if there is no match in the database.
+        For general use in image processing, use the template_manager methods
+        rather than loading templates directly from the database.
         """
         db_session = _db_session or self._db.Session()
         try:
@@ -1703,6 +1705,20 @@ class DataManager(object):
                     self._logger.info('Created default folder permissions')
 
                 if create_default_templates:
+                    # Create system default image template
+                    self.save_object(ImageTemplate(
+                        'Default',
+                        'Defines the system defaults for image generation if the '
+                        'image does not specify a template or specific parameter value', {
+                            'format': {'value': ''},
+                            'quality': {'value': 80},
+                            'strip': {'value': True},
+                            'colorspace': {'value': 'rgb'},
+                            'dpi_x': {'value': None},
+                            'dpi_y': {'value': None},
+                            'expiry_secs': {'value': 60 * 60 * 24 * 7}
+                        }
+                    ))
                     # Create sample SmallJpeg template
                     self.save_object(ImageTemplate(
                         'SmallJpeg',
@@ -1736,6 +1752,7 @@ class DataManager(object):
                 if create_properties:
                     self.save_object(Property(Property.FOLDER_PERMISSION_VERSION, '1'))
                     self.save_object(Property(Property.IMAGE_TEMPLATES_VERSION, '1'))
+                    self.save_object(Property(Property.DEFAULT_TEMPLATE, 'default'))
 
             finally:
                 self._cache.free_global_lock()

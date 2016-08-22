@@ -66,7 +66,7 @@ from imageserver.filesystem_sync import (
 from imageserver.flask_util import internal_url_for
 from imageserver.models import (
     Folder, Group, User, Image, ImageHistory,
-    FolderPermission, Task
+    FolderPermission, Property, Task
 )
 from imageserver.util import strip_sep, unicode_to_utf8
 
@@ -670,7 +670,7 @@ class ImageServerAPITests(BaseTestCase):
         setup_user_account('kryten', 'none')
         self.login('kryten', 'kryten')
         # Logged in - template details should be available
-        rv = self.app.get('/api/admin/templates/1/')
+        rv = self.app.get('/api/admin/templates/2/')
         self.assertEqual(rv.status_code, API_CODES.SUCCESS)
         obj = json.loads(rv.data)['data']
         self.assertEqual(obj['name'], 'SmallJpeg')
@@ -686,13 +686,13 @@ class ImageServerAPITests(BaseTestCase):
         rv = self.app.get('/api/admin/templates/')
         self.assertEqual(rv.status_code, API_CODES.SUCCESS)
         obj = json.loads(rv.data)['data']
-        self.assertEqual(len(obj), 2)  # SmallJpeg and Precache
+        self.assertEqual(len(obj), 3)  # Default, SmallJpeg and Precache
         # Std user cannot update templates
-        rv = self.app.put('/api/admin/templates/1/', data={
+        rv = self.app.put('/api/admin/templates/2/', data={
             'name': 'should fail', 'description': '', 'template': '{}'
         })
         self.assertEqual(rv.status_code, API_CODES.UNAUTHORISED)
-        rv = self.app.delete('/api/admin/templates/1/')
+        rv = self.app.delete('/api/admin/templates/2/')
         self.assertEqual(rv.status_code, API_CODES.UNAUTHORISED)
         # Super user can perform updates
         setup_user_account('kryten', 'admin_all')
@@ -797,6 +797,17 @@ class ImageServerAPITests(BaseTestCase):
         # Changes should take effect immediately
         rv = self.app.get('/image?src=test_images/cathedral.jpg&width=200&tmp=new template')
         self.assertEqual(rv.status_code, 400)
+
+    def test_system_template_no_delete(self):
+        # Get the system default template
+        db_prop = dm.get_object(Property, Property.DEFAULT_TEMPLATE)
+        self.assertIsNotNone(db_prop)
+        db_template = dm.get_image_template(tempname=db_prop.value)
+        self.assertIsNotNone(db_template)
+        # Try to delete it (this shouldn't be allowed)
+        self.login('admin', 'admin')
+        rv = self.app.delete('/api/admin/templates/' + str(db_template.id) + '/')
+        self.assertEqual(rv.status_code, API_CODES.INVALID_PARAM)
 
     # File admin API - images
     def test_file_api_images(self):
@@ -1198,6 +1209,25 @@ class ImageServerAPITests(BaseTestCase):
             db_folder = dm.get_folder(folder_path=test_folder)
             if db_folder:
                 dm.delete_folder(db_folder, purge=True)
+
+    # Task properties API
+    def test_properties_api(self):
+        # Super user access is required
+        setup_user_account('kryten', 'admin_permissions')
+        self.login('kryten', 'kryten')
+        rv = self.app.get('/api/admin/properties/' + Property.DEFAULT_TEMPLATE + '/')
+        self.assertEqual(rv.status_code, API_CODES.UNAUTHORISED)
+        self.login('admin', 'admin')
+        rv = self.app.get('/api/admin/properties/' + Property.DEFAULT_TEMPLATE + '/')
+        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        prop_obj = json.loads(rv.data)['data']
+        self.assertEqual(prop_obj, {
+            'key': Property.DEFAULT_TEMPLATE,
+            'value': 'default'
+        })
+        # Try an update too
+        rv = self.app.put('/api/admin/properties/' + Property.DEFAULT_TEMPLATE + '/', data=prop_obj)
+        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
 
     # Test image API access (folder permissions)
     def test_folder_permissions(self):
