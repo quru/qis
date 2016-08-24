@@ -113,24 +113,20 @@ def setup():
 
 def teardown():
     # Kill the aux child processes
-    # Note: this works on Linux but not on OS X
+    this_pid = os.getpid()
     p = subprocess.Popen(
-        ['ps', '-o', 'pid', '--no-headers', '--ppid', str(os.getpid())],
+        ['pgrep', '-g', str(this_pid)],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE
     )
     output = p.communicate()
     output = (output[1] or output[0])
-    pids = output.split()
-    try:
-        for pid in pids:
-            if pid:
-                try:
-                    os.kill(int(pid), signal.SIGTERM)
-                except OSError:
-                    print "Failed to kill child process %s" % pid
-    except ValueError:
-        print "Failed to kill test child processes"
+    child_pids = [p for p in output.split() if p != str(this_pid)]
+    for pid in child_pids:
+        try:
+            os.kill(int(pid), signal.SIGTERM)
+        except:
+            print "Failed to kill child process %s" % pid
 
 
 # Utility - delete and re-create the internal databases
