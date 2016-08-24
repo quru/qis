@@ -27,6 +27,7 @@
 # Notable modifications:
 # Date       By    Details
 # =========  ====  ============================================================
+# 19Aug2016  Matt  Added system default template
 #
 
 from datetime import datetime, timedelta
@@ -56,6 +57,7 @@ class ImageTemplateManager(object):
     def __init__(self, data_manager, logger):
         self._db = data_manager
         self._logger = logger
+        self._default_template_name = ''
         self._data_version = -1
         self._template_cache = KeyValueCache()
         self._update_lock = threading.Lock()
@@ -114,6 +116,18 @@ class ImageTemplateManager(object):
         tdata = self._template_cache.get(name.lower())
         return tdata['attr_obj'] if tdata is not None else None
 
+    def get_default_template(self):
+        """
+        Returns the TemplateAttrs object for the system's default image template.
+        """
+        self._check_data_version()
+        tdata = self._template_cache.get(self._default_template_name)
+        if tdata is None:
+            raise ValueError(
+                'System default template \'%s\' was not found' % self._default_template_name
+            )
+        return tdata['attr_obj']
+
     def get_template_db_obj(self, name):
         """
         Returns the ImageTemplate database object matching the given name
@@ -143,6 +157,10 @@ class ImageTemplateManager(object):
         self._template_cache.clear()
         db_ver = self._db.get_object(Property, Property.IMAGE_TEMPLATES_VERSION)
         self._data_version = int(db_ver.value)
+
+        # Refresh default template setting
+        db_def_t = self._db.get_object(Property, Property.DEFAULT_TEMPLATE)
+        self._default_template_name = db_def_t.value.lower()
 
         # Load the templates
         db_templates = self._db.list_objects(ImageTemplate)

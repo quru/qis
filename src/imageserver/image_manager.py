@@ -135,6 +135,13 @@ class ImageManager(object):
             raise ValueError('Invalid template name: ' + template_name)
         return ta
 
+    def get_default_template(self):
+        """
+        Returns the TemplateAttrs object that will provide default image processing
+        settings if no other template is specified.
+        """
+        return self._templates.get_default_template()
+
     def get_icc_profile_names(self, colorspace=None):
         """
         Returns a lower case list of available ICC profile names - those names

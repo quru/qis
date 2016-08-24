@@ -35,10 +35,11 @@ from image_attrs import BooleanValidator, RangeValidator, ImageAttrs
 
 class TemplateAttrs(object):
     """
-    Class to hold an image template definition,
-    that is a reusable set of image attributes, handling options, and meta data.
+    Class to hold an image template definition, that is a reusable set of
+    image attributes, handling options, and meta data.
+
     The attribute names are the same as those defined for ImageAttrs,
-    plus extra handling fields:
+    plus these extra image handling fields:
 
       expiry_secs - suggested HTTP caching period
       attachment - whether to flag as HTTP download instead of inline
@@ -60,13 +61,13 @@ class TemplateAttrs(object):
         """
         self._name = name
         if template_dict:
-            self._set_template_dict(template_dict)
+            self._set_raw_dict(template_dict)
         else:
             self._template = {}
             self._image_attrs = ImageAttrs(name)
             self._memo_values = None
 
-    def _set_template_dict(self, template_dict):
+    def _set_raw_dict(self, template_dict):
         """
         Sets this template from the content of a dictionary as described in the
         class documentation. Raises a ValueError if any of the dictionary
@@ -95,7 +96,7 @@ class TemplateAttrs(object):
         # Finally validate the result
         self.validate()
 
-    def get_template_dict(self):
+    def get_raw_dict(self):
         """
         Returns the full template definition as a dictionary as described in
         the class documentation. This may differ from the dictionary originally

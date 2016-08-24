@@ -1,0 +1,41 @@
+{#
+  An HTML fragment that generates a <ul> output of a TemplateAttrs object.
+  This code is based on what refreshTemplateInfo() does for displaying template info in publish.js.
+
+  Template variables:
+    template - the template to output
+    template_show_blank - whether to output template fields without a value set
+#}
+
+<ul>
+{% for k, v in template.get_values_dict().iteritems() if k != 'filename' and (template_show_blank or v) %}
+	<li>
+		{% if k == 'format' %}File format
+		{% elif k == 'align_h'%}Horizontal align
+		{% elif k == 'align_v'%}Vertical align
+		{% elif k == 'top'%}Cropping top
+		{% elif k == 'left'%}Cropping left
+		{% elif k == 'bottom'%}Cropping bottom
+		{% elif k == 'right'%}Cropping right
+		{% elif k == 'crop_fit'%}Cropping minimise padding
+		{% elif k == 'size_fit'%}Prevent padding
+		{% elif k == 'overlay_src'%}Overlay image
+		{% elif k == 'overlay_pos'%}Overlay position
+		{% elif k == 'overlay_size'%}Overlay size
+		{% elif k == 'overlay_opacity'%}Overlay opacity
+		{% elif k == 'icc_profile'%}Colour profile
+		{% elif k == 'icc_intent'%}Colour profile intent
+		{% elif k == 'icc_bpc'%}Black point compensation
+		{% elif k == 'colorspace'%}Colour model
+		{% elif k == 'dpi_x'%}DPI x
+		{% elif k == 'dpi_y'%}DPI y
+		{% elif k == 'expiry_secs'%}Browser cache time (seconds)
+		{% elif k == 'attachment'%}Download instead of display
+		{% elif k == 'record_stats'%}Count in statistics
+		{% else %}{{ k|capitalize }}
+		{% endif %} : {% if v %}{{ v }}{% else %}&ndash;{% endif %}
+	</li>
+{% else %}
+	<li>This is an empty template</li>
+{% endfor %}
+</ul>

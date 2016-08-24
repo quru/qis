@@ -239,7 +239,7 @@ class TemplateAPI(MethodView):
         self._del_keys(template_dict, TemplateAPI.HIDE_FIELDS)
         template_attrs = TemplateAttrs(params['name'], template_dict)
         # Return the template as a validated dict
-        params['template'] = template_attrs.get_template_dict()
+        params['template'] = template_attrs.get_raw_dict()
         return params
 
     def _del_keys(self, dct, keys_list):

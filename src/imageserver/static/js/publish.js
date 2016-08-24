@@ -359,7 +359,7 @@ Publisher.refreshTemplateInfo = function(el, jsonObj) {
 				el.grab(new Element('div', {
 					'id': 'template_field_' + attr,
 					'data-value': t[attr].value,
-					'text': attr_name + ': ' + t[attr].value
+					'text': attr_name + ' : ' + t[attr].value
 				}));
 			}
 		}

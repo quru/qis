@@ -13,6 +13,7 @@ Software developers can refer to both this and the [API user's guide](/api/help/
 
 * [A simple example](#example)
 * [Default settings](#defaults)
+* [Image templates](#templates)
 * [Image options](#options)
     * [src](#option_src)
 	* [page](#option_page)
@@ -45,7 +46,7 @@ This example assumes you have already uploaded an image named `cathedral.jpg` in
 You can now access this image at the location:  
 [`http://images.example.com/image?src=buildings/cathedral.jpg`](http://images.example.com/image?src=buildings/cathedral.jpg)
 
-But more often, you will want to embed the image within a web page.  
+More often, you will want to show the image in a web page.  
 The following HTML code added to a web page will display a thumbnail version, 200 pixels wide:
 
 <code class="imagecode">&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&width=200"></code>
@@ -53,7 +54,7 @@ The following HTML code added to a web page will display a thumbnail version, 20
 
 This example demonstrates the [width](#option_width) option. A resized copy of the image has been
 generated for you, and the original file remains unchanged. This and many other image options can
-be combined together, and are described the rest of this guide.
+be combined together, and are described in the rest of this guide.
 
 Note: the HTML `<img>` tag itself can take further options, which are not described here.  
 Consult an HTML tutorial or try an [internet search engine](http://www.google.com/search?q=html+img+tag)
@@ -63,15 +64,41 @@ for more information.
 ## Default settings
 View this page from within QIS to see the default image settings for your server.
 
+<a name="templates"></a>
+## Image templates
+
+A template is a group of image processing options saved together as a single named shortcut.
+You can use templates to avoid repeating the same set of image options, to make image
+URLs simpler, and to define a standard set of image options in one place.
+
+All image options except for [src](#option_src), [xref](#option_xref), and [tile](#option_tile)
+can be saved in a template. The templates already available to you are [listed above](#defaults),
+and can be created or changed by your system administrator. You can then apply a template to an
+image using the [tmp](#option_tmp) option.
+
+In QIS v1 the use of templates was optional, and a small number of fixed system settings 
+provided fall-back values for image format, colorspace, and caching time.
+
+As of QIS v2 a template is always used when an image is generated. If no [tmp](#option_tmp)
+parameter is given then the system's [default template](#defaults) is used to provide the
+fall-back values. This simplifies image generation and administration, and allows a
+default value to be provided for any of the available image options. If you do specify a
+template then the system's default template is not used.
+
 <a name="options"></a>
 ## Image options
+
+For most of the options that follow, if an image template is specified (with the
+[tmp](#option_tmp) option), the default value for that option is taken from the
+template. If no template is specified, a default value is taken from the system's
+default template. Finally, if the template does not set a value, the default action
+is to leave the image unchanged for that option.
 
 <a name="option_src"></a>
 ### src
 Specifies the image source, as a folder path and filename, of the original image to return or
 manipulate. This is the only mandatory parameter. If you do not specify any other options, 
-the image is returned at its original size with the [server's default options](#defaults)
-applied.
+the image is returned with the server's [default image template](#defaults) applied.
 
 <a name="option_page"></a>
 ### page
@@ -82,8 +109,7 @@ to return. The first page number is 1, which is also the default value.
 ### format
 Converts the image to a different file format, e.g. `jpg`, `tiff`, `png`, `bmp`, `gif`.
 The formats available to you are [listed above](#defaults) and are set by your
-system administrator. If you do not specify a format, the image server's default format
-is used (or if there is no default format, the image is returned in its original format).
+system administrator.
 
 By default, JPEG images are encoded as "baseline", the most common type.
 In the context of a web site loading over a slow network, these images are drawn
@@ -107,8 +133,7 @@ The image as a `png` file (a lossless format):
 <a name="option_quality"></a>
 ### quality
 Sets the `jpg` or `png` compression level (this setting has no effect for other image formats).
-Valid values are 1 to 100. If you do not specify a quality, the  image server's default quality
-level is used.
+Valid values are 1 to 100.
 
 For `jpg`, 1 is lowest quality, highest compression and smallest file size;
 while 100 is highest quality but largest file size. A value of 75 gives a reasonable 
@@ -353,7 +378,6 @@ adjust the colours for printing on a particular printer or type of paper.
 For some audiences this information can be useful, but at other times, such as 
 when displaying thumbnail images on a web site, it may not be required. By enabling the strip
 option, all this embedded information can be removed, resulting in a smaller file size.
-If you do not specify a value, the image server's default strip setting is used.
 Valid values are true or false, 1 or 0.
 
 For advanced users, the strip option should be left at false (or 0) if you are dealing with CMYK images,
@@ -381,8 +405,6 @@ Sets the DPI (dots per inch) resolution for the image, which is often required w
 is to be printed or included in a printable document. A value of 72 or 96 is the typical resolution
 of a traditional computer monitor, while 150, 300, 600 and higher are common resolutions supported
 by inkjet and laser printers. Specifying a value of 0 leaves the image's existing resolution unchanged.
-If you do not specify a value, the image server's default DPI setting is used (or if there is no default
-value, the image's existing resolution again remains unchanged).
 
 The DPI value affects the physical size of an image when printed. For example, an image with a 
 width of 1000 pixels (dots), at a resolution of 300 DPI, will be 1000 &div; 300 = 3 &frac13; inches, or
@@ -402,8 +424,10 @@ in the same format as [src](#option_src). By default the overlay image is centre
 the width or height of the main image. To change this, see [ovsize](#option_ovsize), 
 [ovpos](#option_ovpos), and [ovopacity](#option_ovopacity).
 
-You can use overlays for branding or watermarking your images. Consider using a
-[template](#option_tmp) to group together your standard overlay rules.
+You can use overlays for branding or watermarking your images.
+Consider using a [template](#option_tmp) to group together your standard overlay rules.
+You could also apply a watermark by default in the system's default template, then use
+other templates to selectively remove or alter the watermark.
 
 Currently it is possible to remove (or rather, not apply) the watermark by providing a blank
 overlay path, or by removing the template parameter from the image URL. If this is a concern, you
@@ -515,17 +539,17 @@ This option is intended only for advanced users.
 
 Converts the internal colour model of the image to either Red-Green-Blue, Cyan-Magenta-Yellow-blacK,
 or Greyscale. Most image formats have support for RGB colour, but support varies for the other types. 
-For example, PNG images do not support CMYK colour. If you do not specify a colorspace or an ICC profile,
-the image server's default colorspace setting is used.
+For example, PNG images do not support CMYK colour.
 Valid values are: RGB, CMYK, or GRAY.
 
-RGB images are normally required for on-screen applications, such as the web.  
+RGB images are normally required for on-screen applications, such as in a web page.  
 CMYK images are used for print publishing.
 Some web browsers fail to display CMYK images correctly, or even at all.
 
-This option is most useful for quickly converting existing print-ready images from CMYK to RGB so that they can
-be previewed on-screen. For converting images to CMYK, this operation assumes a default paper type that
-may not be appropriate, and it is better to apply a specific CMYK [colour profile](#option_icc) instead.
+This option is most useful for quickly converting existing print-ready images from CMYK to RGB
+so that they can be previewed on-screen. For converting images to CMYK, this operation assumes
+a default paper type that may not be appropriate, and it is better to apply a specific CMYK
+[colour profile](#option_icc) instead.
 
 If used together with [icc](#option_icc), then the ICC profile is applied first and the
 `colorspace` second. If [strip](#option_strip) is also enabled, this takes place last
@@ -586,10 +610,11 @@ This example shows tiles 1 and 4, with a grid size of 4:
 
 <a name="option_attach"></a>
 ### attach
-Usually, when dealing with images on a web site, you will want your user's web browser to display the images.
-On occasion, however, you may want to offer the user a way of downloading the underlying image file instead of
-displaying it. This can be achieved by setting the image to be an attachment. When the image is an
-attachment, the web browser will prompt the user to save the file on their computer under its original filename.
+Usually, when dealing with images on a web site, you will want your user's web browser to 
+display the images. On occasion, however, you may want to offer the user a way of downloading 
+the underlying image file instead of displaying it. This can be achieved by setting the image 
+to be an attachment. When the image is an attachment, the web browser will prompt the user to 
+save the file on their computer under its original filename.
 Valid values are true or false, 1 or 0.
 
 The following link downloads the sample image as a `png` file:  
@@ -614,18 +639,18 @@ any personally identifiable information.
 By default, statistics about image request are recorded so that the built-in
 management reports can show you when the service is busiest and identify the most popular images.
 You can selectively disable image-level statistics by adding <code>**&stats=0**</code>
-to the image options. This prevents the image's own view, download and bandwidth counts from increasing,
-but does not affect the system-level statistics.
+to the image options. This prevents the image's own view, download and bandwidth counts from
+increasing, but does not affect the system-level statistics.
 
 You may find this option useful to exclude certain images from the "top images" report,
 for example a company logo that appears on every web page.
 
 <a name="option_expires"></a>
 ### expires (client caching duration)
-This option can only be set inside [image templates](#option_tmp), not on individual images.
+This option can only be set in an [image template](#option_tmp), not on individual images.
 
 Sets the number of seconds for which a web browser should cache an image locally before
-re-requesting it again from the server. This is only an instruction to the client; it has
+requesting it again from the server. This is only an instruction to the client; it has
 no effect on the caching of images on the server.
 
 For images that are uploaded once and do not change, this value should be set as `31536000`
@@ -640,24 +665,23 @@ load more slowly.
 
 A value of `0` means do not provide any expiry time to the client. In this case the client
 is free to decide its own caching strategy, and different web browsers will behave in
-different ways. Beware that some may choose not to cache the image.
+different ways. In reality, most web browsers will not cache the image.
 
-If you do not specify a value, the image server's default expiry time is used.
+If you do not specify a value, the default is 7 days.
 
 <a name="option_tmp"></a>
 ### tmp (template)
-If you find that you commonly use the same set of image options, you should consider creating 
-a template. A template groups together any combination of image options
-(all options are supported except [src](#option_src), [xref](#option_xref), and [tile](#option_tile))
-under a single named shortcut. The templates already available to you are
-[listed above](#defaults) and are set by your system administrator.
+Templates, as [described above](#templates), group together a standard set of image
+processing options. If you find that you commonly use the same set of image options,
+you should consider moving them into a template. The templates already available to
+you are [listed above](#defaults) and are controlled by your system administrator.
 
 When using a template:
 
-* The image command is shorter and neater, as you only need to provide the template
-  name instead of all the associated options.
+* The image URL is shorter and neater, as you only need to provide the template name
+  instead of all the associated options.
 * The common image options are defined only in one place, making future changes easier.
-* All places that use the template are automatically updated when the template is changed.
+* All images that use the template are automatically updated when the template is changed.
 * Further image options can be added alongside the template name. This allows a template
   to provide a base set of image options, which can then be selectively overridden.
 
@@ -676,22 +700,33 @@ Options in addition to the template name are either added to or replace those in
 <code class="imagecode">&lt;img class="border" src="//images.example.com/image?src=buildings/cathedral.jpg**&tmp=smalljpeg&angle=90&quality=10**"></code>
 <img class="border" src="//images.example.com/image?src=buildings/cathedral.jpg&stats=0&tmp=smalljpeg&angle=90&quality=10" />
 
+Note that as of QIS v2, if you do not specify a template for an image then the system's
+default template will be applied automatically. If you **do** specify a template, the
+system's default template is **not** applied, and your chosen template replaces it.
 
 <a name="notes"></a>
 ## Usage notes
 
 ### Order of command precedence
-There are up to 3 places where some image options (e.g. quality) can be specified:
+There are up to 3 places where image options (e.g. quality) can be specified:
 
 1. Within the image URL
-2. Within an image template
-3. The server's default settings
+2. Within a custom image template
+3. Within the default image template
 
-...and this is the order of precedence used when the same option is given in multiple places.
-For example, if the server's default image format is `jpg`, and the template 'custom' specifies a format of `png`:
+Options in the URL (1) always take precedence. If an image template (2) is specified then
+it provides all the remaining options. Or if no image template is specified then the
+default template (3) provides all the remaining options.
+
+The order of precedence then is (1) then (2) **or** (1) then (3).
+There is no fall-back from (2) to (3).
+
+As an example, if the server's default template has `jpg` format,
+and the template 'custom' specifies `png` format:
 
 <code>**src=myimage&tmp=custom&format=gif**</code> would return a `gif` image.  
 <code>**src=myimage&tmp=custom**</code> would return a `png` image.  
+<code>**src=myimage&format=gif**</code> would return a `gif` image.  
 <code>**src=myimage**</code> would return a `jpg` image.
 
 ### Order of imaging operations
@@ -715,23 +750,26 @@ resize the result to a 200 pixel width.
 
 <a name="original"></a>
 ## Accessing the original image
-At the beginning of this guide, it was shown that you can access an image by providing no options other than its filename:  
+At the beginning of this guide, it was shown that you can access an image by providing no 
+options other than its filename:  
 <code>
 [http://images.example.com/image?src=buildings/cathedral.jpg](http://images.example.com/image?src=buildings/cathedral.jpg)
 </code>
 
-You might think that this would return the original unaltered image, but in fact it probably does not.
-Your [server's default image options](#defaults) will be still be applied, and the resulting file
-might be quite different from the original.
+You might think that this would return the original unaltered image, but in fact it probably
+does not. The server's [default image template](#defaults) will be applied, and the resulting
+image might be quite different from the original.
 
 In order to obtain the full size original image you must instead use a different URL:  
 <code>
 [http://images.example.com/**original**?src=buildings/cathedral.jpg](http://images.example.com/original?src=buildings/cathedral.jpg)
 </code>
 
-This command takes the mandatory [src](#option_src) parameter, and optionally accepts the [attach](#option_attach) parameter
-so you can download the file instead of displaying it, the [xref](#option_xref) parameter for usage tracking,
+This command takes the mandatory [src](#option_src) parameter. It optionally accepts the
+[attach](#option_attach) parameter so you can download the file instead of displaying it,
+the [xref](#option_xref) parameter for usage tracking,
 and the [stats](#option_stats) parameter. All other options are ignored.
 
-Users must have the *download* permission to use the `original` URL, so that you can restrict access
-to the full images by public/logged-in users and/or folder.
+Users must have the *download* permission to use the `original` URL.
+This allows you to restrict access to the full images by whether users are public or logged-in,
+and/or by folder.

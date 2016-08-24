@@ -144,6 +144,7 @@ def image_help():
     logo_image_attrs = ImageAttrs('test_images/quru110.png')
     logo_pad_image_attrs = ImageAttrs('test_images/quru470.png')
 
+    default_template = image_engine.get_default_template()
     available_formats = image_engine.get_image_formats()
     available_formats.sort()
     available_templates = image_engine.get_template_names()
@@ -158,6 +159,7 @@ def image_help():
         'inc_default_settings.html',
         formats=available_formats,
         templates=available_templates,
+        default_template=default_template,
         iccs=available_iccs
     )
 

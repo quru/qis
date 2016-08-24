@@ -159,7 +159,7 @@ def import_templates():
                 data_engine.save_object(ImageTemplate(
                     template_name,
                     'Imported template',
-                    template_attrs.get_template_dict()
+                    template_attrs.get_raw_dict()
                 ))
             else:
                 log('Skipped template \'%s\' as it already exists' % template_name)
@@ -245,8 +245,8 @@ if __name__ == '__main__':
             exit(1)
         # Go
         upgrade_cache_table()
-        import_templates()
         create_default_template()
+        import_templates()
         print 'Upgrade complete. Review the messages above for any errors, ' + \
               'warnings, or manual changes required.'
         exit(0)
