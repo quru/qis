@@ -1,10 +1,29 @@
-# v2.2.x-dev
-_Breaking change: remove default image settings, add default image templates_
+# v2.2.0-dev
+_Breaking change: remove default image settings, add a default image template_
 
-TODO
+This change removes the 6 IMAGE_*_DEFAULT system settings and replaces them
+with a default image template. The image generation logic is also changed such
+that there are now only 2 levels of image parameters (URL then template) instead
+of 3 (URL then template then system settings).
 
-For a full discussion of this change,
-see [v2/Default-templates.txt](./v2/Default-templates.txt).
+If upgrading from v1, the `v2_upgrade` script will merge the old system settings
+into your templates for you. If upgrading v2 you will need to manually ensure that,
+where appropriate, your templates have values set for parameters that the old system
+settings used to provide.
+
+Update the Python and web code  
+Update the Python dependencies  
+Run (or re-run) the `v2_upgrade` script:
+
+	cd src/imageserver/scripts
+	sudo -u qis python v2_upgrade.py
+
+From `local_settings.py`, delete the settings `IMAGE_FORMAT_DEFAULT`,
+`IMAGE_QUALITY_DEFAULT`, `IMAGE_COLORSPACE_DEFAULT`, `IMAGE_DPI_DEFAULT`,
+`IMAGE_STRIP_DEFAULT`, `IMAGE_EXPIRY_TIME_DEFAULT` (if present).
+
+These changes implement phase 1 of the discussion at: 
+[v2/Default-templates.txt](./v2/Default-templates.txt).
 
 # v2.1.1-dev
 _Changes: Merge from v1.50 - qismagick.so v2.0 upgrade to better support

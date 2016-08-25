@@ -1,5 +1,5 @@
-QIS v2.2 Replace default image settings with default templates, add image security
-==================================================================================
+QIS v2 Replace default image settings with default templates, add image security
+================================================================================
 
 This change follows the move of image templates from being flat text files to
 being entities in the database. It starts with a simple observation:
@@ -165,59 +165,83 @@ be configured separately to be less restrictive.
 
 Phase 1
 =======
-Implement the above with 2 global default templates:
+Replace the system settings for `IMAGE_*_DEFAULT` with a single global default
+template. When first created, this will have the same initial values as the old
+settings it replaces. There will be no field override controls in phase 1.
 
-* Public default template
-* Logged-in default template
-
-to replace the old `IMAGE_x_DEFAULT` and `PUBLIC_MAX_x` settings. When first
-created, both of these will have the same initial values as the old settings
-they replace, and allow everything to be overridden.
+Adjust the image generation logic to look at the 2 levels of "URL else template"
+instead of the previous 3. Add default template administration to the admin UI.
+Update the user guide to show default template values instead of the old system
+setting values, and to reflect the changes in image generation logic.
 
 This fulfils the basic original brief discussed at the top of this document.
-It also allows public images to be "locked down" by default while registered
-users can (if the logged-in default template allows) have more freedom of access.
-
-In phase 1 all user-defined templates will remain accessible to all users.
-This will not be ideal in some situations. For example, one use case may call for
-a template that allows large images to be downloaded without a watermark. It would
-be preferable then if this template is only available to certain users, such as
-only to system administrators. This would require new access controls around the
-template list, additional work that will be covered in phase 2.
 
 Code changes - Phase 1
 
 * v1 to v2 template import routine - change to new JSON format
 * Initial template data - change to new JSON format,
-  add 2 new pre-defined templates to act as the defaults
-* Template admin API - change to new JSON format, get and set the override flags,
-  add override flags into API unit tests, update the API documentation
+  add 1 new pre-defined template to act as the system default
+* Template admin API - change to new JSON format
+* Delete the old system settings and migrate all occurrences
+  (in the documentation too)
+* Add an admin function to choose the default template
+  * Any named template can be chosen as the default, they don't need to be fixed
+* Do not allow deletion of templates that are in use as a default template
+* Template manager - add new method to return the default template from cache
+* Image manager - change the image generation logic to pull in the default
+  template when required, and no longer use the old system settings
+* Image manager - ensure that the image caching still works correctly after a
+  default template has been changed (i.e. the image caching must still work
+  independently of templates and template content)
+* Image publisher - auto-select the system default template if no other template
+  is selected, replace "system default value" helper text with the values from the
+  default/selected template
+* Image API help page - list the defaults from the default templates instead of the
+  old system settings, describe new behaviour of getting either the specified template
+  or the default template, describe new behaviour of how the final image parameters
+  are determined.
+* Benchmark (running) - ensure performance has remained the same or better
+* Upgrade all affected unit tests
+
+Phase 2
+=======
+Extend the above to have 2 global default templates:
+
+* Public default template
+* Logged-in default template
+
+And implement the field-level override rules as discussed above. Remove the
+`PUBLIC_MAX_x` settings. This now allows public images to be "locked down" by
+default while registered users can (if the logged-in default template allows)
+have more freedom of access.
+
+In phase 2 all user-defined templates will remain accessible to all users.
+This will not be ideal in some situations. For example, one use case may call for
+a template that allows large images to be downloaded without a watermark. It would
+be preferable then if this template is only available to certain users, such as
+only to system administrators. This would require new access controls around the
+template list, additional work that will be covered in phase 3.
+
+Code changes - Phase 2
+
+* Initial template data - add a new pre-defined template for the logged-in
+  default template
+* Template admin API - get and set the override flags, add override flags into API
+  unit tests, update the API documentation
 * TemplateAttrs - add a piggy-back dict to hold per-field extras
   (just the override rules for now)
   * TODO consider other options, this doesn't feel very neat
 * ImageAttrs / TemplateAttrs - apply the named or default template based on new
   rules and override flags. Raise an error if an ImageAttrs field has been
   overridden in violation of the template override rules.
-* Delete the old system settings and migrate all occurrences
-  (in the documentation too)
 * Delete the 2x weird functions that used to enforce the `PUBLIC_MAX` settings
-* Add an admin function to choose the default templates
-  * Any named template can be chosen as the default, they don't need to be fixed
+* Adjust the admin UI for having 2 default templates
 * Template admin page - add the override controls to the fields that offer security
-* Do not allow deletion of templates that are in use as a default template
-* Template manager - add new method to return the appropriate default template
-  (public or logged in) from cache
-* Image manager - ensure that the image caching still works correctly after a
-  default template has been changed (i.e. the image caching must still work
-  independently of templates and template content)
-* Image publisher - auto-select the system default template if no other template
-  is selected, replace "system default value" helper text with the values from the
-  default/selected template, indicate which fields cannot be overridden
-* Image API help page - list the defaults from the default templates instead of the
-  old system settings, remove or clarify the section about public limits, document
-  the new field override limits. Move template param to be first, describe new
-  behaviour of getting either the specified template or the default template.
-  Describe new behaviour of how the final image parameters are determined.
+* Template manager - adjust the default template getter to return the appropriate
+  one (public or logged in) for the current request
+* Image publisher - indicate which fields cannot be overridden
+* Image API help page - remove or clarify the section about public limits,
+  document the logged-in default template, document the new field override limits
 * TODO Possibly - upgrade the public JS utilities to detect / handle their
   own added URL parameters breaking the override rules
 * Benchmark - upgrade as necessary, or perhaps disable the override flag checking
@@ -227,9 +251,9 @@ Code changes - Phase 1
 * Add new tests to validate the correctness of the override controls
 
 
-Phase 2
+Phase 3
 =======
-So far so good then. But phase 1 does not deliver a great deal of flexibility;
+So far so good then. But phases 1-2 do not deliver a great deal of flexibility;
 you probably want to protect some images differently from others. Even for the
 same image it is reasonable to want the ability to serve a plain small thumbnail
 while enforcing a watermark on large versions of it.
@@ -290,7 +314,7 @@ terminology to describe these new concepts. Proposed are:
 * TODO
 * Default template?  Image field security?  
 
-Code changes - Phase 2
+Code changes - Phase 3
 
 * TODO Move default template getter from template manager into permissions manager?
   This would (possibly) make sense if it is also based on folder + group
