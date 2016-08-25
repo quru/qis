@@ -43,13 +43,10 @@ import tests.tests as main_tests
 from imageserver.auxiliary import stats_server
 from imageserver.counter import Counter
 from imageserver.filesystem_manager import copy_file, delete_file
+from imageserver.flask_app import app as flask_app
 from imageserver.flask_app import cache_engine as cm
 from imageserver.flask_app import data_engine as dm
 from imageserver.stats_manager import StatsManager
-
-
-def setup():
-    main_tests.setup()
 
 
 class StringIOConnection(object):
@@ -207,10 +204,12 @@ class StatsHandlerTests(main_tests.FlaskTestCase):
 
 
 class StatsServerTests(main_tests.FlaskTestCase):
-    def setUp(self):
-        main_tests.FlaskTestCase.setUp(self)
+    @classmethod
+    def setUpClass(cls):
+        super(StatsServerTests, cls).setUpClass()
+        main_tests.setup()
         # Invoke @app.before_first_request to launch the aux servers
-        self.app.get('/')
+        flask_app.test_client().get('/')
 
     def test_stats_engine(self):
         # Clear stats - wait for previous stats to flush then delete all

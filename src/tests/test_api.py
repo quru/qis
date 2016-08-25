@@ -71,11 +71,12 @@ from imageserver.models import (
 from imageserver.util import strip_sep, unicode_to_utf8
 
 
-def setup():
-    main_tests.setup()
-
-
 class ImageServerAPITests(BaseTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super(ImageServerAPITests, cls).setUpClass()
+        main_tests.setup()
+
     # API token login - bad parameters
     def test_token_login_bad_params(self):
         # Missing params

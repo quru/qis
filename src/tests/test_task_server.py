@@ -37,20 +37,19 @@ import time
 
 import tests.tests as main_tests
 
+from imageserver.flask_app import app as flask_app
 from imageserver.flask_app import data_engine as dm
 from imageserver.flask_app import task_engine as tm
 from imageserver.models import SystemStats, Task
 
 
-def setup():
-    main_tests.setup()
-
-
 class TaskServerTests(main_tests.FlaskTestCase):
-    def setUp(self):
-        main_tests.FlaskTestCase.setUp(self)
+    @classmethod
+    def setUpClass(cls):
+        super(TaskServerTests, cls).setUpClass()
+        main_tests.setup()
         # Invoke @app.before_first_request to launch the aux servers
-        self.app.get('/')
+        flask_app.test_client().get('/')
 
     def test_task_server(self):
         # Create some stats
