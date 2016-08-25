@@ -56,7 +56,7 @@ def upgrade_cache_table():
     log('Loading QIS engine...')
     from imageserver.flask_app import cache_engine
     try:
-        log('Upgrading cache tracking database table')
+        log('\nUpgrading cache tracking database table')
         cache_engine.clear()
         cache_engine._drop_db_schema()
         cache_engine._create_db_schema()
@@ -82,6 +82,18 @@ def import_templates():
     )
     cfg_files = glob.glob(unicode(os.path.join(template_dir_path, '*.cfg')))
     log('Starting image templates import')
+
+    merge_def_settings = False
+    if cfg_files:
+        merge_conf = raw_input(
+            '\nQIS v2 removes the system settings for default image format, '
+            'quality, DPI, strip, colorspace, and expiry time. These values '
+            'now need to be defined in your image templates instead. '
+            'Do you want to merge these settings into your templates now? '
+            'Y/N (Y recommended)\n'
+        )
+        merge_def_settings = (merge_conf in ['y', 'Y'])
+
     for cfg_file_path in cfg_files:
         num_files += 1
         (template_name, _) = os.path.splitext(filepath_filename(cfg_file_path))
@@ -136,7 +148,7 @@ def import_templates():
             t_expiry = _config_get(cp, cp.getint, section, 'expiry')
             t_attach = _config_get(cp, cp.getboolean, section, 'attach')
 
-            # Create the TemplateAttrs object
+            # Get the template as a dict
             template_dict = {
                 'expiry_secs': {'value': t_expiry},
                 'attachment': {'value': t_attach},
@@ -147,6 +159,23 @@ def import_templates():
                 (k, {'value': v}) for k, v in ia_dict.iteritems()
                 if k not in ['filename', 'template']
             ))
+            # Apply the obsolete default image settings to it
+            if merge_def_settings:
+                if not template_dict['format']['value']:
+                    template_dict['format']['value'] = app.config.get('IMAGE_FORMAT_DEFAULT')
+                if not template_dict['quality']['value']:
+                    template_dict['quality']['value'] = app.config.get('IMAGE_QUALITY_DEFAULT')
+                if template_dict['strip']['value'] is None:
+                    template_dict['strip']['value'] = app.config.get('IMAGE_STRIP_DEFAULT')
+                if not template_dict['colorspace']['value']:
+                    template_dict['colorspace']['value'] = app.config.get('IMAGE_COLORSPACE_DEFAULT')
+                if not template_dict['dpi_x']['value']:
+                    template_dict['dpi_x']['value'] = app.config.get('IMAGE_DPI_DEFAULT')
+                if not template_dict['dpi_y']['value']:
+                    template_dict['dpi_y']['value'] = app.config.get('IMAGE_DPI_DEFAULT')
+                if template_dict['expiry_secs']['value'] is None:
+                    template_dict['expiry_secs']['value'] = app.config.get('IMAGE_EXPIRY_TIME_DEFAULT', 60 * 60 * 24 * 7)
+            # Create the TemplateAttrs object
             template_attrs = TemplateAttrs(template_name, template_dict)
 
             # Validate
@@ -172,9 +201,14 @@ def import_templates():
     log('Template import complete, %d file(s) found, '
         '%d errors, %d skipped.' % (num_files, num_errors, num_skipped))
 
+    if not merge_def_settings:
+        log('Warning: You chose not to merge your v1 default image settings '
+            'into your v2 templates. Since the default image settings are '
+            'now ignored, some images may be rendered differently.')
+
     deleted = False
     if num_errors == 0 and os.path.exists(template_dir_path):
-        conf = raw_input('The old template files are no longer required. ' +
+        conf = raw_input('\nThe old template files are no longer required. ' +
                          'Do you want to remove them now? Y/N\n')
         if conf in ['y', 'Y']:
             log('Removing directory ' + template_dir_path)
@@ -245,8 +279,8 @@ if __name__ == '__main__':
             exit(1)
         # Go
         upgrade_cache_table()
-        create_default_template()
         import_templates()
+        create_default_template()
         print 'Upgrade complete. Review the messages above for any errors, ' + \
               'warnings, or manual changes required.'
         exit(0)
