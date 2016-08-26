@@ -771,6 +771,20 @@ def secure_filename(filename, keep_unicode=False):
     return filename
 
 
+def timefunc(f):
+    """
+    A function decorator that prints out how long the function took to execute.
+    For debugging use only.
+    """
+    def f_timer(*args, **kwargs):
+        start = time.time()
+        result = f(*args, **kwargs)
+        end = time.time()
+        print f.__name__, 'took', round((end - start) * 1000, 3), 'millis'
+        return result
+    return f_timer
+
+
 class SimpleODict(DictMixin):
     """
     A dictionary-like class (suitable for simple dictionary use cases) that

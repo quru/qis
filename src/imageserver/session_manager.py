@@ -49,6 +49,7 @@ def logged_in():
     return (get_session_user_id() > 0)
 
 
+# TODO This is taking 7 millis! Why?
 def get_session_user():
     """
     Returns a detached copy of the currently logged in user object,
