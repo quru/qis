@@ -132,19 +132,24 @@ The image as a `png` file (a lossless format):
 
 <a name="option_quality"></a>
 ### quality
-Sets the `jpg` or `png` compression level (this setting has no effect for other image formats).
-Valid values are 1 to 100.
+Sets the `jpg` compression level or `png` encoding method.
+This setting has no effect for other image formats.
+Valid values are 1 to 100 for `jpg`, or 10 to 99 for `png`.
 
 For `jpg`, 1 is lowest quality, highest compression and smallest file size;
 while 100 is highest quality but largest file size. A value of 75 gives a reasonable 
 balance between image quality and file size. Note that if your original image is also a 
-`jpg`, you cannot improve its quality by specifying a value of 100; you will instead generate
-a large image file at the same  quality as the original.
+`jpg`, you cannot improve its quality by specifying a value of 100; you will only generate
+a large image file at the same quality as the original.
 
 For `png`, the first digit is the compression level (1 to 9, 9 being highest compression),
 while the second digit determines the PNG filter type in use. Unlike the `jpg` file format, the
 `png` format is lossless, so changing this value does not affect image quality, only the resulting
-file size and file creation speed. The default value is 75.
+file size and file creation speed. The "optimal" value varies for different images, and also
+for whether you want to optimise for file size or processing speed. As a starting point, try
+21 or 31 for simple images (those with large areas of one colour), and 79 or 99 for complex
+images. The default value is 79. For a more in-depth description of this value, see the
+[ImageMagick documentation](http://www.imagemagick.org/script/command-line-options.php#quality).
 
 The image as a quality 5 <code>jpg</code> file, size 1.5 KB:
 
