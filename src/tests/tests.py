@@ -145,6 +145,8 @@ def reset_databases():
     dm.save_object(admin_user)
     # Default the public root folder permissions to allow View + Download
     set_default_public_permission(FolderPermission.ACCESS_DOWNLOAD)
+    # Set some standard image generation settings
+    reset_default_image_template()
 
 
 def set_default_public_permission(access):
@@ -152,6 +154,23 @@ def set_default_public_permission(access):
     default_fp.access = access
     dm.save_object(default_fp)
     pm.reset()
+
+
+def reset_default_image_template():
+    default_it = dm.get_image_template(tempname='Default')
+    # Use reasonably standard image defaults
+    image_defaults = [
+        ('format', 'jpg'), ('quality', 75), ('colorspace', None),
+        ('dpi_x', None), ('dpi_y', None), ('strip', False),
+        ('expiry_secs', 60 * 60 * 24 * 7)
+    ]
+    # Clear default template then apply our defaults
+    default_it.template = {}
+    for (key, value) in image_defaults:
+        default_it.template[key] = {'value': value}
+    dm.save_object(default_it)
+    # Clear template cache
+    im.reset_templates()
 
 
 # Returns the first of paths+app_name that exists, else app_name
@@ -431,10 +450,10 @@ class ImageServerTestsSlow(BaseTestCase):
         test_img = auto_sync_existing_file('test_images/cathedral.jpg', dm, tm)
         test_image_attrs = ImageAttrs(
             test_img.src, test_img.id, width=50,
-            strip=0, dpi=0, iformat='jpg', quality=75,
+            strip=False, dpi=0, iformat='jpg', quality=75,
             colorspace='rgb'
         )
-        test_image_attrs.normalise_values()
+        im.finalise_image_attrs(test_image_attrs)
         cache_img = cm.get(test_image_attrs.get_cache_key())
         assert cache_img is None, 'Test image was already in cache - cannot run test!'
         # Create a subprocess to handle the xref-generated http request
@@ -783,7 +802,7 @@ class ImageServerTestsFast(BaseTestCase):
         flask_app.config['PUBLIC_MAX_IMAGE_HEIGHT'] = 800
         # Create a blank template
         dm.save_object(ImageTemplate('Blank', '', {}))
-        im._templates.reset()
+        im.reset_templates()
         # Just template should serve at the image size (below limit)
         rv = self.app.get('/image?src=test_images/quru470.png&tmp=blank&format=png')
         self.assertEqual(rv.status_code, 200)
@@ -805,8 +824,6 @@ class ImageServerTestsFast(BaseTestCase):
 
     # Test serving of original image
     def test_serve_original_image(self):
-        flask_app.config['IMAGE_FORMAT_DEFAULT'] = 'png'
-        flask_app.config['IMAGE_STRIP_DEFAULT'] = True
         rv = self.app.get('/original?src=test_images/cathedral.jpg')
         assert rv.status_code == 200
         assert 'image/jpeg' in rv.headers['Content-Type'], 'HTTP headers do not specify image/jpeg'
@@ -964,6 +981,7 @@ class ImageServerTestsFast(BaseTestCase):
             # the same but without the tile spec
             image_obj.src, image_obj.id, iformat='png', left=0.24, right=0.8, width=600
         )
+        im.finalise_image_attrs(tile_base_attrs)
         base_img = cm.get(tile_base_attrs.get_cache_key())
         assert base_img is not None
 
@@ -1119,6 +1137,7 @@ class ImageServerTestsFast(BaseTestCase):
         test_url = '/image?src=test_images/cathedral.jpg&width=123'
         test_img = auto_sync_existing_file('test_images/cathedral.jpg', dm, tm)
         test_attrs = ImageAttrs(test_img.src, test_img.id, width=123)
+        im.finalise_image_attrs(test_attrs)
         # v1.34 when not logged in this param should be ignored
         cm.clear()
         rv = self.app.get(test_url + '&cache=0')
@@ -1489,38 +1508,22 @@ class ImageServerTestsFast(BaseTestCase):
         # Ensure the initial parameters override the template
         self.assertEqual(ia.width(), 789)
         self.assertEqual(ia.fill(), 'auto')
-        # Apply fictional server defaults
-        ia.apply_default_values(iformat='png', strip=True, dpi=72)
-        # Ensure the server defaults are there
-        self.assertEqual(ia.format_raw(), 'png')
-        self.assertEqual(ia.format(), ia.format_raw())
-        self.assertTrue(ia.strip_info())
-        # Ensure the previous params override the server defaults
-        self.assertEqual(ia.dpi(), 300)
         # Ensure the net parameters look good
         ia.normalise_values()
-        self.assertIsNone(ia.format_raw())    # png is the image's format anyway
+        self.assertIsNone(ia.format_raw())
         self.assertEqual(ia.format(), 'png')  # from filename, not params
         self.assertEqual(ia.width(), 789)
         self.assertEqual(ia.dpi(), 300)
-        self.assertTrue(ia.strip_info())
         self.assertIsNone(ia.rotation())      # 360 would have no effect
         self.assertIsNone(ia.fill())          # As there's no rotation and no other filling to do
-        # Test for the bug that caused this unit test in the first place
-        # (auto fill param should take precendence over red fill template)
-        ia = ImageAttrs('myimage.png', -1, top=0.2, fill='auto')
+        # Check a 0 DPI does overrides the template
+        ia = ImageAttrs('myimage.png', -1, dpi=0)
         ia.apply_dict({
-            'width': 300,
-            'height': 300,
-            'fill': 'red'},
+            'dpi_x': 300,
+            'dpi_y': 300},
             override_values=False,
             normalise=True
         )
-        self.assertEqual(ia.fill(), 'auto')
-        # And that 0 DPI does override the system (handled differently in previous versions)
-        ia = ImageAttrs('myimage.png', -1, dpi=0)
-        ia.apply_default_values(dpi=72)
-        ia.normalise_values()
         self.assertIsNone(ia.dpi())
 
     # Test the identification of suitable base images in cache
@@ -1534,52 +1537,67 @@ class ImageServerTestsFast(BaseTestCase):
         w1000_attrs = ImageAttrs('test_images/dorset.jpg', image_id, iformat='png', width=1000, rotation=90)
         w500_attrs = ImageAttrs('test_images/dorset.jpg', image_id, iformat='png', width=500, rotation=90)
         w100_attrs = ImageAttrs('test_images/dorset.jpg', image_id, iformat='png', width=100, rotation=90)
-        base = im._get_base_image(w1000_attrs)
+        base = im._get_base_image(im.finalise_image_attrs(w1000_attrs))
         assert base is None, 'Found an existing base image for ' + str(w1000_attrs)
         # Get an 1100 image, should provide the base for 1000
         rv = self.app.get('/image?src=test_images/dorset.jpg&format=png&width=1100&angle=90')
         assert rv.status_code == 200
-        base = im._get_base_image(w1000_attrs)
+        base = im._get_base_image(im.finalise_image_attrs(w1000_attrs))
         assert base is not None and base.attrs().width() == 1100
         # Get 1000 image, should provide the base for 500
         rv = self.app.get('/image?src=test_images/dorset.jpg&format=png&width=1000&angle=90')
         assert rv.status_code == 200
-        base = im._get_base_image(w500_attrs)
+        base = im._get_base_image(im.finalise_image_attrs(w500_attrs))
         assert base is not None and base.attrs().width() == 1000
         # Get 500 image, should provide the base for 100
         rv = self.app.get('/image?src=test_images/dorset.jpg&format=png&width=500&angle=90')
         assert rv.status_code == 200
-        base = im._get_base_image(w100_attrs)
+        base = im._get_base_image(im.finalise_image_attrs(w100_attrs))
         assert base is not None and base.attrs().width() == 500
         # Make sure none of these come back for incompatible image requests
-        base = im._get_base_image(ImageAttrs('test_images/dorset.jpg', image_id, iformat='png', width=500)) # No rotation
+        try_attrs = ImageAttrs('test_images/dorset.jpg', image_id, iformat='png', width=500)  # No rotation
+        base = im._get_base_image(im.finalise_image_attrs(try_attrs))
         assert base is None
-        base = im._get_base_image(ImageAttrs('test_images/dorset.jpg', image_id, iformat='bmp', width=500, rotation=90)) # Format
+        try_attrs = ImageAttrs('test_images/dorset.jpg', image_id, iformat='bmp', width=500, rotation=90)  # Format
+        base = im._get_base_image(im.finalise_image_attrs(try_attrs))
         assert base is None
-        base = im._get_base_image(ImageAttrs('test_images/dorset.jpg', image_id, iformat='png', width=500, height=500, rotation=90)) # Aspect ratio
+        try_attrs = ImageAttrs('test_images/dorset.jpg', image_id, iformat='png', width=500, height=500, rotation=90)  # Aspect ratio
+        base = im._get_base_image(im.finalise_image_attrs(try_attrs))
         assert base is None
-        base = im._get_base_image(ImageAttrs('test_images/dorset.jpg', image_id, iformat='png', width=500, rotation=90, fill='#ff0000')) # Fill
+        try_attrs = ImageAttrs('test_images/dorset.jpg', image_id, iformat='png', width=500, rotation=90, fill='#ff0000')  # Fill
+        base = im._get_base_image(im.finalise_image_attrs(try_attrs))
         assert base is None
         # But if we want to sharpen the 500px version that should be OK
-        base = im._get_base_image(ImageAttrs('test_images/dorset.jpg', image_id, iformat='png', width=500, rotation=90, sharpen=200))
+        try_attrs = ImageAttrs('test_images/dorset.jpg', image_id, iformat='png', width=500, rotation=90, sharpen=200)
+        base = im._get_base_image(im.finalise_image_attrs(try_attrs))
         assert base is not None and base.attrs().width() == 500
         # Adding an overlay should be OK
-        base = im._get_base_image(ImageAttrs('test_images/dorset.jpg', image_id, iformat='png', width=500, rotation=90, overlay_src='test_images/quru110.png'))
+        try_attrs = ImageAttrs('test_images/dorset.jpg', image_id, iformat='png', width=500, rotation=90, overlay_src='test_images/quru110.png')
+        base = im._get_base_image(im.finalise_image_attrs(try_attrs))
         assert base is not None and base.attrs().width() == 500
         # Tiling!
         # Creating a tile of the 500px version should use the same as a base
-        base = im._get_base_image(ImageAttrs('test_images/dorset.jpg', image_id, iformat='png', width=500, rotation=90, tile_spec=(3,9)))
+        try_attrs = ImageAttrs('test_images/dorset.jpg', image_id, iformat='png', width=500, rotation=90, tile_spec=(3,9))
+        base = im._get_base_image(im.finalise_image_attrs(try_attrs))
         assert base is not None and base.attrs().width() == 500
         # Create that tile
         rv = self.app.get('/image?src=test_images/dorset.jpg&format=png&width=500&angle=90&tile=3:9')
         assert rv.status_code == 200
         # A different format of the tile should not use the cached tile as a base
-        base = im._get_base_image(ImageAttrs('test_images/dorset.jpg', image_id, iformat='jpg', width=500, rotation=90, tile_spec=(3,9)))
+        try_attrs = ImageAttrs('test_images/dorset.jpg', image_id, iformat='jpg', width=500, rotation=90, tile_spec=(3,9))
+        base = im._get_base_image(im.finalise_image_attrs(try_attrs))
         assert base is None
         # But a stripped version of the same tile should
-        base = im._get_base_image(ImageAttrs('test_images/dorset.jpg', image_id, iformat='png', width=500, rotation=90, tile_spec=(3,9), strip=True))
+        try_attrs = ImageAttrs('test_images/dorset.jpg', image_id, iformat='png', width=500, rotation=90, tile_spec=(3,9), strip=True)
+        base = im._get_base_image(im.finalise_image_attrs(try_attrs))
         assert base is not None and base.attrs().tile_spec() == (3, 9)
-        # Clean up
+
+    # Test the identification of suitable base images in cache
+    def test_overlay_base_image_detection(self):
+        image_obj = auto_sync_existing_file('test_images/dorset.jpg', dm, tm)
+        image_id = image_obj.id
+        # Clean
+        orig_attrs = ImageAttrs('test_images/dorset.jpg', image_id)
         im.reset_image(orig_attrs)
         #
         # Overlays - We cannot allow an overlayed image to be use as a base, because:
@@ -1590,6 +1608,7 @@ class ImageServerTestsFast(BaseTestCase):
         # The only exception is tiling, which can (and should!) use the exact same image as a base
         #
         w1000_attrs = ImageAttrs('test_images/dorset.jpg', image_id, iformat='png', width=1000, overlay_src='test_images/quru110.png')
+        im.finalise_image_attrs(w1000_attrs)
         base = im._get_base_image(w1000_attrs)
         assert base is None, 'Found an existing base image for ' + str(w1000_attrs)
         # Get an 1100 image, which should NOT provide the base for 1000
@@ -1600,20 +1619,24 @@ class ImageServerTestsFast(BaseTestCase):
         # Get a 500 image, we should be able to tile from it
         rv = self.app.get('/image?src=test_images/dorset.jpg&format=png&width=500&overlay=test_images/quru110.png')
         assert rv.status_code == 200
-        base = im._get_base_image(ImageAttrs('test_images/dorset.jpg', image_id, iformat='png', width=500, overlay_src='test_images/quru110.png', tile_spec=(1,4)))
+        try_attrs = ImageAttrs('test_images/dorset.jpg', image_id, iformat='png', width=500, overlay_src='test_images/quru110.png', tile_spec=(1,4))
+        im.finalise_image_attrs(try_attrs)
+        base = im._get_base_image(try_attrs)
         assert base is not None and base.attrs().width() == 500
-        # Clean up
-        im.reset_image(orig_attrs)
+
+    # Test the identification of suitable base images in cache
+    def test_flip_base_image_detection(self):
         #
         # Run some similar tests for newer parameters (flip and page)
         #
         image_obj = auto_sync_existing_file('test_images/multipage.tif', dm, tm)
-        image_id  = image_obj.id
+        image_id = image_obj.id
         # Clean
         orig_attrs = ImageAttrs('test_images/multipage.tif', image_id)
         im.reset_image(orig_attrs)
         # Set up tests
         w500_attrs = ImageAttrs('test_images/multipage.tif', image_id, page=2, iformat='png', width=500, flip='v')
+        im.finalise_image_attrs(w500_attrs)
         base = im._get_base_image(w500_attrs)
         assert base is None, 'Found an existing base image for ' + str(w500_attrs)
         # Get an 800 image, p2, flip v
@@ -1627,23 +1650,27 @@ class ImageServerTestsFast(BaseTestCase):
         rv = self.app.get('/image?src=test_images/multipage.tif&format=png&width=500&page=2&flip=v')
         assert rv.status_code == 200
         # Make sure none of these come back for incompatible image requests
-        base = im._get_base_image(ImageAttrs('test_images/multipage.tif', image_id, iformat='png', width=500)) # No page
+        try_attrs = ImageAttrs('test_images/multipage.tif', image_id, iformat='png', width=500)  # No page
+        base = im._get_base_image(im.finalise_image_attrs(try_attrs))
         assert base is None
-        base = im._get_base_image(ImageAttrs('test_images/multipage.tif', image_id, page=2, iformat='png', width=500, flip='h')) # Wrong flip
+        try_attrs = ImageAttrs('test_images/multipage.tif', image_id, page=2, iformat='png', width=500, flip='h')  # Wrong flip
+        base = im._get_base_image(im.finalise_image_attrs(try_attrs))
         assert base is None
-        base = im._get_base_image(ImageAttrs('test_images/multipage.tif', image_id, page=3, iformat='png', width=500, flip='v')) # Wrong page
+        try_attrs = ImageAttrs('test_images/multipage.tif', image_id, page=3, iformat='png', width=500, flip='v')  # Wrong page
+        base = im._get_base_image(im.finalise_image_attrs(try_attrs))
         assert base is None
         # But if we want to sharpen the 500px version that should be OK
-        base = im._get_base_image(ImageAttrs('test_images/multipage.tif', image_id, page=2, iformat='png', width=500, flip='v', sharpen=200))
+        try_attrs = ImageAttrs('test_images/multipage.tif', image_id, page=2, iformat='png', width=500, flip='v', sharpen=200)
+        base = im._get_base_image(im.finalise_image_attrs(try_attrs))
         assert base is not None and base.attrs().width() == 500
         # Adding an overlay should be OK
-        base = im._get_base_image(ImageAttrs('test_images/multipage.tif', image_id, page=2, iformat='png', width=500, flip='v', overlay_src='test_images/quru110.png'))
+        try_attrs = ImageAttrs('test_images/multipage.tif', image_id, page=2, iformat='png', width=500, flip='v', overlay_src='test_images/quru110.png')
+        base = im._get_base_image(im.finalise_image_attrs(try_attrs))
         assert base is not None and base.attrs().width() == 500
         # Creating a tile of the 500px version should use the same as a base
-        base = im._get_base_image(ImageAttrs('test_images/multipage.tif', image_id, page=2, iformat='png', width=500, flip='v', tile_spec=(3,9)))
+        try_attrs = ImageAttrs('test_images/multipage.tif', image_id, page=2, iformat='png', width=500, flip='v', tile_spec=(3,9))
+        base = im._get_base_image(im.finalise_image_attrs(try_attrs))
         assert base is not None and base.attrs().width() == 500
-        # Clean up
-        im.reset_image(orig_attrs)
 
     # There was a bug where "cmyk.jpg&colorspace=rgb" would be used as a base image
     # for "cmyk.jpg&icc=some_icc&colorspace=rgb" but this was incorrect because the
@@ -1655,8 +1682,6 @@ class ImageServerTestsFast(BaseTestCase):
         orig_attrs = ImageAttrs('test_images/picture-cmyk.jpg', image_id)
         im.reset_image(orig_attrs)
         # Set up tests
-        orig_attrs = ImageAttrs('test_images/picture-cmyk.jpg',
-                                image_id, iformat='jpg', width=500, colorspace='rgb')
         w200_attrs = ImageAttrs('test_images/picture-cmyk.jpg',
                                 image_id, iformat='jpg', width=200, colorspace='rgb')
         icc_attrs_1 = ImageAttrs('test_images/picture-cmyk.jpg',
@@ -1670,23 +1695,25 @@ class ImageServerTestsFast(BaseTestCase):
         rv = self.app.get('/image?src=test_images/picture-cmyk.jpg&format=jpg&width=500&colorspace=rgb')
         self.assertEqual(rv.status_code, 200)
         # Now getting a width 200 of that should be OK
-        base = im._get_base_image(w200_attrs)
+        base = im._get_base_image(im.finalise_image_attrs(w200_attrs))
         self.assertIsNotNone(base)
         # Getting an ICC version should not use the RGB base
-        base = im._get_base_image(icc_attrs_1)
+        base = im._get_base_image(im.finalise_image_attrs(icc_attrs_1))
         self.assertIsNone(base)
         # Getting an RGB of the ICC version should not use the RGB base either
-        base = im._get_base_image(icc_attrs_2)
+        base = im._get_base_image(im.finalise_image_attrs(icc_attrs_2))
         self.assertIsNone(base)
         # Getting a GRAY version should not use the RGB base
-        base = im._get_base_image(cspace_attrs)
+        base = im._get_base_image(im.finalise_image_attrs(cspace_attrs))
         self.assertIsNone(base)
 
     # Test the auto-pyramid generation, which is really a specialist case of test_base_image_detection
     def test_auto_pyramid(self):
-        image_obj  = auto_sync_existing_file('test_images/dorset.jpg', dm, tm)
+        image_obj = auto_sync_existing_file('test_images/dorset.jpg', dm, tm)
         orig_attrs = ImageAttrs(image_obj.src, image_obj.id)
+        im.finalise_image_attrs(orig_attrs)
         w500_attrs = ImageAttrs(image_obj.src, image_obj.id, width=500)
+        im.finalise_image_attrs(w500_attrs)
         # Clean
         cm.clear()
         im.reset_image(orig_attrs)
@@ -1710,8 +1737,6 @@ class ImageServerTestsFast(BaseTestCase):
         assert len(base.data()) < orig_len
         assert base.attrs().width() is not None
         assert base.attrs().width() < 1600 and base.attrs().width() >= 500
-        # Finally, clean up the cache so that test_base_image_detection can use similar tests
-        im.reset_image(orig_attrs)
 
     # Test the correct base images are used when creating tiles
     def test_tile_base_images(self):
@@ -1726,69 +1751,84 @@ class ImageServerTestsFast(BaseTestCase):
         rv = self.app.get('/image?src=test_images/cathedral.jpg&width=500&strip=0')
         assert rv.status_code == 200
         # Test base image detection
-        base = im._get_base_image(ImageAttrs('test_images/cathedral.jpg', orig_id, width=800, tile_spec=(2,4)))
+        try_attrs = ImageAttrs('test_images/cathedral.jpg', orig_id, width=800, tile_spec=(2,4))
+        base = im._get_base_image(im.finalise_image_attrs(try_attrs))
         assert base is not None and base.attrs().width() == 1000
-        base = im._get_base_image(ImageAttrs('test_images/cathedral.jpg', orig_id, width=800, rotation=180, flip='v', tile_spec=(2,4)))
+        try_attrs = ImageAttrs('test_images/cathedral.jpg', orig_id, width=800, rotation=180, flip='v', tile_spec=(2,4))
+        base = im._get_base_image(im.finalise_image_attrs(try_attrs))
         assert base is not None and base.attrs().width() == 1000
-        base = im._get_base_image(ImageAttrs('test_images/cathedral.jpg', orig_id, width=800, height=800, size_fit=True, strip=True, tile_spec=(2,4)))
+        try_attrs = ImageAttrs('test_images/cathedral.jpg', orig_id, width=800, height=800, size_fit=True, strip=True, tile_spec=(2,4))
+        base = im._get_base_image(im.finalise_image_attrs(try_attrs))
         assert base is not None and base.attrs().width() == 1000
-        base = im._get_base_image(ImageAttrs('test_images/cathedral.jpg', orig_id, width=800, height=800, size_fit=True, strip=True, overlay_src='test_images/quru110.png', tile_spec=(2,4)))
+        try_attrs = ImageAttrs('test_images/cathedral.jpg', orig_id, width=800, height=800, size_fit=True, strip=True, overlay_src='test_images/quru110.png', tile_spec=(2,4))
+        base = im._get_base_image(im.finalise_image_attrs(try_attrs))
         assert base is not None and base.attrs().width() == 1000
-        base = im._get_base_image(ImageAttrs('test_images/cathedral.jpg', orig_id, width=500, tile_spec=(18,36)))
+        try_attrs = ImageAttrs('test_images/cathedral.jpg', orig_id, width=500, tile_spec=(18,36))
+        base = im._get_base_image(im.finalise_image_attrs(try_attrs))
         assert base is not None and base.attrs().width() == 500
-        base = im._get_base_image(ImageAttrs('test_images/cathedral.jpg', orig_id, width=500, rotation=180, tile_spec=(18,36)))
+        try_attrs = ImageAttrs('test_images/cathedral.jpg', orig_id, width=500, rotation=180, tile_spec=(18,36))
+        base = im._get_base_image(im.finalise_image_attrs(try_attrs))
         assert base is not None and base.attrs().width() == 500
-        base = im._get_base_image(ImageAttrs('test_images/cathedral.jpg', orig_id, width=500, rotation=180, flip='v', tile_spec=(18,36)))
+        try_attrs = ImageAttrs('test_images/cathedral.jpg', orig_id, width=500, rotation=180, flip='v', tile_spec=(18,36))
+        base = im._get_base_image(im.finalise_image_attrs(try_attrs))
         assert base is not None and base.attrs().width() == 500
-        base = im._get_base_image(ImageAttrs('test_images/cathedral.jpg', orig_id, width=500, height=500, size_fit=True, strip=True, tile_spec=(18,36)))
+        try_attrs = ImageAttrs('test_images/cathedral.jpg', orig_id, width=500, height=500, size_fit=True, strip=True, tile_spec=(18,36))
+        base = im._get_base_image(im.finalise_image_attrs(try_attrs))
         assert base is not None and base.attrs().width() == 500
-        base = im._get_base_image(ImageAttrs('test_images/cathedral.jpg', orig_id, width=500, height=500, size_fit=True, strip=True, overlay_src='test_images/quru110.png', tile_spec=(18,36)))
+        try_attrs = ImageAttrs('test_images/cathedral.jpg', orig_id, width=500, height=500, size_fit=True, strip=True, overlay_src='test_images/quru110.png', tile_spec=(18,36))
+        base = im._get_base_image(im.finalise_image_attrs(try_attrs))
         assert base is not None and base.attrs().width() == 500
-        # Clean up again
-        im.reset_image(orig_attrs)
 
-    # Test that settings take effect
-    def test_settings(self):
-        # Get img1 with explicit format and quality params
-        img1 = self.app.get('/image?src=test_images/dorset.jpg&width=800&format=bmp&quality=50')
-        assert img1.status_code == 200
-        assert 'image/bmp' in img1.headers['Content-Type']
-        # Get img2, no params but with global defaults set to be the same as img1
-        flask_app.config['IMAGE_FORMAT_DEFAULT'] = 'bmp'
-        flask_app.config['IMAGE_QUALITY_DEFAULT'] = 50
-        img2 = self.app.get('/image?src=test_images/dorset.jpg&width=800')
-        assert img2.status_code == 200
-        assert 'image/bmp' in img2.headers['Content-Type']
-        assert len(img1.data) == len(img2.data)
-        # Generate img3 with resize quality 3
-        flask_app.config['IMAGE_FORMAT_DEFAULT'] = 'png'
+    # Test that the resize settings take effect
+    def test_resize_system_setting(self):
         flask_app.config['IMAGE_RESIZE_QUALITY'] = 3
-        img3 = self.app.get('/image?src=test_images/dorset.jpg&width=800')
-        assert img3.status_code == 200
-        assert 'image/png' in img3.headers['Content-Type']
-        # Delete img3 from cache
-        img3_obj = auto_sync_existing_file('test_images/dorset.jpg', dm, tm)
-        img3_attrs = ImageAttrs(img3_obj.src, img3_obj.id, iformat='png', width=800)
-        assert cm.delete(img3_attrs.get_cache_key()), 'Failed to delete img3 from cache'
-        # Re-generate it as img4 with resize quality 1
-        flask_app.config['IMAGE_FORMAT_DEFAULT'] = 'png'
+        img1 = self.app.get('/image?src=test_images/dorset.jpg&format=png&width=800')
+        self.assertEqual(img1.status_code, 200)
+        self.assertIn('image/png', img1.headers['Content-Type'])
+        # Delete img from cache
+        im.reset_image(ImageAttrs('test_images/dorset.jpg'))
+        # Re-generate it as img2 with resize quality 1
         flask_app.config['IMAGE_RESIZE_QUALITY'] = 1
-        img4 = self.app.get('/image?src=test_images/dorset.jpg&width=800')
-        assert img4.status_code == 200
-        assert 'image/png' in img4.headers['Content-Type']
-        assert len(img4.data) < len(img3.data)  # Assumes lower quality gives lower file size
-        # Test keeping the original image format
-        flask_app.config['IMAGE_FORMAT_DEFAULT'] = ''
-        flask_app.config['IMAGE_RESIZE_QUALITY'] = 75
-        img5 = self.app.get('/image?src=test_images/dorset.jpg&width=805')
-        assert img5.status_code == 200
-        assert 'image/jpeg' in img5.headers['Content-Type']
-        img5_size = len(img5.data)
-        # Test strip
-        flask_app.config['IMAGE_STRIP_DEFAULT'] = True
-        img6 = self.app.get('/image?src=test_images/dorset.jpg&width=805')
-        assert img6.status_code == 200
-        assert len(img6.data) < img5_size
+        img2 = self.app.get('/image?src=test_images/dorset.jpg&format=png&width=800')
+        self.assertEqual(img2.status_code, 200)
+        self.assertIn('image/png', img2.headers['Content-Type'])
+        self.assertLess(len(img2.data), len(img1.data))
+
+    # Test changing the default template values
+    def test_default_template_settings(self):
+        try:
+            db_def_temp = dm.get_image_template(tempname='Default')
+            # Get img1 with explicit format and quality params
+            img1 = self.app.get('/image?src=test_images/dorset.jpg&width=800&format=bmp&quality=50')
+            self.assertEqual(img1.status_code, 200)
+            self.assertIn('image/bmp', img1.headers['Content-Type'])
+            # Get img2, no params but with defaults set to be the same as img1
+            db_def_temp.template['format']['value'] = 'bmp'
+            db_def_temp.template['quality']['value'] = 50
+            dm.save_object(db_def_temp)
+            im.reset_templates()
+            img2 = self.app.get('/image?src=test_images/dorset.jpg&width=800')
+            self.assertEqual(img2.status_code, 200)
+            self.assertIn('image/bmp', img2.headers['Content-Type'])
+            self.assertEqual(len(img1.data), len(img2.data))
+            # Test keeping the original image format
+            db_def_temp.template['format']['value'] = ''
+            db_def_temp.template['quality']['value'] = 75
+            dm.save_object(db_def_temp)
+            im.reset_templates()
+            img3 = self.app.get('/image?src=test_images/dorset.jpg&width=805')
+            self.assertEqual(img3.status_code, 200)
+            self.assertIn('image/jpeg', img3.headers['Content-Type'])
+            img3_size = len(img3.data)
+            # Test strip
+            db_def_temp.template['strip']['value'] = True
+            dm.save_object(db_def_temp)
+            im.reset_templates()
+            img4 = self.app.get('/image?src=test_images/dorset.jpg&width=805')
+            self.assertEqual(img4.status_code, 200)
+            self.assertLess(len(img4.data), img3_size)
+        finally:
+            reset_default_image_template()
 
     # Test the ETag header behaves as it should
     def test_etag(self):
@@ -2021,74 +2061,79 @@ class ImageServerTestsFast(BaseTestCase):
 
     # Test image templates
     def test_templates(self):
-        template = 'Unit test template'
-        # Utility to update a template in the database and reset the template manager cache
-        def update_db_template(db_obj, update_dict):
-            db_obj.template.update(update_dict)
-            dm.save_object(db_template)
-            im._templates.reset()
-        # Create a temporary template to work with
-        db_template = ImageTemplate(template, 'Temporary template for unit testing', {})
-        db_template = dm.save_object(db_template, refresh=True)
-        # Test format - original first
-        flask_app.config['IMAGE_FORMAT_DEFAULT'] = ''
-        rv = self.app.get('/image?src=test_images/thames.jpg')
-        self.assertEqual(rv.status_code, 200)
-        self.assertIn('image/jpeg', rv.headers['Content-Type'])
-        # Test format from template
-        update_db_template(db_template, {'format': {'value': 'png'}})
-        self.assertIn(template, im.get_template_names())
-        rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template)
-        self.assertEqual(rv.status_code, 200)
-        self.assertIn('image/png', rv.headers['Content-Type'])
-        original_len = len(rv.data)
-        # Test cropping from template makes it smaller
-        update_db_template(db_template, {'top': {'value': 0.1}, 'left': {'value': 0.1},
-                                         'bottom': {'value': 0.9}, 'right': {'value': 0.9}})
-        rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template)
-        self.assertEqual(rv.status_code, 200)
-        cropped_len = len(rv.data)
-        self.assertLess(cropped_len, original_len)
-        # Test stripping the EXIF data makes it smaller again 2
-        update_db_template(db_template, {'strip': {'value': True}})
-        rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template)
-        self.assertEqual(rv.status_code, 200)
-        stripped_len = len(rv.data)
-        self.assertLess(stripped_len, cropped_len)
-        # Test resizing it small makes it smaller again 3
-        update_db_template(db_template, {'width': {'value': 500}, 'height': {'value': 500}})
-        rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template)
-        self.assertEqual(rv.status_code, 200)
-        resized_len = len(rv.data)
-        self.assertLess(resized_len, stripped_len)
-        # And that auto-fitting the crop then makes it slightly larger
-        update_db_template(db_template, {'crop_fit': {'value': True}})
-        rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template)
-        self.assertEqual(rv.status_code, 200)
-        autofit_crop_len = len(rv.data)
-        self.assertGreater(autofit_crop_len, resized_len)
-        # Test expiry settings - original first
-        flask_app.config['IMAGE_EXPIRY_TIME_DEFAULT'] = 99
-        rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template)
-        self.assertEqual(rv.headers.get('Expires'), http_date(int(time.time() + 99)))
-        # Test expiry settings from template
-        update_db_template(db_template, {'expiry_secs': {'value': -1}})
-        rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template)
-        self.assertEqual(rv.headers.get('Expires'), http_date(0))
-        # Test attachment settings from template
-        update_db_template(db_template, {'attachment': {'value': True}})
-        rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template)
-        self.assertIsNotNone(rv.headers.get('Content-Disposition'))
-        self.assertIn('attachment', rv.headers['Content-Disposition'])
-        # Test that URL params override the template
-        rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template+'&format=bmp&attach=0')
-        self.assertEqual(rv.status_code, 200)
-        self.assertIn('image/bmp', rv.headers['Content-Type'])
-        self.assertIsNone(rv.headers.get('Content-Disposition'))
-        template_bmp_len = len(rv.data)
-        rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template+'&format=bmp&width=600&height=600&attach=0')
-        self.assertEqual(rv.status_code, 200)
-        self.assertGreater(len(rv.data), template_bmp_len)
+        try:
+            template = 'Unit test template'
+            # Utility to update a template in the database and reset the template manager cache
+            def update_db_template(db_obj, update_dict):
+                db_obj.template.update(update_dict)
+                dm.save_object(db_obj)
+                im.reset_templates()
+            # Get the default template
+            db_default_template = dm.get_image_template(tempname='Default')
+            # Create a temporary template to work with
+            db_template = ImageTemplate(template, 'Temporary template for unit testing', {})
+            db_template = dm.save_object(db_template, refresh=True)
+            # Test format - first use original format in default template
+            update_db_template(db_default_template, {'format': {'value': ''}})
+            rv = self.app.get('/image?src=test_images/thames.jpg')
+            self.assertEqual(rv.status_code, 200)
+            self.assertIn('image/jpeg', rv.headers['Content-Type'])
+            # Test format from template
+            update_db_template(db_template, {'format': {'value': 'png'}})
+            self.assertIn(template, im.get_template_names())
+            rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template)
+            self.assertEqual(rv.status_code, 200)
+            self.assertIn('image/png', rv.headers['Content-Type'])
+            original_len = len(rv.data)
+            # Test cropping from template makes it smaller
+            update_db_template(db_template, {'top': {'value': 0.1}, 'left': {'value': 0.1},
+                                             'bottom': {'value': 0.9}, 'right': {'value': 0.9}})
+            rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template)
+            self.assertEqual(rv.status_code, 200)
+            cropped_len = len(rv.data)
+            self.assertLess(cropped_len, original_len)
+            # Test stripping the EXIF data makes it smaller again 2
+            update_db_template(db_template, {'strip': {'value': True}})
+            rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template)
+            self.assertEqual(rv.status_code, 200)
+            stripped_len = len(rv.data)
+            self.assertLess(stripped_len, cropped_len)
+            # Test resizing it small makes it smaller again 3
+            update_db_template(db_template, {'width': {'value': 500}, 'height': {'value': 500}})
+            rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template)
+            self.assertEqual(rv.status_code, 200)
+            resized_len = len(rv.data)
+            self.assertLess(resized_len, stripped_len)
+            # And that auto-fitting the crop then makes it slightly larger
+            update_db_template(db_template, {'crop_fit': {'value': True}})
+            rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template)
+            self.assertEqual(rv.status_code, 200)
+            autofit_crop_len = len(rv.data)
+            self.assertGreater(autofit_crop_len, resized_len)
+            # Test expiry settings - from the default template first
+            update_db_template(db_default_template, {'expiry_secs': {'value': 99}})
+            rv = self.app.get('/image?src=test_images/thames.jpg')
+            self.assertEqual(rv.headers.get('Expires'), http_date(int(time.time() + 99)))
+            # Test expiry settings from template
+            update_db_template(db_template, {'expiry_secs': {'value': -1}})
+            rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template)
+            self.assertEqual(rv.headers.get('Expires'), http_date(0))
+            # Test attachment settings from template
+            update_db_template(db_template, {'attachment': {'value': True}})
+            rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template)
+            self.assertIsNotNone(rv.headers.get('Content-Disposition'))
+            self.assertIn('attachment', rv.headers['Content-Disposition'])
+            # Test that URL params override the template
+            rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template+'&format=bmp&attach=0')
+            self.assertEqual(rv.status_code, 200)
+            self.assertIn('image/bmp', rv.headers['Content-Type'])
+            self.assertIsNone(rv.headers.get('Content-Disposition'))
+            template_bmp_len = len(rv.data)
+            rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template+'&format=bmp&width=600&height=600&attach=0')
+            self.assertEqual(rv.status_code, 200)
+            self.assertGreater(len(rv.data), template_bmp_len)
+        finally:
+            reset_default_image_template()
 
     # Test spaces in file names - serving and caching
     def test_filename_spaces(self):
@@ -2101,6 +2146,7 @@ class ImageServerTestsFast(BaseTestCase):
         # Test retrieval from cache
         blue_img = auto_sync_existing_file('test_images/blue bells.jpg', dm, tm)
         blue_attrs = ImageAttrs(blue_img.src, blue_img.id)
+        im.finalise_image_attrs(blue_attrs)
         blue_image = cm.get(blue_attrs.get_cache_key())
         assert blue_image is not None, 'Filename with spaces was not retrieved from cache'
         assert len(blue_image) == 904256
@@ -2766,26 +2812,35 @@ class ImageServerTestsFast(BaseTestCase):
 
     # Test that the browser cache expiry headers work
     def test_caching_expiry_settings(self):
-        # This should work with both 'image' and 'original'
-        for api in ['image', 'original']:
-            img_url = '/' + api + '?src=test_images/dorset.jpg&width=800'
-            flask_app.config['IMAGE_EXPIRY_TIME_DEFAULT'] = -1
-            img = self.app.get(img_url)
-            assert img.headers.get('Expires') == http_date(0)
-            assert img.headers.get('Cache-Control') == 'no-cache, public'
-            flask_app.config['IMAGE_EXPIRY_TIME_DEFAULT'] = 0
-            img = self.app.get(img_url)
-            assert img.headers.get('Expires') is None
-            assert img.headers.get('Cache-Control') is None
-            flask_app.config['IMAGE_EXPIRY_TIME_DEFAULT'] = 60
-            img = self.app.get(img_url)
-            assert img.headers.get('Expires') == http_date(int(time.time() + 60))
-            assert img.headers.get('Cache-Control') == 'public, max-age=60'
+        try:
+            # Utility to update the default template
+            db_def_temp = dm.get_image_template(tempname='Default')
+            def set_default_expiry(value):
+                db_def_temp.template['expiry_secs']['value'] = value
+                dm.save_object(db_def_temp)
+                im.reset_templates()
+            # This should work with both 'image' and 'original'
+            for api in ['image', 'original']:
+                img_url = '/' + api + '?src=test_images/dorset.jpg&width=800'
+                set_default_expiry(-1)
+                img = self.app.get(img_url)
+                self.assertEqual(img.headers.get('Expires'), http_date(0))
+                self.assertEqual(img.headers.get('Cache-Control'), 'no-cache, public')
+                set_default_expiry(0)
+                img = self.app.get(img_url)
+                self.assertIsNone(img.headers.get('Expires'))
+                self.assertIsNone(img.headers.get('Cache-Control'))
+                set_default_expiry(60)
+                img = self.app.get(img_url)
+                self.assertEqual(img.headers.get('Expires'), http_date(int(time.time() + 60)))
+                self.assertEqual(img.headers.get('Cache-Control'), 'public, max-age=60')
+        finally:
+            reset_default_image_template()
 
     # Test that the browser cache validation headers work
     def test_etags(self):
-        # Run this with a normal cache expiry time
-        flask_app.config['IMAGE_EXPIRY_TIME_DEFAULT'] = 604800
+        # Check that client caching is enabled
+        self.assertGreater(im.get_default_template().expiry_secs(), 0)
         # Setup
         img_url = '/image?src=test_images/dorset.jpg&width=440&angle=90&top=0.2&tile=3:4'
         rv = self.app.get(img_url)
@@ -2810,8 +2865,8 @@ class ImageServerTestsFast(BaseTestCase):
 
     # Test that browser caching still works when server side caching is off
     def test_no_server_caching_etags(self):
-        # Run this with a normal cache expiry time
-        flask_app.config['IMAGE_EXPIRY_TIME_DEFAULT'] = 604800
+        # Check the expected default expires header value
+        self.assertEqual(im.get_default_template().expiry_secs(), 604800)
         # Setup
         setup_user_account('kryten', 'none')
         self.login('kryten', 'kryten')  # Login to allow cache=0
@@ -2831,15 +2886,26 @@ class ImageServerTestsFast(BaseTestCase):
 
     # Test that etags are removed when client side caching is off
     def test_no_client_caching_etags(self):
-        flask_app.config['IMAGE_EXPIRY_TIME_DEFAULT'] = -1
-        for api in ['image', 'original']:
-            img_url = '/' + api + '?src=test_images/dorset.jpg'
-            img = self.app.get(img_url)
-            assert img.headers.get('ETag') is None
+        try:
+            # Turn off client side caching in the default template
+            db_def_temp = dm.get_image_template(tempname='Default')
+            db_def_temp.template['expiry_secs']['value'] = -1
+            dm.save_object(db_def_temp)
+            im.reset_templates()
+            # Run test
+            for api in ['image', 'original']:
+                img_url = '/' + api + '?src=test_images/dorset.jpg'
+                img = self.app.get(img_url)
+                self.assertIsNone(img.headers.get('ETag'))
+        finally:
+            reset_default_image_template()
 
     # Test that ETags are all different for different images with the
     # same parameters and for the same images with different parameters
     def test_etag_collisions(self):
+        # Check that client caching is enabled
+        self.assertGreater(im.get_default_template().expiry_secs(), 0)
+        # Generate a suite of URLs
         url_list = [
             '/image?src=test_images/dorset.jpg',
             '/image?src=test_images/cathedral.jpg',
@@ -2855,6 +2921,7 @@ class ImageServerTestsFast(BaseTestCase):
             url_list2.append(url + '&width=200&height=200')
             url_list2.append(url + '&width=200&height=200&fill=red')
         etags_list = []
+        # Request all the URLs
         for url in url_list2:
             rv = self.app.get(url)
             assert rv.status_code == 200
@@ -2865,8 +2932,8 @@ class ImageServerTestsFast(BaseTestCase):
 
     # Test that clients with an up-to-date cached image don't have to download it again
     def test_304_Not_Modified(self):
-        # Run this with a normal cache expiry time
-        flask_app.config['IMAGE_EXPIRY_TIME_DEFAULT'] = 604800
+        # Check the expected default expires header value
+        self.assertEqual(im.get_default_template().expiry_secs(), 604800)
         # This should work with both 'image' and 'original'
         for api in ['image', 'original']:
             # Setup

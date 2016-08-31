@@ -1710,12 +1710,9 @@ class DataManager(object):
                         'Default',
                         'Defines the system defaults for image generation if the '
                         'image does not specify a template or specific parameter value', {
-                            'format': {'value': ''},
                             'quality': {'value': 80},
                             'strip': {'value': True},
                             'colorspace': {'value': 'rgb'},
-                            'dpi_x': {'value': None},
-                            'dpi_y': {'value': None},
                             'expiry_secs': {'value': 60 * 60 * 24 * 7}
                         }
                     ))

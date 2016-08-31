@@ -55,7 +55,7 @@ from session_manager import get_session_user
 from session_manager import logged_in as session_logged_in
 from util import filepath_parent, invoke_http_async, validate_string
 from util import parse_boolean, parse_colour, parse_float, parse_int, parse_tile_spec
-from util import unicode_to_utf8, etag
+from util import default_value, etag, unicode_to_utf8
 from views_util import log_security_error
 
 
@@ -460,8 +460,10 @@ def make_image_response(image_wrapper, is_original, stats=None, as_attachment=No
     response.headers['X-From-Cache'] = str(image_wrapper.is_from_cache())
 
     # URL attachment param overrides what the returned object wants
-    attach = as_attachment if (as_attachment is not None) else \
-             image_wrapper.is_attachment()
+    attach = (
+        as_attachment if as_attachment is not None
+        else image_wrapper.is_attachment()
+    )
     if is_original or attach:
         fname = image_attrs.filename(with_path=False, replace_format=True)
         fname = unicode_to_utf8(fname)
@@ -502,9 +504,9 @@ def make_304_response(image_attrs, is_original, last_modified_time):
         response,
         image_attrs,
         last_modified_time,
-        image_engine._get_expiry_secs(
-            image_engine.get_template(image_attrs.template())
-            if image_attrs.template() else None
+        default_value(
+            image_engine.get_image_template(image_attrs).expiry_secs(),
+            image_engine.DEFAULT_EXPIRY_SECS
         )
     )
 
@@ -549,10 +551,11 @@ def _etag_is_valid(image_attrs, check_etag, is_original):
     image described by image_attrs matches the given ETag.
     Returns (False, new_modified_time) if the current ETag value is different.
     """
-    modified_time = image_engine.get_image_original_modified_time(image_attrs) \
-                    if is_original else \
-                    image_engine.get_image_modified_time(image_attrs)
-
+    modified_time = (
+        image_engine.get_image_original_modified_time(image_attrs)
+        if is_original else
+        image_engine.get_image_modified_time(image_attrs)
+    )
     if modified_time == 0:
         # Return False to re-generate the image and re-store the modified time
         return (False, 0)

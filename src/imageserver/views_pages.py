@@ -423,7 +423,7 @@ def publish():
     # ...but here we use fixed default field values
     field_values = {
         'page': 1,
-        'strip': app.config['IMAGE_STRIP_DEFAULT'],
+        'strip': False,
         'record_stats': True
     }
     return render_template(

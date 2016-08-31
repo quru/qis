@@ -1019,30 +1019,6 @@ class ImageAttrs():
         if normalise:
             self.normalise_values()
 
-    def apply_default_values(
-        self, iformat=None, colorspace=None, strip=None, dpi=None
-    ):
-        """
-        Applies optional default image attributes for this object.
-        Each new attribute value will only be applied if it is not None and if
-        there is no existing value for that attribute.
-        """
-        if iformat and self._format is None:
-            self._format = iformat.lower()
-
-        if colorspace and self._colorspace is None and self._icc_profile is None:
-            # Note we only do this if the ICC profile is blank too
-            self._colorspace = colorspace.lower()
-
-        if strip and self._strip is None:
-            self._strip = strip
-
-        if dpi and self._dpi_x is None:
-            self._dpi_x = dpi
-
-        if dpi and self._dpi_y is None:
-            self._dpi_y = dpi
-
     def normalise_values(self):
         """
         Removes all attributes with a value if they would have no effect.
