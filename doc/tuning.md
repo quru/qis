@@ -236,18 +236,30 @@ may have an impact on the performance and capacity of your server:
   operations and reduce the CPU load on your server
 * `AUTO_PYRAMID_THRESHOLD` - you can disable this feature by setting a value of
   `0` to prevent (possibly unnecessary) extra image resizing
-* `IMAGE_FORMAT_DEFAULT` and `IMAGE_QUALITY_DEFAULT` - some image formats
-  are faster to generate than others, lowering the quality (for `jpg` images)
-  will reduce the generated image sizes
-* `IMAGE_STRIP_DEFAULT` - if you do not generally require embedded colour
-  profiles and meta-data e.g. the camera make and model, setting this to `True`
-  can reduce the generated image sizes
-* `IMAGE_EXPIRY_TIME_DEFAULT` - if your images do not change once uploaded,
-  increase this value to 30 days or 1 year so that they are kept for longer
-  in client-side web browser caches
 * `PDF_BURST_TO_PNG` - you can disable this feature by setting a value of
   `False` to prevent the (possibly unnecessary) automatic creation of images
   from PDF files
+
+## Image generation settings
+
+By tuning some of the image parameters in your templates (including your default
+template) you may be able to create smaller and/or faster images at the same
+quality. From the [image URL](./image_help.md) or template administration area
+you can experiment with these file options:
+
+* *Strip meta-data* - if you do not require embedded colour profiles and meta-data
+  e.g. the camera make and model, enabling this setting can reduce the generated
+  image sizes
+* *File format* - changing the image format can result in faster processing, smaller
+  file sizes, or better image quality
+* *JPG/PNG compression* - For `jpg` images, lowering the quality will reduce the
+  generated image sizes. For `png` images the visual quality is always the same,
+  but careful choice of compression and filter type can greatly affect speed and
+  file sizes. Note that the optimal `png` setting for one type of image may not be
+  the best choice for other images.
+* *Client caching duration* - if your images do not change once uploaded,
+  increase this value to 30 days (`2592000`) or 1 year (`31536000`) to instruct
+  web browsers to keep your images in cache instead of re-requesting them
 
 ## An example
 

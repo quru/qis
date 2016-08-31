@@ -17,6 +17,7 @@
 	Notable modifications:
 	Date       By    Details
 	=========  ====  ============================================================
+	31Aug2016  Matt  v2.2 Replaced server defaults with default template
 -->
 {% endblock %}
 
@@ -32,12 +33,8 @@
 			max_width: {{ image_info.width|default('0') }},
 			max_height: {{ image_info.height|default('0') }},
 			
-			default_format: '{{ settings.IMAGE_FORMAT_DEFAULT|lower }}',
-			default_quality: {{ settings.IMAGE_QUALITY_DEFAULT }},
-			default_colorspace: '{{ settings.IMAGE_COLORSPACE_DEFAULT|lower }}',
-			default_dpi: {{ settings.IMAGE_DPI_DEFAULT }},
-			default_strip: {{ settings.IMAGE_STRIP_DEFAULT|lower }},
 			default_print_dpi: 600,
+			default_template_id: {{ default_template.id }},
 			
 			external_server_url: '{{ external_url_for('index') }}',
 			external_image_url: '{{ external_url_for('image') }}',
@@ -51,6 +48,7 @@
 		var PublisherText = {
 			// Templates
 			'loading': 'Loading details...',
+			'loading_failed': 'Failed to load template details',
 			'empty': 'Empty template',
 			'format': 'File format',
 			'align_h': 'Horizontal align',
@@ -115,6 +113,9 @@
 					<label>Base on template:</label>
 					{{ input(fields, field_values, 'template') }}   {# Note that input_template.html requires {{ template_list }} #}
 					{{ help('option_tmp') }}
+					<span class="field_default">
+						Leave blank to use the system default template
+					</span>
 				</div>
 				<div id="template_fields">
 				</div>

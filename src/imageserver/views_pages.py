@@ -420,12 +420,13 @@ def publish():
     # See also admin.views_pages.template_edit
     fields = ImageAttrs.validators().copy()
     fields.update(TemplateAttrs.validators())
-    # ...but here we use fixed default field values
+    # Any default publishing values can go here.
+    # In v2 most of the defaults come from the default template.
     field_values = {
-        'page': 1,
-        'strip': False,
         'record_stats': True
     }
+    template_list = image_engine.get_template_list()
+    default_template = next(td for td in template_list if td['is_default'])
     return render_template(
         'publish.html',
         fields=fields,
@@ -433,7 +434,8 @@ def publish():
         include_crop_tool=True,
         include_units_tool=True,
         image_info=image_engine.get_image_properties(src, False),
-        template_list=image_engine.get_template_list(),
+        template_list=template_list,
+        default_template=default_template,
         embed=embed,
         src=src,
         path=filepath_parent(src)

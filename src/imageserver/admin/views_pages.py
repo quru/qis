@@ -36,7 +36,7 @@ from datetime import datetime, timedelta
 
 from imageserver.admin import blueprint
 from imageserver.errors import DoesNotExistError
-from imageserver.flask_app import app, data_engine, permissions_engine
+from imageserver.flask_app import app, data_engine, image_engine, permissions_engine
 from imageserver.flask_util import render_template
 from imageserver.image_attrs import ImageAttrs
 from imageserver.template_attrs import TemplateAttrs
@@ -106,7 +106,8 @@ def template_edit(template_id):
         else:
             # New template defaults
             field_values = {
-                'record_stats': True
+                'record_stats': True,
+                'expiry_secs': image_engine.DEFAULT_EXPIRY_SECS
             }
 
     except Exception as e:

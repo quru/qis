@@ -52,9 +52,6 @@
 					<label>DPI:</label>
 					{{ input(fields, field_values, 'dpi_x') }}
 					{{ help('option_dpi') }}
-					<span class="field_default">
-						Server default: {{ settings.IMAGE_DPI_DEFAULT|default('keep original', True) }}
-					</span>
 				</div>
 			</fieldset>
 
@@ -211,33 +208,21 @@
 					<label>Strip meta-data:</label>
 					{{ input(fields, field_values, "strip") }}
 					{{ help('option_strip') }}
-					<span class="field_default">
-						Server default: {{ settings.IMAGE_STRIP_DEFAULT|lower }}
-					</span>
 				</div>
 				<div>
 					<label>File format:</label>
 					{{ input(fields, field_values, "format") }}
 					{{ help('option_format') }}
-					<span class="field_default">
-						Server default: {{ settings.IMAGE_FORMAT_DEFAULT|default('keep original', True) }}
-					</span>
 				</div>
 				<div>
 					<label>JPG quality /<br/>PNG compression:</label>
 					{{ input(fields, field_values, "quality") }}
 					{{ help('option_quality') }}
-					<span class="field_default">
-						Server default: {{ settings.IMAGE_QUALITY_DEFAULT }}
-					</span>
 				</div>
 				<div id="group_colorspace">
 					<label>Colour model:</label>
 					{{ input(fields, field_values, "colorspace") }}
 					{{ help('option_colorspace') }}
-					<span class="field_default">
-						Server default: {{ settings.IMAGE_COLORSPACE_DEFAULT|default('keep original', True) }}
-					</span>
 				</div>
 			</fieldset>
 			

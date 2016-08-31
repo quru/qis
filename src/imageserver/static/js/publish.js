@@ -30,6 +30,7 @@
 	=========  ====  ============================================================
 	06Oct2015  Matt  Refactored help popup JS into preview_popup.js
 	12Oct2015  Matt  Added HTML5 <picture> and <img srcset> outputs
+	31Aug2016  Matt  v2.2 Replaced server defaults with default template
 */
 
 "use strict";
@@ -39,6 +40,8 @@ var Publisher = {
 	// (e.g. by leaning on the rotation angle increment button)
 	previewImageRC: 0,
 	cropImageRC: 0,
+	// This contains a copy of the base template
+	templateSpec: {},
 	// This defines the parameters for the final image
 	imageSpec: {},
 	// The preview image uses these too but overrides some (e.g. width and height)
@@ -78,6 +81,7 @@ Publisher.init = function() {
 	Publisher.hasOuterHTML = ($('publish_output').outerHTML !== undefined);
 	// Set initial state
 	Publisher.initSpecs();
+	Publisher.onTemplateChanged();
 	Publisher.onUnitsChanged(null, true);
 	Publisher.refreshPublishOutput();
 	// IE doesn't fire onload if the image was cached and displayed already
@@ -114,21 +118,22 @@ Publisher.onTemplateChanged = function() {
 	    tempVal = tempEl.options[tempEl.selectedIndex].getProperty('data-id'),
 	    apiURL = PublisherConfig.template_api_url;
 
-	if (tempVal) {
-		infoEl.set('html', PublisherText.loading);
-		(new Request.JSON({
-			url: apiURL.replace('/0/', '/' + tempVal + '/'),
-			onSuccess: function(jsonObj, jsonText) {
-				Publisher.refreshTemplateInfo(infoEl, jsonObj);
-			},
-			onFailure: function(xhr) {
-				infoEl.empty();
-			}
-		})).get();
+	Publisher.templateSpec = {};
+	infoEl.empty();
+	infoEl.set('text', PublisherText.loading);
+
+	if (!tempVal) {
+		tempVal = PublisherConfig.default_template_id;
 	}
-	else {
-		infoEl.empty();
-	}
+	new Request.JSON({
+		url: apiURL.replace('/0/', '/' + tempVal + '/'),
+		onSuccess: function(jsonObj, jsonText) {
+			Publisher.setTemplateInfo(infoEl, jsonObj.data);
+		},
+		onFailure: function(xhr) {
+			infoEl.set('text', PublisherText.loading_failed);
+		}
+	}).get();
 };
 
 Publisher.onUnitsChanged = function(e, init) {
@@ -259,6 +264,12 @@ Publisher.onChange = function() {
 		}
 	});
 
+	// TODO Remove things that are the same as the template spec
+	// TODO Some things removed below need to stay if they're different from the template
+	// TODO ==> add whatever is different to the imageSpec
+	// TODO we probably need to get pre-fill the template values in the fields (reverse of the above)
+	// TODO fix #2931 as part of this, #3059 is related too
+
 	// Remove default values from the spec, handle special cases 
 	if (Publisher.imageSpec.transfill) {
 		Publisher.imageSpec.fill = Publisher.imageSpec.transfill;
@@ -283,7 +294,7 @@ Publisher.onChange = function() {
 	if (Publisher.imageSpec.valign === 'C0.5') {
 		delete Publisher.imageSpec.valign;
 	}
-	if (PublisherConfig.default_strip) {
+	if (Publisher.templateSpec.strip && Publisher.templateSpec.strip.value) {
 		if (Publisher.imageSpec.strip === '1')
 			delete Publisher.imageSpec.strip;
 		else
@@ -341,14 +352,20 @@ Publisher.toPx = function(val, unit, dpi) {
 	return Math.round(inches * dpi);
 };
 
-Publisher.refreshTemplateInfo = function(el, jsonObj) {
-	var tObj = jsonObj.data,
-	    t = tObj.template,
+Publisher.setTemplateInfo = function(el, templateObj) {
+	var t = templateObj.template,
 	    tempEl = $('publish_field_template'),
 	    tempVal = tempEl.options[tempEl.selectedIndex].getProperty('data-id');
+
+	// v2.2 We always use a template
+	if (!tempVal) {
+		tempVal = ''+PublisherConfig.default_template_id;
+	}
 	
 	// If this data is for the currently selected template
-	if (t && (tObj.id === parseInt(tempVal))) {
+	if (templateObj && (templateObj.id === parseInt(tempVal))) {
+		// Save the template spec
+		Publisher.templateSpec = t;
 		// Show the list of key:value items in the template
 		el.empty();
 		for (var attr in t) {
@@ -357,14 +374,12 @@ Publisher.refreshTemplateInfo = function(el, jsonObj) {
 				if (attr_name === undefined)
 					attr_name = attr.charAt(0).toUpperCase() + attr.substring(1);
 				el.grab(new Element('div', {
-					'id': 'template_field_' + attr,
-					'data-value': t[attr].value,
 					'text': attr_name + ' : ' + t[attr].value
 				}));
 			}
 		}
 		if (el.getChildren().length === 0) {
-			el.set('html', PublisherText.empty);
+			el.set('text', PublisherText.empty);
 		}
 		// Update field warnings
 		Publisher.refreshWarnings();
@@ -538,7 +553,7 @@ Publisher.changeAspectRatio = function() {
 
 Publisher.updateCrop = function(coords) {
 	var ratio = (coords.w && coords.h) ? Math.roundx(coords.w / coords.h, 5) : '&ndash;';
-	$('crop_aspect').set('html', ''+ratio);
+	$('crop_aspect').set('text', ''+ratio);
 	$('publish_field_left').value = coords.x > 0 ? Math.roundx(coords.x / Publisher.cropSize.x, 5) : '';
 	$('publish_field_top').value = coords.y > 0 ? Math.roundx(coords.y / Publisher.cropSize.y, 5) : '';
 	$('publish_field_right').value = ((coords.x + coords.w) < Publisher.cropSize.x) ? Math.roundx((coords.x + coords.w) / Publisher.cropSize.x, 5) : '';
@@ -604,43 +619,25 @@ Publisher.refreshWarnings = function() {
 		fileExtension = (parts.length > 1) ? parts.pop().toLowerCase() : '';
 	}
 
-	// Get template values (all optional, and then only if a template is selected)
-	var templateFormat = '',
-	    templateStrip = '',
-	    templateWidth = '',
-	    templateHeight = '',
-	    templateColorspace = '',
-	    templateFill = '';
-
-	if ($('template_field_format')) {
-		templateFormat = $('template_field_format').getProperty('data-value');
-	}
-	if ($('template_field_strip')) {
-		templateStrip = ($('template_field_strip').getProperty('data-value') === 'true') ? '1' : '0';
-	}
-	if ($('template_field_width')) {
-		templateWidth = $('template_field_width').getProperty('data-value');
-	}
-	if ($('template_field_height')) {
-		templateHeight = $('template_field_height').getProperty('data-value');
-	}
-	if ($('template_field_colorspace')) {
-		templateColorspace = $('template_field_colorspace').getProperty('data-value');
-	}
-	if ($('template_field_fill')) {
-		templateFill = $('template_field_fill').getProperty('data-value');
-	}
+	// Get template values
+	var t = Publisher.templateSpec,
+	    templateFormat = t.format ? t.format.value : '',
+	    templateStrip = (t.strip && t.strip.value === true) ? '1' : '0',
+	    templateWidth = t.width ? t.width.value : 0,
+	    templateHeight = t.height ? t.height.value : 0,
+	    templateColorspace = t.colorspace ? t.colorspace.value : '',
+	    templateFill = t.fill ? t.fill.value : '';
 
 	// Determine final field values
-	var finalFormat = Publisher.imageSpec.format || templateFormat || PublisherConfig.default_format || fileExtension || '',
+	var finalFormat = Publisher.imageSpec.format || templateFormat || fileExtension || '',
 	    isjpg = ['jpg', 'jpeg', 'pjpg', 'pjpeg'].contains(finalFormat),
 	    ispng = ['png'].contains(finalFormat),
 	    isgif = ['gif'].contains(finalFormat),
 	    istif = ['tif', 'tiff'].contains(finalFormat);
 
-	var finalStrip = Publisher.imageSpec.strip || templateStrip || PublisherConfig.default_strip,
-	    finalWidth = parseInt(Publisher.imageSpec.width, 10) || parseInt(templateWidth, 10) || 0,
-	    finalHeight = parseInt(Publisher.imageSpec.height, 10) || parseInt(templateHeight, 10) || 0,
+	var finalStrip = Publisher.imageSpec.strip || templateStrip,
+	    finalWidth = parseInt(Publisher.imageSpec.width, 10) || templateWidth,
+	    finalHeight = parseInt(Publisher.imageSpec.height, 10) || templateHeight,
 	    finalColorspace = Publisher.imageSpec.colorspace || templateColorspace,
 	    finalFill = Publisher.imageSpec.fill || templateFill;
 

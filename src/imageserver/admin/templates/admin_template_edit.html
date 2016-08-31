@@ -16,6 +16,7 @@
 	Notable modifications:
 	Date       By    Details
 	=========  ====  ============================================================
+	31Aug2016  Matt  v2.2 Removed server defaults
 -->
 {% endblock %}
 
@@ -84,9 +85,6 @@
 					<label>Client caching duration:</label>
 					{{ input(fields, field_values, 'expiry_secs') }} seconds
 					{{ help('option_expires') }}
-					<span class="field_default">
-						Server default: {{ settings.IMAGE_EXPIRY_TIME_DEFAULT }}
-					</span>
 				</div>
 			</fieldset>
 		</form>
