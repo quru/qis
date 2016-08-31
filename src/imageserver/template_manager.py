@@ -65,8 +65,8 @@ class ImageTemplateManager(object):
 
     def get_template_list(self):
         """
-        Returns a list of {id, name, description} dictionaries representing
-        the available templates, sorted by name.
+        Returns a list of {id, name, description, is_default} dictionaries
+        representing the available templates, sorted by name.
         """
         self._check_data_version()
         cached_list = self._template_cache.get(ImageTemplateManager._TEMPLATE_LIST_KEY)
@@ -75,9 +75,12 @@ class ImageTemplateManager(object):
                 tdata['db_obj'] for tdata in self._template_cache.values()
                 if isinstance(tdata, dict)
             ]
-            cached_list = [
-                {'id': dbo.id, 'name': dbo.name, 'description': dbo.description}
-                for dbo in db_obj_list
+            cached_list = [{
+                    'id': dbo.id,
+                    'name': dbo.name,
+                    'description': dbo.description,
+                    'is_default': (dbo.name.lower() == self._default_template_name)
+                } for dbo in db_obj_list
             ]
             cached_list.sort(key=lambda o: o['name'])
             self._template_cache.set(ImageTemplateManager._TEMPLATE_LIST_KEY, cached_list)

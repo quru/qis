@@ -77,7 +77,7 @@ and can be created or changed by your system administrator. You can then apply a
 image using the [tmp](#option_tmp) option.
 
 In QIS v1 the use of templates was optional, and a small number of fixed system settings 
-provided fall-back values for image format, colorspace, and caching time.
+provided fall-back values for image format, colorspace, and client caching time.
 
 As of QIS v2 a template is always used when an image is generated. If no [tmp](#option_tmp)
 parameter is given then the system's [default template](#defaults) is used to provide the
@@ -707,7 +707,7 @@ Options in addition to the template name are either added to or replace those in
 
 Note that as of QIS v2, if you do not specify a template for an image then the system's
 default template will be applied automatically. If you **do** specify a template, the
-system's default template is **not** applied, and your chosen template replaces it.
+system's default template is **not** applied, your chosen template replaces it.
 
 <a name="notes"></a>
 ## Usage notes

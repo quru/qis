@@ -128,7 +128,7 @@ class ImageManager(object):
     def get_template_list(self):
         """
         Returns a list of available template information as
-        {id, name, description} dictionaries.
+        {id, name, description, is_default} dictionaries.
         """
         return self._templates.get_template_list()
 
