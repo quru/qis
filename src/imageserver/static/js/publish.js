@@ -81,9 +81,8 @@ Publisher.init = function() {
 	Publisher.hasOuterHTML = ($('publish_output').outerHTML !== undefined);
 	// Set initial state
 	Publisher.initSpecs();
-	Publisher.onTemplateChanged();
 	Publisher.onUnitsChanged(null, true);
-	Publisher.refreshPublishOutput();
+	Publisher.onTemplateChanged();
 	// IE doesn't fire onload if the image was cached and displayed already
 	if ($('crop_image').complete) {
 		Publisher.initCropping();
@@ -91,13 +90,13 @@ Publisher.init = function() {
 };
 
 Publisher.initSpecs = function() {
-	var imgSrc = $('preview_image').getProperty('src'),
-	    urlSep = imgSrc.indexOf('?'),
-	    imgParams = imgSrc.substring(urlSep + 1).cleanQueryString().replace(/\+/g, ' ');
+	var pimgSrc = $('preview_image').getProperty('src'),
+	    urlSep = pimgSrc.indexOf('?'),
+	    pimgParams = pimgSrc.substring(urlSep + 1).cleanQueryString().replace(/\+/g, ' ');
 
 	// Default the preview image spec (size, format) from the HTML <img>
-	Publisher.previewURL = imgSrc.substring(0, urlSep);
-	Publisher.previewSpec = imgParams.parseQueryString();
+	Publisher.previewURL = pimgSrc.substring(0, urlSep);
+	Publisher.previewSpec = pimgParams.parseQueryString();
 	// We don't want to cache all the generated previews
 	Publisher.previewSpec.cache = '0';
 	Publisher.previewSpec.stats = '0';
@@ -268,7 +267,6 @@ Publisher.onChange = function() {
 	// TODO Some things removed below need to stay if they're different from the template
 	// TODO ==> add whatever is different to the imageSpec
 	// TODO we probably need to get pre-fill the template values in the fields (reverse of the above)
-	// TODO fix #2931 as part of this, #3059 is related too
 
 	// Remove default values from the spec, handle special cases 
 	if (Publisher.imageSpec.transfill) {
@@ -357,7 +355,7 @@ Publisher.setTemplateInfo = function(el, templateObj) {
 	    tempEl = $('publish_field_template'),
 	    tempVal = tempEl.options[tempEl.selectedIndex].getProperty('data-id');
 
-	// v2.2 We always use a template
+	// v2.2 We always use a template now
 	if (!tempVal) {
 		tempVal = ''+PublisherConfig.default_template_id;
 	}
@@ -366,6 +364,7 @@ Publisher.setTemplateInfo = function(el, templateObj) {
 	if (templateObj && (templateObj.id === parseInt(tempVal))) {
 		// Save the template spec
 		Publisher.templateSpec = t;
+
 		// Show the list of key:value items in the template
 		el.empty();
 		for (var attr in t) {
@@ -381,8 +380,9 @@ Publisher.setTemplateInfo = function(el, templateObj) {
 		if (el.getChildren().length === 0) {
 			el.set('text', PublisherText.empty);
 		}
-		// Update field warnings
-		Publisher.refreshWarnings();
+
+		// Update everything to apply the template values
+		Publisher.onChange();
 	}
 };
 
@@ -401,20 +401,31 @@ Publisher.refreshPreview = function() {
 
 	// Fields we need to override to generate a useful preview
 	var skip_fields = ['width', 'height', 'colorspace', 'format', 'attach', 'xref', 'stats'];
-	// Copy the image spec to the preview spec, minus the skip fields
+	// Reset previewSpec to its default/starting values
 	var imageSpec = Publisher.imageSpec,
 	    previewSpec = Object.clone(Publisher.previewSpec);
+	// Copy the image spec to the preview spec, minus the skip fields
 	for (var f in imageSpec) {
 		if (!skip_fields.contains(f)) {
 			previewSpec[f] = imageSpec[f];
 		}
 	}
 
+	// Get the template values we need
+	var pts = Publisher.templateSpec,
+	    templateSpec = {
+			'format': pts.format ? pts.format.value : undefined,
+			'width': pts.width ? pts.width.value : undefined,
+			'height': pts.height ? pts.height.value : undefined,
+			'autosizefit': pts.autosizefit ? pts.autosizefit.value : undefined,
+			'autocropfit': pts.autocropfit ? pts.autocropfit.value : undefined
+	    };
+	
 	/* Use the requested format if it's web browser compatible */
 	
-	if (imageSpec.format &&
-	    ['gif', 'jpg', 'jpeg', 'pjpg', 'pjpeg', 'png', 'svg'].contains(imageSpec.format.toLowerCase())) {
-		previewSpec.format = imageSpec.format;
+	var reqFormat = (imageSpec.format || templateSpec.format || '').toLowerCase();
+	if (['gif', 'jpg', 'jpeg', 'pjpg', 'pjpeg', 'png', 'svg'].contains(reqFormat)) {
+		previewSpec.format = reqFormat;
 	}
 
 	/* Try to reflect aspect ratio and padding of (variable size) final image
@@ -422,44 +433,51 @@ Publisher.refreshPreview = function() {
 	*/
 	
 	// If requested size is smaller than preview, use requested size
-	var smaller = false;
-	if (iv(imageSpec.width) && (iv(imageSpec.width) <= iv(previewSpec.width))) {
-		previewSpec.width = imageSpec.width;
-		smaller = !iv(imageSpec.height) || (iv(imageSpec.height) <= iv(previewSpec.height));
+	var imWidth = iv(imageSpec.width) || iv(templateSpec.width) || 0,
+	    imHeight = iv(imageSpec.height) || iv(templateSpec.height) || 0,
+	    imSizeFit = (imageSpec.autosizefit !== undefined) ? bv(imageSpec.autosizefit) : bv(templateSpec.autosizefit),
+	    imCropFit = (imageSpec.autocropfit !== undefined) ? bv(imageSpec.autocropfit) : bv(templateSpec.autocropfit),
+	    psWidth = iv(previewSpec.width),
+	    psHeight = iv(previewSpec.height),
+	    smaller = false;
+
+	if (imWidth && (imWidth <= psWidth)) {
+		previewSpec.width = imWidth;
+		smaller = !imHeight || (imHeight <= psHeight);
 	}
-	if (iv(imageSpec.height)) {
-		if (iv(imageSpec.height) <= iv(previewSpec.height)) {
-			previewSpec.height = imageSpec.height;
-			smaller = !iv(imageSpec.width) || (iv(imageSpec.width) <= iv(previewSpec.width));
+	if (imHeight) {
+		if (imHeight <= psHeight) {
+			previewSpec.height = imHeight;
+			smaller = !imWidth || (imWidth <= psWidth);
 		}
 		else {
 			smaller = false;
 		}
 	}
-	// If both width and height specified...
-	if (iv(imageSpec.width) && iv(imageSpec.height)) {
+	// If both width and height are set...
+	if (imWidth && imHeight) {
 		if (!smaller) {
 			// Fit the image to the preview size
-			var aspect = iv(imageSpec.width) / iv(imageSpec.height);
+			var aspect = imWidth / imHeight;
 			if (aspect >= 1) {
-				previewSpec.height = Math.round(iv(previewSpec.width) / aspect);
+				previewSpec.height = Math.round(psWidth / aspect);
 			}
 			else {
-				previewSpec.width = Math.round(iv(previewSpec.height) * aspect);
+				previewSpec.width = Math.round(psHeight * aspect);
 			}
 		}
 		// Reflect autosizefit setting
-		if (imageSpec.autosizefit === undefined) {
+		if (!imSizeFit) {
 			delete previewSpec.autosizefit;
 		}
 		// Ignore autocropfit if autosizefit
-		if (bv(imageSpec.autosizefit)) {
+		if (imSizeFit) {
 			delete previewSpec.autocropfit;
 		}
 	}
 	else {
 		// If only width or height or neither, ignore autocropfit
-		if (bv(imageSpec.autocropfit)) {
+		if (imCropFit) {
 			delete previewSpec.autocropfit;
 		}
 	}
