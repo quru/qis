@@ -690,10 +690,14 @@ When using a template:
 * Further image options can be added alongside the template name. This allows a template
   to provide a base set of image options, which can then be selectively overridden.
 
+Note that as of QIS v2, if you do not specify a template for an image then the system's
+default template will be applied automatically. If you **do** specify a template, the
+system's default template is **not** applied, your chosen template replaces it.
+
 A 200x200 size `jpg` image with typical options for inclusion on a web site:
 
-<code class="imagecode">&lt;img class="border" src="//images.example.com/image?src=buildings/cathedral.jpg**&format=jpg&quality=70&width=200&height=200&sharpen=50&strip=1&dpi=72**"></code>
-<img class="border" src="//images.example.com/image?src=buildings/cathedral.jpg&stats=0&format=jpg&quality=70&width=200&height=200&sharpen=50&strip=1&dpi=72" />
+<code class="imagecode">&lt;img class="border" src="//images.example.com/image?src=buildings/cathedral.jpg**&format=jpg&quality=80&colorspace=rgb&width=200&height=200&strip=1**"></code>
+<img class="border" src="//images.example.com/image?src=buildings/cathedral.jpg&stats=0&format=jpg&quality=80&colorspace=rgb&width=200&height=200&strip=1" />
 
 The same image and options, defined instead using the sample template `SmallJpeg`:
 
@@ -704,10 +708,6 @@ Options in addition to the template name are either added to or replace those in
 
 <code class="imagecode">&lt;img class="border" src="//images.example.com/image?src=buildings/cathedral.jpg**&tmp=smalljpeg&angle=90&quality=10**"></code>
 <img class="border" src="//images.example.com/image?src=buildings/cathedral.jpg&stats=0&tmp=smalljpeg&angle=90&quality=10" />
-
-Note that as of QIS v2, if you do not specify a template for an image then the system's
-default template will be applied automatically. If you **do** specify a template, the
-system's default template is **not** applied, your chosen template replaces it.
 
 <a name="notes"></a>
 ## Usage notes
