@@ -679,7 +679,7 @@ class ImageServerAPITests(BaseTestCase):
         self.assertEqual(tdict['format']['value'], 'jpg')
         self.assertEqual(tdict['width']['value'], 200)
         self.assertEqual(tdict['height']['value'], 200)
-        self.assertNotIn('record_stats', tdict)
+        self.assertNotIn('size_fit', tdict)
         # Invalid template ID - getting details should fail
         rv = self.app.get('/api/admin/templates/-1/')
         self.assertEqual(rv.status_code, API_CODES.NOT_FOUND)

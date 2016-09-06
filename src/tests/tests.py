@@ -162,6 +162,7 @@ def reset_default_image_template():
     image_defaults = [
         ('format', 'jpg'), ('quality', 75), ('colorspace', None),
         ('dpi_x', None), ('dpi_y', None), ('strip', False),
+        ('record_stats', True),
         ('expiry_secs', 60 * 60 * 24 * 7)
     ]
     # Clear default template then apply our defaults

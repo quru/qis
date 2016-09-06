@@ -1713,6 +1713,7 @@ class DataManager(object):
                             'quality': {'value': 80},
                             'strip': {'value': True},
                             'colorspace': {'value': 'rgb'},
+                            'record_stats': {'value': True},
                             'expiry_secs': {'value': 60 * 60 * 24 * 7}
                         }
                     ))
@@ -1726,7 +1727,9 @@ class DataManager(object):
                             'width': {'value': 200},
                             'height': {'value': 200},
                             'strip': {'value': True},
-                            'colorspace': {'value': 'rgb'}
+                            'colorspace': {'value': 'rgb'},
+                            'record_stats': {'value': True},
+                            'expiry_secs': {'value': 60 * 60 * 24 * 7}
                         }
                     ))
                     # Create sample Precache template

@@ -28,6 +28,8 @@
 # Date       By    Details
 # =========  ====  ============================================================
 # 05Nov2015  Matt  v2 Change template values to be expandable objects
+# 06Sep2016  Matt  v2.2 Normalise the template values as there are no longer
+#                       any system image parameters for templates to override
 #
 
 from image_attrs import BooleanValidator, RangeValidator, ImageAttrs
@@ -82,9 +84,8 @@ class TemplateAttrs(object):
             raw_dict = dict((k, v['value']) for (k, v) in self._template.iteritems())
         except (KeyError, TypeError):
             raise ValueError('Bad template dictionary format (refer to TemplateAttrs)')
-        # Set normalise=False so that we keep all assigned template values
-        #     otherwise e.g. fill=white, page=1 would be removed
-        self._image_attrs.apply_dict(raw_dict, True, validate=False, normalise=False)
+        # Populate our internal ImageAttrs
+        self._image_attrs.apply_dict(raw_dict, True, validate=False, normalise=True)
         # Now ImageAttrs did round the floats and lower case (many of) the strings.
         # A few places rely on this, so we need to copy the changed values back again.
         raw_dict = self.get_values_dict()

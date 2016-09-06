@@ -175,6 +175,9 @@ def import_templates():
                     template_dict['dpi_y']['value'] = app.config.get('IMAGE_DPI_DEFAULT')
                 if template_dict['expiry_secs']['value'] is None:
                     template_dict['expiry_secs']['value'] = app.config.get('IMAGE_EXPIRY_TIME_DEFAULT', 60 * 60 * 24 * 7)
+            # Record stats needs to default to True in v2.2+
+            if template_dict['record_stats']['value'] is None:
+                template_dict['record_stats']['value'] = True
             # Create the TemplateAttrs object
             template_attrs = TemplateAttrs(template_name, template_dict)
 
@@ -241,6 +244,7 @@ def create_default_template():
                 'colorspace': {'value': app.config.get('IMAGE_COLORSPACE_DEFAULT', 'RGB')},
                 'dpi_x': {'value': app.config.get('IMAGE_DPI_DEFAULT', None)},
                 'dpi_y': {'value': app.config.get('IMAGE_DPI_DEFAULT', None)},
+                'record_stats': {'value': True},
                 'expiry_secs': {'value': app.config.get('IMAGE_EXPIRY_TIME_DEFAULT',
                                                         60 * 60 * 24 * 7)}
             }
