@@ -1145,10 +1145,9 @@ class ImageAttrs():
             self._align_v = None
 
         # The imaging back-end currently treats RGB == SRGB
-        # Normalise greys
         if self._colorspace == 'srgb':
             self._colorspace = 'rgb'
-
+        # Normalise greys
         if self._colorspace == 'grey':
             self._colorspace = 'gray'
 
