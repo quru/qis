@@ -31,6 +31,7 @@
 	06Oct2015  Matt  Refactored help popup JS into preview_popup.js
 	12Oct2015  Matt  Added HTML5 <picture> and <img srcset> outputs
 	31Aug2016  Matt  v2.2 Replaced server defaults with default template
+	06Sep2016  Matt  Default fields to template values on template selection
 */
 
 "use strict";
@@ -40,8 +41,9 @@ var Publisher = {
 	// (e.g. by leaning on the rotation angle increment button)
 	previewImageRC: 0,
 	cropImageRC: 0,
-	// This contains a copy of the base template
+	// This contains a copy of the base template (full, and just the keys/values)
 	templateSpec: {},
+	templateSpecKV: {},
 	// This defines the parameters for the final image
 	imageSpec: {},
 	// The preview image uses these too but overrides some (e.g. width and height)
@@ -51,7 +53,7 @@ var Publisher = {
 Publisher.init = function() {
 	// Add UI event handlers
 	addEventEx('crop_image', 'load', Publisher.refreshedCropImage);
-	addEventEx('crop_image', 'load', Publisher.initCropping);
+	addEventEx('crop_image', 'load', Publisher.resetCropping);
 	addEventEx('preview_image', 'load', function() { Publisher.refreshedPreview(false); });
 	addEventEx('preview_image', 'error', function() { Publisher.refreshedPreview(true); });
 	addEventEx('publish_field_template', 'change', Publisher.onTemplateChanged);
@@ -61,7 +63,7 @@ Publisher.init = function() {
 	addEventEx('publish_field_transfill', 'change', Publisher.onTransFillChanged);
 	addEventEx('publish_field_flip', 'change', Publisher.onFlipChanged);
 	addEventEx('publish_field_rotation', 'change', Publisher.onRotationChanged);
-	addEventEx('sizing_units', 'change', Publisher.onUnitsChanged);
+	addEventEx('sizing_units', 'change', function() { Publisher.onUnitsChanged(true); });
 	addEventEx('overlay_src_browse', 'click', Publisher.onBrowseOverlay);
 	addEventEx('publish_download', 'click', Publisher.onPublishDownload);
 	addEventEx('publish_type', 'change', Publisher.onPublishTypeChanged);
@@ -81,11 +83,11 @@ Publisher.init = function() {
 	Publisher.hasOuterHTML = ($('publish_output').outerHTML !== undefined);
 	// Set initial state
 	Publisher.initSpecs();
-	Publisher.onUnitsChanged(null, true);
+	Publisher.onUnitsChanged(false);
 	Publisher.onTemplateChanged();
 	// IE doesn't fire onload if the image was cached and displayed already
 	if ($('crop_image').complete) {
-		Publisher.initCropping();
+		Publisher.resetCropping();
 	}
 };
 
@@ -118,6 +120,7 @@ Publisher.onTemplateChanged = function() {
 	    apiURL = PublisherConfig.template_api_url;
 
 	Publisher.templateSpec = {};
+	Publisher.templateSpecKV = {};
 	infoEl.empty();
 	infoEl.set('text', PublisherText.loading);
 
@@ -127,7 +130,8 @@ Publisher.onTemplateChanged = function() {
 	new Request.JSON({
 		url: apiURL.replace('/0/', '/' + tempVal + '/'),
 		onSuccess: function(jsonObj, jsonText) {
-			Publisher.setTemplateInfo(infoEl, jsonObj.data);
+			infoEl.empty();
+			Publisher.setTemplateInfo(jsonObj.data);
 		},
 		onFailure: function(xhr) {
 			infoEl.set('text', PublisherText.loading_failed);
@@ -135,13 +139,14 @@ Publisher.onTemplateChanged = function() {
 	}).get();
 };
 
-Publisher.onUnitsChanged = function(e, init) {
+Publisher.onUnitsChanged = function(triggerChange) {
 	var dpiEl = $('publish_field_dpi_x'),
 	    widthEl = $('publish_field_width'),
 	    heightEl = $('publish_field_height'),
 	    unitsEl = $('sizing_units'),
 	    units = unitsEl.options[unitsEl.selectedIndex].value,
-	    dpi = parseInt(dpiEl.value, 10) || PublisherConfig.default_print_dpi;
+	    dpi = parseInt(dpiEl.value, 10) || PublisherConfig.default_print_dpi,
+	    uiChanged = false;
 
 	if (units == 'px') {
 		// Set pixels mode
@@ -149,15 +154,17 @@ Publisher.onUnitsChanged = function(e, init) {
 		heightEl.removeProperty('step');
 		dpiEl.removeProperty('placeholder');
 		if (dpiEl.value === ''+PublisherConfig.default_print_dpi) {
-			dpiEl.value = '';			
+			dpiEl.value = '';
+			uiChanged = true;
 		}
-
 		// Convert values back to pixels
-		if (!init && widthEl.value) {
+		if (widthEl.value) {
 			widthEl.value = Publisher.toPx(parseFloat(widthEl.value), this.previousUnits, dpi) || '';
+			uiChanged = true;
 		}
-		if (!init && heightEl.value) {
+		if (heightEl.value) {
 			heightEl.value = Publisher.toPx(parseFloat(heightEl.value), this.previousUnits, dpi) || '';
+			uiChanged = true;
 		}
 	}
 	else {
@@ -167,22 +174,25 @@ Publisher.onUnitsChanged = function(e, init) {
 		dpiEl.setProperty('placeholder', PublisherConfig.default_print_dpi);
 		if (!dpiEl.value) {
 			dpiEl.value = PublisherConfig.default_print_dpi;
+			uiChanged = true;
 		}
-
 		// Convert values to mm/inches
-		if (!init && widthEl.value) {
+		if (widthEl.value) {
 			var px = Publisher.toPx(parseFloat(widthEl.value), this.previousUnits, dpi);
 			widthEl.value = Publisher.fromPx(px, units, dpi) || '';
+			uiChanged = true;
 		}
-		if (!init && heightEl.value) {
+		if (heightEl.value) {
 			var px = Publisher.toPx(parseFloat(heightEl.value), this.previousUnits, dpi);
 			heightEl.value = Publisher.fromPx(px, units, dpi) || '';
+			uiChanged = true;
 		}
 	}
 
 	this.previousUnits = units;
-	if (!init) {
-		Publisher.onChange();		
+
+	if (uiChanged && triggerChange) {
+		Publisher.onChange();
 	}
 };
 
@@ -242,68 +252,24 @@ Publisher.onPublishTypeChanged = function() {
 Publisher.onChange = function() {
 	// Update the image spec from the UI fields
 	$$('.publish_field').each(function(el) {
-		var set = false;
 		if (el.type === "checkbox") {
-			if (el.checked) {
-				Publisher.imageSpec[el.name] = el.value;
-				set = true;
-			}
+			Publisher.imageSpec[el.name] = el.checked ? '1' : '0';
 		} else if (el.selectedIndex !== undefined && el.options !== undefined) {
-			if ((el.selectedIndex >= 0) && (el.options[el.selectedIndex].value !== '')) {
-				Publisher.imageSpec[el.name] = el.options[el.selectedIndex].value;
-				set = true;
-			}
-		} else if (el.value !== '') {
+			Publisher.imageSpec[el.name] = el.options[el.selectedIndex].value;
+		} else {
 			Publisher.imageSpec[el.name] = el.value;
-			set = true;
-		}
-		
-		if (!set) {
-			delete Publisher.imageSpec[el.name];
 		}
 	});
 
-	// TODO Remove things that are the same as the template spec
-	// TODO Some things removed below need to stay if they're different from the template
-	// TODO ==> add whatever is different to the imageSpec
-	// TODO we probably need to get pre-fill the template values in the fields (reverse of the above)
-
-	// Remove default values from the spec, handle special cases 
-	if (Publisher.imageSpec.transfill) {
-		Publisher.imageSpec.fill = Publisher.imageSpec.transfill;
-		delete Publisher.imageSpec.transfill;
+	// Handle special cases
+	if (Publisher.imageSpec.transfill === '1') {
+		Publisher.imageSpec.fill = 'none';
 	}
-	if (Publisher.imageSpec.autofill) {
-		Publisher.imageSpec.fill = Publisher.imageSpec.autofill;
-		delete Publisher.imageSpec.autofill;
+	if (Publisher.imageSpec.autofill === '1') {
+		Publisher.imageSpec.fill = 'auto';
 	}
-	if (Publisher.imageSpec.fill) {
-		if (Publisher.imageSpec.fill.charAt(0) === '#')
-			Publisher.imageSpec.fill = Publisher.imageSpec.fill.substring(1);
-		if (Publisher.imageSpec.fill === 'ffffff')
-			delete Publisher.imageSpec.fill;
-	}
-	if (Publisher.imageSpec.page === '0' || Publisher.imageSpec.page === '1') {
-		delete Publisher.imageSpec.page;
-	}
-	if (Publisher.imageSpec.halign === 'C0.5') {
-		delete Publisher.imageSpec.halign;
-	}
-	if (Publisher.imageSpec.valign === 'C0.5') {
-		delete Publisher.imageSpec.valign;
-	}
-	if (Publisher.templateSpec.strip && Publisher.templateSpec.strip.value) {
-		if (Publisher.imageSpec.strip === '1')
-			delete Publisher.imageSpec.strip;
-		else
-			Publisher.imageSpec.strip = '0';
-	}
-	if (Publisher.imageSpec.stats === '1') {
-		delete Publisher.imageSpec.stats;
-	}
-	else {
-		Publisher.imageSpec.stats = '0';
-	}
+	delete Publisher.imageSpec.transfill;
+	delete Publisher.imageSpec.autofill;
 
 	// Convert physical sizes back to pixels
 	var uEl = $('sizing_units'),
@@ -318,6 +284,40 @@ Publisher.onChange = function() {
 		}
 	}
 
+	// Now remove the values that are the same as the base template
+	var ifield, tfield, ival, tval;
+	for (ifield in Publisher.imageSpec) {
+		tfield = Publisher.webFieldToTemplateKey(ifield);
+		ival = Publisher.imageSpec[ifield];
+		tval = Publisher.templateSpecKV[tfield];
+
+		// Skip fields
+		if (ifield == 'src' || ifield == 'tmp')
+			continue;
+		// Strings (apart from src) are all case insensitive
+		if (typeof ival === 'string')
+			ival = ival.toLowerCase();
+		if (typeof tval === 'string')
+			tval = tval.toLowerCase();
+		// Use non-strict equality (for numbers) and check for special cases
+		// console.log(ifield + '/' + tfield + ' : image ' + ival + ' vs tmp ' + tval);
+		if ((tval == ival) ||
+			(!tval && !ival) ||
+			(tval === true && ival === '1') ||
+			(tval === false && ival === '0') ||
+			(tval == null && ival === '0') ||
+			(tval == null && ival === '#ffffff')) {
+			// Remove from the image URL
+			delete Publisher.imageSpec[ifield];
+		}
+	}
+
+	// Adjust anything that should be different in the image URL
+	if (Publisher.imageSpec.tmp === '')
+		delete Publisher.imageSpec.tmp;
+	if (Publisher.imageSpec.fill && Publisher.imageSpec.fill.charAt(0) === '#')
+		Publisher.imageSpec.fill = Publisher.imageSpec.fill.substring(1);
+
 	// Update field warnings
 	Publisher.refreshWarnings();
 
@@ -326,6 +326,104 @@ Publisher.onChange = function() {
 
 	// Update the publisher final output
 	Publisher.refreshPublishOutput();
+};
+
+Publisher.resetUI = function(resetTemplate, templateKV) {
+	if (templateKV === undefined) {
+		templateKV = {};
+	}
+	var useValue = function(key, defaultValue) {
+		var kValue = templateKV[key];
+		return ((kValue !== undefined) &&
+		        (kValue !== null) &&
+		        (kValue !== 0)) ? kValue : defaultValue;
+	};
+
+	// Close help popup
+	if (Publisher.showingHelp) {
+		Publisher.toggleHelp();
+	}
+	// Reset all the UI fields
+	$$('input').each(function(el) {
+		var key = Publisher.webFieldToTemplateKey(el.name);
+		if (el.type === "checkbox") {
+			el.checked = (useValue(key, false) === true);
+		} else if (el.type === "color") {
+			var col = useValue(key, '');
+			el.value = (col && col !== 'auto' && col !== 'none') ? col : '#ffffff';
+		} else {
+			el.value = useValue(key, '');
+		}
+	});
+	$$('select').each(function(el) {
+		var key = Publisher.webFieldToTemplateKey(el.name);
+		if (key !== 'template' || resetTemplate) {
+			var optValue = useValue(key, '');
+			for (var i = 0; i < el.options.length; i++) {
+				if (el.options[i].value === optValue) {
+					el.selectedIndex = i;
+					return;
+				}
+			}
+			el.selectedIndex = 0;
+		}
+	});
+	if (resetTemplate) {
+		Publisher.templateSpec = {};
+		Publisher.templateSpecKV = {};
+		$('template_fields').empty();
+	}
+	// Handle special cases
+	var fillCol = useValue('fill', '');
+	if (fillCol === 'auto') {
+		$('publish_field_autofill').checked = true;
+	}
+	if (fillCol === 'none') {
+		$('publish_field_transfill').checked = true;		
+	}
+
+	// Reset dynamic stuff
+	Publisher.clearWarnings();
+	Publisher.onUnitsChanged(false);
+	Publisher.resetCropping(); // This calls onChange()
+};
+
+// Returns the template key for a web parameter name
+Publisher.webFieldToTemplateKey = function(param) {
+	switch (param) {
+		// ImageAttrs
+		case 'src': return 'filename';
+		case 'tmp': return 'template';
+		case 'halign': return 'align_h';
+		case 'valign': return 'align_v';
+		case 'angle': return 'rotation';
+		case 'autocropfit': return 'crop_fit';
+		case 'autosizefit': return 'size_fit';
+		case 'overlay': return 'overlay_src';
+		case 'ovpos': return 'overlay_pos';
+		case 'ovsize': return 'overlay_size';
+		case 'ovopacity': return 'overlay_opacity';
+		case 'icc': return 'icc_profile';
+		case 'intent': return 'icc_intent';
+		case 'bpc': return 'icc_bpc';
+		case 'dpi': return 'dpi_x';
+		// TemplateAttrs
+		case 'attach': return 'attachment';
+		case 'expiry': return 'expiry_secs';
+		case 'stats': return 'record_stats';
+		// The others are the same
+		default: return param;
+	}
+};
+
+// Convert a template object to a key/value object
+// Note that the template keys are not the same as the web parameter names
+Publisher.templateToKV = function(templateObj) {
+	var kv = {};
+	for (var attr in templateObj) {
+		kv[attr] = templateObj[attr].value;
+	}
+	return kv;
 };
 
 // Convert val pixels at dpi to mm/inches
@@ -350,7 +448,7 @@ Publisher.toPx = function(val, unit, dpi) {
 	return Math.round(inches * dpi);
 };
 
-Publisher.setTemplateInfo = function(el, templateObj) {
+Publisher.setTemplateInfo = function(templateObj) {
 	var t = templateObj.template,
 	    tempEl = $('publish_field_template'),
 	    tempVal = tempEl.options[tempEl.selectedIndex].getProperty('data-id');
@@ -359,30 +457,13 @@ Publisher.setTemplateInfo = function(el, templateObj) {
 	if (!tempVal) {
 		tempVal = ''+PublisherConfig.default_template_id;
 	}
-	
 	// If this data is for the currently selected template
 	if (templateObj && (templateObj.id === parseInt(tempVal))) {
 		// Save the template spec
 		Publisher.templateSpec = t;
-
-		// Show the list of key:value items in the template
-		el.empty();
-		for (var attr in t) {
-			if (t[attr] && t[attr].value !== null && t[attr].value !== '') {
-				var attr_name = PublisherText[attr];
-				if (attr_name === undefined)
-					attr_name = attr.charAt(0).toUpperCase() + attr.substring(1);
-				el.grab(new Element('div', {
-					'text': attr_name + ' : ' + t[attr].value
-				}));
-			}
-		}
-		if (el.getChildren().length === 0) {
-			el.set('text', PublisherText.empty);
-		}
-
-		// Update everything to apply the template values
-		Publisher.onChange();
+		Publisher.templateSpecKV = Publisher.templateToKV(t);
+		// Apply the template values to the UI
+		Publisher.resetUI(false, Publisher.templateSpecKV);
 	}
 };
 
@@ -403,7 +484,8 @@ Publisher.refreshPreview = function() {
 	var skip_fields = ['width', 'height', 'colorspace', 'format', 'attach', 'xref', 'stats'];
 	// Reset previewSpec to its default/starting values
 	var imageSpec = Publisher.imageSpec,
-	    previewSpec = Object.clone(Publisher.previewSpec);
+	    previewSpec = Object.clone(Publisher.previewSpec),
+	    templateSpec = Publisher.templateSpecKV;
 	// Copy the image spec to the preview spec, minus the skip fields
 	for (var f in imageSpec) {
 		if (!skip_fields.contains(f)) {
@@ -411,16 +493,6 @@ Publisher.refreshPreview = function() {
 		}
 	}
 
-	// Get the template values we need
-	var pts = Publisher.templateSpec,
-	    templateSpec = {
-			'format': pts.format ? pts.format.value : undefined,
-			'width': pts.width ? pts.width.value : undefined,
-			'height': pts.height ? pts.height.value : undefined,
-			'autosizefit': pts.autosizefit ? pts.autosizefit.value : undefined,
-			'autocropfit': pts.autocropfit ? pts.autocropfit.value : undefined
-	    };
-	
 	/* Use the requested format if it's web browser compatible */
 	
 	var reqFormat = (imageSpec.format || templateSpec.format || '').toLowerCase();
@@ -435,8 +507,8 @@ Publisher.refreshPreview = function() {
 	// If requested size is smaller than preview, use requested size
 	var imWidth = iv(imageSpec.width) || iv(templateSpec.width) || 0,
 	    imHeight = iv(imageSpec.height) || iv(templateSpec.height) || 0,
-	    imSizeFit = (imageSpec.autosizefit !== undefined) ? bv(imageSpec.autosizefit) : bv(templateSpec.autosizefit),
-	    imCropFit = (imageSpec.autocropfit !== undefined) ? bv(imageSpec.autocropfit) : bv(templateSpec.autocropfit),
+	    imSizeFit = (imageSpec.autosizefit !== undefined) ? bv(imageSpec.autosizefit) : bv(templateSpec.size_fit),
+	    imCropFit = (imageSpec.autocropfit !== undefined) ? bv(imageSpec.autocropfit) : bv(templateSpec.crop_fit),
 	    psWidth = iv(previewSpec.width),
 	    psHeight = iv(previewSpec.height),
 	    smaller = false;
@@ -526,7 +598,7 @@ Publisher.toggleHelp = function(el) {
 	return false;
 };
 
-Publisher.initCropping = function() {
+Publisher.resetCropping = function() {
 	// Remove any previous instance
 	if (Publisher.crop !== undefined) {
 		$('crop_fix_aspect').removeEvent('change', Publisher.changeAspectRatio);
@@ -591,7 +663,7 @@ Publisher.refreshCropImage = function() {
 	}
 
 	// Reloads the crop image with the latest cropSpec.
-	// initCropping() is called again (via load event) when the image has loaded.
+	// resetCropping() is called again (via load event) when the image has loaded.
 	$('crop_image').setProperty('src', newSrc);
 };
 
@@ -781,9 +853,7 @@ function onFileSelected(src) {
 
 /*** Page initialise ***/
 
-function onInit() {
+window.addEvent('domready', function() {
 	GenericPopup.initButtons();
 	Publisher.init();
-}
-
-window.addEvent('domready', onInit);
+});

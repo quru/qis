@@ -98,7 +98,7 @@ def template_edit(template_id):
 
         # See also views_pages.publish
         fields = ImageAttrs.validators().copy()
-        fields.update(TemplateAttrs.validators())
+        fields.update(TemplateAttrs.validators().copy())
         # ...but here we use the template values as field values
         if db_template:
             template = TemplateAttrs(db_template.name, db_template.template)
