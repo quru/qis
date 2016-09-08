@@ -359,8 +359,10 @@ Publisher.resetUI = function(resetTemplate, templateKV) {
 		var key = Publisher.webFieldToTemplateKey(el.name);
 		if (key !== 'template' || resetTemplate) {
 			var optValue = useValue(key, '');
+			if (typeof optValue === 'string')
+				optValue = optValue.toLowerCase();
 			for (var i = 0; i < el.options.length; i++) {
-				if (el.options[i].value === optValue) {
+				if (el.options[i].value.toLowerCase() == optValue) {
 					el.selectedIndex = i;
 					return;
 				}
