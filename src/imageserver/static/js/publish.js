@@ -130,7 +130,6 @@ Publisher.onTemplateChanged = function() {
 	new Request.JSON({
 		url: apiURL.replace('/0/', '/' + tempVal + '/'),
 		onSuccess: function(jsonObj, jsonText) {
-			infoEl.empty();
 			Publisher.setTemplateInfo(jsonObj.data);
 		},
 		onFailure: function(xhr) {
@@ -336,6 +335,7 @@ Publisher.resetUI = function(resetTemplate, templateKV) {
 		var kValue = templateKV[key];
 		return ((kValue !== undefined) &&
 		        (kValue !== null) &&
+		        (kValue !== '') &&
 		        (kValue !== 0)) ? kValue : defaultValue;
 	};
 
@@ -343,7 +343,10 @@ Publisher.resetUI = function(resetTemplate, templateKV) {
 	if (Publisher.showingHelp) {
 		Publisher.toggleHelp();
 	}
-	// Reset all the UI fields
+	// Reset all the UI fields (the non-image UI fields too)
+	$$('label').each(function(el) {
+		el.removeClass('highlight');
+	});
 	$$('input').each(function(el) {
 		var key = Publisher.webFieldToTemplateKey(el.name);
 		if (el.type === "checkbox") {
@@ -361,15 +364,18 @@ Publisher.resetUI = function(resetTemplate, templateKV) {
 			var optValue = useValue(key, '');
 			if (typeof optValue === 'string')
 				optValue = optValue.toLowerCase();
+			// Try to match an option
 			for (var i = 0; i < el.options.length; i++) {
 				if (el.options[i].value.toLowerCase() == optValue) {
 					el.selectedIndex = i;
 					return;
 				}
 			}
+			// Fall back to selecting the first option
 			el.selectedIndex = 0;
 		}
 	});
+	// Reset template data fields
 	if (resetTemplate) {
 		Publisher.templateSpec = {};
 		Publisher.templateSpecKV = {};
@@ -382,6 +388,19 @@ Publisher.resetUI = function(resetTemplate, templateKV) {
 	}
 	if (fillCol === 'none') {
 		$('publish_field_transfill').checked = true;		
+	}
+
+	// Highlight labels of the fields that we set a value for
+	for (var tKey in templateKV) {
+		var tValue = useValue(tKey, null);
+		if (tValue && (tValue !== '#ffffff')) {
+			var fieldEl = $('publish_field_' + tKey);
+			if (fieldEl) {
+				var labelEl = fieldEl.getParent().getFirst('label');
+				if (labelEl)
+					labelEl.addClass('highlight');
+			}
+		}
 	}
 
 	// Reset dynamic stuff
@@ -452,6 +471,7 @@ Publisher.toPx = function(val, unit, dpi) {
 
 Publisher.setTemplateInfo = function(templateObj) {
 	var t = templateObj.template,
+	    infoEl = $('template_fields'),
 	    tempEl = $('publish_field_template'),
 	    tempVal = tempEl.options[tempEl.selectedIndex].getProperty('data-id');
 
@@ -459,13 +479,28 @@ Publisher.setTemplateInfo = function(templateObj) {
 	if (!tempVal) {
 		tempVal = ''+PublisherConfig.default_template_id;
 	}
+
 	// If this data is for the currently selected template
 	if (templateObj && (templateObj.id === parseInt(tempVal))) {
 		// Save the template spec
 		Publisher.templateSpec = t;
 		Publisher.templateSpecKV = Publisher.templateToKV(t);
+
 		// Apply the template values to the UI
 		Publisher.resetUI(false, Publisher.templateSpecKV);
+
+		// Set the template info
+		var isDefault = templateObj.id === PublisherConfig.default_template_id;
+		infoEl.empty();
+		infoEl.set('text', isDefault ? PublisherText.default_template_labels : PublisherText.template_labels);
+		infoEl.grab(new Element('br'));
+		infoEl.grab(new Element('button', {
+			'text': PublisherText.reset_changes,
+			'style': 'margin-top: 0.3em',
+			'events': {
+				'click': function() { Publisher.resetUI(false, Publisher.templateSpecKV); }
+			}
+		}));
 	}
 };
 
@@ -613,7 +648,7 @@ Publisher.resetCropping = function() {
 	    urlSep = imgSrc.indexOf('?'),
 	    imgParams = imgSrc.substring(urlSep + 1).cleanQueryString().replace(/\+/g, ' ');
 	Publisher.cropURL = imgSrc.substring(0, urlSep);
-	Publisher.cropSpec = imgParams.parseQueryString();	
+	Publisher.cropSpec = imgParams.parseQueryString();
 	Publisher.cropSize = imgSize;
 	Publisher.crop = new Lasso.Crop('crop_image', {
 		ratio : false,

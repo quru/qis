@@ -49,6 +49,9 @@
 			// Templates
 			'loading': 'Loading details...',
 			'loading_failed': 'Failed to load template details',
+			'template_labels': 'Template values are shown below with red labels',
+			'default_template_labels': 'Default values are shown below with red labels',
+			'reset_changes': 'Undo your changes',
 			// Warnings
 			'warn_size': 'The image will not be enlarged beyond its original size',
 			'warn_colorspace': 'Not all file formats support non-RGB colour',
@@ -90,11 +93,8 @@
 					<label>Base on template:</label>
 					{{ input(fields, field_values, 'template') }}   {# Note that input_template.html requires {{ template_list }} #}
 					{{ help('option_tmp') }}
-					<span class="field_default">
-						Leave blank to use the system default template
-					</span>
 				</div>
-				<div id="template_fields">
+				<div id="template_fields" class="tall">
 				</div>
 			</fieldset>
 
