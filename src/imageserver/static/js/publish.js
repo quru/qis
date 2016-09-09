@@ -53,7 +53,7 @@ var Publisher = {
 Publisher.init = function() {
 	// Add UI event handlers
 	addEventEx('crop_image', 'load', Publisher.refreshedCropImage);
-	addEventEx('crop_image', 'load', Publisher.resetCropping);
+	addEventEx('crop_image', 'load', function() { Publisher.resetCropping(true); });
 	addEventEx('preview_image', 'load', function() { Publisher.refreshedPreview(false); });
 	addEventEx('preview_image', 'error', function() { Publisher.refreshedPreview(true); });
 	addEventEx('publish_field_template', 'change', Publisher.onTemplateChanged);
@@ -87,7 +87,7 @@ Publisher.init = function() {
 	Publisher.onTemplateChanged();
 	// IE doesn't fire onload if the image was cached and displayed already
 	if ($('crop_image').complete) {
-		Publisher.resetCropping();
+		Publisher.resetCropping(false);
 	}
 };
 
@@ -327,7 +327,7 @@ Publisher.onChange = function() {
 	Publisher.refreshPublishOutput();
 };
 
-Publisher.resetUI = function(resetTemplate, templateKV) {
+Publisher.reset = function(resetTemplate, templateKV) {
 	if (templateKV === undefined) {
 		templateKV = {};
 	}
@@ -343,7 +343,8 @@ Publisher.resetUI = function(resetTemplate, templateKV) {
 	if (Publisher.showingHelp) {
 		Publisher.toggleHelp();
 	}
-	// Reset all the UI fields (the non-image UI fields too)
+
+	// Reset all the UI fields (note: the non-image UI fields too)
 	$$('label').each(function(el) {
 		el.removeClass('highlight');
 	});
@@ -375,12 +376,6 @@ Publisher.resetUI = function(resetTemplate, templateKV) {
 			el.selectedIndex = 0;
 		}
 	});
-	// Reset template data fields
-	if (resetTemplate) {
-		Publisher.templateSpec = {};
-		Publisher.templateSpecKV = {};
-		$('template_fields').empty();
-	}
 	// Handle special cases
 	var fillCol = useValue('fill', '');
 	if (fillCol === 'auto') {
@@ -389,6 +384,17 @@ Publisher.resetUI = function(resetTemplate, templateKV) {
 	if (fillCol === 'none') {
 		$('publish_field_transfill').checked = true;		
 	}
+
+	// Reset template data fields
+	if (resetTemplate) {
+		Publisher.templateSpec = {};
+		Publisher.templateSpecKV = {};
+		$('template_fields').empty();
+	}
+
+	// Reset dynamic stuff
+	Publisher.clearWarnings();
+	Publisher.onUnitsChanged(false);
 
 	// Highlight labels of the fields that we set a value for
 	for (var tKey in templateKV) {
@@ -403,10 +409,24 @@ Publisher.resetUI = function(resetTemplate, templateKV) {
 		}
 	}
 
-	// Reset dynamic stuff
-	Publisher.clearWarnings();
-	Publisher.onUnitsChanged(false);
-	Publisher.resetCropping(); // This calls onChange()
+	// Cropping is a bit of a 'mare as the reset may or may not require us to
+	// swap out the old crop image, and (on load at least) the crop image may
+	// not even have loaded yet
+	var oldCropImageFactors = Publisher.cropSpec ? (Publisher.cropSpec.page + Publisher.cropSpec.flip + Publisher.cropSpec.angle) : NaN;
+	// Reset cropping UI (also sets or resets Publisher.cropSpec)
+	Publisher.resetCropping(false);
+	// Update the crop spec from the new field values
+	Publisher.cropSpec.page = $('publish_field_page').value;
+	Publisher.cropSpec.flip = $('publish_field_flip').value;
+	Publisher.cropSpec.angle = $('publish_field_rotation').value;
+	// Now do we need to replace the crop image?
+	var newCropImageFactors = (Publisher.cropSpec.page + Publisher.cropSpec.flip + Publisher.cropSpec.angle);
+	if (newCropImageFactors !== oldCropImageFactors) {
+		Publisher.refreshCropImage();
+	}
+
+	// Update the publisher output with new field values
+	Publisher.onChange();
 };
 
 // Returns the template key for a web parameter name
@@ -487,7 +507,7 @@ Publisher.setTemplateInfo = function(templateObj) {
 		Publisher.templateSpecKV = Publisher.templateToKV(t);
 
 		// Apply the template values to the UI
-		Publisher.resetUI(false, Publisher.templateSpecKV);
+		Publisher.reset(false, Publisher.templateSpecKV);
 
 		// Set the template info
 		var isDefault = templateObj.id === PublisherConfig.default_template_id;
@@ -498,7 +518,7 @@ Publisher.setTemplateInfo = function(templateObj) {
 			'text': PublisherText.reset_changes,
 			'style': 'margin-top: 0.3em',
 			'events': {
-				'click': function() { Publisher.resetUI(false, Publisher.templateSpecKV); }
+				'click': function() { Publisher.reset(false, Publisher.templateSpecKV); }
 			}
 		}));
 	}
@@ -635,34 +655,60 @@ Publisher.toggleHelp = function(el) {
 	return false;
 };
 
-Publisher.resetCropping = function() {
-	// Remove any previous instance
+Publisher.resetCropping = function(triggerChange) {
+	// Remove any previous cropping lasso
 	if (Publisher.crop !== undefined) {
 		$('crop_fix_aspect').removeEvent('change', Publisher.changeAspectRatio);
-		$('crop_fix_aspect').selectedIndex = 0;		
 		Publisher.crop.destroy();
 	}
-	// Get default cropping image specs
-	var imgSize = $('crop_image').getSize(),
+	// Get default cropping image specs for the latest crop_image
+	var imgSize = {
+			x: $('crop_image').width,  // Unlike .getSize() this works when the real img is hidden by Lasso.Crop
+			y: $('crop_image').height
+	    },
 	    imgSrc = $('crop_image').getProperty('src'),
 	    urlSep = imgSrc.indexOf('?'),
 	    imgParams = imgSrc.substring(urlSep + 1).cleanQueryString().replace(/\+/g, ' ');
 	Publisher.cropURL = imgSrc.substring(0, urlSep);
 	Publisher.cropSpec = imgParams.parseQueryString();
 	Publisher.cropSize = imgSize;
+	// Create a new cropping lasso
 	Publisher.crop = new Lasso.Crop('crop_image', {
 		ratio : false,
-		preset : [0, 0, imgSize.x, imgSize.y],
+		preset : Publisher.defaultCropRect(),
 		min : [10, 10],
 		handleSize : 10,
 		opacity : 0.6,
 		color : '#000',
 		border : '../static/images/crop.gif',
-		onResize : Publisher.updateCrop,
+		onResize : Publisher.updateCropFields,
 		onComplete : Publisher.endCrop
 	});
+	// Reset the fixed aspect tool
+	$('crop_fix_aspect').selectedIndex = 0;
 	$('crop_fix_aspect').addEvent('change', Publisher.changeAspectRatio);
-	Publisher.onChange();
+	// Now, Lasso.Crop has called updateCropFields() with rounded ints, which means
+	// that top/left/bottom/right are probably showing values with rounding errors.
+	// To fix this we'll use the sledgehammer approach.
+	Publisher.resetCropFields();
+
+	if (triggerChange) {
+		Publisher.onChange();
+	}
+};
+
+Publisher.defaultCropRect = function() {
+	// In v2.2 we have a default crop rectangle that comes from the base template
+	if (Publisher.cropSize) {
+		var size = Publisher.cropSize,
+		    top = Publisher.templateSpecKV.top || 0,
+		    left = Publisher.templateSpecKV.left || 0,
+		    bottom = Publisher.templateSpecKV.bottom || 1,
+		    right = Publisher.templateSpecKV.right || 1;
+		// x, y, x2, y2
+		return [size.x * left, size.y * top, size.x * right, size.y * bottom];
+	}
+	return [0, 0, 0, 0];
 };
 
 Publisher.changeAspectRatio = function() {
@@ -678,9 +724,21 @@ Publisher.changeAspectRatio = function() {
 	Publisher.onChange();
 };
 
-Publisher.updateCrop = function(coords) {
+Publisher.resetCropFields = function() {
+	// In v2.2 we have a default crop rectangle that comes from the base template
+	var top = Publisher.templateSpecKV.top || 0,
+        left = Publisher.templateSpecKV.left || 0,
+        bottom = Publisher.templateSpecKV.bottom || 1,
+        right = Publisher.templateSpecKV.right || 1;
+	$('publish_field_left').value = left !== 0 ? Math.roundx(left, 5) : '';
+	$('publish_field_top').value = top !== 0 ? Math.roundx(top, 5) : '';
+	$('publish_field_right').value = right !== 1 ? Math.roundx(right, 5) : '';
+	$('publish_field_bottom').value = bottom !== 1 ? Math.roundx(bottom, 5) : '';
+};
+
+Publisher.updateCropFields = function(coords) {
 	var ratio = (coords.w && coords.h) ? Math.roundx(coords.w / coords.h, 5) : '&ndash;';
-	$('crop_aspect').set('text', ''+ratio);
+	$('crop_aspect').set('html', ratio);
 	$('publish_field_left').value = coords.x > 0 ? Math.roundx(coords.x / Publisher.cropSize.x, 5) : '';
 	$('publish_field_top').value = coords.y > 0 ? Math.roundx(coords.y / Publisher.cropSize.y, 5) : '';
 	$('publish_field_right').value = ((coords.x + coords.w) < Publisher.cropSize.x) ? Math.roundx((coords.x + coords.w) / Publisher.cropSize.x, 5) : '';
@@ -700,7 +758,7 @@ Publisher.refreshCropImage = function() {
 	}
 
 	// Reloads the crop image with the latest cropSpec.
-	// resetCropping() is called again (via load event) when the image has loaded.
+	// Once loaded, resetCropping(true) is called again (via the load event).
 	$('crop_image').setProperty('src', newSrc);
 };
 
@@ -721,7 +779,7 @@ Publisher.endCrop = function(coords) {
 		Publisher.crop.setDefault();
 		coords = Publisher.crop.getRelativeCoords();
 	}
-	Publisher.updateCrop(coords);
+	Publisher.updateCropFields(coords);
 	Publisher.onChange();
 };
 
