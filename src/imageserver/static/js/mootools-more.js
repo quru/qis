@@ -9,7 +9,7 @@ packager build:
  - packager build More/String.QueryString More/URI More/Element.Measure More/Fx.Elements More/Fx.Scroll More/Fx.Slide More/Sortables More/Request.JSONP More/Assets More/Color More/Mask
 
 matt@quru.com:
- - downgraded More/Sortables to 1.4.0.1 as 1.5.1 has a bug with page scroll offsets
+ - customised More/Sortables to fix bug with page scroll offsets (see comments)
 
 ...
 */
@@ -44,8 +44,8 @@ provides: [MooTools.More]
 */
 
 MooTools.More = {
-	version: '1.5.1',
-	build: '2dd695ba957196ae4b0275a690765d6636a61ccd'
+	version: '1.5.2',
+	build: 'facdf0458d10fd214aa9f5fa71935a23a772cc48'
 };
 
 
@@ -76,6 +76,22 @@ provides: [String.QueryString]
 ...
 */
 
+(function(){
+
+/**
+ * decodeURIComponent doesn't do the correct thing with query parameter keys or
+ * values. Specifically, it leaves '+' as '+' when it should be converting them
+ * to spaces as that's the specification. When browsers submit HTML forms via
+ * GET, the values are encoded using 'application/x-www-form-urlencoded'
+ * which converts spaces to '+'.
+ *
+ * See: http://unixpapa.com/js/querystring.html for a description of the
+ * problem.
+ */
+var decodeComponent = function(str){
+	return decodeURIComponent(str.replace(/\+/g, ' '));
+};
+
 String.implement({
 
 	parseQueryString: function(decodeKeys, decodeValues){
@@ -92,9 +108,9 @@ String.implement({
 				keys = index ? val.substr(0, index - 1).match(/([^\]\[]+|(\B)(?=\]))/g) : [val],
 				obj = object;
 			if (!keys) return;
-			if (decodeValues) value = decodeURIComponent(value);
+			if (decodeValues) value = decodeComponent(value);
 			keys.each(function(key, i){
-				if (decodeKeys) key = decodeURIComponent(key);
+				if (decodeKeys) key = decodeComponent(key);
 				var current = obj[key];
 
 				if (i < keys.length - 1) obj = obj[key] = current || {};
@@ -117,6 +133,8 @@ String.implement({
 	}
 
 });
+
+})();
 
 
 /*
@@ -406,7 +424,10 @@ Element.implement({
 	},
 
 	getComputedSize: function(options){
-		
+		//<1.2compat>
+		//legacy support for my stupid spelling error
+		if (options && options.plains) options.planes = options.plains;
+		//</1.2compat>
 
 		options = Object.merge({
 			styles: ['padding','border'],
@@ -698,7 +719,16 @@ Fx.Scroll = new Class({
 
 });
 
-
+//<1.2compat>
+Fx.Scroll.implement({
+	scrollToCenter: function(){
+		return this.toElementCenter.apply(this, arguments);
+	},
+	scrollIntoView: function(){
+		return this.toElementEdge.apply(this, arguments);
+	}
+});
+//</1.2compat>
 
 function isBody(element){
 	return (/^(?:body|html)$/i).test(element.tagName);
@@ -907,8 +937,9 @@ provides: [Drag]
 ...
 
 */
+(function(){
 
-var Drag = new Class({
+var Drag = this.Drag = new Class({
 
 	Implements: [Events, Options],
 
@@ -975,12 +1006,14 @@ var Drag = new Class({
 
 	attach: function(){
 		this.handles.addEvent('mousedown', this.bound.start);
+		this.handles.addEvent('touchstart', this.bound.start);
 		if (this.options.compensateScroll) this.offsetParent.addEvent('scroll', this.bound.scrollListener);
 		return this;
 	},
 
 	detach: function(){
 		this.handles.removeEvent('mousedown', this.bound.start);
+		this.handles.removeEvent('touchstart', this.bound.start);
 		if (this.options.compensateScroll) this.offsetParent.removeEvent('scroll', this.bound.scrollListener);
 		return this;
 	},
@@ -1003,7 +1036,7 @@ var Drag = new Class({
 
 	sumValues: function(alpha, beta, op){
 		var sum = {}, options = this.options;
-		for (z in options.modifiers){
+		for (var z in options.modifiers){
 			if (!options.modifiers[z]) continue;
 			sum[z] = alpha[z] + beta[z] * op;
 		}
@@ -1060,7 +1093,9 @@ var Drag = new Class({
 
 		var events = {
 			mousemove: this.bound.check,
-			mouseup: this.bound.cancel
+			mouseup: this.bound.cancel,
+			touchmove: this.bound.check,
+			touchend: this.bound.cancel
 		};
 		events[this.selection] = this.bound.eventStop;
 		this.document.addEvents(events);
@@ -1073,7 +1108,9 @@ var Drag = new Class({
 			this.cancel();
 			this.document.addEvents({
 				mousemove: this.bound.drag,
-				mouseup: this.bound.stop
+				mouseup: this.bound.stop,
+				touchmove: this.bound.drag,
+				touchend: this.bound.stop
 			});
 			this.fireEvent('start', [this.element, event]).fireEvent('snap', this.element);
 		}
@@ -1086,7 +1123,7 @@ var Drag = new Class({
 
 		this.render(options);
 		this.fireEvent('drag', [this.element, event]);
-	},  
+	},
 
 	render: function(options){
 		for (var z in options.modifiers){
@@ -1110,7 +1147,9 @@ var Drag = new Class({
 	cancel: function(event){
 		this.document.removeEvents({
 			mousemove: this.bound.check,
-			mouseup: this.bound.cancel
+			mouseup: this.bound.cancel,
+			touchmove: this.bound.check,
+			touchend: this.bound.cancel
 		});
 		if (event){
 			this.document.removeEvent(this.selection, this.bound.eventStop);
@@ -1121,7 +1160,9 @@ var Drag = new Class({
 	stop: function(event){
 		var events = {
 			mousemove: this.bound.drag,
-			mouseup: this.bound.stop
+			mouseup: this.bound.stop,
+			touchmove: this.bound.drag,
+			touchend: this.bound.stop
 		};
 		events[this.selection] = this.bound.eventStop;
 		this.document.removeEvents(events);
@@ -1130,6 +1171,9 @@ var Drag = new Class({
 	}
 
 });
+
+})();
+
 
 Element.implement({
 
@@ -1378,8 +1422,9 @@ provides: [Sortables]
 
 ...
 */
+(function(){
 
-var Sortables = new Class({
+var Sortables = this.Sortables = new Class({
 
 	Implements: [Events, Options],
 
@@ -1391,7 +1436,12 @@ var Sortables = new Class({
 		clone: false,
 		revert: false,
 		handle: false,
-		dragOptions: {}
+		dragOptions: {},
+		unDraggableTags: ['button', 'input', 'a', 'textarea', 'select', 'option']/*<1.2compat>*/,
+		snap: 4,
+		constrain: false,
+		preventDefault: false
+		/*</1.2compat>*/
 	},
 
 	initialize: function(lists, options){
@@ -1457,7 +1507,7 @@ var Sortables = new Class({
 			return list;
 		}, this));
 	},
-
+    
 	getClone: function(event, element){
 		if (!this.options.clone) return new Element(element.tagName).inject(document.body);
 		if (typeOf(this.options.clone) == 'function') return this.options.clone.call(this, event, element, this.list);
@@ -1477,7 +1527,8 @@ var Sortables = new Class({
 			});
 		}
 
-		return clone.inject(this.list).setPosition(element.getPosition(element.getOffsetParent()));
+		// matt@quru.com Swap 1.5.2 "getDroppableCoordinates(...)" code for 1.4.0.1 "getPosition(...)" 
+		return clone.inject(this.list).setPosition(this.element.getPosition(this.element.getOffsetParent()));
 	},
 
 	getDroppables: function(){
@@ -1502,7 +1553,7 @@ var Sortables = new Class({
 		if (
 			!this.idle ||
 			event.rightClick ||
-			['button', 'input', 'a', 'textarea'].contains(event.target.get('tag'))
+			(!this.options.handle && this.options.unDraggableTags.contains(event.target.get('tag')))
 		) return;
 
 		this.idle = false;
@@ -1512,7 +1563,11 @@ var Sortables = new Class({
 		this.clone = this.getClone(event, element);
 
 		this.drag = new Drag.Move(this.clone, Object.merge({
-			
+			/*<1.2compat>*/
+			preventDefault: this.options.preventDefault,
+			snap: this.options.snap,
+			container: this.options.constrain && this.element.getParent(),
+			/*</1.2compat>*/
 			droppables: this.getDroppables()
 		}, this.options.dragOptions)).addEvents({
 			onSnap: function(){
@@ -1533,14 +1588,17 @@ var Sortables = new Class({
 	end: function(){
 		this.drag.detach();
 		this.element.setStyle('opacity', this.opacity);
+		var self = this;
 		if (this.effect){
 			var dim = this.element.getStyles('width', 'height'),
 				clone = this.clone,
+				// matt@quru.com Swap 1.5.2 "getDroppableCoordinates(...)" code for 1.4.0.1 "getPosition(...)" 
 				pos = clone.computePosition(this.element.getPosition(this.clone.getOffsetParent()));
 
 			var destroy = function(){
 				this.removeEvent('cancel', destroy);
 				clone.destroy();
+				self.reset();
 			};
 
 			this.effect.element = clone;
@@ -1553,8 +1611,9 @@ var Sortables = new Class({
 			}).addEvent('cancel', destroy).chain(destroy);
 		} else {
 			this.clone.destroy();
+			self.reset();
 		}
-		this.reset();
+		
 	},
 
 	reset: function(){
@@ -1581,6 +1640,8 @@ var Sortables = new Class({
 	}
 
 });
+
+})();
 
 
 /*
@@ -1657,7 +1718,8 @@ Request.JSONP = new Class({
 			case 'object': case 'hash': data = Object.toQueryString(data);
 		}
 
-		var index = this.index = Request.JSONP.counter++;
+		var index = this.index = Request.JSONP.counter++,
+			key = 'request_' + index;
 
 		var src = options.url +
 			(options.url.test('\\?') ? '&' :'?') +
@@ -1667,7 +1729,8 @@ Request.JSONP = new Class({
 
 		if (src.length > 2083) this.fireEvent('error', src);
 
-		Request.JSONP.request_map['request_' + index] = function(){
+		Request.JSONP.request_map[key] = function(){
+			delete Request.JSONP.request_map[key];
 			this.success(arguments, index);
 		}.bind(this);
 
@@ -1688,7 +1751,7 @@ Request.JSONP = new Class({
 		return this.script;
 	},
 
-	success: function(args, index){
+	success: function(args){
 		if (!this.running) return;
 		this.clear()
 			.fireEvent('complete', args).fireEvent('success', args)
@@ -1749,8 +1812,9 @@ provides: [Assets]
 
 ...
 */
+(function(){
 
-var Asset = {
+var Asset = this.Asset = {
 
 	javascript: function(source, properties){
 		if (!properties) properties = {};
@@ -1809,7 +1873,7 @@ var Asset = {
 				}
 				retries++;
 				if (!loaded && retries < timeout / 50) return setTimeout(check, 50);
-			}
+			};
 			setTimeout(check, 0);
 		}
 		return link;
@@ -1876,6 +1940,8 @@ var Asset = {
 	}
 
 };
+
+})();
 
 
 /*
@@ -2039,7 +2105,6 @@ String.implement({
 });
 
 })();
-
 
 
 /*
@@ -2390,9 +2455,11 @@ provides: [IframeShim]
 (function(){
 
 var browsers = false;
+//<1.4compat>
+browsers = Browser.ie6 || (Browser.firefox && Browser.version < 3 && Browser.Platform.mac);
+//</1.4compat>
 
-
-this.IframeShim = new Class({
+var IframeShim = this.IframeShim = new Class({
 
 	Implements: [Options, Events, Class.Occlude],
 
@@ -2525,8 +2592,9 @@ provides: [Mask]
 
 ...
 */
+(function(){
 
-var Mask = new Class({
+var Mask = this.Mask = new Class({
 
 	Implements: [Options, Events],
 
@@ -2677,6 +2745,9 @@ var Mask = new Class({
 
 });
 
+})();
+
+
 Element.Properties.mask = {
 
 	set: function(options){
@@ -2710,4 +2781,3 @@ Element.implement({
 	}
 
 });
-

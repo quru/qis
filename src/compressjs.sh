@@ -1,6 +1,5 @@
 #!/bin/bash -v
 java -jar ../lib/yuicompressor-2.4.6.jar --preserve-semi --charset ISO-8859-1 --line-break 100 -o imageserver/admin/static/js/admin_yc.js imageserver/admin/static/js/admin.js
-java -jar ../lib/yuicompressor-2.4.6.jar --preserve-semi --charset ISO-8859-1 --line-break 100 -o imageserver/admin/static/js/mootools-extras_yc.js imageserver/admin/static/js/mootools-extras.js
 java -jar ../lib/yuicompressor-2.4.6.jar --preserve-semi --charset ISO-8859-1 --line-break 100 -o imageserver/reports/static/js/chart_yc.js imageserver/reports/static/js/chart.js
 java -jar ../lib/yuicompressor-2.4.6.jar --preserve-semi --charset ISO-8859-1 --line-break 100 -o imageserver/reports/static/js/lib/mooflot_yc.js imageserver/reports/static/js/lib/mooflot.js
 java -jar ../lib/yuicompressor-2.4.6.jar --preserve-semi --charset ISO-8859-1 --line-break 100 -o imageserver/reports/static/js/system_stats_yc.js imageserver/reports/static/js/system_stats.js
