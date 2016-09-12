@@ -599,13 +599,10 @@ Publisher.refreshPreview = function() {
 		if (!imSizeFit) {
 			delete previewSpec.autosizefit;
 		}
-		// Ignore autocropfit if autosizefit
-		if (imSizeFit) {
-			delete previewSpec.autocropfit;
-		}
 	}
 	else {
-		// If only width or height or neither, ignore autocropfit
+		// If only width or height or neither in the final image, autocropfit will be ignored,
+		// so delete it from the preview image (which does have both a width and height!)
 		if (imCropFit) {
 			delete previewSpec.autocropfit;
 		}
