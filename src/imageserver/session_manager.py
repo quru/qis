@@ -49,7 +49,6 @@ def logged_in():
     return (get_session_user_id() > 0)
 
 
-# TODO This is taking 7 millis! Why?
 def get_session_user():
     """
     Returns a detached copy of the currently logged in user object,
@@ -59,6 +58,8 @@ def get_session_user():
     if uid > 0:
         # Cache the user object on flask.g.user
         if 'user' not in flask.g or not flask.g.user:
+            # TODO For logged in requests, this db call makes up 7/8 of the
+            #      time taken to return a cached image or a 304
             flask.g.user = data_engine.get_user(uid, load_groups=True)
             del flask.g.user.password  # We don't want this floating around
         return flask.g.user
