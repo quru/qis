@@ -1,7 +1,8 @@
 # v2.2.0-dev
 _Breaking change: remove default image settings, add a default image template_
+_Changes: bug fixes to the image publisher, updated Python libraries_
 
-This change removes the 6 IMAGE_*_DEFAULT system settings and replaces them
+This change removes the 6 `IMAGE_*_DEFAULT` system settings and replaces them
 with a default image template. The image generation logic is also changed such
 that there are now only 2 levels of image parameters (URL then template) instead
 of 3 (URL then template then system settings).
