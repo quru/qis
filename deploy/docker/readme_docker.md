@@ -2,6 +2,23 @@
 
 These instructions last updated 1st May 2015 for Docker 1.6 and Fedora 21.
 
+TODO Docker 1.12
+
+- Use a Composefile to create and run all the containers
+- Auto-build QIS images from the GitHub releases (zip/tar.gz)?
+- Dockerfiles can now take arguments (ARG and --build-arg) - may simplify the build
+- Proper handling of logs
+- Possibly - use readonly filesystem apart from volumes and temp files (see `run --tmpfs`)
+  (can use `docker diff` to check if any other files get written)
+- Change volumes to use `docker volume`
+- Volumes can be shared and can specify a back-end plugin for e.g. Ceph storage
+- Change container linking to use `docker network`
+- Possibly - set up a private network for internal communications
+- Networking - find out how to deploy across multiple hosts
+- Implement `HEALTHCHECK` container tests
+- Deployment under Swarm mode using a bundle file (Compose can create these)
+  (though note there are a currently lot of reported issues with Swarm mode)
+
 ### Notes
 
 Fedora 21 is significantly smaller than Fedora 20, and has packages for:
@@ -13,8 +30,20 @@ Fedora 21 is significantly smaller than Fedora 20, and has packages for:
 The small distribution size means that you need to install several packages
 (`tar`, `zip`, etc) that you would normally expect to be included.
 
+### Docker change notes
+
 Docker 1.5 added named Dockerfiles, IPv6 support, read-only container file systems.  
 Docker 1.6 includes new logging facilities, the ability to set ulimits for containers.
+Docker 1.7 added multi-host networking (beta, `docker network`), ZFS support, better volumes (beta).
+Docker 1.8 added signed images, volume plugins, and 2-way host-container file copy.
+Docker 1.9 added image build args, multi-host networking (GA), `docker volume` commands (GA),
+           separate Swarm utility (GA).
+Docker 1.10 added new image IDs and storage, add disk I/O resource limits, major networking
+            and volumes fixes, internal DNS, Compose support for networks and volumes.
+Docker 1.11 was a major refactor of the daemon.
+Docker 1.12 Splits CLI and daemon binaries, adds orchestration - merges Swarm into the engine
+            (`docker node`, `docker service`, `docker swarm`),
+            adds core plugins (beta, `docker plugin`), adds disk quota support.
 
 ## Creating the QIS build image
 
@@ -307,3 +336,6 @@ script to delete orphaned volumes here:
 https://gist.github.com/mindreframer/7787702
 which I have updated for Docker 1.2 (which does things differently):
 https://gist.github.com/fozcode/f7919f639a3ab01096e9
+
+As of Docker 1.9 you can check for ophaned volumes with:
+`docker volume ls --filter dangling=true`
