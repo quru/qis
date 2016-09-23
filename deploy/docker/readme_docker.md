@@ -2,10 +2,16 @@
 
 These instructions last updated 1st May 2015 for Docker 1.6 and Fedora 21.
 
-TODO Docker 1.12
+TODO Outdated methods that need updating
+
+- Fedora 21 is now outdated, later releases use `dnf` instead of `yum`
+- Download QIS source from the GitHub releases (zip/tar.gz), do not require local files
+- No need for GitHub SSH key in the Build image since the main repo went public
+- Use https://certbot.eff.org/#fedora23-apache to install a proper SSL certificate
+
+TODO For Docker 1.12
 
 - Use a Composefile to create and run all the containers
-- Auto-build QIS images from the GitHub releases (zip/tar.gz)?
 - Dockerfiles can now take arguments (ARG and --build-arg) - may simplify the build
 - Proper handling of logs
 - Possibly - use readonly filesystem apart from volumes and temp files (see `run --tmpfs`)
