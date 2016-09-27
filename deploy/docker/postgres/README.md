@@ -23,7 +23,8 @@ To bind Postgres to the host's port 5432 with a 1GB RAM allocation:
 
 	$ docker volume create --name qis-db-data
 	
-	$ docker run -d -p 5432:5432 -v qis-db-data:/var/lib/postgresql/9.5/data -m 1000m \
+	$ docker run -d -p 5432:5432 -v qis-db-data:/opt/qis/data -m 1000m \
+	  --env PG_USER=qis \
 	  --env PG_PASSWORD=<password> \
 	  --env PG_SHARED_BUFFERS=250MB \
 	  --env PG_EFFECTIVE_CACHE_SIZE=750MB \	  

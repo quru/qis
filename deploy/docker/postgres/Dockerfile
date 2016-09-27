@@ -8,6 +8,7 @@
 #   PG_MAX_CONNECTIONS - Optional - the Postgres connection limit
 #   PG_SHARED_BUFFERS - Optional - the Postgres internal cache size
 #   PG_EFFECTIVE_CACHE_SIZE - Optional - the expected o/s free memory + buffers total
+#   PGDATA - Optional - the path at which to create the QIS database
 #
 FROM ubuntu:16.04
 MAINTAINER Matt Fozard <matt@quru.com>
@@ -26,26 +27,28 @@ ENV PG_USER=qis \
     PG_PASSWORD=qispass \
     PG_MAX_CONNECTIONS=100 \
     PG_SHARED_BUFFERS=250MB \
-    PG_EFFECTIVE_CACHE_SIZE=750MB
+    PG_EFFECTIVE_CACHE_SIZE=750MB \
+    PGDATA=/opt/qis/data
 
 # Add files to the image
 WORKDIR /var/lib/postgresql/
 COPY *.sh ./
 RUN chmod a+x *.sh && chown postgres:postgres *.sh
+RUN mkdir -p $PGDATA && chown postgres:postgres $PGDATA
 
 # Run initialisation scripts
 USER postgres
-RUN /usr/lib/postgresql/9.5/bin/initdb --locale=en_GB.UTF-8 -D /var/lib/postgresql/9.5/data
+RUN /usr/lib/postgresql/9.5/bin/initdb --locale=en_GB.UTF-8
 
 # Require passwords for external connections
-RUN echo "host    all             all             0.0.0.0/0               md5" >> /var/lib/postgresql/9.5/data/pg_hba.conf
+RUN echo "host    all             all             0.0.0.0/0               md5" >> $PGDATA/pg_hba.conf
 
 # Enable external TCP connections, set logging to stderr for Docker to pick up
-RUN echo "listen_addresses = '*'" >> /var/lib/postgresql/9.5/data/postgresql.conf && \
-    echo "log_destination = 'stderr'" >> /var/lib/postgresql/9.5/data/postgresql.conf
+RUN echo "listen_addresses = '*'" >> $PGDATA/postgresql.conf && \
+    echo "log_destination = 'stderr'" >> $PGDATA/postgresql.conf
 
 # Declare data volumes
-VOLUME ["/var/lib/postgresql/9.5/data"]
+VOLUME $PGDATA
 
 # Run regular health checks
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
