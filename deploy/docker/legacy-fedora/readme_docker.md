@@ -8,6 +8,7 @@ TODO Outdated methods that need updating
 - Download QIS source from the GitHub releases (zip/tar.gz), do not require local files
 - No need for GitHub SSH key in the Build image since the main repo went public
 - Use https://certbot.eff.org/#fedora23-apache to install a proper SSL certificate
+- Use a web hook in DockerHub to automatically build the image from the Dockerfile in GitHub
 
 TODO For Docker 1.12
 

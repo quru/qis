@@ -4,8 +4,8 @@ The in-memory cache server for QIS.
 
 ### To build
 
-This is only required once (per release or version), and is an "internal" process
-to be performed by the image maintainer.
+This is only required once (per release or new version), and is an "internal"
+process to be performed by the image maintainer.
 
 	$ cd <this directory>
 	$ docker build -t quru/qis-memcached .
