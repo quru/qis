@@ -20,4 +20,4 @@ EXPOSE 11211
 ENV MEMCACHED_SIZE=512
 
 # Command
-CMD /usr/bin/memcached -u memcache -m $MEMCACHED_SIZE
+CMD ["/usr/bin/memcached", "-u", "memcache", "-m", $MEMCACHED_SIZE]

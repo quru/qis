@@ -40,4 +40,4 @@ https://github.com/docker/docker/issues/13490
 
 ### To run with QIS
 
-Use the application's `Composefile` to run this container in combination with the others.
+Use the application's `docker-compose.yml` to run this container in combination with the others.

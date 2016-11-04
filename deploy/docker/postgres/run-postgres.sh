@@ -26,7 +26,7 @@ if [ ! -f "$FIRST_RUN_LOG_FILE" ]; then
 	$PG_BIN_DIR/pg_ctl start -w -l $FIRST_RUN_LOG_FILE
 
 	# Create the QIS user and database
-	psql -h localhost -U postgres -d postgres -c "CREATE ROLE $PG_USER WITH LOGIN PASSWORD '$PG_PASSWORD'"
+	psql -h localhost -U postgres -d postgres -c "CREATE ROLE \"$PG_USER\" WITH LOGIN PASSWORD '$PG_PASSWORD'"
 	createdb -h localhost -U postgres --owner $PG_USER qis-cache
 	createdb -h localhost -U postgres --owner $PG_USER qis-mgmt
 
@@ -35,4 +35,4 @@ if [ ! -f "$FIRST_RUN_LOG_FILE" ]; then
 fi
 
 # Run the main Docker process (the container exits when this returns)
-$PG_BIN_DIR/postgres
+exec $PG_BIN_DIR/postgres
