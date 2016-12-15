@@ -75,7 +75,7 @@ import threading
 import pylibmc
 import sqlalchemy
 from sqlalchemy import desc
-from sqlalchemy.exc import IntegrityError, OperationalError
+from sqlalchemy.exc import ArgumentError, IntegrityError, OperationalError
 from sqlalchemy.orm import mapper, sessionmaker
 from sqlalchemy.schema import MetaData
 
@@ -778,7 +778,10 @@ class CacheManager(object):
 
         # Set the ORM mapping
         cache_table = CacheEntry.get_alchemy_mapping(metadata)
-        mapper(CacheEntry, cache_table)
+        try:
+            mapper(CacheEntry, cache_table)
+        except ArgumentError:
+            self._logger.warning('Cache DB mapping has already been performed')
 
         # The next section must only be attempted by one process at a time on server startup
         self.get_global_lock()
