@@ -781,7 +781,7 @@ class CacheManager(object):
         try:
             mapper(CacheEntry, cache_table)
         except ArgumentError:
-            self._logger.warning('Cache DB mapping has already been performed')
+            self._logger.warn('Cache DB mapping has already been performed')
 
         # The next section must only be attempted by one process at a time on server startup
         self.get_global_lock()
