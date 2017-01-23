@@ -15,44 +15,38 @@ MAINTAINER Matt Fozard <matt@quru.com>
 
 # Base o/s + app layer
 RUN apt-get update && \
-    apt-get install -y postgresql-9.5 && \
+    apt-get install -y apt-utils postgresql-9.5 && \
     apt-get clean
 RUN locale-gen en_GB.UTF-8 && update-locale LANG=en_GB.UTF-8 LC_ALL=en_GB.UTF-8
 
 # Ports
 EXPOSE 5432
 
-# Environment variables
+# Runtime environment variables
 ENV PG_USER=qis \
     PG_PASSWORD=qispass \
     PG_MAX_CONNECTIONS=100 \
     PG_SHARED_BUFFERS=250MB \
-    PG_EFFECTIVE_CACHE_SIZE=750MB \
-    PGDATA=/opt/qis/data
+    PG_EFFECTIVE_CACHE_SIZE=750MB
+
+# Software-specific environment variables
+ENV PGDATA=/opt/qis/data
 
 # Add files to the image
-WORKDIR /var/lib/postgresql/
-COPY *.sh ./
-RUN chmod a+x *.sh && chown postgres:postgres *.sh
+COPY *.sh /
+RUN chmod a+x /*.sh
+
+# Create PGDATA
 RUN mkdir -p $PGDATA && chown postgres:postgres $PGDATA
 
-# Run initialisation scripts
 USER postgres
-RUN /usr/lib/postgresql/9.5/bin/initdb --locale=en_GB.UTF-8
-
-# Require passwords for external connections
-RUN echo "host    all             all             0.0.0.0/0               md5" >> $PGDATA/pg_hba.conf
-
-# Enable external TCP connections, set logging to stderr for Docker to pick up
-RUN echo "listen_addresses = '*'" >> $PGDATA/postgresql.conf && \
-    echo "log_destination = 'stderr'" >> $PGDATA/postgresql.conf
 
 # Declare data volumes
 VOLUME $PGDATA
 
 # Run regular health checks
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
-    CMD /var/lib/postgresql/check-postgres.sh
+    CMD ["/check-postgres.sh"]
 
-# Command
-CMD ["/var/lib/postgresql/run-postgres.sh"]
+# Note the "exec" form of CMD allows docker stop signals to be sent to our run script
+CMD ["/run-postgres.sh"]

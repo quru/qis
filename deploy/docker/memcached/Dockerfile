@@ -10,14 +10,18 @@ MAINTAINER Matt Fozard <matt@quru.com>
 
 # Base o/s + app layer
 RUN apt-get update && \
-    apt-get install -y memcached && \
+    apt-get install -y apt-utils memcached && \
     apt-get clean
 
 # Ports
 EXPOSE 11211
 
-# Environment variables
+# Runtime environment variables
 ENV MEMCACHED_SIZE=512
 
-# Command
-CMD ["/usr/bin/memcached", "-u", "memcache", "-m", $MEMCACHED_SIZE]
+# Add files to the image
+COPY run-memcached.sh /
+RUN chmod a+x /run-memcached.sh
+
+# Note the "exec" form of CMD allows docker stop signals to be sent to our run script
+CMD ["/run-memcached.sh"]
