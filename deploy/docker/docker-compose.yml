@@ -1,0 +1,58 @@
+#
+# Sample QIS docker-compose launch file
+#
+# Launches containers running:
+# QIS Application Server, Postgres and Memcached
+#
+# Required environment variables:
+#
+#   QIS_HOSTNAME - host name that the QIS web server should serve from
+#   QIS_DATA_DIR - host path in which to store QIS images, database, and log files
+#
+# The data directory ends up containing $QIS_DATA_DIR/images
+#                                       $QIS_DATA_DIR/data
+#                                       $QIS_DATA_DIR/logs
+#
+# The environment variables can be persisted in a text file called .env.
+# See https://docs.docker.com/compose/env-file/
+#
+
+version: "2"
+
+services:
+  qis_db:
+    build: postgres
+    image: quru/qis-postgres
+    volumes:
+      - "$QIS_DATA_DIR/data:/opt/qis/data"
+    mem_limit: 512M
+    environment:
+      - PG_USER=qis
+      - PG_PASSWORD=qisdbpass
+      - PG_SHARED_BUFFERS=256MB
+      - PG_EFFECTIVE_CACHE_SIZE=256MB
+
+  qis_cache:
+    build: memcached
+    image: quru/qis-memcached
+    mem_limit: 512M
+    environment:
+      - MEMCACHED_SIZE=512
+
+  qis_as:
+    build: qis-as
+    image: quru/qis-as
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - "$QIS_DATA_DIR/images:/opt/qis/images"
+      - "$QIS_DATA_DIR/logs/qis:/opt/qis/logs"
+      - "$QIS_DATA_DIR/logs/apache:/var/log/apache2"
+    environment:
+      - HOSTNAME=$QIS_HOSTNAME
+      - DB_USER=qis
+      - DB_PASSWORD=qisdbpass
+    depends_on:
+      - qis_cache
+      - qis_db

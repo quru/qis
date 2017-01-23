@@ -222,7 +222,10 @@ class OpenLDAP_Client(_LDAP_Client):
                 cn.simple_bind_s(user_dn, password)
                 # The bind may not fail if the credentials were incorrect, so
                 # also compare the bind's DN with the user's DN.
-                return cn.whoami_s().lower() == ("dn:" + user_dn.lower())
+                return cn.whoami_s().lower() in [
+                    ("dn:" + user_dn.lower()),
+                    ("dn: " + user_dn.lower()),
+                ]
             except ldap.INVALID_CREDENTIALS:
                 return False
             except ldap.LDAPError as e:

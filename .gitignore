@@ -20,7 +20,7 @@ lib/python*
 logs/*.log
 logs/*.log.*
 bin
-build
+./build
 man
 qismagick/src/Debug
 qismagick/src/Release

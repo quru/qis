@@ -418,7 +418,8 @@ class StatsSocketServer(SocketServer.ThreadingTCPServer):
                     db_session, dt_period_start, dt_now, local_img_cache
                 )
                 db_session.commit()
-                self.logger.info('Statistics updated for %d image(s)' % len(local_img_cache))
+                if local_img_cache:
+                    self.logger.info('Statistics updated for %d image(s)' % len(local_img_cache))
             finally:
                 db_session.close()
 
