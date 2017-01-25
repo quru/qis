@@ -46,7 +46,7 @@ from imageserver.flask_util import api_permission_required, _check_internal_requ
 from imageserver.models import Group, ImageHistory, ImageTemplate, User
 from imageserver.models import FolderPermission, Property, SystemPermissions
 from imageserver.session_manager import get_session_user, get_session_user_id
-from imageserver.session_manager import log_out
+from imageserver.session_manager import log_out, reset_user_sessions
 from imageserver.template_attrs import TemplateAttrs
 from imageserver.util import get_string_changes, generate_password
 from imageserver.util import object_to_dict, object_to_dict_list
@@ -322,6 +322,8 @@ class UserAPI(MethodView):
         if user.auth_type != User.AUTH_TYPE_LDAP and params['password']:
             user.set_password(params['password'])
         data_engine.save_object(user)
+        # Reset session caches
+        reset_user_sessions(user)
         # Do not give out anything password related
         udict = object_to_dict(user)
         del udict['password']
@@ -338,6 +340,8 @@ class UserAPI(MethodView):
         # If this is the current user, log out
         if get_session_user_id() == user_id:
             log_out()
+        # Reset session caches
+        reset_user_sessions(user)
         # Do not give out anything password related
         udict = object_to_dict(user)
         del udict['password']
@@ -427,8 +431,9 @@ class GroupAPI(MethodView):
             group.name = params['name']
         permissions_changed = self._set_permissions(group, params)
         data_engine.save_object(group)
-        # Reset permissions cache
+        # Reset permissions and session caches
         if permissions_changed:
+            reset_user_sessions(group.users)
             permissions_engine.reset()
             _check_for_user_lockout(backup_group)
         # Do not give out anything password related
@@ -443,14 +448,15 @@ class GroupAPI(MethodView):
         permissions_engine.ensure_permitted(
             SystemPermissions.PERMIT_ADMIN_PERMISSIONS, get_session_user()
         )
-        group = data_engine.get_group(group_id=group_id)
+        group = data_engine.get_group(group_id=group_id, load_users=True)
         if group is None:
             raise DoesNotExistError(str(group_id))
         try:
             data_engine.delete_group(group)
         except ValueError as e:
             raise ParameterError(str(e))
-        # Reset permissions cache
+        # Reset permissions and session caches
+        reset_user_sessions(group.users)
         permissions_engine.reset()
         return make_api_success_response()
 
@@ -529,6 +535,7 @@ class UserGroupAPI(MethodView):
             if user not in group.users:
                 group.users.append(user)
                 data_engine.save_object(group)
+                reset_user_sessions(user)
                 permissions_engine.reset()
         return make_api_success_response()
 
@@ -544,6 +551,7 @@ class UserGroupAPI(MethodView):
             if member.id == user_id:
                 del group.users[idx]
                 data_engine.save_object(group)
+                reset_user_sessions(member)
                 permissions_engine.reset()
                 _check_for_user_lockout(backup_group)
                 break

@@ -522,6 +522,7 @@ class CacheManager(object):
 
             # Header matches, now unpickle the value
             obj = cPickle.loads(obj[len(expect_header):])
+
         return obj
 
     def raw_getn(self, keys):

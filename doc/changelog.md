@@ -1,5 +1,9 @@
 # v2.2.1-dev
-_Changes: upgrade Flask to 0.12_
+_Changes: faster performance for logged in users, upgrade Flask to 0.12_
+
+A new caching layer for user-session data has reduced the typical per-request
+time for small images from 9ms to 3ms, which is now in line with the performance
+for anonymous users.
 
 Update the Python and web code  
 Update the Python dependencies  

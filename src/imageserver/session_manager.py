@@ -36,9 +36,14 @@
 
 import flask
 
-from flask_app import data_engine
-from errors import SecurityError
+from flask_app import cache_engine, data_engine, logger
+from errors import DoesNotExistError, SecurityError
 from models import User
+
+
+# Caching the user object and its groups for very long feels dangerous
+# so we'll use a fairly short timeout of 10 minutes
+_USER_CACHE_TIMEOUT_SECS = 600
 
 
 def logged_in():
@@ -56,12 +61,23 @@ def get_session_user():
     """
     uid = get_session_user_id()
     if uid > 0:
-        # Cache the user object on flask.g.user
         if 'user' not in flask.g or not flask.g.user:
-            # TODO For logged in requests, this db call makes up 7/8 of the
-            #      time taken to return a cached image or a 304
-            flask.g.user = data_engine.get_user(uid, load_groups=True)
-            del flask.g.user.password  # We don't want this floating around
+            # v2.2.1 Loading the user + groups from database is very expensive,
+            #        making up 85% of the total request time when serving a cached
+            #        image, so we now use the RAM cache to speed this up.
+            db_user = _cache_get_session_user(uid)
+            if not db_user:
+                # We need to go to the database this time
+                db_user = data_engine.get_user(uid, load_groups=True, _detach=True)
+                if not db_user:
+                    raise DoesNotExistError('User no longer exists: ' + str(uid))
+                # We don't want the password floating around
+                del db_user.password
+                # Add to RAM cache ready for subsequent requests
+                _cache_set_session_user(db_user)
+
+            # Keep the user object for the length of this request on flask.g.user
+            flask.g.user = db_user
         return flask.g.user
     return None
 
@@ -88,6 +104,7 @@ def log_in(user):
     if user.status != User.STATUS_ACTIVE:
         raise SecurityError('User account %s is disabled/deleted' % user.username)
 
+    _cache_clear_session_user(user.id)
     flask.g.user = None
     flask.session['user_id'] = user.id
 
@@ -96,5 +113,59 @@ def log_out():
     """
     Ends the current Flask session.
     """
+    uid = get_session_user_id()
+    if uid > 0:
+        _cache_clear_session_user(uid)
     flask.g.user = None
     flask.session.clear()
+
+
+def reset_user_sessions(users):
+    """
+    Instructs the session manager that user details have changed
+    for either one user or a list of users.
+    """
+    # Upgrade single user to a list
+    if isinstance(users, User):
+        users = [users]
+    # Reset for all users
+    for user in users:
+        _cache_clear_session_user(user.id)
+
+
+def _cache_set_session_user(user):
+    """
+    Puts a user object into cache for fast retrieval on subsequent requests
+    (e.g. measured 0.8ms load from Memcached vs 8ms load from Postgres)
+    """
+    try:
+        cache_engine.raw_put(
+            'SESS_USER:%d' % user.id,
+            user,
+            expiry_secs=_USER_CACHE_TIMEOUT_SECS
+        )
+    except Exception as e:
+        logger.error(
+            'Session manager: Failed to cache user details: ' + str(e)
+        )
+
+
+def _cache_get_session_user(user_id):
+    """
+    Returns the cached user object for a given user ID,
+    or None if the user object is not in cache.
+    """
+    try:
+        return cache_engine.raw_get('SESS_USER:%d' % user_id)
+    except Exception as e:
+        logger.error(
+            'Session manager: Failed to retrieve cached user details: ' + str(e)
+        )
+        return None
+
+
+def _cache_clear_session_user(user_id):
+    """
+    Removes the cache entry for the given user ID.
+    """
+    cache_engine.raw_delete('SESS_USER:%d' % user_id)
