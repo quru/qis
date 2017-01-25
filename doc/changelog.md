@@ -1,3 +1,10 @@
+# v2.2.1-dev
+_Changes: upgrade Flask to 0.12_
+
+Update the Python and web code  
+Update the Python dependencies  
+Restart the Apache service
+
 # v2.2.0-dev
 _Breaking change: remove default image settings, add a default image template_
 _Changes: bug fixes to the image publisher, updated Python libraries_

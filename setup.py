@@ -26,7 +26,7 @@ setup(
 
     install_requires=[
         "qismagick>=2.0.0",
-        "Flask==0.10.1",
+        "Flask==0.12",
         "python-ldap==2.4.27",
         "pylibmc==1.5.1",
         "psycopg2==2.6.2",
