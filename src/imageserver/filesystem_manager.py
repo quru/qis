@@ -226,13 +226,16 @@ def get_upload_directory(dir_index):
     return (dir_name, dir_path)
 
 
-def get_directory_listing(rel_path, include_folders=False, limit=0):
+def get_directory_listing(rel_path, include_folders=False, sort=0, limit=0):
     """
     Returns a DirectoryInfo object describing all files and (optionally) folders
     in the relative path supplied, where an image_path of "" or "/" is the root
     of IMAGES_BASE_DIR. If a limit is supplied, the DirectoryInfo object's count
     value will not exceed the limit (but some files or directories may be missing
     from the returned list). The path does not have to exist.
+
+    The sorting value can be 0 for no sorting, 1 for case sensitive,
+    or 2 for case insensitive.
 
     Raises an OSError on error querying the underlying file system.
     Raises a SecurityError if the supplied relative path is outside IMAGES_BASE_DIR.
@@ -244,7 +247,11 @@ def get_directory_listing(rel_path, include_folders=False, limit=0):
         return DirectoryInfo(rel_path, exists=False)
     # Get a basic listing
     dir_items = os.listdir(abs_dir)
-    dir_items.sort()
+    if sort > 0:
+        dir_items = sorted(
+            dir_items,
+            key=(lambda s: s) if sort == 1 else (lambda s: s.lower())
+        )
     # Convert results into a DirectoryInfo object
     res_count = 0
     dir_info = DirectoryInfo(os.path.sep if rel_path == '' else rel_path)
@@ -264,10 +271,13 @@ def get_directory_listing(rel_path, include_folders=False, limit=0):
     return dir_info
 
 
-def get_directory_subdirs(rel_path):
+def get_directory_subdirs(rel_path, sort=0):
     """
     Returns a list of sub-folder names in the given relative folder path.
     The path must exist. Sub-folder names beginning with '.' are excluded.
+
+    The sorting value can be 0 for no sorting, 1 for case sensitive,
+    or 2 for case insensitive.
 
     Raises a DoesNotExistError if the path does not exist.
     Raises a SecurityError if the requested path is outside IMAGES_BASE_DIR.
@@ -278,7 +288,11 @@ def get_directory_subdirs(rel_path):
         sf for sf in os.listdir(abs_dir)
         if not sf.startswith('.') and os.path.isdir(os.path.join(abs_dir, sf))
     ]
-    subdirs.sort()
+    if sort > 0:
+        subdirs = sorted(
+            subdirs,
+            key=(lambda s: s) if sort == 1 else (lambda s: s.lower())
+        )
     return subdirs
 
 

@@ -359,7 +359,7 @@ def browse():
     db_session = data_engine.db_get_session()
     db_committed = False
     try:
-        directory_info = get_directory_listing(from_path, True)
+        directory_info = get_directory_listing(from_path, True, 2)
 
         # Auto-populate the folders database
         db_folder = auto_sync_folder(
@@ -645,7 +645,7 @@ def folder_browse():
     db_committed = False
     try:
         # This also checks for path existence
-        folder_list = get_directory_listing(from_path, True)
+        folder_list = get_directory_listing(from_path, True, 2)
 
         # Auto-populate the folders database
         db_folder = auto_sync_folder(

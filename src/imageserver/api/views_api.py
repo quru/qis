@@ -134,7 +134,7 @@ def imagelist():
         del image_params['limit']
 
     # Get directory listing
-    directory_info = get_directory_listing(from_path, False, limit)
+    directory_info = get_directory_listing(from_path, False, 2, limit)
     if not directory_info.exists():
         raise DoesNotExistError('Invalid path')
 

@@ -238,9 +238,10 @@ QIS version 2 brings these new features:
 * Simpler override rules for image parameters
 * REST API improvements, including programmatic template management
 * Improvements to SVG file support
-* Bug fixes to the image publisher
 * Built-in support for RAW digital camera image formats
 * Faster image serving for logged-in users (and authenticated API callers)
+* Bug fixes to the image publisher
+* The order of files and folders in the web interface is no longer case sensitive
 
 While still on the to-do list for version 2 is:
 
