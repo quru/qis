@@ -215,38 +215,64 @@ To generate these from the development project:
 
 With these files prepared you should then follow the [install guide](doc/install.md).
 
-QIS has been tested running inside Docker containers, see the
-[Docker notes](deploy/docker/readme_docker.md).  
-QIS has also been deployed on single-server and multi-server load balanced
-configurations at Amazon Web Services.  
-For help in deploying QIS as Docker containers or on AWS, contact Quru at
-info@quru.com - we have experience of such deployments and can save you time.
+### Running in Docker
+
+For a much simpler deployment, QIS can be deployed on Docker. There is a `docker-compose`
+script that will set up and run almost everything for you. The only extra setup required
+is a volume on the host in which to store the persistent data, and a couple of
+environment variables.
+
+See the [docker-compose](deploy/docker/docker-compose.yml) script and the
+[application server image notes](deploy/docker/qis-as/README.md) for more information.
+
+## Version 2
+
+QIS version 2 brings these new features:
+
+* Image templates are now stored in the database and managed from the web
+  interface inside QIS
+* Default image values (format, compression, EXIF stripping, etc) are now
+  defined in a default image template, and can be changed from the web
+  interface inside QIS
+* Any image parameter can now have a default value (in the default template)
+* Simpler override rules for image parameters
+* REST API improvements, including programmatic template management
+* Improvements to SVG file support
+* Bug fixes to the image publisher
+* Built-in support for RAW digital camera image formats
+* Faster image serving for logged-in users (and authenticated API callers)
+
+While still on the to-do list for version 2 is:
+
+* Improve the image generation architecture for more consistent performance under load
+* Web interface improvements
+  * Add a grid / thumbnail browse view
+  * Better navigation
+  * Freshen up the UI
+* Optional long image URL to tiny URL conversion
+  * New checkbox in the image publisher
+  * Add to REST API
+  * Tiny URL admin pages in the web interface
+
+An upgrade script is provided to migrate v1 installations to v2, including the
+import of image templates from flat files into the database. To run this:
+
+	$ cd /opt/qis/src/imageserver/scripts
+	$ sudo -u qis python v2_upgrade.py
+
+Read through the output carefully for advisory and error information. If there
+are any errors you can just re-run the `v2_upgrade.py` script again after taking
+remedial action.
 
 ## Roadmap
 
-QIS version 1 is receiving bug fixes but no significant new features while we
-start to develop new functionality for version 2:
-
-* Store image templates in the database instead of flat files
-* Enforce a default image template
-  * Globally (to replace the `IMAGE_*_DEFAULT` settings)
-  * By user group?
-  * By folder?
-  * For single images?
-* Prevent certain image attributes (width, height, overlay) from being overridden
-* REST API improvements
-* Image search
-* Web interface improvements
-  * Add a grid / thumbnail browse view
-  * Search and results
-  * Freshen up the UI
-* Ship with support for RAW camera images by default
-
-Also under consideration:
+Under consideration for future versions:
 
 * Convert the code base to Python 3
+* Prevent certain image attributes (width, height, overlay) from being overridden
+* Image search and results
 * Modernise the public JavaScript APIs / viewers
-  * Use HTML5 `data-` attributes for code-free initialisation
+  * Use HTML5 `data-` attributes for automatic initialisation
   * Remove dependencies on the MooTools library (moving to vanilla JS, not jQuery!)
   * Reduce the number of included files
 * Image tags
@@ -255,13 +281,17 @@ Also under consideration:
   * Tagging a zone or location on an image
   * Searching by tag
 * Image folios
-  * A "basket" of selected images
-  * Short URL to view the images (gallery viewer integration?)
+  * A "basket" or virtual folder of selected images
+  * Short URL to view the images (gallery viewer integration)
   * Download all as a zip
   * Special access controls, e.g. guest access?
 * The ability to use an object store (e.g. Amazon S3) for back-end image storage
 * New imaging operations
   * Automatic crop to target dimensions
-  * Generate image frames from video files
+  * Generate image frames from video files (like Gifify)
   * Enhanced EXIF / XMP support e.g. to set copyright text
+  * Automatic file size optimisation (like PNG Crush)
+* Support for new image formats
+  * BPG, JPEG XR, WEBP
+  * Wide colour / Display P3 profiles
 * Social media integration (Instagram, Flickr, Pinterest, ...)
