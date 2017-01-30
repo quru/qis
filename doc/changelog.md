@@ -1,6 +1,7 @@
 # v2.2.1-dev
-_Changes: faster performance for logged in users, upgrade Flask to 0.12,
-sort files and folders case-insensitively in web interface_
+_Changes: Upgrade Flask to 0.12, faster performance for logged in users,
+sort files and folders case-insensitively in web interface, add forward/back
+navigation to the image details page_
 
 A new caching layer for user-session data has reduced the typical per-request
 time for small images from 9ms to 3ms, which is now in line with the performance

@@ -54,7 +54,14 @@
 
 	<!-- File info -->
 	<div class="float">
-		<h2>Image details <span>(<a href="{{ url_for('browse', path=path) }}">back to image folder</a>)</span></h2>
+		<h2>
+			Image details
+			<span>(<a href="{{ url_for('browse', path=path) }}">back to image folder</a>)</span>
+			{% if file_info %}
+			<span>(<a href="{{ url_for('browse_navigate', src=src, dir='back') }}"><img src="{{ url_for('static', filename='images/icon-back.png') }}" /> previous</a>)</span>
+			<span>(<a href="{{ url_for('browse_navigate', src=src, dir='fwd') }}">next <img src="{{ url_for('static', filename='images/icon-forward.png') }}" /></a>)</span>
+			{% endif %}
+		</h2>
 		
 		{% if err_msg %}
 			<br/>

@@ -39,7 +39,9 @@ from tests import BaseTestCase, setup_user_account
 
 from imageserver.flask_app import data_engine as dm
 from imageserver.flask_app import cache_engine as cm
-from imageserver.filesystem_manager import get_abs_path, delete_file
+from imageserver.filesystem_manager import (
+    get_abs_path, delete_file, delete_dir, make_dirs
+)
 
 
 class ImageServerTestsWebPages(BaseTestCase):
@@ -50,18 +52,24 @@ class ImageServerTestsWebPages(BaseTestCase):
         # Create a plain user for testing pages that require login
         setup_user_account('webuser', 'none')
 
-    # Utility to call a page requiring login, with and without login
-    def call_page_requiring_login(self, url, admin_login=False, required_text=None):
+    # Utility to call a page requiring login, with and without login,
+    # returns the response of the requested URL after logging in.
+    def call_page_requiring_login(self, url, admin_login=False,
+                                  required_text=None, required_status=200):
+        # Check that anonymous user gets redirected to login
         rv = self.app.get(url)
         self.assertEqual(rv.status_code, 302)
+        # Login
         if admin_login:
             self.login('admin', 'admin')
         else:
             self.login('webuser', 'webuser')
+        # Call the requested page
         rv = self.app.get(url)
-        self.assertEqual(rv.status_code, 200)
+        self.assertEqual(rv.status_code, required_status)
         if required_text:
             self.assertIn(required_text, rv.data)
+        return rv
 
     # Login page
     def test_login_page(self):
@@ -89,7 +97,8 @@ class ImageServerTestsWebPages(BaseTestCase):
     # Help page
     def test_help_page(self):
         self.call_page_requiring_login(
-            '/help/', False,
+            '/help/',
+            False,
             'This guide is aimed at web site editors'
         )
 
@@ -134,7 +143,11 @@ class ImageServerTestsWebPages(BaseTestCase):
 
     # Browse index page
     def test_browse_index_page(self):
-        self.call_page_requiring_login('/list/', False, 'Listing of /')
+        self.call_page_requiring_login(
+            '/list/',
+            False,
+            'Listing of /'
+        )
 
     # Browse folder page
     def test_browse_folder_page(self):
@@ -176,6 +189,51 @@ class ImageServerTestsWebPages(BaseTestCase):
             False,
             'This file does not exist.'
         )
+
+    # Image detail page - go backwards
+    def test_image_detail_navigate_back(self):
+        rv = self.call_page_requiring_login(
+            '/list/navigate/?src=/test_images/blue bells.jpg&dir=back',
+            required_status=302
+        )
+        self.assertIn('bear.jpg', rv.data)
+
+    # Image detail page - go forwards
+    def test_image_detail_navigate_forward(self):
+        rv = self.call_page_requiring_login(
+            '/list/navigate/?src=/test_images/blue bells.jpg&dir=fwd',
+            required_status=302
+        )
+        self.assertIn('book-ecirgb.jpg', rv.data)
+
+    # Image detail page - go backwards from first image
+    def test_image_detail_navigate_back_first(self):
+        self.call_page_requiring_login(
+            '/list/navigate/?src=/test_images/bear.jpg&dir=back',
+            required_status=204
+        )
+
+    # Image detail page - navigate from non-existent file path
+    def test_image_detail_navigate_missing(self):
+        self.call_page_requiring_login(
+            '/list/navigate/?src=/test_images/MISSING FILE&dir=back',
+            required_status=204
+        )
+
+    # Image detail page - ensure navigation ignores folders
+    def test_image_detail_navigate_ignore_folders(self):
+        test_folder = '/test_images/blue images'
+        try:
+            # Create a dir that (alphabetically) follows the test image name
+            make_dirs(test_folder)
+            rv = self.call_page_requiring_login(
+                '/list/navigate/?src=/test_images/blue bells.jpg&dir=fwd',
+                required_status=302
+            )
+            # We should get a redirect to the next file not the folder
+            self.assertIn('book-ecirgb.jpg', rv.data)
+        finally:
+            delete_dir(test_folder)
 
     # Image publish page
     def test_image_publish_page(self):

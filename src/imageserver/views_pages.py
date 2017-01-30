@@ -411,6 +411,64 @@ def browse():
             db_session.close()
 
 
+# File system browsing - go forward or back from a file - there's no UI for this
+@app.route('/list/navigate/')
+@login_required
+def browse_navigate():
+    # Get parameters
+    src = request.args.get('src', '')
+    direction = request.args.get('dir', '')
+    try:
+        # Check parameters
+        if not src:
+            raise ValueError('No filename was specified.')
+        if not direction:
+            raise ValueError('No direction was specified.')
+
+        (src_path, src_filename) = os.path.split(src)
+
+        # Require view permission
+        permissions_engine.ensure_folder_permitted(
+            src_path,
+            FolderPermission.ACCESS_VIEW,
+            get_session_user()
+        )
+
+        # Get the folder listing again to find out what is before/after src_filename.
+        # This isn't very efficient but it should work reliably and avoids caching
+        # a potentially large file system listing (which may not have been requested
+        # recently, might require reloading or refreshing) per directory.
+        directory_info = get_directory_listing(src_path, False, 2)
+        idx = -1
+        go_to_file = None
+        for f in directory_info:
+            idx += 1
+            if f['filename'] == src_filename:
+                # We found the starting position
+                if direction == 'back':
+                    if idx > 0:
+                        go_to_file = directory_info.contents()[idx - 1]
+                else:
+                    if idx < directory_info.count() - 1:
+                        go_to_file = directory_info.contents()[idx + 1]
+                # Navigate if not BOF/EOF
+                if go_to_file:
+                    return redirect(internal_url_for(
+                        'details',
+                        src=os.path.join(src_path, go_to_file['filename'])
+                    ))
+                break
+
+    except Exception as e:
+        if not log_security_error(e, request):
+            logger.error('Error navigating from %s: %s' % (src, str(e)))
+        if app.config['DEBUG']:
+            raise
+
+    # Default - take no action
+    return make_response('', 204)
+
+
 @app.route('/publish/')
 @login_required
 def publish():
@@ -452,7 +510,7 @@ def details():
     src_path = ''
     try:
         # Check parameters
-        if src == '':
+        if not src:
             raise ValueError('No filename was specified.')
         if reset is not None:
             reset = parse_boolean(reset)
@@ -583,7 +641,7 @@ def edit():
     embed = request.args.get('embed', '')
     try:
         # Check parameters
-        if src == '':
+        if not src:
             raise ValueError('No filename was specified.')
 
         db_img = auto_sync_file(src, data_engine, task_engine)
