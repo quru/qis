@@ -1,8 +1,8 @@
 # v2.2.1-dev
 _Changes: Upgrade Flask to 0.12, faster performance for logged in users,
 sort files and folders case-insensitively in web interface, add forward/back
-navigation to the image details page, bug fix to full-screen image viewers
-on zoomed web pages on mobile_
+navigation to the image details page, bug fix to full-screen image viewer
+positions on zoomed web pages on mobile_
 
 A new caching layer for user-session data has reduced the typical per-request
 time for small images from 9ms to 3ms, which is now in line with the performance

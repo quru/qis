@@ -512,7 +512,10 @@ Publisher.setTemplateInfo = function(templateObj) {
 		// Set the template info
 		var isDefault = templateObj.id === PublisherConfig.default_template_id;
 		infoEl.empty();
-		infoEl.set('text', isDefault ? PublisherText.default_template_labels : PublisherText.template_labels);
+		infoEl.grab(new Element('span', {
+			'text': isDefault ? PublisherText.default_template_labels : PublisherText.template_labels,
+			'class': 'highlight'
+		}));
 		infoEl.grab(new Element('br'));
 		infoEl.grab(new Element('button', {
 			'text': PublisherText.reset_changes,
