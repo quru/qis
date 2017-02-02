@@ -55,14 +55,14 @@ if((c.type=="text")||(c.type=="hidden")||(c.type=="password")||(c.type=="textare
 }}else{if(c.type=="select-one"){if(c.selectedIndex>-1){a+=c.name+"="+encodeURIComponent(c.options[c.selectedIndex].value)+"&";
 }else{a+=c.name+"=&";}}}}}if((a.length>1)&&(a.charAt(a.length-1)=="&")){a=a.substring(0,a.length-1);}return a;
 }function popup_convert_anchor(c,e,f,a){var d=$(c);if(d&&d.tagName=="A"){var b=d.href;d.href="#";d.addEvent(is_touch()?"touchstart":"click",function(g){g.preventDefault();
-return popup_iframe(b,e,f,a);});}}function popup_iframe(b,c,i,a){var f=15,d=window.getSize().y,i=Math.min((d-(2*f)),i),e=Math.max(f,Math.round((d-i)/2));
+return popup_iframe(b,e,f,a);});}}function popup_iframe(b,c,i,a){var f=15,d=window.innerHeight?window.innerHeight:window.getSize().y,i=Math.min((d-(2*f)),i),e=Math.max(f,Math.round((d-i)/2));
 var h=function(k){if(window.mask&&k.code==27){window.mask.hide();}};var g=new Element("iframe",{src:b,"class":"edit_popup border",styles:{top:e+"px",width:c+"px",height:i+"px","margin-bottom":e+"px"}});
 var j=new Mask($(document.body),{"class":"overlay_mask",hideOnClick:true,destroyOnHide:true});window.mask=j;
 window.mask.show();g.fade("hide");$(document.body).grab(g,"top");g.fade("in");window.mask.resize();$(document.body).addEvent("keyup",h);
 j.addEvent("destroy",function(){window.mask=null;$(document.body).removeEvent("keyup",h);g.destroy();
 if(a!=undefined){setTimeout(a,1);}});return false;}function popup_close(){var b=(window.location.href.indexOf("onClose=back")!=-1),a=(window.location.href.indexOf("onClose=backrefresh")!=-1);
 if(window.parent&&window.parent.mask&&!b){window.parent.mask.hide();}else{if(a){window.location.replace(document.referrer);
-}else{window.history.back();}}return false;}function wait_form_open(g){var e=15,b=window.getSize().y,d=100,c=Math.max(e,Math.round((b/2)-d));
+}else{window.history.back();}}return false;}function wait_form_open(g){var e=15,b=window.innerHeight?window.innerHeight:window.getSize().y,d=100,c=Math.max(e,Math.round((b/2)-d));
 var f=new Element("div",{"class":"edit_popup wait_popup border",html:'<img src="../static/images/icon-wait.gif"> &nbsp; '+g,styles:{top:c+"px",width:"400px",height:"2.5em","margin-bottom":c+"px"}});
 var a=new Mask($(document.body),{"class":"overlay_mask",hideOnClick:false,destroyOnHide:true});window.mask=a;
 window.mask.show();$(document.body).grab(f,"top");window.mask.resize();a.addEvent("destroy",function(){window.mask=null;

@@ -2148,9 +2148,11 @@ ImgCanvasView.prototype.toggleFullscreen = function() {
 // Full-screen mode size and position calculation
 ImgCanvasView.prototype.fullscreenGetCoords = function() {
 	// Get browser total viewport size
-	var winSize   = window.getSize(),
+	// #517 Prefer window.inner* to get the visual viewport in mobile browsers
+	//      http://www.quirksmode.org/mobile/viewports2.html "Measuring the visual viewport"
+	var winSize   = window.innerWidth ? { x: window.innerWidth, y: window.innerHeight } : window.getSize(),
 	    winScroll = this.options.fullScreenFixed ? { x: 0, y: 0 } : window.getScroll(),
-	    winMargin = Math.min(Math.round(winSize.x / 20), Math.round(winSize.y / 20));
+	    winMargin = Math.min(Math.round(winSize.x / 40), Math.round(winSize.y / 40));
 	// Get target placement of viewer container element
 	var tgtLeft   = (winScroll.x + winMargin),
 	    tgtTop    = (winScroll.y + winMargin),

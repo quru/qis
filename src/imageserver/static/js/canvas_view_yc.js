@@ -298,7 +298,7 @@ this.uiAttrs.fullCloseEl=new Element("a",{"class":"close_button",styles:{display
 this.ctrEl.grab(this.uiAttrs.fullCloseEl,"top");window.addEvent("keydown",this.uiAttrs.fullKeydownFn);
 window.addEvent("resize",this.uiAttrs.fullResizeFn);new Fx.Tween(this.ctrEl,{duration:500,onComplete:this.autoZoomFit.bind(this)}).start("opacity",0,1);
 this.uiAttrs.fullScreen=true;if(this.events){_fire_event(this.events.onfullscreen,this,[this.imageSrc,true]);
-}}};ImgCanvasView.prototype.fullscreenGetCoords=function(){var c=window.getSize(),a=this.options.fullScreenFixed?{x:0,y:0}:window.getScroll(),f=Math.min(Math.round(c.x/20),Math.round(c.y/20));
+}}};ImgCanvasView.prototype.fullscreenGetCoords=function(){var c=window.innerWidth?{x:window.innerWidth,y:window.innerHeight}:window.getSize(),a=this.options.fullScreenFixed?{x:0,y:0}:window.getScroll(),f=Math.min(Math.round(c.x/40),Math.round(c.y/40));
 var d=(a.x+f),e=(a.y+f),b=(c.x-((2*f)+(this.ctrOuterPos.width-this.ctrInnerPos.width))),g=(c.y-((2*f)+(this.ctrOuterPos.height-this.ctrInnerPos.height)));
 if(this.controlpanel){if(f<this.controlpanel.offsetHeight){g-=(this.controlpanel.offsetHeight-f);}}return{left:d,top:e,width:Math.max(b,100),height:Math.max(g,100)};
 };ImgCanvasView.prototype.fullscreenKeydown=function(a){if(a.code==27){setTimeout(this.toggleFullscreen.bind(this),1);
