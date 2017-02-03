@@ -1,4 +1,4 @@
-# v2.2.1-dev
+# v2.3.0-dev
 _Breaking change: folder list API behaviour change_
 _Changes: Upgrade Flask to 0.12, faster performance for logged in users,
 sort files and folders case-insensitively in web interface, add forward/back
