@@ -226,16 +226,19 @@ def get_upload_directory(dir_index):
     return (dir_name, dir_path)
 
 
-def get_directory_listing(rel_path, include_folders=False, sort=0, limit=0):
+def get_directory_listing(rel_path, include_folders=False, sort=0, start=0, limit=0):
     """
     Returns a DirectoryInfo object describing all files and (optionally) folders
     in the relative path supplied, where an image_path of "" or "/" is the root
-    of IMAGES_BASE_DIR. If a limit is supplied, the DirectoryInfo object's count
-    value will not exceed the limit (but some files or directories may be missing
-    from the returned list). The path does not have to exist.
+    of IMAGES_BASE_DIR. The path does not have to exist.
 
     The sorting value can be 0 for no sorting, 1 for case sensitive,
-    or 2 for case insensitive.
+    or 2 for case insensitive sorting of the file/folder name.
+
+    If a start index (zero based) is supplied, the DirectoryInfo object's internal
+    list will start from this offset in the results. If a limit is supplied, the
+    number of results will be capped at this value and the caller can make another
+    call (with a different start index) to get the next page of results.
 
     Raises an OSError on error querying the underlying file system.
     Raises a SecurityError if the supplied relative path is outside IMAGES_BASE_DIR.
@@ -253,20 +256,28 @@ def get_directory_listing(rel_path, include_folders=False, sort=0, limit=0):
             key=(lambda s: s) if sort == 1 else (lambda s: s.lower())
         )
     # Convert results into a DirectoryInfo object
-    res_count = 0
+    res_index = -1
+    res_total = 0
     dir_info = DirectoryInfo(os.path.sep if rel_path == '' else rel_path)
     for item_name in dir_items:
         if not item_name.startswith('.'):
             item_stat = os.stat(os.path.join(abs_dir, item_name))
             if include_folders or not stat.S_ISDIR(item_stat[stat.ST_MODE]):
+                # Filter matches so consider this a result
+                res_index += 1
+                # Have we reached the start index?
+                if res_index < start:
+                    continue
+                # Add the result
                 dir_info.add_entry(
                     item_name,
                     stat.S_ISDIR(item_stat[stat.ST_MODE]),
                     item_stat[stat.ST_SIZE],
                     item_stat[stat.ST_MTIME]
                 )
-                res_count += 1
-                if limit > 0 and res_count == limit:
+                # Have we reached the limit?
+                res_total += 1
+                if limit > 0 and res_total == limit:
                     break
     return dir_info
 

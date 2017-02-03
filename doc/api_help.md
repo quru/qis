@@ -172,9 +172,13 @@ a token is still required however.
 
 <a name="api_list"></a>
 ## list
-Retrieves the list of the images within a folder path, returning the filename, a URL to display
-the image, and optionally additional image attributes. This function returns a maximum of 1,000
-images by default.
+Retrieves the ordered list of the images within a folder path, returning the filename,
+a URL to display the image, and optionally additional image attributes.
+
+To avoid performance issues, this function returns a maximum of 1,000 results.
+To read the full set of results you can use the `start` and `limit` parameters
+to implement paging. The end of the results list is reached when you get back
+less than `limit` results.
 
 ### URL
 * `/api/v1/list`
@@ -184,11 +188,13 @@ images by default.
 
 ### Parameters
 * `path` - Mandatory, text - Specifies the folder path to list
-* `attributes` - Optional, boolean - When true, adds the unique ID, title, description, width and
-	height fields from the image database to the returned objects. Set to false for improved
-	performance if these fields are not required.
-* `limit` - Optional, integer - The maximum number of results to return, default `1000`. Or set to
-    `0` to specify no limit.
+* `attributes` - Optional, boolean - When `true`, adds the unique ID, title, description,
+    width and height fields from the image database to the returned objects.
+    Set to `false` for improved performance if these fields are not required.
+* `start` - Optional, integer - The zero-based result number to start from,
+    default `0`.
+* `limit` - Optional, integer - The maximum number of results to return,
+    default `1000`, maximum value `1000`.
 * _`[any]`_ - Optional, mixed - Any additional parameters are appended to the returned image URLs so
 	that for example the required image sizes can be specified
 
@@ -197,11 +203,13 @@ images by default.
 * If no authentication token has been provided, the folder must be publicly accessible
 
 ### Returns
-An array of 0 or more objects.
+An array of 0 or more objects in alphabetical order of filename.
+If the array length equals `limit`, you can make a second call with the `start`
+parameter set to get the next page of results.
 
 ### Examples
 
-	$ curl 'http://images.example.com/api/v1/list?path=myfolder'
+	$ curl 'http://images.example.com/api/v1/list?path=myfolder&limit=3'
 	{
 	  "data": [
 	    {
@@ -216,6 +224,18 @@ An array of 0 or more objects.
 	      "filename": "image3.jpg",
 	      "url": "http://images.example.com/image?src=myfolder/image3.jpg"
 	    }
+	  ],
+	  "message": "OK",
+	  "status": 200
+	}
+
+	$ curl 'http://images.example.com/api/v1/list?path=myfolder&start=3&limit=1'
+	{
+	  "data": [
+	    {
+	      "filename": "image4.jpg",
+	      "url": "http://images.example.com/image?src=myfolder/image4.jpg" 
+        }
 	  ],
 	  "message": "OK",
 	  "status": 200

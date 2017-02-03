@@ -1,12 +1,17 @@
 # v2.2.1-dev
+_Breaking change: folder list API behaviour change_
 _Changes: Upgrade Flask to 0.12, faster performance for logged in users,
 sort files and folders case-insensitively in web interface, add forward/back
 navigation to the image details page, bug fix to full-screen image viewer
-positions on zoomed web pages on mobile_
+positions on zoomed web pages on mobile, folder list API now supports paging_
 
 A new caching layer for user-session data has reduced the typical per-request
 time for small images from 9ms to 3ms, which is now in line with the performance
 for anonymous users.
+
+The `list` API no longer allows unlimited results with `limit=0`, and instead
+has a new `start` parameter to allow the retrieval of results as multiple pages.
+The `limit` parameter has a new maximum value of `1000`.
 
 Update the Python and web code  
 Update the Python dependencies  

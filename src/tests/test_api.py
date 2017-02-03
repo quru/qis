@@ -224,29 +224,58 @@ class ImageServerAPITests(BaseTestCase):
     def test_api_list(self):
         # Unauthorised path
         rv = self.app.get('/api/list?path=../../../etc/')
-        assert rv.status_code == API_CODES.UNAUTHORISED
-        assert 'application/json' in rv.headers['Content-Type']
+        self.assertEqual(rv.status_code, API_CODES.UNAUTHORISED)
+        self.assertIn('application/json', rv.headers['Content-Type'])
         obj = json.loads(rv.data)
-        assert obj['status'] == API_CODES.UNAUTHORISED
+        self.assertEqual(obj['status'], API_CODES.UNAUTHORISED)
         # Invalid path
         rv = self.app.get('/api/list?path=non-existent')
-        assert rv.status_code == API_CODES.NOT_FOUND
-        assert 'application/json' in rv.headers['Content-Type']
+        self.assertEqual(rv.status_code, API_CODES.NOT_FOUND)
+        self.assertIn('application/json', rv.headers['Content-Type'])
         obj = json.loads(rv.data)
-        assert obj['status'] == API_CODES.NOT_FOUND
+        self.assertEqual(obj['status'], API_CODES.NOT_FOUND)
         # Valid request
         rv = self.app.get('/api/list?path=test_images')
-        assert rv.status_code == API_CODES.SUCCESS
-        assert 'application/json' in rv.headers['Content-Type']
+        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        self.assertIn('application/json', rv.headers['Content-Type'])
         obj = json.loads(rv.data)
-        assert len(obj['data']) > 0
-        assert 'filename' in obj['data'][0]
-        assert 'url' in obj['data'][0]
+        self.assertGreater(len(obj['data']), 0)
+        self.assertIn('filename', obj['data'][0])
+        self.assertIn('url', obj['data'][0])
         # Valid request with extra image params
         rv = self.app.get('/api/list?path=test_images&width=500')
-        assert rv.status_code == API_CODES.SUCCESS
+        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
         obj = json.loads(rv.data)
-        assert 'width=500' in obj['data'][0]['url']
+        self.assertIn('width=500', obj['data'][0]['url'])
+
+    # Folder list - v2.2.1 support paging
+    def test_api_list_paging(self):
+        # Maximum 1000
+        rv = self.app.get('/api/list?path=test_images&limit=1001')
+        self.assertEqual(rv.status_code, API_CODES.INVALID_PARAM)
+        # Test limit
+        rv = self.app.get('/api/list?path=test_images&limit=3')
+        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        obj1 = json.loads(rv.data)
+        list1 = obj1['data']
+        self.assertEqual(len(list1), 3)
+        # Test start + limit
+        rv = self.app.get('/api/list?path=test_images&start=1&limit=3')
+        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        obj2 = json.loads(rv.data)
+        list2 = obj2['data']
+        self.assertEqual(len(list2), 3)
+        # So list2 should be list1 offset by 1
+        self.assertNotIn(list1[0], list2)
+        self.assertEqual(list2[0], list1[1])
+        self.assertEqual(list2[1], list1[2])
+        self.assertNotIn(list2[2], list1)
+        # Start from the end
+        rv = self.app.get('/api/list?path=test_images&start=999999')
+        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        obj3 = json.loads(rv.data)
+        list3 = obj3['data']
+        self.assertEqual(len(list3), 0)
 
     # Image details
     def test_api_details(self):
