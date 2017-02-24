@@ -174,11 +174,10 @@ ImagePopup.prototype.getPreviewImageURL = function(el) {
 	// Replace details URL with image URL
 	urlBase = urlBase.replace('details/', 'image');
 	// Set size params of our own
-	urlAttrs.width = '200';
-	urlAttrs.height = '200';
-	urlAttrs.autosizefit = '1';
-	urlAttrs.stats = '0';
-	urlAttrs.strip = '1';
+	urlAttrs.width = '200';      // All these should match
+	urlAttrs.height = '200';     // the values in the
+	urlAttrs.stats = '0';        // url_for_thumbnail() function
+	urlAttrs.strip = '1';        // ...
 	urlAttrs.format = 'jpg';
 	urlAttrs.colorspace = 'srgb';
 	// Return the modified URL
