@@ -454,7 +454,7 @@ class DirectoryInfo(object):
     def __init__(self, name, contents_list=None, exists=True):
         self._name = name
         self._exists = exists
-        self._contents = [] if contents_list is None else contents_list
+        self._contents = contents_list or []
         self._content_size = sum(f['size'] for f in self._contents if not f['is_directory'])
 
     def name(self):
@@ -479,14 +479,15 @@ class DirectoryInfo(object):
 
     def size(self):
         """
-        Returns the total size of all files in this directory
-        (not including the size of any sub-directories)
+        Returns the total size of all files in this directory's content list
+        (not including the size of any sub-directories).
         """
         return self._content_size
 
     def count(self):
         """
-        Returns the number of files and sub-directories in this directory.
+        Returns the number of files and sub-directories in this directory's
+        content list.
         """
         return len(self._contents)
 
@@ -513,22 +514,19 @@ class DirectoryInfo(object):
 
     def contents(self):
         """
-        Returns a list of dictionaries describing all files and sub-directories
-        in this directory. Each dictionary contains entries as described for the
-        class constructor.
+        Returns the list of dictionaries as described for the class constructor
+        that have been added with add_entry().
         """
         return self._contents
 
     def files(self):
         """
-        Returns a list of dictionaries describing all files within this directory.
-        Each dictionary contains entries as described for the class constructor.
+        Returns just the files from the contents() list.
         """
         return [f for f in self._contents if not f['is_directory']]
 
     def directories(self):
         """
-        Returns a list of dictionaries describing all sub-directories within this directory.
-        Each dictionary contains entries as described for the class constructor.
+        Returns just the sub-directories from the contents() list.
         """
         return [d for d in self._contents if d['is_directory']]

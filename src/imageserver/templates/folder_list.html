@@ -134,7 +134,7 @@
 					{% set sep = pathsep if path != pathsep else '' %}
 					{% set file_path = path + sep + entry.filename %}
 					{# Note view_permitted = True for current folder for this page to load #}
-					{% set can_view = entry.filename|fileextension in formats %}
+					{% set can_view = entry.filename|fileextension in image_formats %}
 
 					<td>
 						{% if can_view %}

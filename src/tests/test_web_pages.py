@@ -145,33 +145,70 @@ class ImageServerTestsWebPages(BaseTestCase):
     def test_browse_index_page(self):
         self.call_page_requiring_login(
             '/list/',
-            False,
-            'Listing of /'
+            required_text='Listing of /'
+        )
+
+    # Browse index page
+    def test_browse_index_page_grid(self):
+        self.call_page_requiring_login(
+            '/list/?view=grid',
+            required_text='Listing of /'
         )
 
     # Browse folder page
     def test_browse_folder_page(self):
         self.call_page_requiring_login(
             '/list/?path=/test_images',
-            False,
-            'blue bells.jpg'
+            required_text='blue bells.jpg'
+        )
+
+    # Browse folder page
+    def test_browse_folder_page_grid(self):
+        self.call_page_requiring_login(
+            '/list/?path=/test_images&view=grid',
+            required_text='blue bells.jpg'
         )
 
     # Browse folder page, non-existent should still be OK
     def test_browse_folder_page_non_exist(self):
         self.call_page_requiring_login(
-            '/list/?path=/test_images/qwerty',
-            False,
-            'Sorry, this folder does not exist.'
+            '/list/?path=/test_images/qwerty&view=list',
+            required_text='Sorry, this folder does not exist.'
         )
+
+    # Browse folder page, non-existent should still be OK
+    def test_browse_folder_page_non_exist_grid(self):
+        self.call_page_requiring_login(
+            '/list/?path=/test_images/qwerty&view=grid',
+            required_text='Sorry, this folder does not exist.'
+        )
+
+    # Browse folder switching views
+    def test_browse_folder_page_view_switch(self):
+        self.login('webuser', 'webuser')
+        rv = self.app.get('/list/?view=list')
+        self.assertEqual(rv.status_code, 200)
+        self.assertIn('-- List view', rv.data)
+        rv = self.app.get('/list/?view=grid')
+        self.assertEqual(rv.status_code, 200)
+        self.assertIn('-- Grid view', rv.data)
+        # Last view should be remembered
+        rv = self.app.get('/list/')
+        self.assertEqual(rv.status_code, 200)
+        self.assertIn('-- Grid view', rv.data)
 
     # #2475 Browse folder page, error reading directory should still be OK
     #       (OK as in returning a nice error rather than the HTTP 500 it used to)
     def test_browse_folder_page_bad_folder(self):
         self.call_page_requiring_login(
-            '/list/?path=/test_images\x00uh oh',
-            False,
-            'must be encoded string without NULL bytes'
+            '/list/?path=/test_images\x00uh oh&view=list',
+            required_text='must be encoded string without NULL bytes'
+        )
+
+    def test_browse_folder_page_bad_folder_grid(self):
+        self.call_page_requiring_login(
+            '/list/?path=/test_images\x00uh oh&view=grid',
+            required_text='must be encoded string without NULL bytes'
         )
 
     # Image detail page

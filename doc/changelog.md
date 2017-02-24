@@ -1,3 +1,12 @@
+# v2.4.0-dev
+_Changes: Adds new grid/thumbnail view for browsing folders in the admin UI_
+
+TODO Update screenshots in README.md
+
+Update the Python and web code  
+Restart the Apache service
+
+
 # v2.3.0-dev
 _Breaking change: folder list API behaviour change_
 _Changes: Upgrade Flask to 0.12, faster performance for logged in users,

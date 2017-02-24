@@ -349,9 +349,8 @@ def slideshow_view_help():
 @app.route('/list/')
 @login_required
 def browse():
-    from_path = request.args.get('path', '')
-    if from_path == '':
-        from_path = os.path.sep
+    from_path = request.args.get('path', os.path.sep)
+    view_type = request.args.get('view', '')
 
     # #2475 Default this in case of error in get_directory_listing()
     directory_info = DirectoryInfo(from_path)
@@ -359,6 +358,11 @@ def browse():
     db_session = data_engine.db_get_session()
     db_committed = False
     try:
+        # Check parameters
+        if view_type not in ['', 'list', 'grid']:
+            raise ValueError('View type must be list or grid')
+
+        # TODO If we get just one page then the reported directory size will be incorrect
         directory_info = get_directory_listing(from_path, True, 2)
 
         # Auto-populate the folders database
@@ -383,15 +387,22 @@ def browse():
         if directory_info.exists() and db_folder:
             session['last_browse_path'] = from_path
 
+        # Remember the requested view type, or default it if not set
+        if view_type != '':
+            session['last_browse_view'] = view_type
+        else:
+            view_type = session.get('last_browse_view', 'list')
+
         return render_template(
             'list.html',
-            formats=image_engine.get_image_formats(),
+            image_formats=image_engine.get_image_formats(),
             pathsep=os.path.sep,
             timezone=get_timezone_code(),
             directory_info=directory_info,
             folder_name=filepath_filename(from_path),
             db_info=db_folder,
             db_parent_info=db_folder.parent if db_folder else None,
+            view_type=view_type,
             STATUS_ACTIVE=Folder.STATUS_ACTIVE
         )
     except Exception as e:
@@ -692,12 +703,10 @@ def account():
 @app.route('/folder_list/')
 @login_required
 def folder_browse():
-    from_path = request.args.get('path', '')
+    from_path = request.args.get('path', os.path.sep)
     show_files = request.args.get('show_files', '')
     embed = request.args.get('embed', '')
     msg = request.args.get('msg', '')
-    if from_path == '':
-        from_path = os.path.sep
 
     db_session = data_engine.db_get_session()
     db_committed = False
@@ -728,7 +737,7 @@ def folder_browse():
 
         return render_template(
             'folder_list.html',
-            formats=image_engine.get_image_formats(),
+            image_formats=image_engine.get_image_formats(),
             embed=embed,
             msg=msg,
             name=filepath_filename(from_path),

@@ -1,0 +1,113 @@
+{#
+  An HTML fragment that generates the list view table of file and folder entries
+  for a server directory.
+
+  Template variables:
+    directory_info  - a DirectoryInfo object containing the server directory information
+    vdisabled_attrs - a string of HTML attributes to add to an HTML element when view permission is denied
+    pathsep         - the path separator character
+    image_formats   - a list of viewable image file extensions
+#}
+
+		<!-- List view (marker: test suite looks for me) -->
+		<table width="100%" 
+		       summary="Listing of the {{ directory_info.name() }} folder">
+
+			{# Dummy row to vpad and set the column spacings #}
+			<tr class="even">
+				<td class="icon">&nbsp;</td>
+				<td class="user">&nbsp;</td>
+				<td class="filesize">&nbsp;</td>
+				<td class="filetime">&nbsp;</td>
+				<td>&nbsp;</td>
+			</tr>
+
+		{% set row_class = cycler('odd', 'even') %}
+
+		{# Offer a Back link if this isn't the root directory #}
+		{% if directory_info.parent_name() %}
+			{% set back_url = url_for('browse', path=directory_info.parent_name()) %}
+			<tr class="{{ row_class.next() }}">
+				<td>
+					<a href="{{ back_url }}">
+						<img src="{{ url_for('static', filename='images/icon-back.png') }}" alt="Back"/>
+					</a>
+				</td>
+				<td>&nbsp;</td>
+				<td>&nbsp;</td>
+				<td>&nbsp;</td>
+				<td>(<a class="action" href="{{ back_url }}">back to parent folder</a>)</td>
+			</tr>
+		{% endif %}
+
+		{# Loop over all directory items #}
+		{% for entry in directory_info.contents() %}
+			<tr class="{{ row_class.next() }}">
+				{% if entry.is_directory %}
+					{% set sep = pathsep if directory_info.name() != pathsep else '' %}
+					{% set sub_folder_path = directory_info.name() + sep + entry.filename %}
+					{% set view_url = url_for('browse', path=sub_folder_path) %}
+					{% set view_permitted = is_folder_permitted(sub_folder_path, FolderPermission.ACCESS_VIEW) %}
+					<td>
+						{% if view_permitted %}
+						<a href="{{ view_url }}">
+						<img src="{{ url_for('static', filename='images/icon-folder.png') }}" alt="Folder"/>
+						</a>
+						{% else %}
+						<img {{ vdisabled_attrs }} src="{{ url_for('static', filename='images/icon-folder.png') }}" />
+						{% endif %}
+					</td>
+					<td>&nbsp;</td>
+					<td>&nbsp;</td>
+					<td>&nbsp;</td>
+					<td>
+						{% if view_permitted %}
+						<a href="{{ view_url }}">{{ entry.filename }}</a>
+						{% else %}
+						<span {{ vdisabled_attrs }}>{{ entry.filename }}</span>
+						{% endif %}
+					</td>
+				{% else %}
+					{% set fpath = (directory_info.name() + pathsep) if directory_info.name() != pathsep else '' %}
+					{% set view_url = url_for('details', src=fpath + entry.filename) %}
+					{% set can_view = entry.filename|fileextension in image_formats %}
+					<td>
+						{% if can_view %}
+							<a class="image_preview" href="{{ view_url }}"><img src="{{ url_for('static', filename='images/icon-image.png') }}" alt="Image"/></a>
+						{% else %}
+							<img src="{{ url_for('static', filename='images/icon-file.png') }}" alt="File"/>
+						{% endif %}
+					</td>
+					<td>
+						&nbsp;
+					</td>
+					<td>
+						{% if can_view %}
+							<a href="{{ view_url }}">{{ entry.size|filesizeformat }}</a>
+						{% else %}
+							{{ entry.size|filesizeformat }}
+						{% endif %}
+					</td>
+					<td>
+						{% if can_view %}
+							<a href="{{ view_url }}">{{ entry.modified|datetimeformat(True) }}</a>
+						{% else %}
+							{{ entry.modified|datetimeformat(True) }}
+						{% endif %}
+					</td>
+					<td>
+						{% if can_view %}
+							<a class="image_preview" href="{{ view_url }}">{{ entry.filename }}</a>
+						{% else %}
+							{{ entry.filename }}
+						{% endif %}
+					</td>
+				{% endif %}
+			</tr>
+		{% else %}
+			{# The directory is empty #}
+			<tr class="{{ row_class.next() }}">
+				<td colspan="5">This folder contains no files.</td>
+			</tr>
+		{% endfor %}
+		</table>

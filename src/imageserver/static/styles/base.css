@@ -140,13 +140,8 @@ table a:hover {
 tr {
 	margin: 0;
 	padding: 0;
-	line-height: 160%;
+	line-height: 1.6;
 	vertical-align: top;
-}
-tr.odd {
-	background-color: #f0f0f0;
-}
-tr.even {
 }
 tr.header {
 	font-style: italic;
@@ -209,6 +204,16 @@ li.spacer {
 
 .clickable {
 	cursor: pointer;
+}
+
+.no-underline {
+	border-bottom: none;
+}
+
+.odd {
+	background-color: #f0f0f0;
+}
+.even {
 }
 
 .error {
@@ -427,7 +432,7 @@ a:hover .highlight {
 	background-repeat: no-repeat;
 }
 .preview_popup_right {
-	width: 220px;
+	width: 220px;        /* expects preview image of 200x200 */
 	height: 200px;
 	line-height: 200px;
 	position: relative;

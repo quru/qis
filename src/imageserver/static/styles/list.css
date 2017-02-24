@@ -47,3 +47,28 @@ td.count {
 	text-align: right;
 	padding-right: 2em;
 }
+
+.view-icons {
+	float: right;
+}
+
+.grid {
+	/* Match the table styles used for list view */
+	font-size: 95%;
+	/* Emulate the blank first tr of the list view */
+	margin-top: 2em;
+}
+.grid-row,
+.grid-cell {
+	/* Match the tr and td styles used for list view */
+	vertical-align: top;
+	line-height: 1.6;
+	padding: 2px;
+}
+.grid-cell {
+	display: inline-block;
+	margin: 1em;
+	width: 200px;  /* expects preview image of 200x200 */
+	height: 200px;
+	padding: 10px;
+}
