@@ -219,6 +219,7 @@ li.spacer {
 	background-color: #f0f0f0;
 }
 .even {
+	background-color: #ffffff;
 }
 
 .error {
@@ -283,6 +284,7 @@ a:hover .highlight {
 .right {
 	text-align: right;
 }
+
 .sticky {
 	position: sticky;
 	top: 0px;
