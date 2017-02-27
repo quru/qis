@@ -31,7 +31,7 @@
 				{% set view_url = url_for('browse', path=sub_folder_path) %}
 				{% set view_permitted = is_folder_permitted(sub_folder_path, FolderPermission.ACCESS_VIEW) %}
 
-				<div class="grid-cell border even directory">
+				<div id="{{ entry.filename }}" class="grid-cell border even directory">
 					{% if view_permitted %}
 					<a class="no-underline" href="{{ view_url }}">
 						<img src="{{ url_for('static', filename='images/icon-folder.png') }}" alt="Folder" />
@@ -49,7 +49,7 @@
 				{% set can_view = entry.filename|fileextension in image_formats %}
 
 				{% if can_view %}
-				<div class="grid-cell border even">
+				<div id="{{ entry.filename }}" class="grid-cell border even">
 					<div class="image-placeholder">
 						<a class="no-underline" href="{{ view_url }}">
 						<img src="{{ thumb_url }}" />
@@ -60,7 +60,7 @@
 					<div class="rfloat"><a class="no-underline" href="{{ view_url }}">{{ entry.size|filesizeformat }}</a></div>
 				</div>
 				{% else %}
-				<div class="grid-cell border even">
+				<div id="{{ entry.filename }}" class="grid-cell border even">
 					<div class="image-placeholder">
 						<img src="{{ url_for('static', filename='images/icon-file.png') }}" alt="File" />
 					</div>

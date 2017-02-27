@@ -41,7 +41,7 @@
 {% block body %}
 	<h2>
 		Image details
-		<span>(<a href="{{ url_for('browse', path=path) }}">back to image folder</a>)</span>
+		<span>(<a href="{{ url_for('browse', path=path, _anchor=filename) }}">back to image folder</a>)</span>
 		{% if file_info %}
 		<span>(<a href="{{ url_for('browse_navigate', src=src, dir='back') }}"><img src="{{ url_for('static', filename='images/icon-back.png') }}" /> previous</a>)</span>
 		<span>(<a href="{{ url_for('browse_navigate', src=src, dir='fwd') }}">next <img src="{{ url_for('static', filename='images/icon-forward.png') }}" /></a>)</span>

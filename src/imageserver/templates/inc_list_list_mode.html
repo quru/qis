@@ -42,7 +42,7 @@
 
 		{# Loop over all directory items #}
 		{% for entry in directory_info.contents() %}
-			<tr class="{{ row_class.next() }}">
+			<tr id="{{ entry.filename }}" class="{{ row_class.next() }}">
 				{% if entry.is_directory %}
 					{% set sep = pathsep if directory_info.name() != pathsep else '' %}
 					{% set sub_folder_path = directory_info.name() + sep + entry.filename %}

@@ -519,6 +519,7 @@ def details():
     src = request.args.get('src', '')
     reset = request.args.get('reset', None)
     src_path = ''
+    src_filename = ''
     try:
         # Check parameters
         if not src:
@@ -639,6 +640,7 @@ def details():
             'details.html',
             src=src,
             path=src_path,
+            filename=src_filename,
             err_msg='This file cannot be viewed: ' + str(e)
         )
 

@@ -67,7 +67,7 @@ td.count {
 }
 .grid-cell {
 	display: inline-block;
-	margin: 1em;
+	margin: 1em 0.5em 0.8em 1em;
 	width: 200px;   /* expects preview image of 200x200 */
 	height: 240px;  /* plus 40px for filename and info  */
 	padding: 10px;
