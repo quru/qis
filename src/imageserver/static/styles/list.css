@@ -48,8 +48,8 @@ td.count {
 	padding-right: 2em;
 }
 
-.view-icons {
-	float: right;
+.view_icons {
+	margin-top: 0.5em;
 }
 
 .grid {

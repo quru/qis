@@ -68,39 +68,37 @@
 			<div class="error">{{ err_msg|newlines }}</div>
 		{% else %}
 			{% if db_info and db_info.status == STATUS_ACTIVE %}
-				<img src="{{ url_for('static', filename='images/icon-action.png') }}"
-				      class="action_menu_owner" 
-				      id="image_action_menu_owner" />
-				
-				<div id="image_actions_container">
-					<div id="image_action_menu" class="action_menu border shadow">
-						<ul>
-							{% if is_folder_permitted(db_info.folder, FolderPermission.ACCESS_DOWNLOAD) %}
-							<li><a href="{{ url_for('original', src=src, attach=1) }}">Download original</a></li>
-							<li><a id="file_publish" href="{{ url_for('publish', src=src) }}">Publish image</a></li>
-							{% else %}
-							<li {{ disabled_attrs }}>Download original</li>
-							<li {{ disabled_attrs }}>Publish image</li>
-							{% endif %}
-							<li class="spacer">&nbsp;</li>
-							{% if is_folder_permitted(db_info.folder, FolderPermission.ACCESS_UPLOAD) %}
-							<li><a id="file_reset" href="{{ url_for('details', src=src, reset=1) }}">Reset</a></li>
-							<li><a id="file_rename" href="#">Rename file</a></li>
-							{% else %}
-							<li {{ disabled_attrs }}>Reset</li>
-							<li {{ disabled_attrs }}>Rename file</li>
-							{% endif %}
-							{% if is_folder_permitted(db_info.folder, FolderPermission.ACCESS_DELETE) %}
-							<li><a id="file_move" href="#">Move file</a></li>
-							<li class="spacer">&nbsp;</li>
-							<li><a id="file_delete" href="#">Delete file</a></li>
-							{% else %}
-							<li {{ disabled_attrs }}>Move file</li>
-							<li class="spacer">&nbsp;</li>
-							<li {{ disabled_attrs }}>Delete file</li>
-							{% endif %}
-						</ul>
-					</div>
+				<div id="image_action_menu_owner" class="action_menu_owner">
+					<img src="{{ url_for('static', filename='images/icon-action.png') }}" />
+					&nbsp;<span class="smalltext">Image actions</span>
+				</div>
+				<div id="image_action_menu" class="action_menu border shadow">
+					<ul>
+						{% if is_folder_permitted(db_info.folder, FolderPermission.ACCESS_DOWNLOAD) %}
+						<li><a href="{{ url_for('original', src=src, attach=1) }}">Download original</a></li>
+						<li><a id="file_publish" href="{{ url_for('publish', src=src) }}">Publish image</a></li>
+						{% else %}
+						<li {{ disabled_attrs }}>Download original</li>
+						<li {{ disabled_attrs }}>Publish image</li>
+						{% endif %}
+						<li class="spacer">&nbsp;</li>
+						{% if is_folder_permitted(db_info.folder, FolderPermission.ACCESS_UPLOAD) %}
+						<li><a id="file_reset" href="{{ url_for('details', src=src, reset=1) }}">Reset</a></li>
+						<li><a id="file_rename" href="#">Rename file</a></li>
+						{% else %}
+						<li {{ disabled_attrs }}>Reset</li>
+						<li {{ disabled_attrs }}>Rename file</li>
+						{% endif %}
+						{% if is_folder_permitted(db_info.folder, FolderPermission.ACCESS_DELETE) %}
+						<li><a id="file_move" href="#">Move file</a></li>
+						<li class="spacer">&nbsp;</li>
+						<li><a id="file_delete" href="#">Delete file</a></li>
+						{% else %}
+						<li {{ disabled_attrs }}>Move file</li>
+						<li class="spacer">&nbsp;</li>
+						<li {{ disabled_attrs }}>Delete file</li>
+						{% endif %}
+					</ul>
 				</div>
 			{% endif %}
 		

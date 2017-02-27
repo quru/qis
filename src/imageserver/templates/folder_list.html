@@ -51,11 +51,16 @@
 		<br/>
 		<div class="error">{{ err_msg|newlines }}</div>
 	{% else %}
+		{% if not show_files %}
+		<div class="smalltext">
+			(<a href="#" class="select_folder" data-path="{{ path }}">select this folder</a>)
+		</div>
+		{% endif %}
 		{% if db_info and db_info.status == STATUS_ACTIVE %}
-			<img src="{{ url_for('static', filename='images/icon-action.png') }}"
-			     class="action_menu_owner" 
-			     id="folder_action_menu_owner" />
-
+			<div id="folder_action_menu_owner" class="action_menu_owner tall">
+				<img src="{{ url_for('static', filename='images/icon-action.png') }}" />
+				&nbsp;<span class="smalltext">Folder actions</span>
+			</div>
 			<div id="folder_action_menu" class="action_menu border shadow">
 				<ul>
 					{% if is_folder_permitted(db_info, FolderPermission.ACCESS_CREATE_FOLDER) %}
@@ -65,12 +70,6 @@
 					{% endif %}
 				</ul>
 			</div>
-		{% endif %}
-		{% if not show_files %}
-		&nbsp;
-		<span class="smalltext">
-			(<a href="#" class="select_folder" data-path="{{ path }}">select this folder</a>)
-		</span>
 		{% endif %}
 		
 		<table width="100%" 

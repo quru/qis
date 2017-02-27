@@ -39,6 +39,10 @@
 	white-space: nowrap;
 }
 
+#image_action_menu_owner {
+	margin-top: 0.1em;  /* reduced as here it's adjacent to h2 bottom margin */
+}
+
 #viewport,
 #viewport_empty {
 	width: 500px;
