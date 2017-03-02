@@ -32,13 +32,14 @@
 				{% set view_permitted = is_folder_permitted(sub_folder_path, FolderPermission.ACCESS_VIEW) %}
 
 				<div id="{{ entry.filename }}" class="grid-cell border even directory">
+					<div class="icon-placeholder"></div>
 					{% if view_permitted %}
 					<a class="no-underline" href="{{ view_url }}">
-						<img src="{{ url_for('static', filename='images/icon-folder.png') }}" alt="Folder" />
+						<img src="{{ url_for('static', filename='images/icon-folder-96.png') }}" alt="Folder" />
 					</a>
 					<div><a class="no-underline" href="{{ view_url }}">{{ entry.filename }}</a></div>
 					{% else %}
-					<img {{ vdisabled_attrs }} src="{{ url_for('static', filename='images/icon-folder.png') }}" alt="Folder" />
+					<img {{ vdisabled_attrs }} src="{{ url_for('static', filename='images/icon-folder-96.png') }}" alt="Folder" />
 					<div {{ vdisabled_attrs }}>{{ entry.filename }}</div>
 					{% endif %}
 				</div>
@@ -62,7 +63,7 @@
 				{% else %}
 				<div id="{{ entry.filename }}" class="grid-cell border even">
 					<div class="image-placeholder">
-						<img src="{{ url_for('static', filename='images/icon-file.png') }}" alt="File" />
+						<img src="{{ url_for('static', filename='images/icon-file-96.png') }}" alt="File" />
 					</div>
 					<div>{{ entry.filename }}</div>
 					<div class="float">{{ entry.modified|datetimeformat(True) }}</div>

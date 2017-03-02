@@ -51,10 +51,10 @@
 					<td>
 						{% if view_permitted %}
 						<a href="{{ view_url }}">
-						<img src="{{ url_for('static', filename='images/icon-folder.png') }}" alt="Folder"/>
+						<img src="{{ url_for('static', filename='images/icon-folder-16.png') }}" alt="Folder"/>
 						</a>
 						{% else %}
-						<img {{ vdisabled_attrs }} src="{{ url_for('static', filename='images/icon-folder.png') }}" alt="Folder"/>
+						<img {{ vdisabled_attrs }} src="{{ url_for('static', filename='images/icon-folder-16.png') }}" alt="Folder"/>
 						{% endif %}
 					</td>
 					<td>&nbsp;</td>
@@ -73,9 +73,9 @@
 					{% set can_view = entry.filename|fileextension in image_formats %}
 					<td>
 						{% if can_view %}
-							<a class="image_preview" href="{{ view_url }}"><img src="{{ url_for('static', filename='images/icon-image.png') }}" alt="Image"/></a>
+							<a class="image_preview" href="{{ view_url }}"><img src="{{ url_for('static', filename='images/icon-image-16.png') }}" alt="Image"/></a>
 						{% else %}
-							<img src="{{ url_for('static', filename='images/icon-file.png') }}" alt="File"/>
+							<img src="{{ url_for('static', filename='images/icon-file-16.png') }}" alt="File"/>
 						{% endif %}
 					</td>
 					<td>

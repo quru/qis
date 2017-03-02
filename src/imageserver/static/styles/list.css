@@ -91,3 +91,7 @@ td.count {
 	/* For all thumbnails */
 	margin-bottom: 3px;
 }
+.grid-cell .icon-placeholder {
+	/* For icons that are smaller than 200x200 */
+	height: 55px;
+}
