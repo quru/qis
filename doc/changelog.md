@@ -1,6 +1,7 @@
 # v2.4.0-dev
 _Changes: Adds new grid/thumbnail view for browsing folders in the admin UI,
-label the folder and image action menus_
+new file/folder/cog icons, labels for the folder and image action menus,
+more consistent page layout_
 
 TODO Update screenshots in README.md
 

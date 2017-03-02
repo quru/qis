@@ -241,15 +241,15 @@ QIS version 2 brings these new features:
 * Built-in support for RAW digital camera image formats
 * Faster image serving for logged-in users (and authenticated API callers)
 * Bug fixes to the image publisher
-* The order of files and folders in the web interface is no longer case sensitive
+* Web interface improvements
+  * New grid / thumbnail browse view
+  * New icons and a more consistent page layout
+  * New next/previous image navigation
+  * The order of files and folders in the web interface is no longer case sensitive
 
 While still on the to-do list for version 2 is:
 
 * Improve the image generation architecture for more consistent performance under load
-* Web interface improvements
-  * Add a grid / thumbnail browse view
-  * Better navigation
-  * Freshen up the UI
 * Optional long image URL to tiny URL conversion
   * New checkbox in the image publisher
   * Add to REST API
