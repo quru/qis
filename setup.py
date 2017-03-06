@@ -35,7 +35,7 @@ setup(
         "psutil==2.2.1",
         "itsdangerous==0.24",
         "importlib",  # Only for Python 2.6
-        "markdown==2.6.6"
+        "markdown==2.6.2"
     ],
 
     setup_requires=[
