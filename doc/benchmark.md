@@ -237,11 +237,20 @@ remains the same).
 Machine and software spec:
 
 * 2012 MacBook Pro 2.9 GHz Intel Core i7, 16 GB 1600 MHz DDR3
-* Python 2.7.6
+* Python 2.7.10
 * ImageMagick 6.8.8-10 Q16 x86_64
-* Memcached 1.4.5
-* PostgreSQL 9.3.3
-* QIS v1.42
+* Memcached 1.4.34
+* PostgreSQL 9.5.2
+* QIS v1.51
+
+Setup (folder permissions):
+
+* Enable _View and download_ permission for the `test_images` folder and the `Public` group
+
+Setup (local settings):
+
+	DEBUG = False
+	BENCHMARKING = True
 
 Setup (every time):
 
@@ -251,68 +260,68 @@ Setup (every time):
 Default test:
 
 	$ python src/imageserver/scripts/bench.py http://localhost:5000/ 1000 90 1
-	LOG   1215 - Checking connectivity to http://localhost:5000/
-	LOG   1215 - Building request list
-	LOG   1215 - Pre-warming the image cache
-	LOG   1215 - Creating clients, running tests
-	LOG   1215 - Complete
+	LOG   36104 - Checking connectivity to http://localhost:5000/
+	LOG   36104 - Building request list
+	LOG   36104 - Pre-warming the image cache
+	LOG   36104 - Creating clients, running tests
+	LOG   36104 - Complete
 	
 	Results
 	=======
 	1000 successful requests, 0 errors.
-	Run time 43.417782 seconds = 23.032038 requests/sec.
+	Run time 45.808848 seconds = 21.829844 requests/sec.
 	
-	Average response 0.043298 seconds
+	Average response 0.045684 seconds
 	  * 189 non-cached responses
-	      * Average app time 0.213764 seconds
-	      * Average response 0.215583 seconds
-	      * Worst response 1.270284 seconds
+	      * Average app time 0.222641 seconds
+	      * Average response 0.225118 seconds
+	      * Worst response 1.308964 seconds
 	  * 811 cached responses
-	      * Average app time 0.001396 seconds
-	      * Average response 0.003148 seconds
-	      * Worst response 0.005541 seconds
+	      * Average app time 0.001485 seconds
+	      * Average response 0.003868 seconds
+	      * Worst response 0.025992 seconds
 
 All cached test:
 
 	$ python src/imageserver/scripts/bench.py http://localhost:5000/ 1000 100 1
-	LOG   1194 - Checking connectivity to http://localhost:5000/
-	LOG   1194 - Building request list
-	LOG   1194 - Pre-warming the image cache
-	LOG   1194 - Creating clients, running tests
-	LOG   1194 - Complete
+	LOG   36182 - Checking connectivity to http://localhost:5000/
+	LOG   36182 - Building request list
+	LOG   36182 - Pre-warming the image cache
+	LOG   36182 - Creating clients, running tests
+	LOG   36182 - Complete
 	
 	Results
 	=======
 	1000 successful requests, 0 errors.
-	Run time 3.747544 seconds = 266.841426 requests/sec.
+	Run time 3.967191 seconds = 252.067522 requests/sec.
 	
-	Average response 0.003579 seconds
+	Average response 0.003850 seconds
 	  * 98 non-cached responses
-	      * Average app time 0.003428 seconds
-	      * Average response 0.005341 seconds
-	      * Worst response 0.014927 seconds
+	      * Average app time 0.002953 seconds
+	      * Average response 0.005257 seconds
+	      * Worst response 0.010037 seconds
 	  * 902 cached responses
-	      * Average app time 0.001516 seconds
-	      * Average response 0.003388 seconds
-	      * Worst response 0.007123 seconds
+	      * Average app time 0.001408 seconds
+	      * Average response 0.003697 seconds
+	      * Worst response 0.005711 seconds
 
 Heavy processing test:
 
 	$ python src/imageserver/scripts/bench.py http://localhost:5000/ 100 0 1
-	LOG   1301 - Checking connectivity to http://localhost:5000/
-	LOG   1301 - Building request list
-	LOG   1301 - NOTE! You need to manually clear your image cache if you have previously run these tests.
-	LOG   1301 - Creating clients, running tests
-	LOG   1301 - Complete
+	LOG   36214 - Checking connectivity to http://localhost:5000/
+	LOG   36214 - Building request list
+	LOG   36214 - NOTE! You need to manually clear your image cache if you have previously run these tests.
+	LOG   36214 - Creating clients, running tests
+	LOG   36214 - Complete
 	
 	Results
 	=======
 	100 successful requests, 0 errors.
-	Run time 39.537110 seconds = 2.529269 requests/sec.
+	Run time 38.494178 seconds = 2.597795 requests/sec.
 	
-	Average response 0.394726 seconds
+	Average response 0.384053 seconds
 	  * 100 non-cached responses
-	      * Average app time 0.392478 seconds
-	      * Average response 0.394726 seconds
-	      * Worst response 1.068507 seconds
+	      * Average app time 0.381463 seconds
+	      * Average response 0.384053 seconds
+	      * Worst response 0.927990 seconds
 	  * 0 from cache
