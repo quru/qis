@@ -1,3 +1,10 @@
+# v1.51
+_Changes: Modernised Docker deployment, a few bug fixes_
+
+Update the Python and web code  
+Restart the Apache service
+
+
 # v1.50
 _Changes: Add RAW file support, bug fixes to SVG support_
 
