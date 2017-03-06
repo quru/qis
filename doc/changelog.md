@@ -8,7 +8,6 @@ TODO Update screenshots in README.md
 Update the Python and web code  
 Restart the Apache service
 
-
 # v2.3.0-dev
 _Breaking change: folder list API behaviour change_
 _Changes: Upgrade Flask to 0.12, faster performance for logged in users,
@@ -115,6 +114,13 @@ Update the Python dependencies
 Restart the Memcached service  
 Optional: drop the `cachectl` table [note! v2_upgrade.py will do this]
 Start the Apache service
+
+
+# v1.51
+_Changes: Modernised Docker deployment, a few bug fixes_
+
+Update the Python and web code  
+Restart the Apache service
 
 
 # v1.50
