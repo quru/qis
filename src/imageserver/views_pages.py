@@ -362,7 +362,6 @@ def browse():
         if view_type not in ['', 'list', 'grid']:
             raise ValueError('View type must be list or grid')
 
-        # TODO If we get just one page then the reported directory size will be incorrect
         directory_info = get_directory_listing(from_path, True, 2)
 
         # Auto-populate the folders database
