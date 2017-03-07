@@ -1,9 +1,15 @@
-# v2.4.0-dev
+# v2.4.0
 _Changes: Adds new grid/thumbnail view for browsing folders in the admin UI,
 new file/folder/cog icons, labels for the folder and image action menus,
 more consistent page layout_
 
+This version is the first release of v2.x and also becomes the new master
+branch in GitHub.
+
 TODO Update screenshots in README.md
+
+If upgrading from v1.x, see the [upgrading guide](upgrading.md).  
+If upgrading from v2.3:
 
 Update the Python and web code  
 Restart the Apache service
@@ -90,6 +96,8 @@ _Changes: new APIs for administration of image templates_
 # v2.0.1-dev
 _Breaking change: move image templates into the database_
 
+This release requires Postgres 9.2 or above.
+
 Update the Python and web code  
 Update the Python dependencies  
 Import the existing image templates into the database:
@@ -112,7 +120,7 @@ Stop the Apache service
 Update the Python and web code  
 Update the Python dependencies  
 Restart the Memcached service  
-Optional: drop the `cachectl` table [note! v2_upgrade.py will do this]
+Optional: drop the `cachectl` table (note v2_upgrade.py will do this for you)
 Start the Apache service
 
 

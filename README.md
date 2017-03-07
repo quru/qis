@@ -117,7 +117,8 @@ QIS depends on the following open source tools and applications:
 * mod_wsgi Apache module - to run the QIS Python application inside Apache
 * ImageMagick - to provide the image processing capabilities
 * Memcached - for caching generated images and frequently accessed data
-* PostgreSQL - to store image and folder data, users, groups, and permissions
+* PostgreSQL 9.2 or above - to store image and folder data, users, groups,
+  statistics and permissions
 
 For how these should be installed and configured,
 see the [install guide](doc/install.md) and the [tuning guide](doc/tuning.md).
@@ -178,15 +179,15 @@ To see the default values and other settings you can override, see the
 You will need to [request a copy of the `qismagick` package](#qismagick.so)
 for your development platform, and install it:
 
-	$ pip install qismagick-1.41.0-cp27-none-macosx_10_10_intel.whl
+	$ pip install qismagick-2.1.0-cp27-none-macosx_10_12_intel.whl
 
 Then run the server in development mode with:
 
 	$ python src/runserver.py
-	2015-08-28 10:41:06,942 qis_10369  INFO     Quru Image Server v1.33 engine startup
-	2015-08-28 10:41:06,944 qis_10369  INFO     Using settings base_settings + local_settings.py
+	2017-03-06 16:11:39,932 qis_37720  INFO     Quru Image Server v2.4.0 engine startup
+	2017-03-06 16:11:39,934 qis_37720  INFO     Using settings base_settings + local_settings.py
 	...
-	Running on http://127.0.0.1:5000/ (Press CTRL+C to quit)
+	 * Running on http://127.0.0.1:5000/ (Press CTRL+C to quit)
 
 On first run, the required database tables and default data will be created
 automatically. Watch the output for the creation of the `admin` user account,
@@ -195,7 +196,7 @@ in `logs/qis.log` instead.
 
 To run QIS in production, you will need files:
 
-* `Quru Image Server-1.xx.tar.gz` - the main QIS Python web application
+* `Quru Image Server-2.xx.tar.gz` - the main QIS Python web application
 * `dependencies.tar.gz` - the application's Python dependencies,
   including compiled C extensions as platform-specific binaries
 * and unless your `dependencies.tar.gz` was supplied by Quru, you will also
@@ -210,7 +211,7 @@ To generate these from the development project:
 	$ ./package_deps.sh python2.7
 	$ ls -l dist/
 	...
-	-rw-r--r--  1 matt  staff  27441170 28 Aug 11:19 Quru Image Server-1.33.tar.gz
+	-rw-r--r--  1 matt  staff  27441170 28 Aug 11:19 Quru Image Server-2.40.tar.gz
 	-rw-r--r--  1 matt  staff   5064883 28 Aug 11:19 dependencies.tar.gz
 
 With these files prepared you should then follow the [install guide](doc/install.md).
@@ -256,14 +257,8 @@ While still on the to-do list for version 2 is:
   * Tiny URL admin pages in the web interface
 
 An upgrade script is provided to migrate v1 installations to v2, including the
-import of image templates from flat files into the database. To run this:
-
-	$ cd /opt/qis/src/imageserver/scripts
-	$ sudo -u qis python v2_upgrade.py
-
-Read through the output carefully for advisory and error information. If there
-are any errors you can just re-run the `v2_upgrade.py` script again after taking
-remedial action.
+import of image templates from flat files into the database. For more information
+on how to upgrade, see the [upgrading guide](./docs/upgrading.md).
 
 ## Roadmap
 
