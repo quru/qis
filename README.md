@@ -157,6 +157,18 @@ Memcached and PostgreSQL servers, ImageMagick installed locally, Python 2.6 or
 Python 2.7, and Python development tools `pip`, `setuptools`, `wheel`, and
 `virtualenv`. Development is possible on Linux or on Mac OS X.
 
+### Operating system packages
+
+See the [install guide](doc/install.md) for the required system packages.
+
+The following development packages (on a Fedora-based system) are also required
+in order to build and install the Python libraries:
+
+	$ sudo yum install gcc gcc-c++ git curl wget make tar zip unzip \
+	                   python-devel openldap-devel postgresql-devel libmemcached-devel
+
+### Starting development
+
 Get the code, create a virtualenv and install the Python dependencies:
 
 	$ git clone https://github.com/quru/qis.git

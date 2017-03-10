@@ -30,9 +30,11 @@ ${VENV_PATH}/bin/flake8: venv
 	${VENV_ACTIVATE} ; pip install flake8
 
 venv: ${VENV_PATH}/bin/activate doc/requirements.txt setup.py ${QISMAGICK_SO}
-	test -d ${VENV_PATH} || virtualenv --python=${PYTHON} ${VENV_PATH}
 	${VENV_ACTIVATE} ; pip install --upgrade pip ; pip install --upgrade setuptools
 	${VENV_ACTIVATE} ; pip install --upgrade --force-reinstall --no-index --find-links file://$(QISMAGICK_WHEEL_PATH) qismagick
-	${VENV_ACTIVATE} ; pip install -r doc/requirements.txt
+	${VENV_ACTIVATE} ; pip install --upgrade -r doc/requirements.txt
 
-.PHONY: venv test test-unit distribute runserver
+${VENV_PATH}/bin/activate:
+	virtualenv --python=${PYTHON} ${VENV_PATH}
+
+.PHONY: venv test test-unit distribute runserver ${QISMAGICK_SO}
