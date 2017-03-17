@@ -31,3 +31,9 @@ Install the newer version:
 
 	$ sudo yum install ImageMagick-libs-6.9.8-0.x86_64.rpm
 	$ sudo yum install ImageMagick-6.9.8-0.x86_64.rpm
+
+This fixes the colour management, but if you want to work with `SVG` files there
+is a new problem. The standard `rpm` supplied by ImageMagick has a built-in SVG
+renderer that does not work well. To fix this you will need to install the
+`librsvg2` package and compile ImageMagick from source, specifying `--with-rsvg`
+at the `configure` stage. See http://legacy.imagemagick.org/script/install-source.php
