@@ -35,5 +35,5 @@ Install the newer version:
 This fixes the colour management, but if you want to work with `SVG` files there
 is a new problem. The standard `rpm` supplied by ImageMagick has a built-in SVG
 renderer that does not work well. To fix this you will need to install the
-`librsvg2` package and compile ImageMagick from source, specifying `--with-rsvg`
+`librsvg2-devel` package and compile ImageMagick from source, specifying `--with-rsvg`
 at the `configure` stage. See http://legacy.imagemagick.org/script/install-source.php
