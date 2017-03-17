@@ -316,10 +316,11 @@ def compare_images(img_path1, img_path2):
         stderr=subprocess.PIPE
     )
     output = p.communicate()
-    result = output[1]
+    result = output[1].strip()
     os.remove(diff_temp_nm)
-
-    return float(result)
+    # ImageMagick compare switched "identical" PSNR to 0 in 6.9.5-4 and to "inf" in 6.9.7-10
+    psnr = float(result) if result not in ('0', 'inf') else 100
+    return psnr
 
 
 # Utility - invoke Ghostscript gs command, wait for completion,
