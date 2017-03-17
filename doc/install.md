@@ -17,6 +17,8 @@ To simplify this guide, one instance of each application will be installed on on
 
 QIS requires a Linux-based operating system. However, development and testing takes place
 on Mac OS X, so it is likely that other unix-based operating systems will also work.
+For a list of operating systems that are known to work, see the
+[operating systems](operating_systems.md) notes.
 
 The examples given here assume a Fedora-based system (with the `systemd` init system and
 the `yum` installer). For Debian-based systems, replace `yum` with `apt-get`, and be aware

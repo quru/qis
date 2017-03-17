@@ -1,21 +1,28 @@
-# Known good versions of application dependencies
+# QIS application dependencies
 
-* Python 2.6.5+ or 2.7
-	* Prefer 2.7
-	* We are affected by a deadlock bug in < 2.6.5
+### Postgres
+
 * PostgreSQL 9.2 or above (due to use of JSON data type)
+
+### Memory cache
+
 * Memcached 1.2.8 or above
 * libmemcached 1.0.10 / 1.0.16 (0.32 or above is required)
     * 1.0.8 shipping in Ubuntu 14.04.3 has a set_socket_options() bug
       https://bugs.launchpad.net/libmemcached/+bug/1021819
 * Membase 1.7.1 (note: Membase support is untested since 2011)
+
+### Web server
+
 * Apache 2.2.17 or above
 * mod_wsgi 3.2.7 or above
-* OpenLDAP 2.4.21
-* Ghostscript 8.62 but...
-	* 9.04 or above for downscaling support (much higher quality results), but...
-	* 9.05 or above to fix indexed color space bugs that cause corrupt pages, so...
-	* 9.06 or above is recommended
+
+### LDAP authentication
+
+* OpenLDAP 2.4.21 or above
+
+### ImageMagick
+
 * ImageMagick is a minefield
 	* See http://legacy.imagemagick.org/script/changelog.php
 	* 6.5.4 causes rotate + crop PNG unit tests to fail, due to blurry PNG output
@@ -41,11 +48,24 @@
 	* 6.9.5-3 - 6.9.5-8 fixes further buffer overflows
 	* 6.9.7-1 - 6.9.8-0 seems OK
 
-# Python libraries
+### PDF conversion
 
-See `doc/requirements.txt` for Python library versions.
+* Ghostscript 8.62 works but...
+	* 9.04 or above for downscaling support (much higher quality results), but...
+	* 9.05 or above to fix indexed color space bugs that cause corrupt pages, so...
+	* 9.06 or above is recommended
 
-* Flask dependency Jinja2 - require v2.5.5 or 2.7 or above
+### Python
+
+* Python 2.6.5 or above, or 2.7
+	* Prefer 2.7
+	* We are affected by a deadlock bug in < 2.6.5
+
+### Python libraries
+
+See `doc/requirements.txt` for the Python library versions currently required.
+
+* Flask dependency Jinja2 - requires v2.5.5 or 2.7 or above
 	* v2.6.x has a bug with filesizefilter
 
 * Flask dependency Werkzeug - require v0.9 or above
