@@ -363,7 +363,7 @@ class CacheManager(object):
                     'searchfield3': entry.searchfield3,
                     'searchfield4': entry.searchfield4,
                     'searchfield5': entry.searchfield5,
-                    'metadata': entry.metadata
+                    'extradata': entry.extradata
                 }, synchronize_session=False)
                 db_session.commit()
                 db_committed = True
