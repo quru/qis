@@ -36,3 +36,6 @@ SESSION_COOKIE_SECURE = False
 
 # No LDAP
 LDAP_INTEGRATION = False
+
+# No usage stats
+USAGE_DATA_URL = ""
