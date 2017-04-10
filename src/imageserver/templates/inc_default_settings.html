@@ -3,6 +3,7 @@
   and the default settings in force on this server.
 
   Template variables:
+    default_template - the system default template
     formats - the list supported image file types
     templates - the list supported image template names
     iccs - the list supported ICC profile names
@@ -10,9 +11,21 @@
 #}
 
 <p>
-	The following settings are in force on your server. 
+	The following settings are active on your server. 
 	Contact your system administrator if you require any of these values to be changed.
 </p>
+
+<h3>Default image settings</h3>
+If your image request does not specify a particular image template, 
+default image processing options will be sourced from the 
+<code>{{ default_template.name() }}</code> template.  
+This template applies the following settings:
+
+{% set template=default_template %}
+{% set template_show_blank=False %}
+{% include "inc_template_ul.html" %}
+
+<p>PDF files will be converted to images at <code>{{ settings.PDF_BURST_DPI }}</code> DPI by default.</p>
 
 <h3>Public width and height limits</h3>
 Public-facing images can optionally be restricted in size when requested by unknown, untrusted users.
@@ -37,46 +50,6 @@ Public-facing images can optionally be restricted in size when requested by unkn
 	precedence.
 {% endif %}
 </p>
-
-<h3>Default format</h3>
-If you do not specify an image format, 
-{% if settings.IMAGE_FORMAT_DEFAULT %}
-	images will be returned as <code>{{ settings.IMAGE_FORMAT_DEFAULT }}</code> 
-	{% if settings.IMAGE_FORMAT_DEFAULT in ['jpg', 'jpeg', 'pjpg', 'pjpeg', 'png'] %}
-		with
-		{% if settings.IMAGE_FORMAT_DEFAULT == 'png' %}compression{% else %}quality{% endif %}
-		<code>{{ settings.IMAGE_QUALITY_DEFAULT }}</code>.
-	{% else %}
-		.
-	{% endif %}
-{% else %}
-  images will be returned in their original format.
-{% endif %}
-
-<h3>Default DPI</h3>
-If you do not specify a value for DPI,
-{% if settings.IMAGE_DPI_DEFAULT %}
-	images will be set to <code>{{ settings.IMAGE_DPI_DEFAULT }}</code> DPI.
-{% else %}
-	images will be returned with their DPI value unchanged.
-{% endif %}
-<p>PDF files will be converted to images at <code>{{ settings.PDF_BURST_DPI }}</code> DPI by default.</p>
-
-<h3>Default strip</h3>
-If you do not specify a value for strip, images will be 
-{% if settings.IMAGE_STRIP_DEFAULT %}
-	stripped of their comments and meta-data.
-{% else %}
-	returned with their comments and meta-data intact.
-{% endif %}
-
-<h3>Default colorspace</h3>
-If you do not specify an ICC profile or a value for colorspace, images will be returned
-{% if settings.IMAGE_COLORSPACE_DEFAULT %}
-	with a colorspace of <code>{{ settings.IMAGE_COLORSPACE_DEFAULT|upper }}</code>.
-{% else %}
-	with their colorspace unchanged.
-{% endif %}
 
 <h3>Available image formats</h3>
 The following image formats are available for you to use:

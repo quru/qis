@@ -226,13 +226,19 @@ def get_upload_directory(dir_index):
     return (dir_name, dir_path)
 
 
-def get_directory_listing(rel_path, include_folders=False, limit=0):
+def get_directory_listing(rel_path, include_folders=False, sort=0, start=0, limit=0):
     """
     Returns a DirectoryInfo object describing all files and (optionally) folders
     in the relative path supplied, where an image_path of "" or "/" is the root
-    of IMAGES_BASE_DIR. If a limit is supplied, the DirectoryInfo object's count
-    value will not exceed the limit (but some files or directories may be missing
-    from the returned list). The path does not have to exist.
+    of IMAGES_BASE_DIR. The path does not have to exist.
+
+    The sorting value can be 0 for no sorting, 1 for case sensitive,
+    or 2 for case insensitive sorting of the file/folder name.
+
+    If a start index (zero based) is supplied, the DirectoryInfo object's internal
+    list will start from this offset in the results. If a limit is supplied, the
+    number of results will be capped at this value and the caller can make another
+    call (with a different start index) to get the next page of results.
 
     Raises an OSError on error querying the underlying file system.
     Raises a SecurityError if the supplied relative path is outside IMAGES_BASE_DIR.
@@ -244,30 +250,45 @@ def get_directory_listing(rel_path, include_folders=False, limit=0):
         return DirectoryInfo(rel_path, exists=False)
     # Get a basic listing
     dir_items = os.listdir(abs_dir)
-    dir_items.sort()
+    if sort > 0:
+        dir_items = sorted(
+            dir_items,
+            key=(lambda s: s) if sort == 1 else (lambda s: s.lower())
+        )
     # Convert results into a DirectoryInfo object
-    res_count = 0
+    res_index = -1
+    res_total = 0
     dir_info = DirectoryInfo(os.path.sep if rel_path == '' else rel_path)
     for item_name in dir_items:
         if not item_name.startswith('.'):
             item_stat = os.stat(os.path.join(abs_dir, item_name))
             if include_folders or not stat.S_ISDIR(item_stat[stat.ST_MODE]):
+                # Filter matches so consider this a result
+                res_index += 1
+                # Have we reached the start index?
+                if res_index < start:
+                    continue
+                # Add the result
                 dir_info.add_entry(
                     item_name,
                     stat.S_ISDIR(item_stat[stat.ST_MODE]),
                     item_stat[stat.ST_SIZE],
                     item_stat[stat.ST_MTIME]
                 )
-                res_count += 1
-                if limit > 0 and res_count == limit:
+                # Have we reached the limit?
+                res_total += 1
+                if limit > 0 and res_total == limit:
                     break
     return dir_info
 
 
-def get_directory_subdirs(rel_path):
+def get_directory_subdirs(rel_path, sort=0):
     """
     Returns a list of sub-folder names in the given relative folder path.
     The path must exist. Sub-folder names beginning with '.' are excluded.
+
+    The sorting value can be 0 for no sorting, 1 for case sensitive,
+    or 2 for case insensitive.
 
     Raises a DoesNotExistError if the path does not exist.
     Raises a SecurityError if the requested path is outside IMAGES_BASE_DIR.
@@ -278,7 +299,11 @@ def get_directory_subdirs(rel_path):
         sf for sf in os.listdir(abs_dir)
         if not sf.startswith('.') and os.path.isdir(os.path.join(abs_dir, sf))
     ]
-    subdirs.sort()
+    if sort > 0:
+        subdirs = sorted(
+            subdirs,
+            key=(lambda s: s) if sort == 1 else (lambda s: s.lower())
+        )
     return subdirs
 
 
@@ -429,7 +454,7 @@ class DirectoryInfo(object):
     def __init__(self, name, contents_list=None, exists=True):
         self._name = name
         self._exists = exists
-        self._contents = [] if contents_list is None else contents_list
+        self._contents = contents_list or []
         self._content_size = sum(f['size'] for f in self._contents if not f['is_directory'])
 
     def name(self):
@@ -454,14 +479,15 @@ class DirectoryInfo(object):
 
     def size(self):
         """
-        Returns the total size of all files in this directory
-        (not including the size of any sub-directories)
+        Returns the total size of all files in this directory's content list
+        (not including the size of any sub-directories).
         """
         return self._content_size
 
     def count(self):
         """
-        Returns the number of files and sub-directories in this directory.
+        Returns the number of files and sub-directories in this directory's
+        content list.
         """
         return len(self._contents)
 
@@ -488,22 +514,19 @@ class DirectoryInfo(object):
 
     def contents(self):
         """
-        Returns a list of dictionaries describing all files and sub-directories
-        in this directory. Each dictionary contains entries as described for the
-        class constructor.
+        Returns the list of dictionaries as described for the class constructor
+        that have been added with add_entry().
         """
         return self._contents
 
     def files(self):
         """
-        Returns a list of dictionaries describing all files within this directory.
-        Each dictionary contains entries as described for the class constructor.
+        Returns just the files from the contents() list.
         """
         return [f for f in self._contents if not f['is_directory']]
 
     def directories(self):
         """
-        Returns a list of dictionaries describing all sub-directories within this directory.
-        Each dictionary contains entries as described for the class constructor.
+        Returns just the sub-directories from the contents() list.
         """
         return [d for d in self._contents if d['is_directory']]

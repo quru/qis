@@ -1,3 +1,129 @@
+# v2.4.0
+_Changes: Adds new grid/thumbnail view for browsing folders in the admin UI,
+new file/folder/cog icons, labels for the folder and image action menus,
+more consistent page layout_
+
+This version is the first release of v2.x and also becomes the new master
+branch in GitHub.
+
+TODO Update screenshots in README.md
+
+If upgrading from v1.x, see the [upgrading guide](upgrading.md).  
+If upgrading from v2.3:
+
+Update the Python and web code  
+Restart the Apache service
+
+# v2.3.0-dev
+_Breaking change: folder list API behaviour change_
+_Changes: Upgrade Flask to 0.12, faster performance for logged in users,
+sort files and folders case-insensitively in web interface, add forward/back
+navigation to the image details page, bug fix to full-screen image viewer
+positions on zoomed web pages on mobile, folder list API now supports paging_
+
+A new caching layer for user-session data has reduced the typical per-request
+time for small images from 9ms to 3ms, which is now in line with the performance
+for anonymous users.
+
+The `list` API no longer allows unlimited results with `limit=0`, and instead
+has a new `start` parameter to allow the retrieval of results as multiple pages.
+The `limit` parameter has a new maximum value of `1000`.
+
+Update the Python and web code  
+Update the Python dependencies  
+Restart the Apache service
+
+# v2.2.0-dev
+_Breaking change: remove default image settings, add a default image template_
+_Changes: bug fixes to the image publisher, updated Python libraries_
+
+This change removes the 6 `IMAGE_*_DEFAULT` system settings and replaces them
+with a default image template. The image generation logic is also changed such
+that there are now only 2 levels of image parameters (URL then template) instead
+of 3 (URL then template then system settings).
+
+If upgrading from v1, the `v2_upgrade` script will merge the old system settings
+into your templates for you. If upgrading v2 you will need to manually ensure that,
+where appropriate, your templates have values set for parameters that the old system
+settings used to provide.
+
+Update the Python and web code  
+Update the Python dependencies  
+Run (or re-run) the `v2_upgrade` script:
+
+	cd src/imageserver/scripts
+	sudo -u qis python v2_upgrade.py
+
+From `local_settings.py`, delete the settings `IMAGE_FORMAT_DEFAULT`,
+`IMAGE_QUALITY_DEFAULT`, `IMAGE_COLORSPACE_DEFAULT`, `IMAGE_DPI_DEFAULT`,
+`IMAGE_STRIP_DEFAULT`, `IMAGE_EXPIRY_TIME_DEFAULT` (if present).
+
+These changes implement phase 1 of the discussion at: 
+[v2/Default-templates.txt](./v2/Default-templates.txt).
+
+# v2.1.1-dev
+_Changes: Merge from v1.50 - qismagick.so v2.0 upgrade to better support
+SVG and digital camera RAW files_
+
+# v2.1.0-dev
+_Changes: change template storage JSON format_
+
+Templates created since 2.0.1-dev will need to be re-created or re-imported
+with `v2_upgrade.py`.
+
+# v2.0.7-dev
+_Changes: Merge from v1.41 - updated qismagick.so to flatten XCF/PSD files_
+
+# v2.0.6-dev
+_Changes: Merge from v1.40 - REST API bug fixes and improvements_
+
+# v2.0.5-dev
+_Changes: Merge from v1.35 - bug fix to make usernames case insensitive_
+
+If upgrading an existing installation, see the notes for v1.35.
+No SQLAlchemy upgrade is required for the v2 branch.
+
+# v2.0.4-dev
+_Changes: Merge from v1.34 - recache=1 and cache=0 are no longer public,
+add html5 responsive image tags to publisher output_
+
+# v2.0.3-dev
+_Changes: Adds image template administration pages_
+
+# v2.0.2-dev
+_Changes: new APIs for administration of image templates_
+
+# v2.0.1-dev
+_Breaking change: move image templates into the database_
+
+This release requires Postgres 9.2 or above.
+
+Update the Python and web code  
+Update the Python dependencies  
+Import the existing image templates into the database:
+
+	cd src/imageserver/scripts
+	sudo -u qis python v2_upgrade.py
+
+From `local_settings.py`, delete the setting `TEMPLATES_BASE_DIR` (if present)
+
+The API `/api/v1/admin/templates/[template name]/` now takes a template ID
+instead of name, and returns the complete template object (with `name` and
+`description` fields) instead of just the raw template value. Backwards
+compatibility is not being maintained. There will soon be new API functions
+for listing, creating, updating and deleting templates.
+
+# v2.0.0-dev
+_Changes: upgrade SQLAlchemy to v1, upgrade internal database models_
+
+Stop the Apache service  
+Update the Python and web code  
+Update the Python dependencies  
+Restart the Memcached service  
+Optional: drop the `cachectl` table (note v2_upgrade.py will do this for you)
+Start the Apache service
+
+
 # v1.51
 _Changes: Modernised Docker deployment, a few bug fixes_
 

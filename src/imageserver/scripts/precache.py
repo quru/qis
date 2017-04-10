@@ -233,7 +233,7 @@ def validate_params(start_dir, file_specs, templates):
         return RETURN_BAD_PARAMS
 
     # Validate template names
-    available_templates = app.image_engine.get_template_names()
+    available_templates = app.image_engine.get_template_names(lowercase=True)
     for t in templates:
         if t not in available_templates:
             error(

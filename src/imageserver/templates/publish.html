@@ -1,20 +1,6 @@
 {% if embed %}{% extends "base_blank_js.html" %}{% else %}{% extends "base.html" %}{% endif %}
 
-{# Outputs the HTML form element for an image parameter,
-   where 'key' is an ImageAttrs field name. #}
-{% macro input(key, default="", placeholder="") %}
-	{% set validator = fields[key][0] %}
-	{% set web_name = fields[key][1] %}
-	{% set typename = validator.__class__.__name__ %}
-	{% include ["publish/input_%s.html" % key,
-	            "publish/input_%s.html" % typename,
-	            "publish/input_default.html"] %}
-{% endmacro %}
-
-{# Outputs the HTML for a help icon. #}
-{% macro help(anchor, classes="") %}
-	<img src="{{ url_for('static', filename='images/icon-help.png') }}" class="clickable help {{ classes }}" data-anchor="{{ anchor }}" />
-{% endmacro %}
+{% from "publish/inc_field_macros.html" import input, help with context %}
 
 {% block copyright %}
 <!-- 
@@ -31,6 +17,7 @@
 	Notable modifications:
 	Date       By    Details
 	=========  ====  ============================================================
+	31Aug2016  Matt  v2.2 Replaced server defaults with default template
 -->
 {% endblock %}
 
@@ -46,48 +33,25 @@
 			max_width: {{ image_info.width|default('0') }},
 			max_height: {{ image_info.height|default('0') }},
 			
-			default_format: '{{ settings.IMAGE_FORMAT_DEFAULT|lower }}',
-			default_quality: {{ settings.IMAGE_QUALITY_DEFAULT }},
-			default_colorspace: '{{ settings.IMAGE_COLORSPACE_DEFAULT|lower }}',
-			default_dpi: {{ settings.IMAGE_DPI_DEFAULT }},
-			default_strip: {{ settings.IMAGE_STRIP_DEFAULT|lower }},
 			default_print_dpi: 600,
+			default_template_id: {{ default_template.id }},
 			
 			external_server_url: '{{ external_url_for('index') }}',
 			external_image_url: '{{ external_url_for('image') }}',
 			external_static_url: '{{ external_url_for('static', filename='') }}',
 			help_url: '{{ url_for('image_help', embed=1) }}',
-			template_api_url: '{{ url_for('api.admin.template', template_name='') }}',
+			template_api_url: '{{ url_for('api.admin.template', template_id=0) }}',
 			warn_icon_url: '{{ url_for('static', filename='images/icon-warning.png') }}'
 		};
-		
+
 		// UI text for the Publisher JS
 		var PublisherText = {
 			// Templates
 			'loading': 'Loading details...',
-			'empty': 'Empty template',
-			'format': 'File format',
-			'align_h': 'Horizontal align',
-			'align_v': 'Vertical align',
-			'top': 'Cropping top',
-			'left': 'Cropping left',
-			'bottom': 'Cropping bottom',
-			'right': 'Cropping right',
-			'crop_fit': 'Cropping minimise padding',
-			'size_fit': 'Prevent padding',
-			'overlay_src': 'Overlay image',
-			'overlay_pos': 'Overlay position',
-			'overlay_size': 'Overlay size',
-			'overlay_opacity': 'Overlay opacity',
-			'icc_profile': 'Colour profile',
-			'icc_intent': 'Colour profile intent',
-			'icc_bpc': 'Black point compensation',
-			'colorspace': 'Colour model',
-			'dpi_x': 'DPI x',
-			'dpi_y': 'DPI y',
-			'expiry_secs': 'Browser cache time (seconds)',
-			'attachment': 'Download instead of display',
-			'record_stats': 'Count in statistics',
+			'loading_failed': 'Failed to load template details',
+			'template_labels': 'Template values are shown below with red labels',
+			'default_template_labels': 'Default values are shown below with red labels',
+			'reset_changes': 'Undo your changes',
 			// Warnings
 			'warn_size': 'The image will not be enlarged beyond its original size',
 			'warn_colorspace': 'Not all file formats support non-RGB colour',
@@ -102,9 +66,11 @@
 	<script src="{{ url_for('static', filename='js/lib/highlight.pack.js') }}" type="text/javascript"></script>
 	{% if settings.DEBUG %}
 	<script src="{{ url_for('static', filename='js/lib/lassocrop.js') }}" type="text/javascript"></script>
+	<script src="{{ url_for('static', filename='js/preview_popup.js') }}" type="text/javascript"></script>
 	<script src="{{ url_for('static', filename='js/publish.js') }}" type="text/javascript"></script>
 	{% else %}
 	<script src="{{ url_for('static', filename='js/lib/lassocrop_yc.js') }}" type="text/javascript"></script>
+	<script src="{{ url_for('static', filename='js/preview_popup_yc.js') }}" type="text/javascript"></script>
 	<script src="{{ url_for('static', filename='js/publish_yc.js') }}" type="text/javascript"></script>
 	{% endif%}
 {% endblock %}
@@ -119,275 +85,20 @@
 	
 	<div class="publisher">
 		<h2>Publish image {% if not embed %}<span>(<a href="{{ url_for('details', src=src) }}">back to image details</a>)</span>{% endif %}</h2>
-		
+
 		<div class="column">
 			<h3>Template</h3>
-			<form>
-				<fieldset class="subtlebg">
-					<div>
-						<label>Base on template:</label>
-						{{ input('template') }}
-						{{ help('option_tmp') }}
-					</div>
-					<div id="template_fields">
-					</div>
-				</fieldset>
-			</form>
+			<fieldset class="subtlebg">
+				<div>
+					<label>Base on template:</label>
+					{{ input(fields, field_values, 'template') }}   {# Note that input_template.html requires {{ template_list }} #}
+					{{ help('option_tmp') }}
+				</div>
+				<div id="template_fields" class="tall">
+				</div>
+			</fieldset>
 
-			<h3>Page</h3>
-			<form>
-				<fieldset class="subtlebg">
-					<div>
-						<label>Page number:</label>
-						{{ input('page', '1') }}
-						{{ help('option_page') }}
-					</div>
-				</fieldset>
-			</form>
-
-			<h3>Size</h3>
-			<form>
-				<fieldset class="subtlebg">
-					<div>
-						<label>Sizing units:</label>
-						<select id="sizing_units" autocomplete="off">
-							<option value="px">Pixels</option>
-							<option value="mm">Millimetres</option>
-							<option value="in">Inches</option>
-						</select>
-					</div>
-					<div id="group_width">
-						<label>Width:</label>
-						{{ input('width') }}
-						{{ help('option_width') }}
-						<span class="field_default">
-							{% if image_info.width %}Original: {{ image_info.width }} pixels{% endif %}
-						</span>
-					</div>
-					<div id="group_height">
-						<label>Height:</label>
-						{{ input('height') }}
-						{{ help('option_height', 'hidden') }}
-						<span class="field_default">
-							{% if image_info.height %}Original: {{ image_info.height }} pixels{% endif %}
-						</span>
-					</div>
-					<div>
-						<label>DPI:</label>
-						{{ input('dpi_x') }}
-						{{ help('option_dpi') }}
-						<span class="field_default">
-							Server default: {{ settings.IMAGE_DPI_DEFAULT|default('keep original', True) }}
-						</span>
-					</div>
-				</fieldset>
-			</form>
-
-			<h3>Padding</h3>
-			<form>
-				<fieldset class="subtlebg">
-					<div>
-						<label>Prevent padding:</label>
-						{{ input('size_fit') }}
-						{{ help('option_autosizefit') }}
-					</div>
-					<div id="group_fill">
-						<label>Padding colour:</label>
-						{{ input('fill', '#ffffff') }}  {{ help('option_fill') }}<br>
-						<label></label>
-						<input type="checkbox" name="autofill" id="publish_field_autofill"
-						       class="publish_field" value="auto" autocomplete="off">
-						       <label for="publish_field_autofill">auto</label><br>
-						<label></label>
-						<input type="checkbox" name="transfill" id="publish_field_transfill"
-						       class="publish_field" value="none" autocomplete="off">
-						       <label for="publish_field_transfill">transparent</label>
-					</div>
-					<div>
-						<label>Image position:</label>
-						{{ input("align_h") }}
-						{{ help('option_halign') }}
-					</div>
-					<div>
-						<label></label>
-						{{ input("align_v") }}
-					</div>
-				</fieldset>
-			</form>
-
-			<h3>Image processing</h3>
-			<form>
-				<fieldset class="subtlebg">
-					<div>
-						<label>Flip image:</label>
-						{{ input('flip') }}
-						{{ help('option_flip') }}
-					</div>
-					<div>
-						<label>Rotate image:</label>
-						{{ input("rotation") }}
-						{{ help('option_angle') }}
-					</div>
-					<div>
-						<label>Sharpen / blur:</label>
-						{{ input("sharpen") }}
-						{{ help('option_sharpen') }}
-					</div>
-				</fieldset>
-			</form>
-			
-			<h3>Cropping</h3>
-			<div class="crop_container">
-				<img id="crop_image" src="{{ url_for('image', src=src, width=320, height=320, format='png', colorspace='srgb', autosizefit=1, stats=0) }}" />
-			</div>
-			<form>
-				<fieldset class="subtlebg">
-					<div>
-						<label>Current aspect ratio:</label>
-						<span id="crop_aspect">&ndash;</span>
-					</div>
-					<div>
-						<label>Fix aspect ratio:</label>
-						<select id="crop_fix_aspect" autocomplete="off">
-							<option value="">None</option>
-							<option value="1:1">1:1 (square)</option>
-							<option value="4:3">4:3 (landscape)</option>
-							<option value="3:4">3:4 (portrait)</option>
-							<option value="16:9">16:9 (landscape)</option>
-							<option value="9:16">9:16 (portrait)</option>
-						</select>
-					</div>
-					<div>
-						<label>Left:</label>
-						{{ input('left') }}
-						{{ help('option_top') }}
-					</div>
-					<div>
-						<label>Top:</label>
-						{{ input('top') }}
-					</div>
-					<div>
-						<label>Right:</label>
-						{{ input('right') }}
-					</div>
-					<div>
-						<label>Bottom:</label>
-						{{ input('bottom') }}
-					</div>
-					<div>
-						<label>Minimise padding:</label>
-						{{ input('crop_fit') }}
-						{{ help('option_autocropfit') }}
-					</div>
-				</fieldset>
-			</form>
-			
-			<h3>Overlay / Watermark</h3>
-			<form>
-				<fieldset class="subtlebg">
-					<div>
-						<label>Overlay image:</label>
-						<button id="overlay_src_browse"
-						        data-browse-url="{{ url_for('folder_browse', path=path, embed=1, show_files=1, msg='Select the overlay image file:') }}"
-						        >Browse...</button>
-						{{ help('option_overlay') }}<br>
-						<label></label>
-						{{ input('overlay_src', '', '/path/to/your-image.jpg') }}
-					</div>
-					<div>
-						<label>Relative size:</label>
-						{{ input("overlay_size") }}
-						{{ help('option_ovsize') }}
-					</div>
-					<div>
-						<label>Position:</label>
-						{{ input("overlay_pos") }}
-						{{ help('option_ovpos') }}
-					</div>
-					<div>
-						<label>Opacity:</label>
-						{{ input("overlay_opacity") }}
-						{{ help('option_ovopacity') }}
-					</div>
-				</fieldset>
-			</form>
-
-			<h3>Colour processing</h3>
-			<form>
-				<fieldset class="subtlebg">
-					<div id="group_icc">
-						<label>Colour profile:</label>
-						{{ input("icc_profile") }}
-						{{ help('option_icc') }}
-					</div>
-					<div>
-						<label>Intent:</label>
-						{{ input("icc_intent") }}
-						{{ help('option_intent') }}
-					</div>
-					<div>
-						<label>Black point compensation:</label>
-						{{ input("icc_bpc") }}
-						{{ help('option_bpc') }}
-					</div>
-				</fieldset>
-			</form>
-
-			<h3>File options</h3>
-			<form>
-				<fieldset class="subtlebg">
-					<div id="group_strip">
-						<label>Strip meta-data:</label>
-						{{ input("strip", settings.IMAGE_STRIP_DEFAULT) }}
-						{{ help('option_strip') }}
-						<span class="field_default">
-							Server default: {{ settings.IMAGE_STRIP_DEFAULT|lower }}
-						</span>
-					</div>
-					<div>
-						<label>File format:</label>
-						{{ input("format") }}
-						{{ help('option_format') }}
-						<span class="field_default">
-							Server default: {{ settings.IMAGE_FORMAT_DEFAULT|default('keep original', True) }}
-						</span>
-					</div>
-					<div>
-						<label>JPG quality /<br/>PNG compression:</label>
-						{{ input("quality") }}
-						{{ help('option_quality') }}
-						<span class="field_default">
-							Server default: {{ settings.IMAGE_QUALITY_DEFAULT }}
-						</span>
-					</div>
-					<div id="group_colorspace">
-						<label>Colour model:</label>
-						{{ input("colorspace") }}
-						{{ help('option_colorspace') }}
-						<span class="field_default">
-							Server default: {{ settings.IMAGE_COLORSPACE_DEFAULT|default('keep original', True) }}
-						</span>
-					</div>
-				</fieldset>
-			</form>
-			
-			<h3>Browser handling options</h3>
-			<form>
-				<fieldset class="subtlebg">
-					<div>
-						<label>Download file instead of displaying image:</label>
-						<input type="checkbox" name="attach" id="publish_field_attach" class="publish_field"
-						       value="1" autocomplete="off">
-						{{ help('option_attach') }}
-					</div>
-					<div>
-						<label>Count requests in server statistics:</label>
-						<input type="checkbox" name="stats" id="publish_field_stats" class="publish_field"
-						       value="1" checked="checked" autocomplete="off">
-						{{ help('option_stats') }}
-					</div>
-				</fieldset>
-			</form>
+			{% include "publish/inc_common_fields.html" %}
 		</div>
 
 		<div class="column sticky">
@@ -398,34 +109,32 @@
 				<img id="preview_image" src="{{ url_for('image', src=src, width=320, height=320, format='png', colorspace='srgb', autosizefit=1, stats=0) }}" />
 			</div>
 			<div class="clear"></div>
-			
+
 			<h3>Publish</h3>
-			<form>
-				<fieldset class="subtlebg">
-					<div>
-						<label>Publish to file:</label>
-						<button id="publish_download" data-url="">Download final image</button>
-					</div>
-					<div>
-						<label>Publish to web:</label>
-						<select id="publish_type">
-							<option value="plain">Plain image URL</option>
-							<option value="img_tag">HTML image tag, static</option>
-							<option value="img_srcset_tag">HTML5 image tag, responsive</option>
-							<option value="picture_tag">HTML5 picture tag, responsive</option>
-							<option value="img_tag_zoom">HTML image tag, click to launch zoom</option>
-							<option value="img_tag_gallery">HTML image tag, click to launch gallery</option>
-							<option value="canvas_zoom">Embedded zoomable image</option>
-						</select>
-					</div>
-					<pre><code id="publish_output"></code></pre>
-				</fieldset>
-			</form>			
+			<fieldset class="subtlebg">
+				<div>
+					<label>Publish to file:</label>
+					<button id="publish_download" data-url="">Download final image</button>
+				</div>
+				<div>
+					<label>Publish to web:</label>
+					<select id="publish_type">
+						<option value="plain">Plain image URL</option>
+						<option value="img_tag">HTML image tag, static</option>
+						<option value="img_srcset_tag">HTML5 image tag, responsive</option>
+						<option value="picture_tag">HTML5 picture tag, responsive</option>
+						<option value="img_tag_zoom">HTML image tag, click to launch zoom</option>
+						<option value="img_tag_gallery">HTML image tag, click to launch gallery</option>
+						<option value="canvas_zoom">Embedded zoomable image</option>
+					</select>
+				</div>
+				<pre><code id="publish_output"></code></pre>
+			</fieldset>
 		</div>
-		
+
 		<div class="clear"></div>
 		{% include "inc_preview_popup.html" %}
-		
+
 		{# These are hidden until required by publish.js #}
 		<div class="output_templates">
 			<div id="output_template_plain">{% include "publish/output_plain.html" %}</div>

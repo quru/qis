@@ -112,12 +112,13 @@ Web interface - image publisher
 QIS depends on the following open source tools and applications:
 
 * Linux operating system
-* Python 2.x - to run the QIS application code
+* Python 2.6 or 2.7 - to run the QIS application code
 * Apache 2.2 or 2.4 - the web server
 * mod_wsgi Apache module - to run the QIS Python application inside Apache
 * ImageMagick - to provide the image processing capabilities
 * Memcached - for caching generated images and frequently accessed data
-* PostgreSQL - to store image and folder data, users, groups, and permissions
+* PostgreSQL 9.2 or above - to store image and folder data, users, groups,
+  statistics and permissions
 
 For how these should be installed and configured,
 see the [install guide](doc/install.md) and the [tuning guide](doc/tuning.md).
@@ -190,15 +191,15 @@ To see the default values and other settings you can override, see the
 You will need to [request a copy of the `qismagick` package](#qismagick.so)
 for your development platform, and install it:
 
-	$ pip install qismagick-1.41.0-cp27-none-macosx_10_10_intel.whl
+	$ pip install qismagick-2.1.0-cp27-none-macosx_10_12_intel.whl
 
 Then run the server in development mode with:
 
 	$ python src/runserver.py
-	2015-08-28 10:41:06,942 qis_10369  INFO     Quru Image Server v1.33 engine startup
-	2015-08-28 10:41:06,944 qis_10369  INFO     Using settings base_settings + local_settings.py
+	2017-03-06 16:11:39,932 qis_37720  INFO     Quru Image Server v2.4.0 engine startup
+	2017-03-06 16:11:39,934 qis_37720  INFO     Using settings base_settings + local_settings.py
 	...
-	Running on http://127.0.0.1:5000/ (Press CTRL+C to quit)
+	 * Running on http://127.0.0.1:5000/ (Press CTRL+C to quit)
 
 On first run, the required database tables and default data will be created
 automatically. Watch the output for the creation of the `admin` user account,
@@ -207,7 +208,7 @@ in `logs/qis.log` instead.
 
 To run QIS in production, you will need files:
 
-* `Quru Image Server-1.xx.tar.gz` - the main QIS Python web application
+* `Quru Image Server-2.xx.tar.gz` - the main QIS Python web application
 * `dependencies.tar.gz` - the application's Python dependencies,
   including compiled C extensions as platform-specific binaries
 * and unless your `dependencies.tar.gz` was supplied by Quru, you will also
@@ -222,43 +223,64 @@ To generate these from the development project:
 	$ ./package_deps.sh python2.7
 	$ ls -l dist/
 	...
-	-rw-r--r--  1 matt  staff  27441170 28 Aug 11:19 Quru Image Server-1.33.tar.gz
+	-rw-r--r--  1 matt  staff  27441170 28 Aug 11:19 Quru Image Server-2.40.tar.gz
 	-rw-r--r--  1 matt  staff   5064883 28 Aug 11:19 dependencies.tar.gz
 
 With these files prepared you should then follow the [install guide](doc/install.md).
 
-QIS has been tested running inside Docker containers, see the
-[Docker notes](deploy/docker/readme_docker.md).  
-QIS has also been deployed on single-server and multi-server load balanced
-configurations at Amazon Web Services.  
-For help in deploying QIS as Docker containers or on AWS, contact Quru at
-info@quru.com - we have experience of such deployments and can save you time.
+### Running in Docker
+
+For a much simpler deployment, QIS can be deployed on Docker. There is a `docker-compose`
+script that will set up and run almost everything for you. The only extra setup required
+is a volume on the host in which to store the persistent data, and a couple of
+environment variables.
+
+See the [docker-compose](deploy/docker/docker-compose.yml) script and the
+[application server image notes](deploy/docker/qis-as/README.md) for more information.
+
+## Version 2
+
+QIS version 2 brings these new features:
+
+* Image templates are now stored in the database and managed from the web
+  interface inside QIS
+* Default image values (format, compression, EXIF stripping, etc) are now
+  defined in a default image template, and can be changed from the web
+  interface inside QIS
+* Any image parameter can now have a default value (in the default template)
+* Simpler override rules for image parameters
+* REST API improvements, including programmatic template management
+* Improvements to SVG file support
+* Built-in support for RAW digital camera image formats
+* Faster image serving for logged-in users (and authenticated API callers)
+* Bug fixes to the image publisher
+* Web interface improvements
+  * New grid / thumbnail browse view
+  * New icons and a more consistent page layout
+  * New next/previous image navigation
+  * The order of files and folders in the web interface is no longer case sensitive
+
+While still on the to-do list for version 2 is:
+
+* Improve the image generation architecture for more consistent performance under load
+* Optional long image URL to tiny URL conversion
+  * New checkbox in the image publisher
+  * Add to REST API
+  * Tiny URL admin pages in the web interface
+
+An upgrade script is provided to migrate v1 installations to v2, including the
+import of image templates from flat files into the database. For more information
+on how to upgrade, see the [upgrading guide](./docs/upgrading.md).
 
 ## Roadmap
 
-QIS version 1 is receiving bug fixes but no significant new features while we
-start to develop new functionality for version 2:
-
-* Store image templates in the database instead of flat files
-* Enforce a default image template
-  * Globally (to replace the `IMAGE_*_DEFAULT` settings)
-  * By user group?
-  * By folder?
-  * For single images?
-* Prevent certain image attributes (width, height, overlay) from being overridden
-* REST API improvements
-* Image search
-* Web interface improvements
-  * Add a grid / thumbnail browse view
-  * Search and results
-  * Freshen up the UI
-* Ship with support for RAW camera images by default
-
-Also under consideration:
+Under consideration for future versions:
 
 * Convert the code base to Python 3
+* Prevent certain image attributes (width, height, overlay) from being overridden
+* Image search and results
 * Modernise the public JavaScript APIs / viewers
-  * Use HTML5 `data-` attributes for code-free initialisation
+  * Use HTML5 `data-` attributes for automatic initialisation
   * Remove dependencies on the MooTools library (moving to vanilla JS, not jQuery!)
   * Reduce the number of included files
 * Image tags
@@ -267,13 +289,17 @@ Also under consideration:
   * Tagging a zone or location on an image
   * Searching by tag
 * Image folios
-  * A "basket" of selected images
-  * Short URL to view the images (gallery viewer integration?)
+  * A "basket" or virtual folder of selected images
+  * Short URL to view the images (gallery viewer integration)
   * Download all as a zip
   * Special access controls, e.g. guest access?
 * The ability to use an object store (e.g. Amazon S3) for back-end image storage
 * New imaging operations
   * Automatic crop to target dimensions
-  * Generate image frames from video files
+  * Generate image frames from video files (like Gifify)
   * Enhanced EXIF / XMP support e.g. to set copyright text
+  * Automatic file size optimisation (like PNG Crush)
+* Support for new image formats
+  * BPG, JPEG XR, WEBP
+  * Wide colour / Display P3 profiles
 * Social media integration (Instagram, Flickr, Pinterest, ...)

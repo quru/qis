@@ -28,19 +28,19 @@
 		(<a class="popuplink" href="{{ url_for('admin.group_edit', group_id=0, embed=1) }}">add a new group</a>)
 		{% endif %}
 	</div>
-	<br/>
-	<table summary="Listing of {{ page_heading }}">
-	
+
+	<table class="list_table" summary="Listing of {{ page_heading }}">
+
 		{% set row_class = cycler('even', 'odd') %}
 		<tr class="{{ row_class.next() }} header">
 			<td>Name</td>
 			<td>Description</td>
 			<td>Action</td>
 		</tr>
-	
+
 		{% for group in groups %}
 		{% set edit_url = url_for('admin.group_edit', group_id=group.id, embed=1) %}
-		
+
 		<tr class="{{ row_class.next() }}">
 			<td><a class="popuplink" href="{{ edit_url }}">{{ group.name }}</a></td>
 			<td><a class="popuplink" href="{{ edit_url }}">{{ group.description }}</a></td>

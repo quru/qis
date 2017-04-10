@@ -33,10 +33,10 @@ __uri__ = "https://quru.com/qis/"
 __source_uri__ = "https://github.com/quru/qis"
 __platforms__ = ["Linux", "Unix", "Mac OSX"]
 
-__version__ = "1.51"
+__version__ = "2.4.0-dev"
 
 __author__ = "Quru Ltd"
 __email__ = "info@quru.com"
 
 __license__ = "GNU Affero General Public License"
-__copyright__ = u"Copyright \xa9 2011 - 2016 Quru Ltd"
+__copyright__ = u"Copyright \xa9 2011 - 2017 Quru Ltd"

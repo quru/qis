@@ -241,7 +241,7 @@ Machine and software spec:
 * ImageMagick 6.8.8-10 Q16 x86_64
 * Memcached 1.4.34
 * PostgreSQL 9.5.2
-* QIS v1.51
+* QIS v2.40
 
 Setup (folder permissions):
 
@@ -260,68 +260,68 @@ Setup (every time):
 Default test:
 
 	$ python src/imageserver/scripts/bench.py http://localhost:5000/ 1000 90 1
-	LOG   36104 - Checking connectivity to http://localhost:5000/
-	LOG   36104 - Building request list
-	LOG   36104 - Pre-warming the image cache
-	LOG   36104 - Creating clients, running tests
-	LOG   36104 - Complete
+	LOG   36477 - Checking connectivity to http://localhost:5000/
+	LOG   36477 - Building request list
+	LOG   36477 - Pre-warming the image cache
+	LOG   36477 - Creating clients, running tests
+	LOG   36477 - Complete
 	
 	Results
 	=======
 	1000 successful requests, 0 errors.
-	Run time 45.808848 seconds = 21.829844 requests/sec.
+	Run time 44.987094 seconds = 22.228597 requests/sec.
 	
-	Average response 0.045684 seconds
+	Average response 0.044842 seconds
 	  * 189 non-cached responses
-	      * Average app time 0.222641 seconds
-	      * Average response 0.225118 seconds
-	      * Worst response 1.308964 seconds
+	      * Average app time 0.217741 seconds
+	      * Average response 0.220187 seconds
+	      * Worst response 1.308162 seconds
 	  * 811 cached responses
-	      * Average app time 0.001485 seconds
-	      * Average response 0.003868 seconds
-	      * Worst response 0.025992 seconds
+	      * Average app time 0.001573 seconds
+	      * Average response 0.003978 seconds
+	      * Worst response 0.014360 seconds
 
 All cached test:
 
 	$ python src/imageserver/scripts/bench.py http://localhost:5000/ 1000 100 1
-	LOG   36182 - Checking connectivity to http://localhost:5000/
-	LOG   36182 - Building request list
-	LOG   36182 - Pre-warming the image cache
-	LOG   36182 - Creating clients, running tests
-	LOG   36182 - Complete
+	LOG   36572 - Checking connectivity to http://localhost:5000/
+	LOG   36572 - Building request list
+	LOG   36572 - Pre-warming the image cache
+	LOG   36572 - Creating clients, running tests
+	LOG   36572 - Complete
 	
 	Results
 	=======
 	1000 successful requests, 0 errors.
-	Run time 3.967191 seconds = 252.067522 requests/sec.
+	Run time 4.174397 seconds = 239.555558 requests/sec.
 	
-	Average response 0.003850 seconds
+	Average response 0.004039 seconds
 	  * 98 non-cached responses
-	      * Average app time 0.002953 seconds
-	      * Average response 0.005257 seconds
-	      * Worst response 0.010037 seconds
+	      * Average app time 0.003053 seconds
+	      * Average response 0.005385 seconds
+	      * Worst response 0.008140 seconds
 	  * 902 cached responses
-	      * Average app time 0.001408 seconds
-	      * Average response 0.003697 seconds
-	      * Worst response 0.005711 seconds
+	      * Average app time 0.001547 seconds
+	      * Average response 0.003893 seconds
+	      * Worst response 0.006872 seconds
 
 Heavy processing test:
 
 	$ python src/imageserver/scripts/bench.py http://localhost:5000/ 100 0 1
-	LOG   36214 - Checking connectivity to http://localhost:5000/
-	LOG   36214 - Building request list
-	LOG   36214 - NOTE! You need to manually clear your image cache if you have previously run these tests.
-	LOG   36214 - Creating clients, running tests
-	LOG   36214 - Complete
+	LOG   36607 - Checking connectivity to http://localhost:5000/
+	LOG   36607 - Building request list
+	LOG   36607 - NOTE! You need to manually clear your image cache if you have previously run these tests.
+	LOG   36607 - Creating clients, running tests
+	LOG   36607 - Complete
 	
 	Results
 	=======
 	100 successful requests, 0 errors.
-	Run time 38.494178 seconds = 2.597795 requests/sec.
+	Run time 38.117027 seconds = 2.623499 requests/sec.
 	
-	Average response 0.384053 seconds
+	Average response 0.380507 seconds
 	  * 100 non-cached responses
-	      * Average app time 0.381463 seconds
-	      * Average response 0.384053 seconds
-	      * Worst response 0.927990 seconds
+	      * Average app time 0.377900 seconds
+	      * Average response 0.380507 seconds
+	      * Worst response 0.957323 seconds
 	  * 0 from cache

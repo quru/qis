@@ -28,14 +28,15 @@
 # Date       By    Details
 # =========  ====  ============================================================
 # 25 Nov 14  Matt  v1.17 Standardise ImageAttrs pre-processing and validation
-# 27 Feb 15  Matt  #532 Auto-reload templates
+# 27 Feb 15  Matt  #532 Auto-reload template files
+# 22 Sep 15  Matt  v2 Templates are now loaded from the database
+# 25 Aug 16  Matt  v2.2 Replace fall-back image parameters with a default template
 #
 
 # TODO Can we make base image detection more intelligent to work with cropped images?
 #      Currently auto-pyramid for cropped images has no effect.
 
 import copy
-import ConfigParser
 import glob
 import os
 import threading
@@ -54,8 +55,8 @@ from imagemagick import imagemagick_init
 from imagemagick import imagemagick_adjust_image, imagemagick_get_image_profile_data
 from imagemagick import imagemagick_get_image_dimensions, imagemagick_get_version_info
 from models import FolderPermission, Image, ImageHistory, Task
-from template_attrs import TemplateAttrs
-from util import default_value, get_file_extension, parse_colour
+from template_manager import ImageTemplateManager
+from util import default_value, get_file_extension
 from util import filepath_filename, validate_filename
 
 
@@ -64,7 +65,9 @@ class ImageManager(object):
     Provides image management and image retrieval functions backed by a cache
     """
     IMAGE_ERROR_HEADER = '*ERROR*'
-    TEMPLATE_CHECK_SECONDS = 60 * 5
+    DEFAULT_EXPIRY_SECS = 60 * 60 * 24 * 7
+    DEFAULT_QUALITY_JPG = 80  # Err on the high quality side
+    DEFAULT_QUALITY_PNG = 79  # 79 for complex images / 31 for simple images
 
     def __init__(self, data_manager, cache_manager, task_manager,
                  permissions_manager, settings, logger):
@@ -74,12 +77,9 @@ class ImageManager(object):
         self._permissions = permissions_manager
         self._settings = settings
         self._logger = logger
+        self._templates = ImageTemplateManager(data_manager, logger)
         self.__icc_profiles = None
         self._icc_load_lock = threading.Lock()
-        self.__templates = None
-        self.__templates_mtime = 0
-        self.__templates_ctime = 0
-        self._templates_load_lock = threading.Lock()
         # Load C back-end
         imagemagick_init(
             settings['GHOSTSCRIPT_PATH'],
@@ -91,45 +91,75 @@ class ImageManager(object):
     def finalise_image_attrs(self, image_attrs):
         """
         For the given image attributes object, applies template values
-        (if a template is defined), applies default image attributes,
-        normalises the resulting object, and validates it to ensure it is
-        ready for use.
+        (or the default template), normalises the resulting object,
+        and validates it to ensure it is ready for use.
 
         This function should usually be called before requesting an image
         so that global settings and standard parameter behaviours are enforced.
 
-        Raises a ValueError if the finalised image attributes fail validation.
+        Returns image_attrs, or raises a ValueError if the finalised image
+        attributes fail validation.
         """
-        # Validate first so we can validate the template value before using it
+        original_quality = image_attrs.quality()
+        # Validate first so that we check the template value before using it
         image_attrs.validate()
-        # Apply template values if required, using override False
-        # so that web params take precedence over template.
-        if image_attrs.template():
-            self._poll_reload_templates()  # #532 Auto-reload image templates
-            self._apply_template(image_attrs.template(), image_attrs, False)
-        # Apply system default values for anything still not set
-        self._apply_defaults(image_attrs)
-        # Lastly wipe any redundant values so we get more consistent cache keys
+        # Apply template values, using override False so that web params take
+        # precedence over template values. Not validating here saves a bit of time
+        # but assumes that the template values are already valid. This should be
+        # true as templates are validated elsewhere on load and before save.
+        template_attrs = self.get_image_template(image_attrs)
+        image_attrs.apply_dict(
+            template_attrs.get_values_dict(), False, False, False
+        )
+        # Clear any redundant values so that we get consistent cache keys
         image_attrs.normalise_values()
+        # v2.2 QIS v1 had a bit of logic that said "if you request an image with no
+        # pixel changes and no explicit quality parameter, do not re-encode the unchanged
+        # image with the default quality setting, just return the original image file."
+        # The following few lines implement this in v2.
+        # Just delete this bit if the old behaviour is unwanted (and fix the unit tests).
+        if not original_quality and not image_attrs.template():
+            prev_quality = image_attrs._quality        # Note: not the same as original_quality
+            image_attrs._quality = None                # Wipe the quality setting, then
+            if image_attrs.attributes_change_image():  # if sans-quality the image still changes,
+                image_attrs._quality = prev_quality    # restore the quality setting
+        return image_attrs
 
-    def get_template_names(self):
+    def get_template_list(self):
         """
-        Returns a list of available template names - those names that
-        are valid for use in the 'template' attribute of an ImageAttrs object.
+        Returns a list of available template information as
+        {id, name, description, is_default} dictionaries.
         """
-        return self._templates.keys()
+        return self._templates.get_template_list()
+
+    def get_template_names(self, lowercase=False):
+        """
+        Returns a list of available template names - those names that are valid
+        for calling get_template() or in the 'template' attribute of an ImageAttrs object.
+        """
+        return self._templates.get_template_names(lowercase)
 
     def get_template(self, template_name):
         """
-        Returns the TemplateAttrs object for the template name,
-        or raises a KeyError if the template name does not exist.
+        Returns the TemplateAttrs object for the template name (case insensitive),
+        or raises a ValueError if the template name does not exist.
         """
-        return self._templates[template_name]
+        ta = self._templates.get_template(template_name)
+        if ta is None:
+            raise ValueError('Invalid template name: ' + template_name)
+        return ta
+
+    def get_default_template(self):
+        """
+        Returns the TemplateAttrs object that will provide default image processing
+        settings if no other template is specified.
+        """
+        return self._templates.get_default_template()
 
     def get_icc_profile_names(self, colorspace=None):
         """
-        Returns a list of available ICC profile names - those names that
-        are valid for use in the 'icc' attribute of an ImageAttrs object -
+        Returns a lower case list of available ICC profile names - those names
+        that are valid for use in the 'icc' attribute of an ImageAttrs object -
         optionally filtered by a colorspace (e.g. "RGB").
         """
         if colorspace is not None:
@@ -148,8 +178,8 @@ class ImageManager(object):
 
     def get_image_formats(self):
         """
-        Returns a list of supported image formats (as file extensions)
-        e.g. ['jpg','png'].
+        Returns a lower case list of supported image formats
+        (as file extensions) e.g. ['jpg','png']
         """
         return self._settings['IMAGE_FORMATS'].keys()
 
@@ -290,13 +320,21 @@ class ImageManager(object):
         file_data = get_file_data(image_attrs.filename())
         if file_data is None:
             return None
+
+        # Hmm, what client caching time for the original image?
+        # Let's assume that the original is valid for as long as the default derivations of it
+        expiry_secs = default_value(
+            self._templates.get_default_template().expiry_secs(),
+            ImageManager.DEFAULT_EXPIRY_SECS
+        )
+
         # Return the requested image
         return ImageWrapper(
             file_data,
             ImageAttrs(image_attrs.filename(), image_attrs.database_id()),
-            False,
-            self.get_image_original_modified_time(image_attrs),
-            self._get_expiry_secs(image_attrs)
+            from_cache=False,
+            last_modified=self.get_image_original_modified_time(image_attrs),
+            client_expiry_seconds=expiry_secs
         )
 
     def get_image(self, image_attrs, cache_result=True):
@@ -449,10 +487,13 @@ class ImageManager(object):
             modified_time = time.time()
             self._cache_image_metadata(image_attrs, modified_time)
 
+        # Get default handling options from requested template or default template
+        template_attrs = self.get_image_template(image_attrs)
+        expiry_secs = default_value(template_attrs.expiry_secs(), ImageManager.DEFAULT_EXPIRY_SECS)
+        attachment = default_value(template_attrs.attachment(), False)
+        do_stats = default_value(template_attrs.record_stats(), True)
+
         # Return the requested image
-        expiry_secs = self._get_expiry_secs(image_attrs)
-        attachment = self._get_attachment_setting(image_attrs)
-        do_stats = self._get_stats_setting(image_attrs)
         return ImageWrapper(
             ret_image_data,
             image_attrs,
@@ -462,6 +503,16 @@ class ImageManager(object):
             attachment,
             do_stats
         )
+
+    def get_image_template(self, image_attrs):
+        """
+        Returns the template (as a TemplateAttrs object) that will be used to
+        generate the image described by image_attrs. As of v2.2 this is the
+        system default template if image_attrs does not specify a template.
+        """
+        ia_t_name = image_attrs.template()
+        return (self._templates.get_template(ia_t_name) if ia_t_name else
+                self._templates.get_default_template())
 
     def get_image_modified_time(self, image_attrs):
         """
@@ -495,10 +546,8 @@ class ImageManager(object):
     def get_image_properties(self, filepath, return_unknown=True):
         """
         Reads the image dimensions and embedded image profile properties
-        (EXIF, IPTC, TIFF, etc) from an image file.
-
-        The original image file is always used, so that the value of the
-        IMAGE_STRIP_DEFAULT setting does not affect this function.
+        (EXIF, IPTC, TIFF, etc) from an image file. The original image file is
+        always read, because cached versions may have had their profiles stripped.
 
         See get_image_data_properties() for the return values.
 
@@ -634,6 +683,12 @@ class ImageManager(object):
                     db_session.rollback()
             finally:
                 db_session.close()
+
+    def reset_templates(self):
+        """
+        Instructs the template system to refresh its data from the database.
+        """
+        self._templates.reset()
 
     def _is_image_lock(self, image_key):
         """
@@ -945,7 +1000,7 @@ class ImageManager(object):
         supplied image data is returned unchanged. On error creating the new
         image, an ImageError is raised.
         """
-        # See if we have been requested to alter any image attributes.
+        # See if the requested image attributes require altering the base image
         if new_image_attrs.attributes_change_image():
 
             # Set the final image attributes
@@ -964,6 +1019,7 @@ class ImageManager(object):
             autocropfit = default_value(new_image_attrs.crop_fit(), False)
             autosizefit = default_value(new_image_attrs.size_fit(), False)
             fill = default_value(new_image_attrs.fill(), '#ffffff')
+            cquality = default_value(new_image_attrs.quality(), 0)
             sharpen = default_value(new_image_attrs.sharpen(), 0)
             rquality = self._settings['IMAGE_RESIZE_QUALITY']
             overlay_src = new_image_attrs.overlay_src()
@@ -977,13 +1033,22 @@ class ImageManager(object):
             dpi = default_value(new_image_attrs.dpi(), 0)
             strip_info = default_value(new_image_attrs.strip_info(), False)
             tile_spec = default_value(new_image_attrs.tile_spec(), (0, 0))
-            # Setting the default image quality here
-            # (AFTER checking whether attributes_change_image)
-            # is a special case. Also see _apply_defaults().
-            cquality = default_value(
-                new_image_attrs.quality(),
-                self._settings['IMAGE_QUALITY_DEFAULT']
-            )
+
+            # Mandatory image attributes: a couple of things must have a value,
+            # so we need to set them here if they're not already set. These are
+            # special cases - note that setting them here means that these values
+            # do not go into the cache key! This is only OK for things that do
+            # not change the actual image pixels.
+            #
+            # compression value must always be set to something
+            if cquality == 0:
+                cquality = (
+                    ImageManager.DEFAULT_QUALITY_PNG if iformat == 'png'
+                    else ImageManager.DEFAULT_QUALITY_JPG
+                )
+            # when converting from PDF we must set a DPI
+            if dpi == 0 and base_image_attrs.src_is_pdf():
+                dpi = self._settings['PDF_BURST_DPI']
 
             # Now, if the base image is already rotated, cropped, sharpened etc,
             # do not re-apply the same adjustment. These checks rely heavily on
@@ -1042,6 +1107,7 @@ class ImageManager(object):
             # Get ICC profile data, if required
             icc_profile_data = self._icc_profiles[icc_profile_name][1] if icc_profile_name else None
 
+            # Finally, generate a new image from base_image_data
             try:
                 return imagemagick_adjust_image(
                     base_image_data,
@@ -1062,106 +1128,6 @@ class ImageManager(object):
             # There are no attributes to change
             return base_image_data
 
-    def _get_expiry_secs(self, image_attrs):
-        """
-        Returns the HTTP expiry / cache control time in seconds for an image.
-        This value is determined by the image template if there is one and the
-        expiry value is set, else by the image server global setting.
-        """
-        if image_attrs.template():
-            template = self.get_template(image_attrs.template())
-            template_expiry = template.expiry_secs()
-            if template_expiry is not None:
-                return template_expiry
-        return self._settings['IMAGE_EXPIRY_TIME_DEFAULT']
-
-    def _get_attachment_setting(self, image_attrs):
-        """
-        Returns True if the image attributes specify a template with the
-        attachment setting enabled, otherwise False.
-        """
-        if image_attrs.template():
-            template = self.get_template(image_attrs.template())
-            if template.attachment():
-                return True
-        return False
-
-    def _get_stats_setting(self, image_attrs):
-        """
-        Returns True unless the image attributes specify a template with the
-        stats setting disabled.
-        """
-        if image_attrs.template():
-            template = self.get_template(image_attrs.template())
-            if template.record_stats() is not None:
-                return template.record_stats()
-        return True
-
-    def _apply_template(self, template_name, dest_image_attrs, override_existing):
-        """
-        Applies the image attributes defined by a given template into an
-        existing set of image attributes. If override_existing is True, the
-        template attributes will be applied over any existing attributes.
-        If override_existing is False, existing attributes will not be changed.
-        """
-        template = self.get_template(template_name)
-        src_attrs = template.image_attrs
-        dest_image_attrs.apply_template_values(
-            override_existing,
-            src_attrs.page(),
-            src_attrs.format_raw(),
-            src_attrs.width(),
-            src_attrs.height(),
-            src_attrs.align_h(),
-            src_attrs.align_v(),
-            src_attrs.rotation(),
-            src_attrs.flip(),
-            src_attrs.top(),
-            src_attrs.left(),
-            src_attrs.bottom(),
-            src_attrs.right(),
-            src_attrs.crop_fit(),
-            src_attrs.size_fit(),
-            src_attrs.fill(),
-            src_attrs.quality(),
-            src_attrs.sharpen(),
-            src_attrs.overlay_src(),
-            src_attrs.overlay_size(),
-            src_attrs.overlay_pos(),
-            src_attrs.overlay_opacity(),
-            src_attrs.icc_profile(),
-            src_attrs.icc_intent(),
-            src_attrs.icc_bpc(),
-            src_attrs.colorspace(),
-            src_attrs.strip_info(),
-            src_attrs.dpi()
-        )
-
-    def _apply_defaults(self, image_attrs):
-        """
-        Applies default image attributes, only where a default
-        value is defined and the attribute is not yet set.
-        """
-        # Image format
-        default_format = self._settings['IMAGE_FORMAT_DEFAULT'].lower()
-        # Image quality
-        # Handled in _adjust_image() as a special case, as we must not associate
-        # a quality value with an image unless this attribute has been explicitly
-        # set. If we did so, then requested an original image without any changes,
-        # it would be converted to the default quality rather than being left alone.
-        # Image colorspace
-        default_colorspace = self._settings['IMAGE_COLORSPACE_DEFAULT'].lower()
-        # Image DPI
-        default_dpi = self._settings['PDF_BURST_DPI'] \
-            if image_attrs.src_is_pdf() else \
-            self._settings['IMAGE_DPI_DEFAULT']
-        # Strip info
-        default_strip = self._settings['IMAGE_STRIP_DEFAULT']
-        # Apply
-        image_attrs.apply_default_values(
-            default_format, default_colorspace, default_strip, default_dpi
-        )
-
     def _get_icc_colorspace(self, icc_data):
         """
         Returns the colorspace header field of an ICC profile
@@ -1173,148 +1139,6 @@ class ImageManager(object):
             # See http://www.color.org/specification/ICC1v43_2010-12.pdf
             return icc_data[16:20].strip()
         return None
-
-    @property
-    def _templates(self):
-        """
-        A lazy-loaded cache of the image templates, as a dictionary of form:
-        { 'template_name': TemplateAttrs }
-        """
-        if self.__templates is None:
-            with self._templates_load_lock:
-                if self.__templates is None:
-                    self.__templates = self._load_templates()
-                    self.__templates_mtime = self._get_templates_mtime()
-                    self.__templates_ctime = time.time()
-        return self.__templates
-
-    def _poll_reload_templates(self):
-        """
-        Checks for whether to reload the image templates,
-        at most once every ImageManager.TEMPLATE_CHECK_SECONDS seconds.
-        """
-        if self.__templates is not None and self.__templates_ctime < (
-            time.time() - ImageManager.TEMPLATE_CHECK_SECONDS
-        ):
-            if self._get_templates_mtime() != self.__templates_mtime:
-                self._logger.info('Detected image template changes')
-                self._reload_templates()
-            self.__templates_ctime = time.time()
-
-    def _reload_templates(self):
-        """
-        Clears the internal image template cache.
-        """
-        with self._templates_load_lock:
-            self.__templates = None
-            self.__templates_mtime = 0
-            self.__templates_ctime = 0
-
-    def _load_templates(self):
-        """
-        Finds and returns the configured image templates by searching for files
-        named *.cfg in the image templates directory. Returns a dictionary
-        of TemplateAttr objects mapped to filename (lower case, without file
-        extension).
-        Any invalid template configurations are logged but otherwise ignored.
-        """
-        templates = {}
-
-        # Utility to allow no value for a config file option
-        def _config_get(cp, get_fn, section, option, lower_case=False):
-            if cp.has_option(section, option):
-                val = get_fn(section, option)
-                return val.lower() if lower_case else val
-            else:
-                return None
-
-        # Find *.cfg
-        cfg_files = glob.glob(unicode(os.path.join(self._settings['TEMPLATES_BASE_DIR'], '*.cfg')))
-        for cfg_file_path in cfg_files:
-            (template_name, _) = os.path.splitext(filepath_filename(cfg_file_path))
-            template_name = template_name.lower()
-            try:
-                # Read config file
-                cp = ConfigParser.RawConfigParser()
-                cp.read(cfg_file_path)
-
-                # Get image values and put them in an ImageAttrs object
-                section = 'ImageAttributes'
-                t_image_attrs = ImageAttrs(
-                    template_name,
-                    -1,
-                    _config_get(cp, cp.getint, section, 'page'),
-                    _config_get(cp, cp.get, section, 'format', True),
-                    None,
-                    _config_get(cp, cp.getint, section, 'width'),
-                    _config_get(cp, cp.getint, section, 'height'),
-                    _config_get(cp, cp.get, section, 'halign', True),
-                    _config_get(cp, cp.get, section, 'valign', True),
-                    _config_get(cp, cp.getfloat, section, 'angle'),
-                    _config_get(cp, cp.get, section, 'flip'),
-                    _config_get(cp, cp.getfloat, section, 'top'),
-                    _config_get(cp, cp.getfloat, section, 'left'),
-                    _config_get(cp, cp.getfloat, section, 'bottom'),
-                    _config_get(cp, cp.getfloat, section, 'right'),
-                    _config_get(cp, cp.getboolean, section, 'autocropfit'),
-                    _config_get(cp, cp.getboolean, section, 'autosizefit'),
-                    parse_colour(_config_get(cp, cp.get, section, 'fill')),
-                    _config_get(cp, cp.getint, section, 'quality'),
-                    _config_get(cp, cp.getint, section, 'sharpen'),
-                    _config_get(cp, cp.get, section, 'overlay', False),
-                    _config_get(cp, cp.getfloat, section, 'ovsize'),
-                    _config_get(cp, cp.get, section, 'ovpos', True),
-                    _config_get(cp, cp.getfloat, section, 'ovopacity'),
-                    _config_get(cp, cp.get, section, 'icc', True),
-                    _config_get(cp, cp.get, section, 'intent', True),
-                    _config_get(cp, cp.getboolean, section, 'bpc'),
-                    _config_get(cp, cp.get, section, 'colorspace', True),
-                    _config_get(cp, cp.getboolean, section, 'strip'),
-                    _config_get(cp, cp.getint, section, 'dpi'),
-                    None
-                )
-                t_image_attrs.normalise_values()
-
-                # Get misc options
-                section = 'Miscellaneous'
-                t_stats = _config_get(cp, cp.getboolean, section, 'stats')
-
-                # Get handling options and create the TemplateAttrs object
-                section = 'BrowserOptions'
-                template_attrs = TemplateAttrs(
-                    t_image_attrs,
-                    _config_get(cp, cp.getint, section, 'expiry'),
-                    _config_get(cp, cp.getboolean, section, 'attach'),
-                    t_stats
-                )
-
-                # Validate and store
-                template_attrs.validate()
-                templates[template_name] = template_attrs
-
-            except Exception as e:
-                self._logger.error(
-                    'Unable to load \'%s\' template configuration: %s' % (template_name, str(e))
-                )
-
-        self._logger.info('Loaded templates: ' + ', '.join(templates.keys()))
-        return templates
-
-    def _get_templates_mtime(self):
-        """
-        Returns the most recent modification time of the template files,
-        or 0 if there are no files or if they cannot be queried.
-        """
-        mtime = 0
-        try:
-            cfg_files = glob.glob(unicode(os.path.join(self._settings['TEMPLATES_BASE_DIR'], '*.cfg')))
-            for cfg_file_path in cfg_files:
-                stinfo = os.stat(cfg_file_path)
-                if stinfo.st_mtime > mtime:
-                    mtime = stinfo.st_mtime
-        except:
-            pass
-        return mtime
 
     @property
     def _icc_profiles(self):

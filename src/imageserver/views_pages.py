@@ -47,6 +47,7 @@ from flask_app import cache_engine, data_engine, image_engine, permissions_engin
 from flask_util import external_url_for, internal_url_for, render_template
 from flask_util import login_point, login_required
 from image_attrs import ImageAttrs
+from template_attrs import TemplateAttrs
 from models import Folder, FolderPermission, Image, ImageHistory, User
 from session_manager import get_session_user, get_session_user_id
 from session_manager import log_in, log_out, logged_in
@@ -143,6 +144,7 @@ def image_help():
     logo_image_attrs = ImageAttrs('test_images/quru110.png')
     logo_pad_image_attrs = ImageAttrs('test_images/quru470.png')
 
+    default_template = image_engine.get_default_template()
     available_formats = image_engine.get_image_formats()
     available_formats.sort()
     available_templates = image_engine.get_template_names()
@@ -157,6 +159,7 @@ def image_help():
         'inc_default_settings.html',
         formats=available_formats,
         templates=available_templates,
+        default_template=default_template,
         iccs=available_iccs
     )
 
@@ -346,9 +349,8 @@ def slideshow_view_help():
 @app.route('/list/')
 @login_required
 def browse():
-    from_path = request.args.get('path', '')
-    if from_path == '':
-        from_path = os.path.sep
+    from_path = request.args.get('path', os.path.sep)
+    view_type = request.args.get('view', '')
 
     # #2475 Default this in case of error in get_directory_listing()
     directory_info = DirectoryInfo(from_path)
@@ -356,7 +358,11 @@ def browse():
     db_session = data_engine.db_get_session()
     db_committed = False
     try:
-        directory_info = get_directory_listing(from_path, True)
+        # Check parameters
+        if view_type not in ['', 'list', 'grid']:
+            raise ValueError('View type must be list or grid')
+
+        directory_info = get_directory_listing(from_path, True, 2)
 
         # Auto-populate the folders database
         db_folder = auto_sync_folder(
@@ -380,15 +386,22 @@ def browse():
         if directory_info.exists() and db_folder:
             session['last_browse_path'] = from_path
 
+        # Remember the requested view type, or default it if not set
+        if view_type != '':
+            session['last_browse_view'] = view_type
+        else:
+            view_type = session.get('last_browse_view', 'list')
+
         return render_template(
             'list.html',
-            formats=image_engine.get_image_formats(),
+            image_formats=image_engine.get_image_formats(),
             pathsep=os.path.sep,
             timezone=get_timezone_code(),
             directory_info=directory_info,
             folder_name=filepath_filename(from_path),
             db_info=db_folder,
             db_parent_info=db_folder.parent if db_folder else None,
+            view_type=view_type,
             STATUS_ACTIVE=Folder.STATUS_ACTIVE
         )
     except Exception as e:
@@ -408,16 +421,89 @@ def browse():
             db_session.close()
 
 
+# File system browsing - go forward or back from a file - there's no UI for this
+@app.route('/list/navigate/')
+@login_required
+def browse_navigate():
+    # Get parameters
+    src = request.args.get('src', '')
+    direction = request.args.get('dir', '')
+    try:
+        # Check parameters
+        if not src:
+            raise ValueError('No filename was specified.')
+        if not direction:
+            raise ValueError('No direction was specified.')
+
+        (src_path, src_filename) = os.path.split(src)
+
+        # Require view permission
+        permissions_engine.ensure_folder_permitted(
+            src_path,
+            FolderPermission.ACCESS_VIEW,
+            get_session_user()
+        )
+
+        # Get the folder listing again to find out what is before/after src_filename.
+        # This isn't very efficient but it should work reliably and avoids caching
+        # a potentially large file system listing (which may not have been requested
+        # recently, might require reloading or refreshing) per directory.
+        directory_info = get_directory_listing(src_path, False, 2)
+        idx = -1
+        go_to_file = None
+        for f in directory_info:
+            idx += 1
+            if f['filename'] == src_filename:
+                # We found the starting position
+                if direction == 'back':
+                    if idx > 0:
+                        go_to_file = directory_info.contents()[idx - 1]
+                else:
+                    if idx < directory_info.count() - 1:
+                        go_to_file = directory_info.contents()[idx + 1]
+                # Navigate if not BOF/EOF
+                if go_to_file:
+                    return redirect(internal_url_for(
+                        'details',
+                        src=os.path.join(src_path, go_to_file['filename'])
+                    ))
+                break
+
+    except Exception as e:
+        if not log_security_error(e, request):
+            logger.error('Error navigating from %s: %s' % (src, str(e)))
+        if app.config['DEBUG']:
+            raise
+
+    # Default - take no action
+    return make_response('', 204)
+
+
 @app.route('/publish/')
 @login_required
 def publish():
     src = request.args.get('src', '')
     embed = request.args.get('embed', '')
 
+    # See also admin.views_pages.template_edit
+    fields = ImageAttrs.validators().copy()
+    fields.update(TemplateAttrs.validators())
+    # Any default publishing values can go here.
+    # In v2 most of the defaults come from the default template.
+    field_values = {
+        'record_stats': True
+    }
+    template_list = image_engine.get_template_list()
+    default_template = next(td for td in template_list if td['is_default'])
     return render_template(
         'publish.html',
-        fields=ImageAttrs.validators(),
+        fields=fields,
+        field_values=field_values,
+        include_crop_tool=True,
+        include_units_tool=True,
         image_info=image_engine.get_image_properties(src, False),
+        template_list=template_list,
+        default_template=default_template,
         embed=embed,
         src=src,
         path=filepath_parent(src)
@@ -432,9 +518,10 @@ def details():
     src = request.args.get('src', '')
     reset = request.args.get('reset', None)
     src_path = ''
+    src_filename = ''
     try:
         # Check parameters
-        if src == '':
+        if not src:
             raise ValueError('No filename was specified.')
         if reset is not None:
             reset = parse_boolean(reset)
@@ -552,6 +639,7 @@ def details():
             'details.html',
             src=src,
             path=src_path,
+            filename=src_filename,
             err_msg='This file cannot be viewed: ' + str(e)
         )
 
@@ -565,7 +653,7 @@ def edit():
     embed = request.args.get('embed', '')
     try:
         # Check parameters
-        if src == '':
+        if not src:
             raise ValueError('No filename was specified.')
 
         db_img = auto_sync_file(src, data_engine, task_engine)
@@ -616,18 +704,16 @@ def account():
 @app.route('/folder_list/')
 @login_required
 def folder_browse():
-    from_path = request.args.get('path', '')
+    from_path = request.args.get('path', os.path.sep)
     show_files = request.args.get('show_files', '')
     embed = request.args.get('embed', '')
     msg = request.args.get('msg', '')
-    if from_path == '':
-        from_path = os.path.sep
 
     db_session = data_engine.db_get_session()
     db_committed = False
     try:
         # This also checks for path existence
-        folder_list = get_directory_listing(from_path, True)
+        folder_list = get_directory_listing(from_path, True, 2)
 
         # Auto-populate the folders database
         db_folder = auto_sync_folder(
@@ -652,7 +738,7 @@ def folder_browse():
 
         return render_template(
             'folder_list.html',
-            formats=image_engine.get_image_formats(),
+            image_formats=image_engine.get_image_formats(),
             embed=embed,
             msg=msg,
             name=filepath_filename(from_path),

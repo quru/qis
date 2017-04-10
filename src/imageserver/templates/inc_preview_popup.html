@@ -1,11 +1,12 @@
 {#
-  A generic HTML fragment that creates the hover image preview box (list screen and reports)
+  A generic HTML fragment that creates the hover image preview box (list screen and reports).
+  Pages that include this will want to include preview_popup.js
 #}
-<div id="preview_popup">
-	<div id="preview_popup_left">
+<div class="preview_popup">
+	<div class="preview_popup_left">
 	</div>
-	<div id="preview_popup_right" class="border shadow">
-		<img id="preview_popup_waitimg" src="{{ url_for('static', filename='images/icon-wait.gif') }}" />
+	<div class="preview_popup_right border shadow">
+		<img class="preview_popup_waitimg" src="{{ url_for('static', filename='images/icon-wait.gif') }}" />
 	</div>
 	<div class="clear"></div>
 </div>

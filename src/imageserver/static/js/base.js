@@ -293,7 +293,8 @@ function popup_convert_anchor(element, popupWidth, popupHeight, onCloseFn) {
  */
 function popup_iframe(url, width, height, onCloseFn) {
 	var minMargin = 15,
-	    winHeight = window.getSize().y,
+	    // #517 Prefer window.inner* to get the visual viewport in mobile browsers
+	    winHeight = window.innerHeight ? window.innerHeight : window.getSize().y,
 	    height = Math.min((winHeight - (2 * minMargin)), height),
 	    topMargin = Math.max(minMargin, Math.round((winHeight - height) / 2));
 	// Define mask event handlers
@@ -358,7 +359,8 @@ function popup_close() {
 /* Opens a "please wait" popup dialog */
 function wait_form_open(msg) {
 	var minMargin = 15,
-	    winHeight = window.getSize().y,
+	    // #517 Prefer window.inner* to get the visual viewport in mobile browsers
+	    winHeight = window.innerHeight ? window.innerHeight : window.getSize().y,
 	    approxHeight = 100,
 	    topMargin = Math.max(minMargin, Math.round((winHeight / 2) - approxHeight));
 	// Create popup

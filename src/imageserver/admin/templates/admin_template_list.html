@@ -1,0 +1,86 @@
+{% extends "admin_base.html" %}
+
+{% block copyright %}
+<!-- 
+	Document:      admin_template_list.html
+	Date started:  30 Sep 2015
+	By:            Matt Fozard
+	Purpose:       Quru Image Server Administration - template list
+	Requires:      
+	Copyright:     Quru Ltd (www.quru.com)
+	
+	Last Changed:  $Date$ $Rev$ by $Author$
+	
+	Notable modifications:
+	Date       By    Details
+	=========  ====  ============================================================
+-->
+{% endblock %}
+
+{% set body_id = 'template_list' %}
+{% set page_heading = 'Templates' %}
+
+{% block body %}
+	{{ super() }}
+	<div class="smalltext">
+		{{ templates|length }} template{{ templates|length|pluralize }}
+		{% if is_permitted(SystemPermission.PERMIT_SUPER_USER) %}
+		(<a href="{{ url_for('admin.template_edit', template_id=0, onClose='backrefresh') }}">add a new template</a>)
+		{% endif %}
+	</div>
+
+	<table class="list_table" summary="Listing of {{ page_heading }}">
+
+		{% set row_class = cycler('even', 'odd') %}
+		<tr class="{{ row_class.next() }} header">
+			<td>Name</td>
+			<td>Description</td>
+			<td>Action</td>
+		</tr>
+
+		{% for template in templates %}
+		{% set edit_url = url_for('admin.template_edit', template_id=template.id, onClose='backrefresh') %}
+
+		<tr class="{{ row_class.next() }}">
+			<td><a href="{{ edit_url }}">{{ template.name }}</a></td>
+			<td><a href="{{ edit_url }}">{{ template.description }}</a></td>
+			<td>
+				{% if is_permitted(SystemPermission.PERMIT_SUPER_USER) %}
+				{% if template.name|lower != system_template_value|lower %}
+				<form id="delform_{{ template.id }}" class="delform" action="{{ url_for('api.admin.template', template_id=template.id) }}" _method="delete">
+					<input type="hidden" name="del_name" value="{{ template.name }}" />
+					(<a class="action" href="#" onclick="return submitParentForm(this)">delete</a>)
+				</form>
+				{% endif %}
+				{% endif %}
+			</td>
+		</tr>
+		{% endfor %}
+	</table>
+
+	<br>
+	<h2>System default template</h2>
+	<div class="tall">
+		For image requests that do not specify a template, default image processing
+		values will be applied from this template:<br>
+
+		{% if is_permitted(SystemPermission.PERMIT_SUPER_USER) %}
+			<form id="deftemplform" action="{{ url_for('api.admin.property', property_id=system_template_key) }}" _method="put">
+			<select name="value" autocomplete="off">
+			{% for template in templates %}
+				{% set sel = 'selected="selected"' if template.name|lower == system_template_value|lower else '' %}
+				<option value="{{ template.name }}" {{ sel|safe }}>{{ template.name }}</option>
+			{% endfor %}
+			</select>
+			&nbsp;<input type="submit" value="&nbsp;Change&nbsp;" />
+			</form>
+		{% else %}
+			<select disabled="disabled">
+			<option>{{ system_template_value|capitalize }}</option>
+			</select>
+			&nbsp;
+			<span class="smalltext">The default template can be changed a system administrator.</span> 
+		{% endif %}
+	</div>
+
+{% endblock %}

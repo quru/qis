@@ -134,8 +134,10 @@ class PermissionsManager(object):
                     return True
                 elif flag == 'admin_any':
                     # Special flag
-                    return sys_perms.admin_users or sys_perms.admin_files or \
-                           sys_perms.admin_folios or sys_perms.admin_permissions
+                    return (
+                        sys_perms.admin_users or sys_perms.admin_files or
+                        sys_perms.admin_folios or sys_perms.admin_permissions
+                    )
                 else:
                     # Check just the specified flag name
                     return getattr(sys_perms, flag)
@@ -357,7 +359,7 @@ class PermissionsManager(object):
             new_ver = self._db.increment_property(Property.FOLDER_PERMISSION_VERSION)
         self._fp_last_check = datetime.min
         self._logger.info(
-            'Folder permissions flagging new version ' + new_ver
+            'Folder permissions setting new version ' + new_ver
         )
 
     def _trace_folder_permissions(self, folder, user=None, check_consistency=True):
@@ -489,6 +491,8 @@ class PermissionsManager(object):
         internal data version number, and resets caches if necessary.
         Uses an internal lock for thread safety.
         """
+        check_secs = PermissionsManager.FP_CACHE_SYNC_INTERVAL
+
         if (self._fp_data_version < 0) or (self._fp_last_check is None):
             # Start up
             db_ver = self._db.get_object(Property, Property.FOLDER_PERMISSION_VERSION)
@@ -497,11 +501,9 @@ class PermissionsManager(object):
             self._logger.info(
                 'Folder permissions initialising with version ' + str(self._fp_data_version)
             )
-        elif _force or (self._fp_last_check < (
-            datetime.utcnow() - timedelta(seconds=PermissionsManager.FP_CACHE_SYNC_INTERVAL)
-        )):
+        elif _force or self._fp_last_check < (datetime.utcnow() - timedelta(seconds=check_secs)):
             # Check for newer data version
-            if self._fp_refresh_lock.acquire(0):      # 0 = nonblocking
+            if self._fp_refresh_lock.acquire(0):  # 0 = nonblocking
                 try:
                     old_ver = self._fp_data_version
                     db_ver = self._db.get_object(Property, Property.FOLDER_PERMISSION_VERSION)
@@ -512,8 +514,8 @@ class PermissionsManager(object):
                             'Folder permissions detected new version ' +
                             str(self._fp_data_version)
                         )
-                    self._fp_last_check = datetime.utcnow()
                 finally:
+                    self._fp_last_check = datetime.utcnow()
                     self._fp_refresh_lock.release()
 
     def _get_cache_key(self, user, path):

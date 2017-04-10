@@ -4,6 +4,7 @@
 	By:            Matt Fozard
 	Purpose:       Quru Image Server File Browsing helpers
 	Requires:      base.js
+	               preview_popup.js
 	               MooTools Core 1.3 (no compat)
 	               MooTools More 1.3 - Assets, String.QueryString
 	Copyright:     Quru Ltd (www.quru.com)
@@ -33,35 +34,19 @@
 	17Jan2013  Matt  Share with folder_list.html
 	23Jan2013  Matt  Add folder actions menu handling
 	10Feb2015  Matt  Add support for HTTP 202 responses
+	06Oct2015  Matt  Refactored image popup JS into preview_popup.js
 */
 
-var previewState = { hoverEl: null, delayId: null, visible: false, mouseOver: false };
-var previewUI = { containerEl: null, waitAnimEl: null, imgAreaEl: null, previewEl: null };
+"use strict";
 
 function onInit() {
 	// Normal browse mode (list.html)
-	var previewEl = $('preview_popup');
+	var previewEl = $$('.preview_popup')[0];
 	if (previewEl) {
-		// Add event handlers for producing image previews
-		$$('.image_preview').each(function(el) {
-			el.addEvent('mouseenter', function() { onMouseIn(el); });
-			el.addEvent('mouseleave', function() { onMouseOut(el); });
-			el.addEvent('click', function() { onClick(el); });
-		});
-		
-		// Init the preview pane
-		if (previewEl.getStyle('visibility') == 'hidden') {
-			previewEl.fade('hide');
-		}
-		previewEl.set('tween', { onComplete: onImagePreviewFadeComplete });
-		previewEl.addEvent('mouseenter', onImagePreviewMouseIn);
-		previewEl.addEvent('mouseleave', onImagePreviewMouseOut);
-		// Grab some UI objects for later
-		previewUI.containerEl = previewEl;
-		previewUI.waitAnimEl = $('preview_popup_waitimg');
-		previewUI.imgAreaEl = $('preview_popup_right');
+		var popup = new ImagePopup(previewEl);
+		popup.attachToElements('.image_preview');
 	}
-	
+
 	// Folder browse mode (folder_list.html)
 	GenericPopup.initButtons();
 	$$('.select_folder').each(function(el) {
@@ -76,122 +61,12 @@ function onInit() {
 			return false;
 		});
 	});
-	
+
 	// Folder actions (both modes)
 	addEventEx('folder_create', 'click', onFolderCreateClick);
 	addEventEx('folder_rename', 'click', onFolderRenameClick);
 	addEventEx('folder_move', 'click', onFolderMoveClick);
 	addEventEx('folder_delete', 'click', onFolderDeleteClick);
-}
-
-function onMouseIn(el) {
-	// Cancel previous popup if we've moved to a different element
-	if (previewState.hoverEl && (previewState.hoverEl != el))
-		clearImagePreview();
-	// Flag popup to show after a wait
-	previewState.hoverEl = el;
-	previewState.delayId = doImagePreview.delay(500);
-}
-
-function onMouseOut(el) {
-	// Bug fix - set a short delay before closing popup in case we're entering the
-	// popup (mouseleave on element fires before mouseenter on the popup).
-	setTimeout(function() {
-		if (!previewState.mouseOver)
-			clearImagePreview();
-	}, 5);
-}
-
-function onClick(el) {
-	clearImagePreview();
-}
-
-function doImagePreview() {
-	// Flag the wait as completed
-	previewState.delayId = null;
-	
-	if (previewState.hoverEl) {
-		// Set position of the popup
-		var bodyPos = $(document.body).getCoordinates();
-		var previewPos = previewUI.containerEl.getCoordinates();
-		var targetPos = previewState.hoverEl.getCoordinates();
-		var xPos = targetPos.right + 5;
-		if ((xPos + previewPos.width) > bodyPos.right)
-			xPos = Math.max(targetPos.left + 30, bodyPos.right - previewPos.width);
-		var yPos = (targetPos.bottom - (targetPos.height / 2)) - (previewPos.height / 2) + 1;
-		previewUI.containerEl.setPosition({ x: xPos, y: yPos });
-		// Reset the popup contents
-		previewUI.imgAreaEl.empty();
-		previewUI.imgAreaEl.grab(previewUI.waitAnimEl);
-		previewUI.imgAreaEl.grab(new Element('span')); /* IE<8 trigger line height */
-		// Request the preview image async
-		previewUI.previewEl = Asset.image(getPreviewImageURL(previewState.hoverEl), {
-			onLoad: function() {
-				previewUI.imgAreaEl.empty();
-				previewUI.imgAreaEl.grab(previewUI.previewEl);
-				previewUI.imgAreaEl.grab(new Element('span')); /* IE<8 trigger line height */
-			},
-			onError: function() {
-				previewUI.imgAreaEl.empty();
-			}
-		});
-		// Fade in the popup
-		previewState.visible = true;
-		previewUI.containerEl.fade('in');
-	}
-}
-
-function clearImagePreview() {
-	// Cancel the popup wait, if there is one in progress
-	if (previewState.delayId)
-		clearTimeout(previewState.delayId);
-	// Hide the popup, if it is visible
-	if (previewState.visible)
-		previewUI.containerEl.fade('out');
-	// Reset state
-	previewState.hoverEl = null;
-	previewState.delayId = null;
-	previewState.visible = false;
-	previewState.mouseOver = false;
-}
-
-function onImagePreviewMouseIn() {
-	previewState.mouseOver = true;
-}
-
-function onImagePreviewMouseOut() {
-	previewState.mouseOver = false;
-	clearImagePreview();
-}
-
-function onImagePreviewFadeComplete() {
-	// Shift popup somewhere out of the way when hidden
-	if (!previewState.visible)
-		previewUI.containerEl.setPosition({ x: 1, y: -1000 });
-}
-
-function getPreviewImageURL(el) {
-	el = $(el);
-	// Find nearest anchor
-	var aEl = (el.get('tag') == 'a') ? el : el.getParent('a');
-	if (aEl == null) return '';
-	// Use the anchor href as basis for the image URL, parse it
-	var url = aEl.href.cleanQueryString().replace(/\+/g, ' ');
-	var urlSep = url.indexOf('?');
-	var urlBase = url.substring(0, urlSep);
-	var urlAttrs = url.substring(urlSep + 1).parseQueryString();
-	// Replace details URL with image URL
-	urlBase = urlBase.replace('details/', 'image');
-	// Set size params of our own
-	urlAttrs.width = '200';
-	urlAttrs.height = '200';
-	urlAttrs.autosizefit = '1';
-	urlAttrs.stats = '0';
-	urlAttrs.strip = '1';
-	urlAttrs.format = 'jpg';
-	urlAttrs.colorspace = 'srgb';
-	// Return the modified URL
-	return urlBase + '?' + Object.toQueryString(urlAttrs);
 }
 
 // Invoked in browse mode when a folder is selected

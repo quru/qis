@@ -33,6 +33,8 @@
 # 16Nov2012  Matt  Added system permission tests
 # 19Feb2013  Matt  Added folder permission tests
 # 13Aug2013  Matt  Replaced file size checks with image comparison checks
+# 28Sep2015  Matt  Moved API tests into test_api.py
+# 26Aug2016  Matt  Moved web page tests into test_web_pages.py
 #
 
 import os
@@ -50,10 +52,7 @@ IMAGEMAGICK_PATHS = [
 
 print "Importing imageserver libraries"
 
-import base64
 import binascii
-import cPickle
-import datetime
 import json
 import shutil
 import signal
@@ -66,7 +65,6 @@ import unittest2 as unittest
 
 import mock
 import flask
-from werkzeug.urls import url_quote_plus
 from werkzeug.http import http_date
 
 # Assign global managers, same as the main app uses
@@ -74,30 +72,29 @@ from imageserver.flask_app import app as flask_app
 from imageserver.flask_app import logger as lm
 from imageserver.flask_app import cache_engine as cm
 from imageserver.flask_app import data_engine as dm
-from imageserver.flask_app import image_engine as ie
+from imageserver.flask_app import image_engine as im
 from imageserver.flask_app import task_engine as tm
 from imageserver.flask_app import permissions_engine as pm
 
 from imageserver.api_util import API_CODES
-from imageserver.errors import AlreadyExistsError, DoesNotExistError
+from imageserver.errors import AlreadyExistsError
 from imageserver.filesystem_manager import (
     get_abs_path, copy_file, delete_dir, delete_file
 )
-from imageserver.filesystem_manager import (
-    ensure_path_exists, path_exists, make_dirs
-)
+from imageserver.filesystem_manager import path_exists, make_dirs
 from imageserver.filesystem_sync import (
     auto_sync_existing_file, auto_sync_file, auto_sync_folder
 )
 from imageserver.flask_util import internal_url_for
 from imageserver.image_attrs import ImageAttrs
-from imageserver.image_manager import ImageManager
-from imageserver.models import Folder, Group, User, Image, ImageHistory
-from imageserver.models import FolderPermission, SystemPermissions, Task
+from imageserver.models import (
+    Folder, Group, User, Image, ImageHistory, ImageTemplate,
+    FolderPermission, SystemPermissions
+)
 from imageserver.permissions_manager import _trace_to_str
 from imageserver.session_manager import get_session_user
-from imageserver.util import strip_sep, unicode_to_utf8
 from imageserver.scripts.cache_util import delete_image_ids
+from imageserver.template_attrs import TemplateAttrs
 
 
 # http://www.imagemagick.org/script/changelog.php
@@ -117,41 +114,20 @@ def setup():
 
 def teardown():
     # Kill the aux child processes
-    # Note: this works on Linux but not on OS X
-    p = subprocess.Popen([
-            'ps',
-            '-o',
-            'pid',
-            '--no-headers',
-            '--ppid',
-            str(os.getpid())
-        ],
+    this_pid = os.getpid()
+    p = subprocess.Popen(
+        ['pgrep', '-g', str(this_pid)],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE
     )
     output = p.communicate()
     output = (output[1] or output[0])
-    pids = output.split()
-    try:
-        for pid in pids:
-            if pid:
-                try:
-                    os.kill(int(pid), signal.SIGTERM)
-                except OSError:
-                    print "Failed to kill child process %s" % pid
-    except ValueError:
-        print "Failed to kill test child processes"
-
-
-# Utility - flushing file write with optional touch (modification time update)
-#           note touch delays as modification times are 1 second resolution
-def fwrite(f, strval, touch=False):
-    f.write(strval)
-    f.flush()
-    os.fsync(f.fileno())
-    if touch:
-        os.utime(f.name, None)
-        time.sleep(1)
+    child_pids = [p for p in output.split() if p != str(this_pid)]
+    for pid in child_pids:
+        try:
+            os.kill(int(pid), signal.SIGTERM)
+        except:
+            print "Failed to kill child process %s" % pid
 
 
 # Utility - delete and re-create the internal databases
@@ -159,12 +135,8 @@ def reset_databases():
     assert flask_app.config['TESTING'], \
         'Testing settings have not been applied, not clearing the database!'
 
-    import sqlalchemy.orm
     cm._drop_db()
-    cm._db_metadata.clear()
     dm._drop_db()
-    dm._db_metadata.clear()
-    sqlalchemy.orm.clear_mappers()
     cm._init_db()
     dm._init_db()
     # Set the admin password to something known so we can log in
@@ -173,6 +145,8 @@ def reset_databases():
     dm.save_object(admin_user)
     # Default the public root folder permissions to allow View + Download
     set_default_public_permission(FolderPermission.ACCESS_DOWNLOAD)
+    # Set some standard image generation settings
+    reset_default_image_template()
 
 
 def set_default_public_permission(access):
@@ -180,6 +154,24 @@ def set_default_public_permission(access):
     default_fp.access = access
     dm.save_object(default_fp)
     pm.reset()
+
+
+def reset_default_image_template():
+    default_it = dm.get_image_template(tempname='Default')
+    # Use reasonably standard image defaults
+    image_defaults = [
+        ('format', 'jpg'), ('quality', 75), ('colorspace', None),
+        ('dpi_x', None), ('dpi_y', None), ('strip', False),
+        ('record_stats', True),
+        ('expiry_secs', 60 * 60 * 24 * 7)
+    ]
+    # Clear default template then apply our defaults
+    default_it.template = {}
+    for (key, value) in image_defaults:
+        default_it.template[key] = {'value': value}
+    dm.save_object(default_it)
+    # Clear template cache
+    im.reset_templates()
 
 
 # Returns the first of paths+app_name that exists, else app_name
@@ -460,10 +452,10 @@ class ImageServerTestsSlow(BaseTestCase):
         test_img = auto_sync_existing_file('test_images/cathedral.jpg', dm, tm)
         test_image_attrs = ImageAttrs(
             test_img.src, test_img.id, width=50,
-            strip=0, dpi=0, iformat='jpg', quality=75,
+            strip=False, dpi=0, iformat='jpg', quality=75,
             colorspace='rgb'
         )
-        test_image_attrs.normalise_values()
+        im.finalise_image_attrs(test_image_attrs)
         cache_img = cm.get(test_image_attrs.get_cache_key())
         assert cache_img is None, 'Test image was already in cache - cannot run test!'
         # Create a subprocess to handle the xref-generated http request
@@ -810,29 +802,30 @@ class ImageServerTestsFast(BaseTestCase):
     def test_template_public_image_defaults(self):
         flask_app.config['PUBLIC_MAX_IMAGE_WIDTH'] = 800
         flask_app.config['PUBLIC_MAX_IMAGE_HEIGHT'] = 800
+        # Create a blank template
+        dm.save_object(ImageTemplate('Blank', '', {}))
+        im.reset_templates()
         # Just template should serve at the image size (below limit)
-        rv = self.app.get('/image?src=test_images/quru470.png&tmp=sample&format=png')
+        rv = self.app.get('/image?src=test_images/quru470.png&tmp=blank&format=png')
         self.assertEqual(rv.status_code, 200)
         (w, h) = get_png_dimensions(rv.data)
         self.assertEqual(w, 470)
         self.assertEqual(h, 300)
         # Just template should serve at the limit size (image larger than limit)
-        rv = self.app.get('/image?src=test_images/cathedral.jpg&tmp=sample&format=png')
+        rv = self.app.get('/image?src=test_images/cathedral.jpg&tmp=blank&format=png')
         self.assertEqual(rv.status_code, 200)
         (w, h) = get_png_dimensions(rv.data)
         self.assertEqual(w, 800)
         self.assertEqual(h, 600)
         # Up to limit should be ok
-        rv = self.app.get('/image?src=test_images/cathedral.jpg&tmp=sample&format=png&width=600')
+        rv = self.app.get('/image?src=test_images/cathedral.jpg&tmp=blank&format=png&width=600')
         self.assertEqual(rv.status_code, 200)
         # Over the limit should error
-        rv = self.app.get('/image?src=test_images/cathedral.jpg&tmp=sample&format=png&width=900')
+        rv = self.app.get('/image?src=test_images/cathedral.jpg&tmp=blank&format=png&width=900')
         self.assertEqual(rv.status_code, 400)
 
     # Test serving of original image
     def test_serve_original_image(self):
-        flask_app.config['IMAGE_FORMAT_DEFAULT'] = 'png'
-        flask_app.config['IMAGE_STRIP_DEFAULT'] = True
         rv = self.app.get('/original?src=test_images/cathedral.jpg')
         assert rv.status_code == 200
         assert 'image/jpeg' in rv.headers['Content-Type'], 'HTTP headers do not specify image/jpeg'
@@ -959,7 +952,7 @@ class ImageServerTestsFast(BaseTestCase):
         # Empty the cache prior to testing base image creation
         test_img = auto_sync_file('test_images/cathedral.jpg', dm, tm)
         assert test_img is not None and test_img.status == Image.STATUS_ACTIVE
-        ie._uncache_image(ImageAttrs(test_img.src, test_img.id))
+        im._uncache_image(ImageAttrs(test_img.src, test_img.id))
         # Test by comparing tiles vs the equivalent crops
         url_topleft_crop  = '/image?src=test_images/cathedral.jpg&format=png&right=0.5&bottom=0.5'
         url_botright_crop = '/image?src=test_images/cathedral.jpg&format=png&left=0.5&top=0.5'
@@ -990,12 +983,13 @@ class ImageServerTestsFast(BaseTestCase):
             # the same but without the tile spec
             image_obj.src, image_obj.id, iformat='png', left=0.24, right=0.8, width=600
         )
+        im.finalise_image_attrs(tile_base_attrs)
         base_img = cm.get(tile_base_attrs.get_cache_key())
         assert base_img is not None
 
     # Test rotated image
     def test_rotated_image(self):
-        ie.reset_image(ImageAttrs('test_images/cathedral.jpg'))
+        im.reset_image(ImageAttrs('test_images/cathedral.jpg'))
         rv = self.app.get('/image?src=test_images/cathedral.jpg&format=png&width=500&angle=-90')
         assert rv.status_code == 200
         self.assertImageMatch(rv.data, 'rotated.png')
@@ -1005,7 +999,7 @@ class ImageServerTestsFast(BaseTestCase):
 
     # Test flipped image
     def test_flipped_image(self):
-        ie.reset_image(ImageAttrs('test_images/dorset.jpg'))
+        im.reset_image(ImageAttrs('test_images/dorset.jpg'))
         rv = self.app.get('/image?src=test_images/dorset.jpg&format=png&width=500&flip=h')
         assert rv.status_code == 200
         self.assertImageMatch(rv.data, 'flip-h.png')
@@ -1145,6 +1139,7 @@ class ImageServerTestsFast(BaseTestCase):
         test_url = '/image?src=test_images/cathedral.jpg&width=123'
         test_img = auto_sync_existing_file('test_images/cathedral.jpg', dm, tm)
         test_attrs = ImageAttrs(test_img.src, test_img.id, width=123)
+        im.finalise_image_attrs(test_attrs)
         # v1.34 when not logged in this param should be ignored
         cm.clear()
         rv = self.app.get(test_url + '&cache=0')
@@ -1500,59 +1495,38 @@ class ImageServerTestsFast(BaseTestCase):
     def test_image_attrs_precedence(self):
         ia = ImageAttrs('myimage.png', -1, width=789, fill='auto')
         # Apply a fictional template
-        ia.apply_template_values(
-            override_values=False, page=None, iformat=None,
-            width=100, height=None, align_h=None, align_v=None,
-            rotation=360, flip=None,
-            top=None, left=None, bottom=None, right=None, crop_fit=None,
-            size_fit=None, fill='red', quality=None, sharpen=None,
-            overlay_src=None, overlay_size=None, overlay_pos=None, overlay_opacity=None,
-            icc_profile=None, icc_intent=None, icc_bpc=None,
-            colorspace=None, strip=None, dpi=300
+        ia.apply_dict({
+            'width': 100,
+            'rotation': 360,
+            'fill': 'red',
+            'dpi_x': 300,
+            'dpi_y': 300},
+            override_values=False,
+            normalise=False
         )
         # Ensure the template params are there
-        assert ia.rotation() == 360
-        assert ia.dpi() == 300
+        self.assertEqual(ia.rotation(), 360)
+        self.assertEqual(ia.dpi(), 300)
         # Ensure the initial parameters override the template
-        assert ia.width() == 789
-        assert ia.fill() == 'auto'
-        # Apply fictional server defaults
-        ia.apply_default_values(iformat='png', strip=True, dpi=72)
-        # Ensure the server defaults are there
-        assert ia.format_raw() == 'png'
-        assert ia.format() == ia.format_raw()
-        assert ia.strip_info() == True
-        # Ensure the previous params override the server defaults
-        assert ia.dpi() == 300
+        self.assertEqual(ia.width(), 789)
+        self.assertEqual(ia.fill(), 'auto')
         # Ensure the net parameters look good
         ia.normalise_values()
-        assert ia.format_raw() is None # png is the image's format anyway
-        assert ia.format() == 'png'    # from filename, not params
-        assert ia.width() == 789
-        assert ia.dpi() == 300
-        assert ia.strip_info() == True
-        assert ia.rotation() is None   # 360 would have no effect
-        assert ia.fill() is None       # As there's no rotation and no other filling to do
-        # Test for the bug that caused this unit test in the first place
-        # (auto fill param should take precendence over red fill template)
-        ia = ImageAttrs('myimage.png', -1, top=0.2, fill='auto')
-        ia.apply_template_values(
-            override_values=False, page=None, iformat=None,
-            width=300, height=300, align_h=None, align_v=None,
-            rotation=None, flip=None,
-            top=None, left=None, bottom=None, right=None, crop_fit=None,
-            size_fit=None, fill='red', quality=None, sharpen=None,
-            overlay_src=None, overlay_size=None, overlay_pos=None, overlay_opacity=None,
-            icc_profile=None, icc_intent=None, icc_bpc=None,
-            colorspace=None, strip=None, dpi=None
-        )
-        ia.normalise_values()
-        assert ia.fill() == 'auto'
-        # And that 0 DPI does override the system (handled differently in previous versions)
+        self.assertIsNone(ia.format_raw())
+        self.assertEqual(ia.format(), 'png')  # from filename, not params
+        self.assertEqual(ia.width(), 789)
+        self.assertEqual(ia.dpi(), 300)
+        self.assertIsNone(ia.rotation())      # 360 would have no effect
+        self.assertIsNone(ia.fill())          # As there's no rotation and no other filling to do
+        # Check a 0 DPI does overrides the template
         ia = ImageAttrs('myimage.png', -1, dpi=0)
-        ia.apply_default_values(dpi=72)
-        ia.normalise_values()
-        assert ia.dpi() is None
+        ia.apply_dict({
+            'dpi_x': 300,
+            'dpi_y': 300},
+            override_values=False,
+            normalise=True
+        )
+        self.assertIsNone(ia.dpi())
 
     # Test the identification of suitable base images in cache
     def test_base_image_detection(self):
@@ -1560,58 +1534,73 @@ class ImageServerTestsFast(BaseTestCase):
         image_id = image_obj.id
         # Clean
         orig_attrs = ImageAttrs('test_images/dorset.jpg', image_id)
-        ie.reset_image(orig_attrs)
+        im.reset_image(orig_attrs)
         # Set up tests
         w1000_attrs = ImageAttrs('test_images/dorset.jpg', image_id, iformat='png', width=1000, rotation=90)
         w500_attrs = ImageAttrs('test_images/dorset.jpg', image_id, iformat='png', width=500, rotation=90)
         w100_attrs = ImageAttrs('test_images/dorset.jpg', image_id, iformat='png', width=100, rotation=90)
-        base = ie._get_base_image(w1000_attrs)
+        base = im._get_base_image(im.finalise_image_attrs(w1000_attrs))
         assert base is None, 'Found an existing base image for ' + str(w1000_attrs)
         # Get an 1100 image, should provide the base for 1000
         rv = self.app.get('/image?src=test_images/dorset.jpg&format=png&width=1100&angle=90')
         assert rv.status_code == 200
-        base = ie._get_base_image(w1000_attrs)
+        base = im._get_base_image(im.finalise_image_attrs(w1000_attrs))
         assert base is not None and base.attrs().width() == 1100
         # Get 1000 image, should provide the base for 500
         rv = self.app.get('/image?src=test_images/dorset.jpg&format=png&width=1000&angle=90')
         assert rv.status_code == 200
-        base = ie._get_base_image(w500_attrs)
+        base = im._get_base_image(im.finalise_image_attrs(w500_attrs))
         assert base is not None and base.attrs().width() == 1000
         # Get 500 image, should provide the base for 100
         rv = self.app.get('/image?src=test_images/dorset.jpg&format=png&width=500&angle=90')
         assert rv.status_code == 200
-        base = ie._get_base_image(w100_attrs)
+        base = im._get_base_image(im.finalise_image_attrs(w100_attrs))
         assert base is not None and base.attrs().width() == 500
         # Make sure none of these come back for incompatible image requests
-        base = ie._get_base_image(ImageAttrs('test_images/dorset.jpg', image_id, iformat='png', width=500)) # No rotation
+        try_attrs = ImageAttrs('test_images/dorset.jpg', image_id, iformat='png', width=500)  # No rotation
+        base = im._get_base_image(im.finalise_image_attrs(try_attrs))
         assert base is None
-        base = ie._get_base_image(ImageAttrs('test_images/dorset.jpg', image_id, iformat='bmp', width=500, rotation=90)) # Format
+        try_attrs = ImageAttrs('test_images/dorset.jpg', image_id, iformat='bmp', width=500, rotation=90)  # Format
+        base = im._get_base_image(im.finalise_image_attrs(try_attrs))
         assert base is None
-        base = ie._get_base_image(ImageAttrs('test_images/dorset.jpg', image_id, iformat='png', width=500, height=500, rotation=90)) # Aspect ratio
+        try_attrs = ImageAttrs('test_images/dorset.jpg', image_id, iformat='png', width=500, height=500, rotation=90)  # Aspect ratio
+        base = im._get_base_image(im.finalise_image_attrs(try_attrs))
         assert base is None
-        base = ie._get_base_image(ImageAttrs('test_images/dorset.jpg', image_id, iformat='png', width=500, rotation=90, fill='#ff0000')) # Fill
+        try_attrs = ImageAttrs('test_images/dorset.jpg', image_id, iformat='png', width=500, rotation=90, fill='#ff0000')  # Fill
+        base = im._get_base_image(im.finalise_image_attrs(try_attrs))
         assert base is None
         # But if we want to sharpen the 500px version that should be OK
-        base = ie._get_base_image(ImageAttrs('test_images/dorset.jpg', image_id, iformat='png', width=500, rotation=90, sharpen=200))
+        try_attrs = ImageAttrs('test_images/dorset.jpg', image_id, iformat='png', width=500, rotation=90, sharpen=200)
+        base = im._get_base_image(im.finalise_image_attrs(try_attrs))
         assert base is not None and base.attrs().width() == 500
         # Adding an overlay should be OK
-        base = ie._get_base_image(ImageAttrs('test_images/dorset.jpg', image_id, iformat='png', width=500, rotation=90, overlay_src='test_images/quru110.png'))
+        try_attrs = ImageAttrs('test_images/dorset.jpg', image_id, iformat='png', width=500, rotation=90, overlay_src='test_images/quru110.png')
+        base = im._get_base_image(im.finalise_image_attrs(try_attrs))
         assert base is not None and base.attrs().width() == 500
         # Tiling!
         # Creating a tile of the 500px version should use the same as a base
-        base = ie._get_base_image(ImageAttrs('test_images/dorset.jpg', image_id, iformat='png', width=500, rotation=90, tile_spec=(3,9)))
+        try_attrs = ImageAttrs('test_images/dorset.jpg', image_id, iformat='png', width=500, rotation=90, tile_spec=(3,9))
+        base = im._get_base_image(im.finalise_image_attrs(try_attrs))
         assert base is not None and base.attrs().width() == 500
         # Create that tile
         rv = self.app.get('/image?src=test_images/dorset.jpg&format=png&width=500&angle=90&tile=3:9')
         assert rv.status_code == 200
         # A different format of the tile should not use the cached tile as a base
-        base = ie._get_base_image(ImageAttrs('test_images/dorset.jpg', image_id, iformat='jpg', width=500, rotation=90, tile_spec=(3,9)))
+        try_attrs = ImageAttrs('test_images/dorset.jpg', image_id, iformat='jpg', width=500, rotation=90, tile_spec=(3,9))
+        base = im._get_base_image(im.finalise_image_attrs(try_attrs))
         assert base is None
         # But a stripped version of the same tile should
-        base = ie._get_base_image(ImageAttrs('test_images/dorset.jpg', image_id, iformat='png', width=500, rotation=90, tile_spec=(3,9), strip=True))
+        try_attrs = ImageAttrs('test_images/dorset.jpg', image_id, iformat='png', width=500, rotation=90, tile_spec=(3,9), strip=True)
+        base = im._get_base_image(im.finalise_image_attrs(try_attrs))
         assert base is not None and base.attrs().tile_spec() == (3, 9)
-        # Clean up
-        ie.reset_image(orig_attrs)
+
+    # Test the identification of suitable base images in cache
+    def test_overlay_base_image_detection(self):
+        image_obj = auto_sync_existing_file('test_images/dorset.jpg', dm, tm)
+        image_id = image_obj.id
+        # Clean
+        orig_attrs = ImageAttrs('test_images/dorset.jpg', image_id)
+        im.reset_image(orig_attrs)
         #
         # Overlays - We cannot allow an overlayed image to be use as a base, because:
         #            a) After resizing, the resulting overlay size might not be correct
@@ -1621,60 +1610,69 @@ class ImageServerTestsFast(BaseTestCase):
         # The only exception is tiling, which can (and should!) use the exact same image as a base
         #
         w1000_attrs = ImageAttrs('test_images/dorset.jpg', image_id, iformat='png', width=1000, overlay_src='test_images/quru110.png')
-        base = ie._get_base_image(w1000_attrs)
+        im.finalise_image_attrs(w1000_attrs)
+        base = im._get_base_image(w1000_attrs)
         assert base is None, 'Found an existing base image for ' + str(w1000_attrs)
         # Get an 1100 image, which should NOT provide the base for 1000
         rv = self.app.get('/image?src=test_images/dorset.jpg&format=png&width=1100&overlay=test_images/quru110.png')
         assert rv.status_code == 200
-        base = ie._get_base_image(w1000_attrs)
+        base = im._get_base_image(w1000_attrs)
         assert base is None
         # Get a 500 image, we should be able to tile from it
         rv = self.app.get('/image?src=test_images/dorset.jpg&format=png&width=500&overlay=test_images/quru110.png')
         assert rv.status_code == 200
-        base = ie._get_base_image(ImageAttrs('test_images/dorset.jpg', image_id, iformat='png', width=500, overlay_src='test_images/quru110.png', tile_spec=(1,4)))
+        try_attrs = ImageAttrs('test_images/dorset.jpg', image_id, iformat='png', width=500, overlay_src='test_images/quru110.png', tile_spec=(1,4))
+        im.finalise_image_attrs(try_attrs)
+        base = im._get_base_image(try_attrs)
         assert base is not None and base.attrs().width() == 500
-        # Clean up
-        ie.reset_image(orig_attrs)
+
+    # Test the identification of suitable base images in cache
+    def test_flip_base_image_detection(self):
         #
         # Run some similar tests for newer parameters (flip and page)
         #
         image_obj = auto_sync_existing_file('test_images/multipage.tif', dm, tm)
-        image_id  = image_obj.id
+        image_id = image_obj.id
         # Clean
         orig_attrs = ImageAttrs('test_images/multipage.tif', image_id)
-        ie.reset_image(orig_attrs)
+        im.reset_image(orig_attrs)
         # Set up tests
         w500_attrs = ImageAttrs('test_images/multipage.tif', image_id, page=2, iformat='png', width=500, flip='v')
-        base = ie._get_base_image(w500_attrs)
+        im.finalise_image_attrs(w500_attrs)
+        base = im._get_base_image(w500_attrs)
         assert base is None, 'Found an existing base image for ' + str(w500_attrs)
         # Get an 800 image, p2, flip v
         rv = self.app.get('/image?src=test_images/multipage.tif&format=png&width=800&page=2&flip=v')
         assert rv.status_code == 200
         self.assertImageMatch(rv.data, 'multi-page-2-800-flip-v.png')
         # Should be able to use the 800 as a base for a 500
-        base = ie._get_base_image(w500_attrs)
+        base = im._get_base_image(w500_attrs)
         assert base is not None and base.attrs().width() == 800
         # Generate the 500
         rv = self.app.get('/image?src=test_images/multipage.tif&format=png&width=500&page=2&flip=v')
         assert rv.status_code == 200
         # Make sure none of these come back for incompatible image requests
-        base = ie._get_base_image(ImageAttrs('test_images/multipage.tif', image_id, iformat='png', width=500)) # No page
+        try_attrs = ImageAttrs('test_images/multipage.tif', image_id, iformat='png', width=500)  # No page
+        base = im._get_base_image(im.finalise_image_attrs(try_attrs))
         assert base is None
-        base = ie._get_base_image(ImageAttrs('test_images/multipage.tif', image_id, page=2, iformat='png', width=500, flip='h')) # Wrong flip
+        try_attrs = ImageAttrs('test_images/multipage.tif', image_id, page=2, iformat='png', width=500, flip='h')  # Wrong flip
+        base = im._get_base_image(im.finalise_image_attrs(try_attrs))
         assert base is None
-        base = ie._get_base_image(ImageAttrs('test_images/multipage.tif', image_id, page=3, iformat='png', width=500, flip='v')) # Wrong page
+        try_attrs = ImageAttrs('test_images/multipage.tif', image_id, page=3, iformat='png', width=500, flip='v')  # Wrong page
+        base = im._get_base_image(im.finalise_image_attrs(try_attrs))
         assert base is None
         # But if we want to sharpen the 500px version that should be OK
-        base = ie._get_base_image(ImageAttrs('test_images/multipage.tif', image_id, page=2, iformat='png', width=500, flip='v', sharpen=200))
+        try_attrs = ImageAttrs('test_images/multipage.tif', image_id, page=2, iformat='png', width=500, flip='v', sharpen=200)
+        base = im._get_base_image(im.finalise_image_attrs(try_attrs))
         assert base is not None and base.attrs().width() == 500
         # Adding an overlay should be OK
-        base = ie._get_base_image(ImageAttrs('test_images/multipage.tif', image_id, page=2, iformat='png', width=500, flip='v', overlay_src='test_images/quru110.png'))
+        try_attrs = ImageAttrs('test_images/multipage.tif', image_id, page=2, iformat='png', width=500, flip='v', overlay_src='test_images/quru110.png')
+        base = im._get_base_image(im.finalise_image_attrs(try_attrs))
         assert base is not None and base.attrs().width() == 500
         # Creating a tile of the 500px version should use the same as a base
-        base = ie._get_base_image(ImageAttrs('test_images/multipage.tif', image_id, page=2, iformat='png', width=500, flip='v', tile_spec=(3,9)))
+        try_attrs = ImageAttrs('test_images/multipage.tif', image_id, page=2, iformat='png', width=500, flip='v', tile_spec=(3,9))
+        base = im._get_base_image(im.finalise_image_attrs(try_attrs))
         assert base is not None and base.attrs().width() == 500
-        # Clean up
-        ie.reset_image(orig_attrs)
 
     # There was a bug where "cmyk.jpg&colorspace=rgb" would be used as a base image
     # for "cmyk.jpg&icc=some_icc&colorspace=rgb" but this was incorrect because the
@@ -1684,10 +1682,8 @@ class ImageServerTestsFast(BaseTestCase):
         image_obj = auto_sync_existing_file('test_images/picture-cmyk.jpg', dm, tm)
         image_id = image_obj.id
         orig_attrs = ImageAttrs('test_images/picture-cmyk.jpg', image_id)
-        ie.reset_image(orig_attrs)
+        im.reset_image(orig_attrs)
         # Set up tests
-        orig_attrs = ImageAttrs('test_images/picture-cmyk.jpg',
-                                image_id, iformat='jpg', width=500, colorspace='rgb')
         w200_attrs = ImageAttrs('test_images/picture-cmyk.jpg',
                                 image_id, iformat='jpg', width=200, colorspace='rgb')
         icc_attrs_1 = ImageAttrs('test_images/picture-cmyk.jpg',
@@ -1701,32 +1697,34 @@ class ImageServerTestsFast(BaseTestCase):
         rv = self.app.get('/image?src=test_images/picture-cmyk.jpg&format=jpg&width=500&colorspace=rgb')
         self.assertEqual(rv.status_code, 200)
         # Now getting a width 200 of that should be OK
-        base = ie._get_base_image(w200_attrs)
+        base = im._get_base_image(im.finalise_image_attrs(w200_attrs))
         self.assertIsNotNone(base)
         # Getting an ICC version should not use the RGB base
-        base = ie._get_base_image(icc_attrs_1)
+        base = im._get_base_image(im.finalise_image_attrs(icc_attrs_1))
         self.assertIsNone(base)
         # Getting an RGB of the ICC version should not use the RGB base either
-        base = ie._get_base_image(icc_attrs_2)
+        base = im._get_base_image(im.finalise_image_attrs(icc_attrs_2))
         self.assertIsNone(base)
         # Getting a GRAY version should not use the RGB base
-        base = ie._get_base_image(cspace_attrs)
+        base = im._get_base_image(im.finalise_image_attrs(cspace_attrs))
         self.assertIsNone(base)
 
     # Test the auto-pyramid generation, which is really a specialist case of test_base_image_detection
     def test_auto_pyramid(self):
-        image_obj  = auto_sync_existing_file('test_images/dorset.jpg', dm, tm)
+        image_obj = auto_sync_existing_file('test_images/dorset.jpg', dm, tm)
         orig_attrs = ImageAttrs(image_obj.src, image_obj.id)
+        im.finalise_image_attrs(orig_attrs)
         w500_attrs = ImageAttrs(image_obj.src, image_obj.id, width=500)
+        im.finalise_image_attrs(w500_attrs)
         # Clean
         cm.clear()
-        ie.reset_image(orig_attrs)
+        im.reset_image(orig_attrs)
         # Get the original
         rv = self.app.get('/image?src=test_images/dorset.jpg')
         assert rv.status_code == 200
         orig_len = len(rv.data)
         # Only the original should come back as base for a 500 version
-        base = ie._get_base_image(w500_attrs)
+        base = im._get_base_image(w500_attrs)
         assert base is None or len(base.data()) == orig_len
         # Set the minimum auto-pyramid threshold and get a tile of the image
         flask_app.config["AUTO_PYRAMID_THRESHOLD"] = 1000000
@@ -1735,14 +1733,12 @@ class ImageServerTestsFast(BaseTestCase):
         # Wait a bit for the pyramiding to finish
         time.sleep(15)
         # Now check the cache again for a base for the 500 version
-        base = ie._get_base_image(w500_attrs)
+        base = im._get_base_image(w500_attrs)
         assert base is not None, 'Auto-pyramid did not generate a smaller image'
         # And it shouldn't be the original image either
         assert len(base.data()) < orig_len
         assert base.attrs().width() is not None
         assert base.attrs().width() < 1600 and base.attrs().width() >= 500
-        # Finally, clean up the cache so that test_base_image_detection can use similar tests
-        ie.reset_image(orig_attrs)
 
     # Test the correct base images are used when creating tiles
     def test_tile_base_images(self):
@@ -1750,76 +1746,91 @@ class ImageServerTestsFast(BaseTestCase):
         orig_attrs = ImageAttrs(orig_img.src, orig_img.id)
         orig_id = orig_img.id
         # Clean
-        ie.reset_image(orig_attrs)
+        im.reset_image(orig_attrs)
         # Generate 2 base images
         rv = self.app.get('/image?src=test_images/cathedral.jpg&width=1000&strip=0')
         assert rv.status_code == 200
         rv = self.app.get('/image?src=test_images/cathedral.jpg&width=500&strip=0')
         assert rv.status_code == 200
         # Test base image detection
-        base = ie._get_base_image(ImageAttrs('test_images/cathedral.jpg', orig_id, width=800, tile_spec=(2,4)))
+        try_attrs = ImageAttrs('test_images/cathedral.jpg', orig_id, width=800, tile_spec=(2,4))
+        base = im._get_base_image(im.finalise_image_attrs(try_attrs))
         assert base is not None and base.attrs().width() == 1000
-        base = ie._get_base_image(ImageAttrs('test_images/cathedral.jpg', orig_id, width=800, rotation=180, flip='v', tile_spec=(2,4)))
+        try_attrs = ImageAttrs('test_images/cathedral.jpg', orig_id, width=800, rotation=180, flip='v', tile_spec=(2,4))
+        base = im._get_base_image(im.finalise_image_attrs(try_attrs))
         assert base is not None and base.attrs().width() == 1000
-        base = ie._get_base_image(ImageAttrs('test_images/cathedral.jpg', orig_id, width=800, height=800, size_fit=True, strip=True, tile_spec=(2,4)))
+        try_attrs = ImageAttrs('test_images/cathedral.jpg', orig_id, width=800, height=800, size_fit=True, strip=True, tile_spec=(2,4))
+        base = im._get_base_image(im.finalise_image_attrs(try_attrs))
         assert base is not None and base.attrs().width() == 1000
-        base = ie._get_base_image(ImageAttrs('test_images/cathedral.jpg', orig_id, width=800, height=800, size_fit=True, strip=True, overlay_src='test_images/quru110.png', tile_spec=(2,4)))
+        try_attrs = ImageAttrs('test_images/cathedral.jpg', orig_id, width=800, height=800, size_fit=True, strip=True, overlay_src='test_images/quru110.png', tile_spec=(2,4))
+        base = im._get_base_image(im.finalise_image_attrs(try_attrs))
         assert base is not None and base.attrs().width() == 1000
-        base = ie._get_base_image(ImageAttrs('test_images/cathedral.jpg', orig_id, width=500, tile_spec=(18,36)))
+        try_attrs = ImageAttrs('test_images/cathedral.jpg', orig_id, width=500, tile_spec=(18,36))
+        base = im._get_base_image(im.finalise_image_attrs(try_attrs))
         assert base is not None and base.attrs().width() == 500
-        base = ie._get_base_image(ImageAttrs('test_images/cathedral.jpg', orig_id, width=500, rotation=180, tile_spec=(18,36)))
+        try_attrs = ImageAttrs('test_images/cathedral.jpg', orig_id, width=500, rotation=180, tile_spec=(18,36))
+        base = im._get_base_image(im.finalise_image_attrs(try_attrs))
         assert base is not None and base.attrs().width() == 500
-        base = ie._get_base_image(ImageAttrs('test_images/cathedral.jpg', orig_id, width=500, rotation=180, flip='v', tile_spec=(18,36)))
+        try_attrs = ImageAttrs('test_images/cathedral.jpg', orig_id, width=500, rotation=180, flip='v', tile_spec=(18,36))
+        base = im._get_base_image(im.finalise_image_attrs(try_attrs))
         assert base is not None and base.attrs().width() == 500
-        base = ie._get_base_image(ImageAttrs('test_images/cathedral.jpg', orig_id, width=500, height=500, size_fit=True, strip=True, tile_spec=(18,36)))
+        try_attrs = ImageAttrs('test_images/cathedral.jpg', orig_id, width=500, height=500, size_fit=True, strip=True, tile_spec=(18,36))
+        base = im._get_base_image(im.finalise_image_attrs(try_attrs))
         assert base is not None and base.attrs().width() == 500
-        base = ie._get_base_image(ImageAttrs('test_images/cathedral.jpg', orig_id, width=500, height=500, size_fit=True, strip=True, overlay_src='test_images/quru110.png', tile_spec=(18,36)))
+        try_attrs = ImageAttrs('test_images/cathedral.jpg', orig_id, width=500, height=500, size_fit=True, strip=True, overlay_src='test_images/quru110.png', tile_spec=(18,36))
+        base = im._get_base_image(im.finalise_image_attrs(try_attrs))
         assert base is not None and base.attrs().width() == 500
-        # Clean up again
-        ie.reset_image(orig_attrs)
 
-    # Test that settings take effect
-    def test_settings(self):
-        # Get img1 with explicit format and quality params
-        img1 = self.app.get('/image?src=test_images/dorset.jpg&width=800&format=bmp&quality=50')
-        assert img1.status_code == 200
-        assert 'image/bmp' in img1.headers['Content-Type']
-        # Get img2, no params but with global defaults set to be the same as img1
-        flask_app.config['IMAGE_FORMAT_DEFAULT'] = 'bmp'
-        flask_app.config['IMAGE_QUALITY_DEFAULT'] = 50
-        img2 = self.app.get('/image?src=test_images/dorset.jpg&width=800')
-        assert img2.status_code == 200
-        assert 'image/bmp' in img2.headers['Content-Type']
-        assert len(img1.data) == len(img2.data)
-        # Generate img3 with resize quality 3
-        flask_app.config['IMAGE_FORMAT_DEFAULT'] = 'png'
+    # Test that the resize settings take effect
+    def test_resize_system_setting(self):
         flask_app.config['IMAGE_RESIZE_QUALITY'] = 3
-        img3 = self.app.get('/image?src=test_images/dorset.jpg&width=800')
-        assert img3.status_code == 200
-        assert 'image/png' in img3.headers['Content-Type']
-        # Delete img3 from cache
-        img3_obj = auto_sync_existing_file('test_images/dorset.jpg', dm, tm)
-        img3_attrs = ImageAttrs(img3_obj.src, img3_obj.id, iformat='png', width=800)
-        assert cm.delete(img3_attrs.get_cache_key()), 'Failed to delete img3 from cache'
-        # Re-generate it as img4 with resize quality 1
-        flask_app.config['IMAGE_FORMAT_DEFAULT'] = 'png'
+        img1 = self.app.get('/image?src=test_images/dorset.jpg&format=png&width=800')
+        self.assertEqual(img1.status_code, 200)
+        self.assertIn('image/png', img1.headers['Content-Type'])
+        # Delete img from cache
+        im.reset_image(ImageAttrs('test_images/dorset.jpg'))
+        # Re-generate it as img2 with resize quality 1
         flask_app.config['IMAGE_RESIZE_QUALITY'] = 1
-        img4 = self.app.get('/image?src=test_images/dorset.jpg&width=800')
-        assert img4.status_code == 200
-        assert 'image/png' in img4.headers['Content-Type']
-        assert len(img4.data) < len(img3.data)  # Assumes lower quality gives lower file size
-        # Test keeping the original image format
-        flask_app.config['IMAGE_FORMAT_DEFAULT'] = ''
-        flask_app.config['IMAGE_RESIZE_QUALITY'] = 75
-        img5 = self.app.get('/image?src=test_images/dorset.jpg&width=805')
-        assert img5.status_code == 200
-        assert 'image/jpeg' in img5.headers['Content-Type']
-        img5_size = len(img5.data)
-        # Test strip
-        flask_app.config['IMAGE_STRIP_DEFAULT'] = True
-        img6 = self.app.get('/image?src=test_images/dorset.jpg&width=805')
-        assert img6.status_code == 200
-        assert len(img6.data) < img5_size
+        img2 = self.app.get('/image?src=test_images/dorset.jpg&format=png&width=800')
+        self.assertEqual(img2.status_code, 200)
+        self.assertIn('image/png', img2.headers['Content-Type'])
+        self.assertLess(len(img2.data), len(img1.data))
+
+    # Test changing the default template values
+    def test_default_template_settings(self):
+        try:
+            db_def_temp = dm.get_image_template(tempname='Default')
+            # Get img1 with explicit format and quality params
+            img1 = self.app.get('/image?src=test_images/dorset.jpg&width=800&format=bmp&quality=50')
+            self.assertEqual(img1.status_code, 200)
+            self.assertIn('image/bmp', img1.headers['Content-Type'])
+            # Get img2, no params but with defaults set to be the same as img1
+            db_def_temp.template['format']['value'] = 'bmp'
+            db_def_temp.template['quality']['value'] = 50
+            dm.save_object(db_def_temp)
+            im.reset_templates()
+            img2 = self.app.get('/image?src=test_images/dorset.jpg&width=800')
+            self.assertEqual(img2.status_code, 200)
+            self.assertIn('image/bmp', img2.headers['Content-Type'])
+            self.assertEqual(len(img1.data), len(img2.data))
+            # Test keeping the original image format
+            db_def_temp.template['format']['value'] = ''
+            db_def_temp.template['quality']['value'] = 75
+            dm.save_object(db_def_temp)
+            im.reset_templates()
+            img3 = self.app.get('/image?src=test_images/dorset.jpg&width=805')
+            self.assertEqual(img3.status_code, 200)
+            self.assertIn('image/jpeg', img3.headers['Content-Type'])
+            img3_size = len(img3.data)
+            # Test strip
+            db_def_temp.template['strip']['value'] = True
+            dm.save_object(db_def_temp)
+            im.reset_templates()
+            img4 = self.app.get('/image?src=test_images/dorset.jpg&width=805')
+            self.assertEqual(img4.status_code, 200)
+            self.assertLess(len(img4.data), img3_size)
+        finally:
+            reset_default_image_template()
 
     # Test the ETag header behaves as it should
     def test_etag(self):
@@ -1859,7 +1870,7 @@ class ImageServerTestsFast(BaseTestCase):
             try: os.remove(tempfile)
             except: pass
         # Test getting "image" dimensions - should be using PDF_BURST_DPI setting, default 150
-        pdf_props = ie.get_image_properties(pdfrelfile)
+        pdf_props = im.get_image_properties(pdfrelfile)
         assert pdf_props, 'Failed to read PDF properties'
         assert pdf_props['width'] in [1237, 1238], 'Converted image width is ' + str(pdf_props['width'])
         assert pdf_props['height'] == 1650, 'Converted image height is ' + str(pdf_props['height'])
@@ -1900,7 +1911,7 @@ class ImageServerTestsFast(BaseTestCase):
         self.assertEqual(dims[0], 800)
         self.assertImageMatch(rv.data, 'nikon-raw-800.png')
         # The image dimensions are really 2000x3008 (Mac Preview) or 2014x3039 (LibRaw)
-        raw_props = ie.get_image_properties('test_images/nikon_raw.nef', True)
+        raw_props = im.get_image_properties('test_images/nikon_raw.nef', True)
         self.assertEqual(raw_props['width'], 2014)
         self.assertEqual(raw_props['height'], 3039)
         # EXIF data should be readable
@@ -1914,7 +1925,7 @@ class ImageServerTestsFast(BaseTestCase):
     def test_nef_raw_file_converted_exif(self):
         rv = self.app.get('/image?src=test_images/nikon_raw.nef&format=png&width=800&strip=0')
         self.assertEqual(rv.status_code, 200)
-        props = ie.get_image_data_properties(rv.data, 'png', True)
+        props = im.get_image_data_properties(rv.data, 'png', True)
         self.check_image_properties_dict(props, 'TIFF', Model='NIKON D50')
         self.check_image_properties_dict(props, 'EXIF', FNumber='4.2')
 
@@ -1929,7 +1940,7 @@ class ImageServerTestsFast(BaseTestCase):
         self.assertEqual(dims[0], 4770)
         self.assertEqual(dims[1], 3178)
         # Check expected dimensions - original file
-        raw_props = ie.get_image_properties('test_images/canon_raw.cr2', True)
+        raw_props = im.get_image_properties('test_images/canon_raw.cr2', True)
         self.assertEqual(raw_props['width'], 4770)
         self.assertEqual(raw_props['height'], 3178)
         # EXIF data should be readable
@@ -1943,7 +1954,7 @@ class ImageServerTestsFast(BaseTestCase):
     def test_cr2_raw_file_converted_exif(self):
         rv = self.app.get('/image?src=test_images/canon_raw.cr2&format=png&strip=0')
         self.assertEqual(rv.status_code, 200)
-        props = ie.get_image_data_properties(rv.data, 'png', True)
+        props = im.get_image_data_properties(rv.data, 'png', True)
         self.check_image_properties_dict(props, 'TIFF', Model='Canon EOS 500D')
         self.check_image_properties_dict(props, 'EXIF', FNumber='4.0')
 
@@ -2052,81 +2063,79 @@ class ImageServerTestsFast(BaseTestCase):
 
     # Test image templates
     def test_templates(self):
-        template = 'qis_template_test'
-        tempfile = '/tmp/'+template+'.cfg'
-        # Set image manager to re-check template files continuously
-        prev_check_time = ImageManager.TEMPLATE_CHECK_SECONDS
-        ImageManager.TEMPLATE_CHECK_SECONDS = 0
         try:
-            # Reload with 0 templates
-            flask_app.config['TEMPLATES_BASE_DIR'] = '/tmp/'
-            flask_app.image_engine._reload_templates()
-            self.assertEqual(len(flask_app.image_engine.get_template_names()), 0)
-            # Create a temporary template to work from
-            with open(tempfile, 'w') as tfile:
-                flask_app.image_engine._reload_templates()
-                # Test format - original first
-                flask_app.config['IMAGE_FORMAT_DEFAULT'] = ''
-                rv = self.app.get('/image?src=test_images/thames.jpg')
-                self.assertEqual(rv.status_code, 200)
-                self.assertIn('image/jpeg', rv.headers['Content-Type'])
-                # Test format from template
-                fwrite(tfile, '\n[ImageAttributes]\nformat=png\n', True)
-                self.assertIn(template, flask_app.image_engine.get_template_names())
-                rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template)
-                self.assertEqual(rv.status_code, 200)
-                self.assertIn('image/png', rv.headers['Content-Type'])
-                original_len = len(rv.data)
-                # Test cropping from template makes it smaller
-                fwrite(tfile, '\ntop=0.1\nleft=0.1\nbottom=0.9\nright=0.9\n', True)
-                rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template)
-                self.assertEqual(rv.status_code, 200)
-                cropped_len = len(rv.data)
-                self.assertLess(cropped_len, original_len)
-                # Test stripping the EXIF data makes it smaller again 2
-                fwrite(tfile, '\nstrip=1\n', True)
-                rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template)
-                self.assertEqual(rv.status_code, 200)
-                stripped_len = len(rv.data)
-                self.assertLess(stripped_len, cropped_len)
-                # Test resizing it small makes it smaller again 3
-                fwrite(tfile, '\nwidth=500\nheight=500\n', True)
-                rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template)
-                self.assertEqual(rv.status_code, 200)
-                resized_len = len(rv.data)
-                self.assertLess(resized_len, stripped_len)
-                # And that auto-fitting the crop then makes it slightly larger
-                fwrite(tfile, '\nautocropfit=1\n', True)
-                rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template)
-                self.assertEqual(rv.status_code, 200)
-                autofit_crop_len = len(rv.data)
-                self.assertGreater(autofit_crop_len, resized_len)
-                # Test expiry settings - original first
-                flask_app.config['IMAGE_EXPIRY_TIME_DEFAULT'] = 99
-                rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template)
-                self.assertEqual(rv.headers.get('Expires'), http_date(int(time.time() + 99)))
-                # Test expiry settings from template
-                fwrite(tfile, '\n[BrowserOptions]\nexpiry=-1\n', True)
-                rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template)
-                self.assertEqual(rv.headers.get('Expires'), http_date(0))
-                # Test attachment settings from template
-                fwrite(tfile, '\nattach=true\n', True)
-                rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template)
-                self.assertIsNotNone(rv.headers.get('Content-Disposition'))
-                self.assertIn('attachment', rv.headers['Content-Disposition'])
-                # Test that URL params override the template
-                rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template+'&format=bmp&attach=0')
-                self.assertEqual(rv.status_code, 200)
-                self.assertIn('image/bmp', rv.headers['Content-Type'])
-                self.assertIsNone(rv.headers.get('Content-Disposition'))
-                template_bmp_len = len(rv.data)
-                rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template+'&format=bmp&width=600&height=600&attach=0')
-                self.assertEqual(rv.status_code, 200)
-                self.assertGreater(len(rv.data), template_bmp_len)
+            template = 'Unit test template'
+            # Utility to update a template in the database and reset the template manager cache
+            def update_db_template(db_obj, update_dict):
+                db_obj.template.update(update_dict)
+                dm.save_object(db_obj)
+                im.reset_templates()
+            # Get the default template
+            db_default_template = dm.get_image_template(tempname='Default')
+            # Create a temporary template to work with
+            db_template = ImageTemplate(template, 'Temporary template for unit testing', {})
+            db_template = dm.save_object(db_template, refresh=True)
+            # Test format - first use original format in default template
+            update_db_template(db_default_template, {'format': {'value': ''}})
+            rv = self.app.get('/image?src=test_images/thames.jpg')
+            self.assertEqual(rv.status_code, 200)
+            self.assertIn('image/jpeg', rv.headers['Content-Type'])
+            # Test format from template
+            update_db_template(db_template, {'format': {'value': 'png'}})
+            self.assertIn(template, im.get_template_names())
+            rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template)
+            self.assertEqual(rv.status_code, 200)
+            self.assertIn('image/png', rv.headers['Content-Type'])
+            original_len = len(rv.data)
+            # Test cropping from template makes it smaller
+            update_db_template(db_template, {'top': {'value': 0.1}, 'left': {'value': 0.1},
+                                             'bottom': {'value': 0.9}, 'right': {'value': 0.9}})
+            rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template)
+            self.assertEqual(rv.status_code, 200)
+            cropped_len = len(rv.data)
+            self.assertLess(cropped_len, original_len)
+            # Test stripping the EXIF data makes it smaller again 2
+            update_db_template(db_template, {'strip': {'value': True}})
+            rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template)
+            self.assertEqual(rv.status_code, 200)
+            stripped_len = len(rv.data)
+            self.assertLess(stripped_len, cropped_len)
+            # Test resizing it small makes it smaller again 3
+            update_db_template(db_template, {'width': {'value': 500}, 'height': {'value': 500}})
+            rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template)
+            self.assertEqual(rv.status_code, 200)
+            resized_len = len(rv.data)
+            self.assertLess(resized_len, stripped_len)
+            # And that auto-fitting the crop then makes it slightly larger
+            update_db_template(db_template, {'crop_fit': {'value': True}})
+            rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template)
+            self.assertEqual(rv.status_code, 200)
+            autofit_crop_len = len(rv.data)
+            self.assertGreater(autofit_crop_len, resized_len)
+            # Test expiry settings - from the default template first
+            update_db_template(db_default_template, {'expiry_secs': {'value': 99}})
+            rv = self.app.get('/image?src=test_images/thames.jpg')
+            self.assertEqual(rv.headers.get('Expires'), http_date(int(time.time() + 99)))
+            # Test expiry settings from template
+            update_db_template(db_template, {'expiry_secs': {'value': -1}})
+            rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template)
+            self.assertEqual(rv.headers.get('Expires'), http_date(0))
+            # Test attachment settings from template
+            update_db_template(db_template, {'attachment': {'value': True}})
+            rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template)
+            self.assertIsNotNone(rv.headers.get('Content-Disposition'))
+            self.assertIn('attachment', rv.headers['Content-Disposition'])
+            # Test that URL params override the template
+            rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template+'&format=bmp&attach=0')
+            self.assertEqual(rv.status_code, 200)
+            self.assertIn('image/bmp', rv.headers['Content-Type'])
+            self.assertIsNone(rv.headers.get('Content-Disposition'))
+            template_bmp_len = len(rv.data)
+            rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template+'&format=bmp&width=600&height=600&attach=0')
+            self.assertEqual(rv.status_code, 200)
+            self.assertGreater(len(rv.data), template_bmp_len)
         finally:
-            ImageManager.TEMPLATE_CHECK_SECONDS = prev_check_time
-            if os.path.exists(tempfile):
-                os.remove(tempfile)
+            reset_default_image_template()
 
     # Test spaces in file names - serving and caching
     def test_filename_spaces(self):
@@ -2139,6 +2148,7 @@ class ImageServerTestsFast(BaseTestCase):
         # Test retrieval from cache
         blue_img = auto_sync_existing_file('test_images/blue bells.jpg', dm, tm)
         blue_attrs = ImageAttrs(blue_img.src, blue_img.id)
+        im.finalise_image_attrs(blue_attrs)
         blue_image = cm.get(blue_attrs.get_cache_key())
         assert blue_image is not None, 'Filename with spaces was not retrieved from cache'
         assert len(blue_image) == 904256
@@ -2154,7 +2164,7 @@ class ImageServerTestsFast(BaseTestCase):
 
     # Test reading image profile data
     def test_image_profile_properties(self):
-        profile_data = ie.get_image_properties('test_images/cathedral.jpg', True)
+        profile_data = im.get_image_properties('test_images/cathedral.jpg', True)
         assert 'width' in profile_data and 'height' in profile_data
         assert profile_data['width'] == 1600
         assert profile_data['height'] == 1200
@@ -2248,7 +2258,7 @@ class ImageServerTestsFast(BaseTestCase):
         try:
             # Create a php.ini
             with open(tempfile, 'w') as tfile:
-                fwrite(tfile, 'UNIT TEST! This is my php.ini file containing interesting info.')
+                tfile.write('UNIT TEST! This is my php.ini file containing interesting info.')
             # Test we can't now serve that up
             rv = self.app.get('/original?src=php.ini')
             self.assertEqual(rv.status_code, 415)
@@ -2351,7 +2361,7 @@ class ImageServerTestsFast(BaseTestCase):
             if os.path.exists(temp_file): os.remove(temp_file)
             delete_file(image_path)
         # Check db auto-populates for the now-deleted uploaded file
-        ie.reset_image(ImageAttrs(image_path))  # Anything to trigger auto-populate
+        im.reset_image(ImageAttrs(image_path))  # Anything to trigger auto-populate
         i = dm.get_image(src=image_path, load_history=True)
         assert i is not None
         assert i.status == Image.STATUS_DELETED
@@ -2594,7 +2604,7 @@ class ImageServerTestsFast(BaseTestCase):
         dm.get_group(Group.ID_PUBLIC)
         assert sql_info['count'] == 1
         # Clear out the image caches and permissions caches
-        ie.reset_image(ImageAttrs(test_image))
+        im.reset_image(ImageAttrs(test_image))
         delete_image_ids()
         pm.reset()
         # Viewing an image will trigger SQL for the image record and folder permissions reads
@@ -2804,26 +2814,35 @@ class ImageServerTestsFast(BaseTestCase):
 
     # Test that the browser cache expiry headers work
     def test_caching_expiry_settings(self):
-        # This should work with both 'image' and 'original'
-        for api in ['image', 'original']:
-            img_url = '/' + api + '?src=test_images/dorset.jpg&width=800'
-            flask_app.config['IMAGE_EXPIRY_TIME_DEFAULT'] = -1
-            img = self.app.get(img_url)
-            assert img.headers.get('Expires') == http_date(0)
-            assert img.headers.get('Cache-Control') == 'no-cache, public'
-            flask_app.config['IMAGE_EXPIRY_TIME_DEFAULT'] = 0
-            img = self.app.get(img_url)
-            assert img.headers.get('Expires') is None
-            assert img.headers.get('Cache-Control') is None
-            flask_app.config['IMAGE_EXPIRY_TIME_DEFAULT'] = 60
-            img = self.app.get(img_url)
-            assert img.headers.get('Expires') == http_date(int(time.time() + 60))
-            assert img.headers.get('Cache-Control') == 'public, max-age=60'
+        try:
+            # Utility to update the default template
+            db_def_temp = dm.get_image_template(tempname='Default')
+            def set_default_expiry(value):
+                db_def_temp.template['expiry_secs']['value'] = value
+                dm.save_object(db_def_temp)
+                im.reset_templates()
+            # This should work with both 'image' and 'original'
+            for api in ['image', 'original']:
+                img_url = '/' + api + '?src=test_images/dorset.jpg&width=800'
+                set_default_expiry(-1)
+                img = self.app.get(img_url)
+                self.assertEqual(img.headers.get('Expires'), http_date(0))
+                self.assertEqual(img.headers.get('Cache-Control'), 'no-cache, public')
+                set_default_expiry(0)
+                img = self.app.get(img_url)
+                self.assertIsNone(img.headers.get('Expires'))
+                self.assertIsNone(img.headers.get('Cache-Control'))
+                set_default_expiry(60)
+                img = self.app.get(img_url)
+                self.assertEqual(img.headers.get('Expires'), http_date(int(time.time() + 60)))
+                self.assertEqual(img.headers.get('Cache-Control'), 'public, max-age=60')
+        finally:
+            reset_default_image_template()
 
     # Test that the browser cache validation headers work
     def test_etags(self):
-        # Run this with a normal cache expiry time
-        flask_app.config['IMAGE_EXPIRY_TIME_DEFAULT'] = 604800
+        # Check that client caching is enabled
+        self.assertGreater(im.get_default_template().expiry_secs(), 0)
         # Setup
         img_url = '/image?src=test_images/dorset.jpg&width=440&angle=90&top=0.2&tile=3:4'
         rv = self.app.get(img_url)
@@ -2835,7 +2854,7 @@ class ImageServerTestsFast(BaseTestCase):
         assert rv.headers['X-From-Cache'] == 'True'
         assert rv.headers.get('ETag') == etag
         # Etag should be updated when the image is re-generated
-        ie.reset_image(ImageAttrs('test_images/dorset.jpg'))
+        im.reset_image(ImageAttrs('test_images/dorset.jpg'))
         rv = self.app.get(img_url)
         assert rv.headers['X-From-Cache'] == 'False'
         assert rv.headers.get('ETag') is not None
@@ -2848,8 +2867,8 @@ class ImageServerTestsFast(BaseTestCase):
 
     # Test that browser caching still works when server side caching is off
     def test_no_server_caching_etags(self):
-        # Run this with a normal cache expiry time
-        flask_app.config['IMAGE_EXPIRY_TIME_DEFAULT'] = 604800
+        # Check the expected default expires header value
+        self.assertEqual(im.get_default_template().expiry_secs(), 604800)
         # Setup
         setup_user_account('kryten', 'none')
         self.login('kryten', 'kryten')  # Login to allow cache=0
@@ -2869,15 +2888,26 @@ class ImageServerTestsFast(BaseTestCase):
 
     # Test that etags are removed when client side caching is off
     def test_no_client_caching_etags(self):
-        flask_app.config['IMAGE_EXPIRY_TIME_DEFAULT'] = -1
-        for api in ['image', 'original']:
-            img_url = '/' + api + '?src=test_images/dorset.jpg'
-            img = self.app.get(img_url)
-            assert img.headers.get('ETag') is None
+        try:
+            # Turn off client side caching in the default template
+            db_def_temp = dm.get_image_template(tempname='Default')
+            db_def_temp.template['expiry_secs']['value'] = -1
+            dm.save_object(db_def_temp)
+            im.reset_templates()
+            # Run test
+            for api in ['image', 'original']:
+                img_url = '/' + api + '?src=test_images/dorset.jpg'
+                img = self.app.get(img_url)
+                self.assertIsNone(img.headers.get('ETag'))
+        finally:
+            reset_default_image_template()
 
     # Test that ETags are all different for different images with the
     # same parameters and for the same images with different parameters
     def test_etag_collisions(self):
+        # Check that client caching is enabled
+        self.assertGreater(im.get_default_template().expiry_secs(), 0)
+        # Generate a suite of URLs
         url_list = [
             '/image?src=test_images/dorset.jpg',
             '/image?src=test_images/cathedral.jpg',
@@ -2893,6 +2923,7 @@ class ImageServerTestsFast(BaseTestCase):
             url_list2.append(url + '&width=200&height=200')
             url_list2.append(url + '&width=200&height=200&fill=red')
         etags_list = []
+        # Request all the URLs
         for url in url_list2:
             rv = self.app.get(url)
             assert rv.status_code == 200
@@ -2903,8 +2934,8 @@ class ImageServerTestsFast(BaseTestCase):
 
     # Test that clients with an up-to-date cached image don't have to download it again
     def test_304_Not_Modified(self):
-        # Run this with a normal cache expiry time
-        flask_app.config['IMAGE_EXPIRY_TIME_DEFAULT'] = 604800
+        # Check the expected default expires header value
+        self.assertEqual(im.get_default_template().expiry_secs(), 604800)
         # This should work with both 'image' and 'original'
         for api in ['image', 'original']:
             # Setup
@@ -2936,7 +2967,7 @@ class ImageServerTestsFast(BaseTestCase):
             self.assertEqual(rv.data, '')
             # Now reset the image
             if api == 'image':
-                ie.reset_image(ImageAttrs('test_images/dorset.jpg'))
+                im.reset_image(ImageAttrs('test_images/dorset.jpg'))
             else:
                 os.utime(get_abs_path('test_images/dorset.jpg'), None)  # Touch
             # Client should get a new image and Etag when the old one is no longer valid
@@ -3105,1524 +3136,77 @@ class ImageServerCacheTests(BaseTestCase):
         self.assertIsNone(ret)
 
 
-class ImageServerAPITests(BaseTestCase):
-    # API token login - bad parameters
-    def test_token_login_bad_params(self):
-        # Missing params
-        rv = self.app.post('/api/token')
-        self.assertEqual(rv.status_code, API_CODES.INVALID_PARAM)
-        # Invalid username
-        rv = self.app.post('/api/token', data={
-            'username': 'unclebulgaria',
-            'password': 'wimbledon'
-        })
-        self.assertEqual(rv.status_code, API_CODES.UNAUTHORISED)
-        # Invalid password
-        rv = self.app.post('/api/token', data={
-            'username': 'admin',
-            'password': 'wimbledon'
-        })
-        self.assertEqual(rv.status_code, API_CODES.UNAUTHORISED)
+class UtilityTests(unittest.TestCase):
+    def test_image_attrs_serialisation(self):
+        ia = ImageAttrs('some/path', -1, page=2, iformat='psd', template='smalljpeg',
+                        width=1000, height=1000, size_fit=False,
+                        fill='black', colorspace='rgb', strip=False)
+        ia_dict = ia.to_dict()
+        self.assertEqual(ia_dict['template'], 'smalljpeg')
+        self.assertEqual(ia_dict['fill'], 'black')
+        self.assertEqual(ia_dict['page'], 2)
+        self.assertEqual(ia_dict['size_fit'], False)
+        rev = ImageAttrs.from_dict(ia_dict)
+        rev_dict = rev.to_dict()
+        self.assertEqual(ia_dict, rev_dict)
 
-    # API token login - normal with username+password parameters
-    def test_token_login(self):
-        rv = self.app.get('/api/admin/groups/')
-        self.assertEqual(rv.status_code, API_CODES.REQUIRES_AUTH)
-        # Login
-        setup_user_account('kryten', 'admin_all', allow_api=True)
-        token = self.api_login('kryten', 'kryten')
-        creds = base64.b64encode(token + ':password')
-        # Try again
-        rv = self.app.get('/api/admin/groups/', headers={
-            'Authorization': 'Basic ' + creds
-        })
-        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
-
-    # API token login - normal with username+password http basic auth
-    def test_token_login_http_basic_auth(self):
-        setup_user_account('kryten', 'none', allow_api=True)
-        creds = base64.b64encode('kryten:kryten')
-        rv = self.app.post('/api/token', headers={
-            'Authorization': 'Basic ' + creds
-        })
-        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
-        obj = json.loads(rv.data)
-        self.assertEqual(obj['status'], rv.status_code)
-
-    # API token login - account disabled
-    def test_token_login_user_disabled(self):
-        setup_user_account('kryten', 'admin_users', allow_api=True)
-        user = dm.get_user(username='kryten')
-        self.assertIsNotNone(user)
-        user.status = User.STATUS_DELETED
-        dm.save_object(user)
-        self.assertRaises(AssertionError, self.api_login, 'kryten', 'kryten')
-
-    # API token login - user.allow_api flag false
-    def test_token_allow_api_false(self):
-        setup_user_account('kryten', 'admin_users', allow_api=False)
-        self.assertRaises(AssertionError, self.api_login, 'kryten', 'kryten')
-
-    # Test you cannot request a new token by authenticating with an older (still valid) token
-    def test_no_token_extension(self):
-        setup_user_account('kryten', 'none', allow_api=True)
-        token = self.api_login('kryten', 'kryten')
-        creds = base64.b64encode(token + ':password')
-        # Try to get a new token with only the old token
-        rv = self.app.post('/api/token', headers={
-            'Authorization': 'Basic ' + creds
-        })
-        self.assertEqual(rv.status_code, API_CODES.UNAUTHORISED)
-        obj = json.loads(rv.data)
-        self.assertEqual(obj['status'], rv.status_code)
-
-    # Test that tokens expire
-    def test_token_expiry(self):
-        old_expiry = flask_app.config['API_TOKEN_EXPIRY_TIME']
-        # Enable CSRF - there have been bugs with this overring API responses
-        flask_app.config['TESTING'] = False
-        try:
-            setup_user_account('kryten', 'admin_users', allow_api=True)
-            # Get a 1 second token
-            flask_app.config['API_TOKEN_EXPIRY_TIME'] = 1
-            token = self.api_login('kryten', 'kryten')
-            creds = base64.b64encode(token + ':password')
-            # Token should work now
-            rv = self.app.get('/api/admin/users/', headers={
-                'Authorization': 'Basic ' + creds
-            })
-            self.assertEqual(rv.status_code, API_CODES.SUCCESS)
-            obj = json.loads(rv.data)
-            self.assertEqual(obj['status'], rv.status_code)
-            # That 1 second expiry is anything from 1 to 2s in reality
-            time.sleep(2)
-            # Token should now be expired
-            rv = self.app.get('/api/admin/users/', headers={
-                'Authorization': 'Basic ' + creds
-            })
-            self.assertEqual(rv.status_code, API_CODES.REQUIRES_AUTH)
-            obj = json.loads(rv.data)
-            self.assertEqual(obj['status'], rv.status_code)
-            # Also test a POST as this could (but shouldn't) trigger CSRF
-            rv = self.app.post('/api/admin/users/', headers={
-                'Authorization': 'Basic ' + creds
-            })
-            self.assertEqual(rv.status_code, API_CODES.REQUIRES_AUTH)
-            obj = json.loads(rv.data)
-            self.assertEqual(obj['status'], rv.status_code)
-        finally:
-            flask_app.config['API_TOKEN_EXPIRY_TIME'] = old_expiry
-            flask_app.config['TESTING'] = True
-
-    # Test you cannot authenticate with a bad token
-    def test_bad_token(self):
-        # Enable CSRF - there have been bugs with this overring API responses
-        flask_app.config['TESTING'] = False
-        try:
-            setup_user_account('kryten', 'admin_users', allow_api=True)
-            token = self.api_login('kryten', 'kryten')
-            # Tampered token
-            token = ('0' + token[1:]) if token[0] != '0' else ('1' + token[1:])
-            creds = base64.b64encode(token + ':password')
-            rv = self.app.get('/api/admin/users/1/', headers={
-                'Authorization': 'Basic ' + creds
-            })
-            self.assertEqual(rv.status_code, API_CODES.REQUIRES_AUTH)
-            obj = json.loads(rv.data)
-            self.assertEqual(obj['status'], rv.status_code)
-            # Blank token
-            token = ''
-            creds = base64.b64encode(token + ':password')
-            rv = self.app.get('/api/admin/users/1/', headers={
-                'Authorization': 'Basic ' + creds
-            })
-            self.assertEqual(rv.status_code, API_CODES.REQUIRES_AUTH)
-            obj = json.loads(rv.data)
-            self.assertEqual(obj['status'], rv.status_code)
-            # Also test a POST as this could (but shouldn't) trigger CSRF
-            rv = self.app.post('/api/admin/users/', headers={
-                'Authorization': 'Basic ' + creds
-            })
-            self.assertEqual(rv.status_code, API_CODES.REQUIRES_AUTH)
-            obj = json.loads(rv.data)
-            self.assertEqual(obj['status'], rv.status_code)
-        finally:
-            flask_app.config['TESTING'] = True
-
-    # Folder list
-    def test_api_list(self):
-        # Unauthorised path
-        rv = self.app.get('/api/list?path=../../../etc/')
-        assert rv.status_code == API_CODES.UNAUTHORISED
-        assert 'application/json' in rv.headers['Content-Type']
-        obj = json.loads(rv.data)
-        assert obj['status'] == API_CODES.UNAUTHORISED
-        # Invalid path
-        rv = self.app.get('/api/list?path=non-existent')
-        assert rv.status_code == API_CODES.NOT_FOUND
-        assert 'application/json' in rv.headers['Content-Type']
-        obj = json.loads(rv.data)
-        assert obj['status'] == API_CODES.NOT_FOUND
-        # Valid request
-        rv = self.app.get('/api/list?path=test_images')
-        assert rv.status_code == API_CODES.SUCCESS
-        assert 'application/json' in rv.headers['Content-Type']
-        obj = json.loads(rv.data)
-        assert len(obj['data']) > 0
-        assert 'filename' in obj['data'][0]
-        assert 'url' in obj['data'][0]
-        # Valid request with extra image params
-        rv = self.app.get('/api/list?path=test_images&width=500')
-        assert rv.status_code == API_CODES.SUCCESS
-        obj = json.loads(rv.data)
-        assert 'width=500' in obj['data'][0]['url']
-
-    # Image details
-    def test_api_details(self):
-        # Unauthorised path
-        rv = self.app.get('/api/details?src=../../../etc/')
-        assert rv.status_code == API_CODES.UNAUTHORISED
-        # Try requesting a folder
-        rv = self.app.get('/api/details?src=test_images')
-        assert rv.status_code == API_CODES.NOT_FOUND
-        # Valid request
-        rv = self.app.get('/api/details?src=test_images/cathedral.jpg')
-        assert rv.status_code == API_CODES.SUCCESS
-        assert 'application/json' in rv.headers['Content-Type']
-        obj = json.loads(rv.data)
-        assert obj['data']['width'] == 1600, 'Did not find data.width=1600, got ' + str(obj)
-        assert obj['data']['height'] == 1200
-
-    # Database admin API - images
-    def test_data_api_images(self):
-        # Get image ID
-        rv = self.app.get('/api/details?src=test_images/cathedral.jpg')
-        assert rv.status_code == API_CODES.SUCCESS
-        image_id = json.loads(rv.data)['data']['id']
-        # Set API URL
-        api_url = '/api/admin/images/' + str(image_id) + '/'
-        # Check no access when not logged in
-        rv = self.app.get(api_url)
-        assert rv.status_code == API_CODES.REQUIRES_AUTH
-        # Log in without edit permission
-        setup_user_account('kryten', 'none')
-        self.login('kryten', 'kryten')
-        # Test PUT (should fail)
-        rv = self.app.put(api_url, data={
-            'title': 'test title',
-            'description': 'test description'
-        })
-        assert rv.status_code == API_CODES.UNAUTHORISED
-        # Log in with edit permission
-        setup_user_account('kryten', 'admin_files')
-        self.login('kryten', 'kryten')
-        # Test PUT
-        rv = self.app.put(api_url, data={
-            'title': 'test title',
-            'description': 'test description'
-        })
-        assert rv.status_code == API_CODES.SUCCESS
-        # Test GET
-        rv = self.app.get(api_url)
-        assert rv.status_code == API_CODES.SUCCESS
-        obj = json.loads(rv.data)
-        assert obj['data']['id'] == image_id
-        assert obj['data']['title'] == 'test title'
-        assert obj['data']['description'] == 'test description'
-
-    # Database admin API - users
-    def test_data_api_users(self):
-        # Not logged in - getting details should fail
-        rv = self.app.get('/api/admin/users/2/')
-        assert rv.status_code == API_CODES.REQUIRES_AUTH
-        #
-        # Log in as std user
-        #
-        setup_user_account('kryten', 'none')
-        self.login('kryten', 'kryten')
-        # Logged in std user - user list should fail
-        rv = self.app.get('/api/admin/users/')
-        assert rv.status_code == API_CODES.UNAUTHORISED
-        # Logged in std user - getting another's details should fail
-        rv = self.app.get('/api/admin/users/1/')
-        assert rv.status_code == API_CODES.UNAUTHORISED
-        # Logged in std user - getting our own details should be OK
-        rv = self.app.get('/api/admin/users/2/')
-        assert rv.status_code == API_CODES.SUCCESS
-        # We should never send out the password
-        obj = json.loads(rv.data)
-        assert 'password' not in obj['data']
-        #
-        # Log in as user with user admin
-        #
-        setup_user_account('kryten', 'admin_users')
-        self.login('kryten', 'kryten')
-        # Logged in - getting another's details should now work
-        rv = self.app.get('/api/admin/users/1/')
-        assert rv.status_code == API_CODES.SUCCESS
-        # List users
-        rv = self.app.get('/api/admin/users/')
-        assert rv.status_code == API_CODES.SUCCESS
-        obj = json.loads(rv.data)
-        assert len(obj['data']) > 1
-        # We should never send out the password
-        assert 'password' not in obj['data'][0]
-        # Create a user - duplicate username
-        new_user_data = {
-            'first_name': 'Miles',
-            'last_name': 'Davis',
-            'email': '',
-            'username': 'admin',  # Dupe
-            'password': 'abcdef',
-            'auth_type': User.AUTH_TYPE_PASSWORD,
-            'api_user': False,
-            'status': User.STATUS_ACTIVE
+    def test_image_attrs_bad_serialisation(self):
+        bad_dict = {
+            'filename': 'some/path',
+            'format': 'potato'
         }
-        rv = self.app.post('/api/admin/users/', data=new_user_data)
-        assert rv.status_code == API_CODES.ALREADY_EXISTS, str(rv)
-        # Create a user - OK username
-        new_user_data['username'] = 'miles'
-        rv = self.app.post('/api/admin/users/', data=new_user_data)
-        assert rv.status_code == API_CODES.SUCCESS
-        obj = json.loads(rv.data)
-        new_user_id = obj['data']['id']
-        # We should never send out the password
-        assert 'password' not in obj['data']
-        # Update the user
-        new_user_data['id'] = new_user_id
-        new_user_data['first_name'] = 'Joe'
-        rv = self.app.put('/api/admin/users/' + str(new_user_id) +'/', data=new_user_data)
-        assert rv.status_code == API_CODES.SUCCESS
-        rv = self.app.get('/api/admin/users/' + str(new_user_id) +'/')
-        assert rv.status_code == API_CODES.SUCCESS
-        obj = json.loads(rv.data)
-        assert obj['data']['first_name'] == 'Joe'
-        # We should never send out the password
-        assert 'password' not in obj['data']
-        # Delete a user
-        rv = self.app.delete('/api/admin/users/' + str(new_user_id) +'/')
-        assert rv.status_code == API_CODES.SUCCESS
-        rv = self.app.get('/api/admin/users/' + str(new_user_id) +'/')
-        assert rv.status_code == API_CODES.SUCCESS
-        obj = json.loads(rv.data)
-        assert obj['data']['status'] == User.STATUS_DELETED
-        # We should never send out the password
-        assert 'password' not in obj['data']
-
-    # Database admin API - groups
-    def test_data_api_groups(self):
-        # Not logged in - getting group details should fail
-        rv = self.app.get('/api/admin/groups/')
-        assert rv.status_code == API_CODES.REQUIRES_AUTH
-        rv = self.app.get('/api/admin/groups/' + str(Group.ID_EVERYONE) + '/')
-        assert rv.status_code == API_CODES.REQUIRES_AUTH
-        # Log in as std user
-        setup_user_account('kryten', 'none')
-        self.login('kryten', 'kryten')
-        # Logged in std user - access should be denied
-        rv = self.app.get('/api/admin/groups/')
-        assert rv.status_code == API_CODES.UNAUTHORISED
-        rv = self.app.get('/api/admin/groups/' + str(Group.ID_EVERYONE) + '/')
-        assert rv.status_code == API_CODES.UNAUTHORISED
-        #
-        # Log in as user with basic group access
-        #
-        setup_user_account('kryten', 'admin_users')
-        self.login('kryten', 'kryten')
-        # Logged in basic admin - getting group details should be OK
-        rv = self.app.get('/api/admin/groups/' + str(Group.ID_EVERYONE) + '/')
-        assert rv.status_code == API_CODES.SUCCESS
-        # Check that permissions are included
-        obj = json.loads(rv.data)
-        assert 'permissions' in obj['data']
-        # Check that the group's user list is included
-        assert 'users' in obj['data']
-        # Check that passwords aren't returned in the group's user list
-        assert len(obj['data']['users']) > 0
-        assert 'password' not in obj['data']['users'][0]
-        # List groups
-        rv = self.app.get('/api/admin/groups/')
-        assert rv.status_code == API_CODES.SUCCESS
-        obj = json.loads(rv.data)
-        assert len(obj['data']) > 0
-        # Check the group list does *not* include user lists
-        assert 'users' not in obj['data'][0]
-        # Creating and deleting a group should fail
-        new_group_data = {
-            'name': 'My Group',
-            'description': 'This is a test group',
-            'group_type': Group.GROUP_TYPE_LOCAL
+        self.assertRaises(ValueError, ImageAttrs.from_dict, bad_dict)
+        bad_dict = {
+            'filename': 'some/path',
+            'width': '-1'
         }
-        rv = self.app.post('/api/admin/groups/', data=new_group_data)
-        assert rv.status_code == API_CODES.UNAUTHORISED, rv
-        rv = self.app.delete('/api/admin/groups/' + str(Group.ID_EVERYONE) + '/')
-        assert rv.status_code == API_CODES.UNAUTHORISED, rv
-        # Updating a group should change the name/description but not the permissions
-        dwarf_group = dm.get_group(groupname='Red Dwarf')
-        assert dwarf_group is not None
-        change_data = {
-            'name': 'White Dwarf',
-            'description': 'Was Red now White',
-            'group_type': Group.GROUP_TYPE_LOCAL,
-            'access_reports': '1',
-            'access_admin_files': '1',
-            'access_admin_all': '1'
+        self.assertRaises(ValueError, ImageAttrs.from_dict, bad_dict)
+        bad_dict = {
+            'filename': ''
         }
-        rv = self.app.put('/api/admin/groups/' + str(dwarf_group.id) + '/', data=change_data)
-        assert rv.status_code == API_CODES.SUCCESS
-        rv = self.app.get('/api/admin/groups/' + str(dwarf_group.id) + '/')
-        assert rv.status_code == API_CODES.SUCCESS
-        obj = json.loads(rv.data)
-        assert obj['data']['name'] == 'White Dwarf'                # Changed
-        assert obj['data']['description'] == 'Was Red now White'   # Changed
-        assert obj['data']['permissions']['reports'] == False      # Unchanged
-        assert obj['data']['permissions']['admin_files'] == False
-        assert obj['data']['permissions']['admin_all'] == False
-        # Check that passwords aren't returned in the group's user list
-        assert len(obj['data']['users']) > 0
-        assert 'password' not in obj['data']['users'][0]
-        # Adding a user to Everyone should be allowed
-        rv = self.app.post('/api/admin/groups/' + str(Group.ID_EVERYONE) + '/members/', data={ 'user_id': 3 })
-        assert rv.status_code == API_CODES.SUCCESS
-        # But adding a user to Administrators should be blocked
-        su_group = dm.get_group(Group.ID_ADMINS)
-        assert su_group is not None
-        rv = self.app.post('/api/admin/groups/' + str(su_group.id) + '/members/', data={ 'user_id': 3 })
-        assert rv.status_code == API_CODES.UNAUTHORISED
-        #
-        # Log in as user with full group access
-        #
-        self.login('admin', 'admin')
-        # Create a group - duplicate name
-        new_group_data = {
-            'name': 'Public',
-            'description': 'This is a test group',
-            'group_type': Group.GROUP_TYPE_LOCAL
+        self.assertRaises(ValueError, ImageAttrs.from_dict, bad_dict)
+
+    def test_template_attrs_serialisation(self):
+        # Test the standard constructor
+        ta = TemplateAttrs('abcdef', {
+            'width': {'value': 1000},
+            'height': {'value': 1000},
+            'expiry_secs': {'value': 50000},
+            'record_stats': {'value': True}
+        })
+        self.assertEqual(ta.name(), 'abcdef')
+        self.assertEqual(ta.get_image_attrs().filename(), 'abcdef')
+        self.assertEqual(ta.expiry_secs(), 50000)
+        self.assertEqual(ta.record_stats(), True)
+        self.assertIsNone(ta.attachment())
+        # Test values dict
+        ta_dict = ta.get_values_dict()
+        self.assertEqual(ta_dict['filename'], 'abcdef')
+        self.assertEqual(ta_dict['width'], 1000)
+        self.assertEqual(ta_dict['expiry_secs'], 50000)
+        self.assertEqual(ta_dict['record_stats'], True)
+
+    def test_template_attrs_bad_serialisation(self):
+        # Old dict format
+        bad_dict = {
+            'filename': 'some/path',
+            'expiry_secs': 50000
         }
-        rv = self.app.post('/api/admin/groups/', data=new_group_data)
-        assert rv.status_code == API_CODES.ALREADY_EXISTS, str(rv)
-        # Create a group - OK name
-        new_group_data['name'] = 'Company X'
-        rv = self.app.post('/api/admin/groups/', data=new_group_data)
-        assert rv.status_code == API_CODES.SUCCESS
-        obj = json.loads(rv.data)
-        new_group_id = obj['data']['id']
-        # Updating the group should change the name/description *and* the permissions
-        new_group_data['id'] = new_group_id
-        new_group_data['name'] = 'Company XYZ'
-        new_group_data['description'] = 'Company XYZ\'s users'
-        new_group_data['access_reports'] = '1'
-        new_group_data['access_admin_users'] = '1'
-        new_group_data['access_admin_all'] = '1'
-        rv = self.app.put('/api/admin/groups/' + str(new_group_id) + '/', data=new_group_data)
-        assert rv.status_code == API_CODES.SUCCESS
-        rv = self.app.get('/api/admin/groups/' + str(new_group_id) + '/')
-        assert rv.status_code == API_CODES.SUCCESS
-        obj = json.loads(rv.data)
-        assert obj['data']['name'] == 'Company XYZ'
-        assert obj['data']['description'] == 'Company XYZ\'s users'
-        assert obj['data']['permissions']['reports'] == True
-        assert obj['data']['permissions']['admin_users'] == True
-        assert obj['data']['permissions']['admin_all'] == True
-        # Add users to the group
-        assert len(obj['data']['users']) == 0
-        rv = self.app.post('/api/admin/groups/' + str(new_group_id) + '/members/', data={ 'user_id': 1 })
-        assert rv.status_code == API_CODES.SUCCESS, str(rv)
-        rv = self.app.post('/api/admin/groups/' + str(new_group_id) + '/members/', data={ 'user_id': 2 })
-        assert rv.status_code == API_CODES.SUCCESS
-        rv = self.app.get('/api/admin/groups/' + str(new_group_id) + '/')
-        assert rv.status_code == API_CODES.SUCCESS
-        obj = json.loads(rv.data)
-        assert len(obj['data']['users']) == 2
-        # Delete a user from the group
-        rv = self.app.delete('/api/admin/groups/' + str(new_group_id) + '/members/2/')
-        assert rv.status_code == API_CODES.SUCCESS, str(rv)
-        rv = self.app.get('/api/admin/groups/' + str(new_group_id) + '/')
-        assert rv.status_code == API_CODES.SUCCESS
-        obj = json.loads(rv.data)
-        assert len(obj['data']['users']) == 1
-        # Delete the group and remaining members
-        rv = self.app.delete('/api/admin/groups/' + str(new_group_id) + '/')
-        assert rv.status_code == API_CODES.SUCCESS, str(rv)
-        rv = self.app.get('/api/admin/groups/' + str(new_group_id) + '/')
-        assert rv.status_code == API_CODES.NOT_FOUND
-        # Deleting a system group should fail
-        rv = self.app.delete('/api/admin/groups/' + str(Group.ID_EVERYONE) + '/')
-        assert rv.status_code == API_CODES.INVALID_PARAM, rv
-
-    # #2054 Bug fixes where the current user could lock themselves out
-    #       or lock out the admin user
-    def test_group_admin_lockout(self):
-        # Log in as a user with full group access
-        setup_user_account('kryten', 'admin_permissions')
-        self.login('kryten', 'kryten')
-        db_user = dm.get_user(username='kryten', load_groups=True)
-        # These tests require setup_user_account() to set up 1 group
-        self.assertEqual(len(db_user.groups), 1)
-        # Removing admin_permission flag from Administrators group would lock out the admin user
-        # Removing admin_users flag from a user's only admin group would lock them out
-        group_ids = [
-            db_user.groups[0].id,  # Test user locking themselves out
-            Group.ID_ADMINS        # Test user locking out the admin user
-        ]
-        for group_id in group_ids:
-            db_group = dm.get_group(group_id)
-            self.assertIsNotNone(db_group)
-            set_users_flag = (group_id == Group.ID_ADMINS)
-            group_data = {
-                'name': db_group.name,
-                'description': db_group.description,
-                'group_type': db_group.group_type,
-                'access_folios': db_group.permissions.folios,
-                'access_reports': db_group.permissions.reports,
-                'access_admin_users': set_users_flag,
-                'access_admin_files': db_group.permissions.admin_files,
-                'access_admin_folios': db_group.permissions.admin_folios,
-                'access_admin_permissions': False,
-                'access_admin_all': False
-            }
-            rv = self.app.put('/api/admin/groups/' + str(db_group.id) + '/', data=group_data)
-            self.assertEqual(rv.status_code, API_CODES.INVALID_PARAM)
-            self.assertIn('would lock', rv.data)
-            # Double check that the group data has not changed
-            db_group_2 = dm.get_group(group_id)
-            self.assertIsNotNone(db_group_2)
-            self.assertEqual(db_group.permissions.admin_users,
-                             db_group_2.permissions.admin_users)
-            self.assertEqual(db_group.permissions.admin_permissions,
-                             db_group_2.permissions.admin_permissions)
-            self.assertEqual(db_group.permissions.admin_all,
-                             db_group_2.permissions.admin_all)
-        # Removing (any) user from their only admin group would lock them out
-        user_groups = [
-            (db_user.id, db_user.groups[0].id),  # Test user locking themselves out
-            (1, Group.ID_ADMINS)                 # Test user locking out the admin user
-        ]
-        for ug in user_groups:
-            rv = self.app.delete('/api/admin/groups/' + str(ug[1]) + '/members/' + str(ug[0]) + '/')
-            self.assertEqual(rv.status_code, API_CODES.INVALID_PARAM)
-            self.assertIn('would lock', rv.data)
-            # Double check that the user is still in the group
-            db_group = dm.get_group(ug[1], load_users=True)
-            group_users = [u.id for u in db_group.users]
-            self.assertIn(ug[0], group_users)
-
-    # Database admin API - folderpermissions
-    def test_data_api_folder_permissions(self):
-        # Not logged in - getting permission details should fail
-        rv = self.app.get('/api/admin/permissions/')
-        assert rv.status_code == API_CODES.REQUIRES_AUTH
-        rv = self.app.get('/api/admin/permissions/1/')
-        assert rv.status_code == API_CODES.REQUIRES_AUTH
-        # Log in as std user
-        setup_user_account('kryten', 'none')
-        self.login('kryten', 'kryten')
-        # Logged in std user - access should be denied
-        rv = self.app.get('/api/admin/permissions/')
-        assert rv.status_code == API_CODES.UNAUTHORISED
-        rv = self.app.get('/api/admin/permissions/1/')
-        assert rv.status_code == API_CODES.UNAUTHORISED
-        #
-        # Log in as user with permissions admin access
-        #
-        setup_user_account('kryten', 'admin_permissions')
-        self.login('kryten', 'kryten')
-        # Getting permissions should be OK
-        rv = self.app.get('/api/admin/permissions/1/')
-        assert rv.status_code == API_CODES.SUCCESS
-        # Try deleting root public permission (this should fail)
-        rv = self.app.delete('/api/admin/permissions/1/')
-        assert rv.status_code == API_CODES.INVALID_PARAM
-        # Try creating a duplicate root public permission (this should fail)
-        root_folder = dm.get_folder(folder_path='')
-        pub_group = dm.get_group(Group.ID_PUBLIC)
-        rv = self.app.post('/api/admin/permissions/', data={
-            'folder_id': root_folder.id,
-            'group_id': pub_group.id,
-            'access': FolderPermission.ACCESS_VIEW
-        })
-        assert rv.status_code == API_CODES.ALREADY_EXISTS
-        # Get default permission for test_images + public
-        test_folder = dm.get_folder(folder_path='test_images')
-        assert test_folder is not None
-        test_fp = dm.get_nearest_folder_permission(test_folder, pub_group)
-        assert test_fp is not None
-        assert test_fp.folder_id == root_folder.id                 # See reset_databases()
-        assert test_fp.access == FolderPermission.ACCESS_DOWNLOAD  # See reset_databases()
-        # Create custom permission for test_images + public
-        rv = self.app.post('/api/admin/permissions/', data={
-            'folder_id': test_folder.id,
-            'group_id': pub_group.id,
-            'access': FolderPermission.ACCESS_EDIT
-        })
-        assert rv.status_code == API_CODES.SUCCESS
-        obj = json.loads(rv.data)
-        assert obj['data']['id'] > 0
-        assert obj['data']['access'] == FolderPermission.ACCESS_EDIT
-        custom_p_id = obj['data']['id']
-        # Re-read permission for test_images + public
-        test_fp = dm.get_nearest_folder_permission(test_folder, pub_group)
-        assert test_fp is not None
-        assert test_fp.folder_id == test_folder.id
-        assert test_fp.access == FolderPermission.ACCESS_EDIT
-        # Change the custom permission
-        rv = self.app.put('/api/admin/permissions/' + str(custom_p_id) + '/', data={
-            'folder_id': test_folder.id,
-            'group_id': pub_group.id,
-            'access': FolderPermission.ACCESS_ALL
-        })
-        assert rv.status_code == API_CODES.SUCCESS
-        obj = json.loads(rv.data)
-        assert obj['data']['access'] == FolderPermission.ACCESS_ALL
-        # Re-read permission for test_images + public
-        test_fp = dm.get_nearest_folder_permission(test_folder, pub_group)
-        assert test_fp is not None
-        assert test_fp.folder_id == test_folder.id
-        assert test_fp.access == FolderPermission.ACCESS_ALL
-        # Delete the custom permission again
-        rv = self.app.delete('/api/admin/permissions/' + str(custom_p_id) + '/')
-        assert rv.status_code == API_CODES.SUCCESS
-        # Re-read permission for test_images + public
-        test_fp = dm.get_nearest_folder_permission(test_folder, pub_group)
-        assert test_fp is not None
-        assert test_fp.folder_id == root_folder.id                 # Back to default
-        assert test_fp.access == FolderPermission.ACCESS_DOWNLOAD  # Back to default
-
-    # Tests the image template API
-    def test_data_api_templates(self):
-        # Not logged in - getting details should fail
-        rv = self.app.get('/api/admin/templates/smalljpeg/')
-        self.assertEqual(rv.status_code, API_CODES.REQUIRES_AUTH)
-        # Log in as std user
-        setup_user_account('kryten', 'none')
-        self.login('kryten', 'kryten')
-        # Logged in - template details should be available
-        rv = self.app.get('/api/admin/templates/smalljpeg/')
-        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
-        obj = json.loads(rv.data)['data']
-        self.assertEqual(obj['filename'], 'smalljpeg')
-        self.assertEqual(obj['format'], 'jpg')
-        self.assertEqual(obj['width'], 200)
-        self.assertEqual(obj['height'], 200)
-        self.assertIsNone(obj['record_stats'])
-        # Invalid template name - getting details should fail
-        rv = self.app.get('/api/admin/templates/moon cheese/')
-        self.assertEqual(rv.status_code, API_CODES.NOT_FOUND)
-
-    # File admin API - images
-    def test_file_api_images(self):
-        # Util
-        def ensure_file_exists(db_image):
-            ensure_path_exists(db_image.src, require_file=True)
-        # Tests
-        temp_folder = 'test_images_api'
-        temp_image = temp_folder + '/image1.jpg'
-        moved_image = None
-        try:
-            # Create a test folder and test image and get their IDs
-            make_dirs(temp_folder)
-            copy_file('test_images/cathedral.jpg', temp_image)
-            rv = self.app.get('/api/details?src=' + temp_image)
-            assert rv.status_code == API_CODES.SUCCESS
-            temp_image_id = json.loads(rv.data)['data']['id']
-            temp_folder_id = dm.get_folder(folder_path=temp_folder).id
-            orig_folder_id = dm.get_folder(folder_path='test_images').id
-            # Create a cached image, also creates a cached src-ID entry
-            rv = self.app.get('/image?src=' + temp_image)
-            assert rv.status_code == 200
-            # Check that it does indeed create the cached src-ID
-            cached_id = dm.get_or_create_image_id(temp_image, on_create=ensure_file_exists)
-            assert cached_id == temp_image_id
-            # Not logged in - file ops should fail
-            rv = self.app.put('/api/admin/filesystem/images/%d/' % temp_image_id, data={ 'path': temp_folder + '/newname.jpg' })
-            assert rv.status_code == API_CODES.REQUIRES_AUTH, str(rv)
-            rv = self.app.delete('/api/admin/filesystem/images/%d/' % temp_image_id)
-            assert rv.status_code == API_CODES.REQUIRES_AUTH, str(rv)
-            # Log in as a standard user
-            setup_user_account('kryten', 'none')
-            self.login('kryten', 'kryten')
-            # File ops should still fail
-            rv = self.app.put('/api/admin/filesystem/images/%d/' % temp_image_id, data={ 'path': temp_folder + '/newname.jpg' })
-            assert rv.status_code == API_CODES.UNAUTHORISED, str(rv)
-            rv = self.app.delete('/api/admin/filesystem/images/%d/' % temp_image_id)
-            assert rv.status_code == API_CODES.UNAUTHORISED, str(rv)
-            #
-            # Log in as a user with file admin
-            #
-            setup_user_account('kryten', 'admin_files')
-            self.login('kryten', 'kryten')
-            # Rename the file (in the same folder)
-            renamed_image = temp_folder + '/newname.jpg'
-            rv = self.app.put('/api/admin/filesystem/images/%d/' % temp_image_id, data={ 'path': renamed_image })
-            assert rv.status_code == API_CODES.SUCCESS, str(rv)
-            # Check returned object data
-            obj = json.loads(rv.data)
-            assert obj['data']['src'] == renamed_image
-            # Check physical file has been renamed
-            assert path_exists(temp_image) == False
-            assert path_exists(renamed_image) == True
-            # Check db record has been updated, and rename history added
-            db_image = dm.get_image(temp_image_id, load_history=True)
-            assert db_image.status == Image.STATUS_ACTIVE
-            assert db_image.src == renamed_image
-            assert db_image.folder.id == temp_folder_id
-            assert len(db_image.history) == 2   # Create, Rename
-            assert db_image.history[1].action == ImageHistory.ACTION_MOVED
-            # Check the cached ID has gone for the original path
-            got_cached_id = True
-            try: cached_id = dm.get_or_create_image_id(temp_image, on_create=ensure_file_exists)
-            except DoesNotExistError: got_cached_id = False
-            assert got_cached_id == False
-            # Check the cached image has gone for the old path
-            rv = self.app.get('/image?src=' + temp_image)
-            assert rv.status_code == 404
-            # Create a new cached image, also creates a cached src-ID entry
-            rv = self.app.get('/image?src=' + renamed_image)
-            assert rv.status_code == 200
-            # Try renaming the test file without a file extension (this should fail)
-            invalid_filename = temp_folder + '/newname'
-            rv = self.app.put('/api/admin/filesystem/images/%d/' % temp_image_id, data={ 'path': invalid_filename })
-            assert rv.status_code == API_CODES.INVALID_PARAM, str(rv)
-            # Try renaming the test file with '.' in the path (this should fail)
-            invalid_filename = temp_folder + '/.newname.jpg'
-            rv = self.app.put('/api/admin/filesystem/images/%d/' % temp_image_id, data={ 'path': invalid_filename })
-            assert rv.status_code == API_CODES.INVALID_PARAM, str(rv)
-            # Try renaming the test file with '..' in the path (this should fail)
-            invalid_filename = temp_folder + '/..newname.jpg'
-            rv = self.app.put('/api/admin/filesystem/images/%d/' % temp_image_id, data={ 'path': invalid_filename })
-            assert rv.status_code == API_CODES.INVALID_PARAM, str(rv)
-            # Try moving the test file into a non-existent folder (this should fail)
-            invalid_path = 'non_existent_folder/newname.jpg'
-            rv = self.app.put('/api/admin/filesystem/images/%d/' % temp_image_id, data={ 'path': invalid_path })
-            assert rv.status_code == API_CODES.NOT_FOUND, str(rv) + '\n' + rv.data
-            # Try moving the test file over an existing image (this should fail)
-            existing_image = 'test_images/dorset.jpg'
-            rv = self.app.put('/api/admin/filesystem/images/%d/' % temp_image_id, data={ 'path': existing_image })
-            assert rv.status_code == API_CODES.ALREADY_EXISTS, str(rv)
-            # Move the test file into the original folder
-            moved_image = 'test_images/newname.jpg'
-            rv = self.app.put('/api/admin/filesystem/images/%d/' % temp_image_id, data={ 'path': moved_image })
-            assert rv.status_code == API_CODES.SUCCESS, str(rv)
-            # Check returned object data
-            obj = json.loads(rv.data)
-            assert obj['data']['src'] == moved_image
-            assert obj['data']['folder']['id'] == orig_folder_id
-            # Check physical file has been moved
-            assert path_exists(renamed_image) == False
-            assert path_exists(moved_image) == True
-            # Check db record has been updated (folder changed), and move history added
-            db_image = dm.get_image(temp_image_id, load_history=True)
-            assert db_image.status == Image.STATUS_ACTIVE
-            assert db_image.src == moved_image
-            assert db_image.folder.id == orig_folder_id
-            assert len(db_image.history) == 3
-            assert db_image.history[2].action == ImageHistory.ACTION_MOVED
-            # Check the cached ID has gone for the old path
-            got_cached_id = True
-            try: cached_id = dm.get_or_create_image_id(renamed_image, on_create=ensure_file_exists)
-            except DoesNotExistError: got_cached_id = False
-            assert got_cached_id == False
-            # Check the cached image has gone for the old path
-            rv = self.app.get('/image?src=' + renamed_image)
-            assert rv.status_code == 404
-            # Create another new cached image, also creates a cached src-ID entry
-            rv = self.app.get('/image?src=' + moved_image)
-            assert rv.status_code == 200
-            # Delete the test file
-            rv = self.app.delete('/api/admin/filesystem/images/%d/' % temp_image_id)
-            assert rv.status_code == API_CODES.SUCCESS, str(rv)
-            # Check returned object data
-            obj = json.loads(rv.data)
-            assert obj['data']['status'] == Image.STATUS_DELETED
-            # Check physical file has been deleted
-            assert path_exists(moved_image) == False
-            # Check db record status, and delete history added
-            db_image = dm.get_image(temp_image_id, load_history=True)
-            assert db_image.status == Image.STATUS_DELETED
-            assert len(db_image.history) == 4
-            assert db_image.history[3].action == ImageHistory.ACTION_DELETED
-            # Check the cached ID has gone
-            cached_id = dm.get_or_create_image_id(moved_image, on_create=ensure_file_exists)
-            assert cached_id == 0
-            # Check that cached images are gone
-            rv = self.app.get('/image?src=' + moved_image)
-            assert rv.status_code == 404
-        finally:
-            delete_file(temp_image)
-            delete_dir(temp_folder, recursive=True)
-            if moved_image:
-                delete_file(moved_image)
-
-    # File admin API - folders
-    def test_file_api_folders(self):
-        temp_folder = '/test_folders_api'
-        try:
-            # Not logged in - folder ops should fail
-            rv = self.app.post('/api/admin/filesystem/folders/', data={ 'path': temp_folder })
-            assert rv.status_code == API_CODES.REQUIRES_AUTH, str(rv)
-            rv = self.app.get('/api/admin/filesystem/folders/1/')
-            assert rv.status_code == API_CODES.REQUIRES_AUTH, str(rv)
-            rv = self.app.put('/api/admin/filesystem/folders/1/', data={ 'path': temp_folder })
-            assert rv.status_code == API_CODES.REQUIRES_AUTH, str(rv)
-            rv = self.app.delete('/api/admin/filesystem/folders/1/')
-            assert rv.status_code == API_CODES.REQUIRES_AUTH, str(rv)
-            # Log in as a standard user
-            setup_user_account('kryten', 'none')
-            self.login('kryten', 'kryten')
-            # v1.40 Viewable folder should be readable
-            rv = self.app.get('/api/admin/filesystem/folders/?path=test_images')
-            assert rv.status_code == API_CODES.SUCCESS, str(rv)
-            # Other ops should still fail
-            active_folder = dm.get_folder(folder_path='test_images')
-            assert active_folder is not None
-            rv = self.app.post('/api/admin/filesystem/folders/', data={ 'path': temp_folder })
-            assert rv.status_code == API_CODES.UNAUTHORISED, str(rv)
-            rv = self.app.put('/api/admin/filesystem/folders/%d/' % active_folder.id, data={ 'path': temp_folder })
-            assert rv.status_code == API_CODES.UNAUTHORISED, str(rv)
-            rv = self.app.delete('/api/admin/filesystem/folders/%d/' % active_folder.id)
-            assert rv.status_code == API_CODES.UNAUTHORISED, str(rv)
-            #
-            # Log in as a user with file admin
-            #
-            setup_user_account('kryten', 'admin_files')
-            self.login('kryten', 'kryten')
-            # Create a new folder branch
-            rv = self.app.post('/api/admin/filesystem/folders/', data={ 'path': temp_folder + '/a/b/' })
-            assert rv.status_code == API_CODES.SUCCESS, str(rv)
-            json_folder_b = json.loads(rv.data)['data']
-            assert json_folder_b['id'] > 0
-            assert json_folder_b['path'] == temp_folder + '/a/b'
-            assert path_exists(temp_folder + '/a/b', require_directory=True)
-            db_folder_a = dm.get_folder(folder_path=temp_folder + '/a/')
-            assert db_folder_a is not None
-            # v1.40 New GET methods should return 1 level of sub-tree
-            rv = self.app.get('/api/admin/filesystem/folders/?path=' + temp_folder)
-            assert rv.status_code == API_CODES.SUCCESS, str(rv)
-            obj = json.loads(rv.data)
-            assert 'parent' in obj['data']
-            assert obj['data']['parent']['path'] == os.path.sep
-            assert 'children' in obj['data']
-            assert len(obj['data']['children']) == 1               # should have "a"
-            assert 'children' not in obj['data']['children'][0]    # but not "b"
-            assert 'parent' not in obj['data']['children'][0]      # and no link back/recursion
-            # Things that shouldn't be allowed (TTSBA) - create a duplicate folder
-            rv = self.app.post('/api/admin/filesystem/folders/', data={ 'path': '/test_images/'  })
-            assert rv.status_code == API_CODES.ALREADY_EXISTS, str(rv)
-            # TTSBA - Move folder to an existing path
-            rv = self.app.put('/api/admin/filesystem/folders/%d/' % json_folder_b['id'],
-                              data={ 'path': '/test_images/'  })
-            assert rv.status_code == API_CODES.ALREADY_EXISTS, str(rv)
-            # TTSBA - Move folder to a relative path
-            rv = self.app.put('/api/admin/filesystem/folders/%d/' % json_folder_b['id'],
-                              data={ 'path': temp_folder + '/a/../c'  })
-            assert rv.status_code == API_CODES.INVALID_PARAM, str(rv)
-            # TTSBA - Move folder to a hidden folder
-            rv = self.app.put('/api/admin/filesystem/folders/%d/' % json_folder_b['id'],
-                              data={ 'path': temp_folder + '/a/.b'  })
-            assert rv.status_code == API_CODES.INVALID_PARAM, str(rv)
-            # TTSBA - Delete the root folder
-            db_folder_root = dm.get_folder(folder_path='')
-            assert db_folder_root is not None
-            rv = self.app.delete('/api/admin/filesystem/folders/%d/' % db_folder_root.id)
-            assert rv.status_code == API_CODES.INVALID_PARAM, str(rv)
-            # TTSBA - Move/rename the root folder
-            rv = self.app.put('/api/admin/filesystem/folders/%d/' % db_folder_root.id, data={ 'path': 'some_other_name'  })
-            assert rv.status_code == API_CODES.INVALID_PARAM, str(rv)
-            # Add images to a and b so we can test that path changes affect those too
-            copy_file('test_images/cathedral.jpg', temp_folder + '/a/image_a.jpg')
-            copy_file('test_images/dorset.jpg', temp_folder + '/a/b/image_b.jpg')
-            db_image_a = auto_sync_file(temp_folder + '/a/image_a.jpg', dm, tm)
-            db_image_b = auto_sync_file(temp_folder + '/a/b/image_b.jpg', dm, tm)
-            assert db_image_a.folder.id == db_folder_a.id
-            assert db_image_b.folder.id == json_folder_b['id']
-            # Cache an image
-            rv = self.app.get('/image?src=' + db_image_a.src)
-            assert rv.status_code == 200
-            image_a_src_old = db_image_a.src
-            # Rename folder a
-            renamed_folder = temp_folder + '/parrot'
-            rv = self.app.put('/api/admin/filesystem/folders/%d/' % db_folder_a.id, data={ 'path': renamed_folder })
-            assert rv.status_code == API_CODES.SUCCESS, str(rv)
-            obj = json.loads(rv.data)
-            assert obj['data']['path'] == renamed_folder
-            assert 'children' not in obj['data']  # v1.40 Do not return sub-trees any more
-            assert 'parent' not in obj['data']    # v1.40 Do not return sub-trees any more
-            assert path_exists(temp_folder + '/a/') == False
-            assert path_exists(renamed_folder) == True
-            db_folder_a = dm.get_folder(folder_id=db_folder_a.id)
-            assert db_folder_a.path == renamed_folder
-            # This should have moved image a
-            db_image_a = dm.get_image(db_image_a.id, load_history=True)
-            assert db_image_a.folder.id == db_folder_a.id
-            assert db_image_a.src == strip_sep(renamed_folder + '/image_a.jpg', leading=True)
-            assert db_image_a.history[-1].action == ImageHistory.ACTION_MOVED
-            assert path_exists(db_image_a.src, require_file=True) == True
-            rv = self.app.get('/image?src=' + image_a_src_old)
-            assert rv.status_code == 404
-            rv = self.app.get('/image?src=' + db_image_a.src)
-            assert rv.status_code == 200
-            # This should also have moved sub-folder b with it
-            assert path_exists(renamed_folder + '/b/') == True
-            db_folder_b = dm.get_folder(folder_id=json_folder_b['id'])
-            assert db_folder_b.path == renamed_folder + '/b'
-            # Which should have moved image b too
-            db_image_b = dm.get_image(db_image_b.id, load_history=True)
-            assert db_image_b.folder.id == db_folder_b.id
-            assert db_image_b.src == strip_sep(renamed_folder + '/b/image_b.jpg', leading=True)
-            assert db_image_b.history[-1].action == ImageHistory.ACTION_MOVED
-            assert path_exists(db_image_b.src, require_file=True) == True
-            # Delete parrot (was folder a)
-            rv = self.app.delete('/api/admin/filesystem/folders/%d/' % db_folder_a.id)
-            assert rv.status_code == API_CODES.SUCCESS, str(rv)
-            obj = json.loads(rv.data)
-            assert obj['data']['id'] == db_folder_a.id
-            assert obj['data']['status'] == Folder.STATUS_DELETED
-            assert 'children' not in obj['data']  # v1.40 Do not return sub-trees any more
-            assert 'parent' not in obj['data']    # v1.40 Do not return sub-trees any more
-            db_folder_a = dm.get_folder(folder_id=db_folder_a.id)
-            assert db_folder_a.status == Folder.STATUS_DELETED
-            assert path_exists(db_folder_a.path) == False
-            # This should have deleted image a
-            db_image_a = dm.get_image(db_image_a.id, load_history=True)
-            assert db_image_a.status == Image.STATUS_DELETED
-            assert db_image_a.history[-1].action == ImageHistory.ACTION_DELETED
-            assert path_exists(db_image_a.src) == False
-            rv = self.app.get('/image?src=' + db_image_a.src)
-            assert rv.status_code == 404
-            # This should have deleted sub-folder b with it
-            db_folder_b = dm.get_folder(folder_id=db_folder_b.id)
-            assert db_folder_b.status == Folder.STATUS_DELETED
-            assert path_exists(db_folder_b.path) == False
-            # Which should have deleted image b too
-            db_image_b = dm.get_image(db_image_b.id, load_history=True)
-            assert db_image_b.status == Image.STATUS_DELETED
-            assert db_image_b.history[-1].action == ImageHistory.ACTION_DELETED
-            assert path_exists(db_image_b.src) == False
-            rv = self.app.get('/image?src=' + db_image_b.src)
-            assert rv.status_code == 404
-        finally:
-            delete_dir(temp_folder, recursive=True)
-
-    # #2517 File admin API - ignore // in folders
-    def test_file_api_folders_double_sep(self):
-        temp_folder = '/test_folders_api'
-        setup_user_account('kryten', 'admin_files')
-        self.login('kryten', 'kryten')
-        test_cases = ['/a//b', '/a///b']
-        try:
-            for fpath in test_cases:
-                # Creating a//b or a///b should create a/b
-                rv = self.app.post(
-                    '/api/admin/filesystem/folders/',
-                    data={'path': temp_folder + fpath}
-                )
-                self.assertEqual(rv.status_code, API_CODES.SUCCESS)
-                json_folder = json.loads(rv.data)['data']
-                self.assertEqual(json_folder['path'], temp_folder + '/a/b')  # not /a//b
-                db_folder = dm.get_folder(folder_path=temp_folder + '/a/b')  # not /a//b
-                self.assertIsNotNone(db_folder)
-                self.assertEqual(json_folder['id'], db_folder.id)
-                dm.delete_folder(db_folder, purge=True)
-                delete_dir(temp_folder + fpath)
-        finally:
-            delete_dir(temp_folder, recursive=True)
-
-    # Task admin API
-    def test_tasks_api(self):
-        test_folder = 'test_tasks_api_folder'
-        task_url = '/api/admin/tasks/'
-        purge_url = task_url + 'purge_deleted_folder_data/'
-
-        try:
-            # Create test folder in the database
-            db_folder = dm.get_or_create_folder(test_folder)
-            # and delete (flag) it
-            dm.delete_folder(db_folder, purge=False)
-            # Folder should still exist but with deleted flag
-            db_folder = dm.get_folder(folder_path=test_folder)
-            self.assertIsNotNone(db_folder)
-            self.assertEqual(db_folder.status, Folder.STATUS_DELETED)
-
-            # Not logged in - cannot run tasks
-            rv = self.app.post(purge_url, data={'path': ''})
-            self.assertEqual(rv.status_code, API_CODES.REQUIRES_AUTH)
-
-            # Logged in as admin (non superuser) user - cannot run tasks with API
-            setup_user_account('kryten', 'admin_files')
-            self.login('kryten', 'kryten')
-            rv = self.app.post(purge_url, data={'path': ''})
-            self.assertEqual(rv.status_code, API_CODES.UNAUTHORISED)
-
-            # Have the system start a task owned by the user though
-            user_task = tm.add_task(
-                dm.get_user(username='kryten'),
-                'Testing user task access',
-                'uncache_image',
-                {'image_id': 1},
-                Task.PRIORITY_NORMAL,
-                'debug', 'error', 1
-            )
-            # A user can query their own task
-            rv = self.app.get(task_url + str(user_task.id) + '/')
-            self.assertEqual(rv.status_code, API_CODES.SUCCESS)
-            # Another (non super) user cannot query it
-            setup_user_account('taskuser', 'admin_files')
-            self.login('taskuser', 'taskuser')
-            rv = self.app.get(task_url + str(user_task.id) + '/')
-            self.assertEqual(rv.status_code, API_CODES.UNAUTHORISED)
-
-            # Logged in as superuser - task should launch with API
-            setup_user_account('kryten', 'admin_all')
-            self.login('kryten', 'kryten')
-            rv = self.app.post(purge_url, data={'path': ''})
-            self.assertEqual(rv.status_code, API_CODES.SUCCESS)
-            task_obj = json.loads(rv.data)['data']
-            # Do not return the task user password
-            self.assertIsNotNone(task_obj['user'])
-            self.assertNotIn('password', task_obj['user'])
-
-            # Test duplicate task isn't allowed
-            rv = self.app.post(purge_url, data={'path': ''})
-            self.assertEqual(rv.status_code, API_CODES.ALREADY_EXISTS)
-
-            # Test checking task progress
-            rv = self.app.get(task_url + str(task_obj['id']) + '/')
-            self.assertEqual(rv.status_code, API_CODES.SUCCESS)
-            task_obj_2 = json.loads(rv.data)['data']
-            self.assertEqual(task_obj_2['id'], task_obj['id'])
-            self.assertEqual(task_obj_2['funcname'], 'purge_deleted_folder_data')
-            # Do not return the task user password
-            self.assertIsNotNone(task_obj_2['user'])
-            self.assertNotIn('password', task_obj_2['user'])
-
-        finally:
-            # After error, delete (proper) the test folder
-            db_folder = dm.get_folder(folder_path=test_folder)
-            if db_folder:
-                dm.delete_folder(db_folder, purge=True)
-
-    # Test image API access (folder permissions)
-    def test_folder_permissions(self):
-        temp_image   = 'test_images/fptest_image.jpg'
-        temp_image2  = 'test_images/fptest_image_2.jpg'
-        temp_image3  = '/fptest_image_2.jpg'
-        temp_folder  = 'test_images/fp-test_folder'
-        temp_folder2 = 'test_images/fp-test_folder_2'
-        temp_folder3 = '/fp-test_folder_2'
-        setup_user_account('kryten', 'none')
-        self.login('kryten', 'kryten')
-        # Helper to change user permissions
-        def setup_fp_user(root_access, test_folder_access=None):
-            db_group = dm.get_group(groupname='Red Dwarf')
-            db_folder = dm.get_folder(folder_path='')
-            # Set root folder access
-            rf_fp = dm.get_folder_permission(db_folder, db_group)
-            if not rf_fp: rf_fp = FolderPermission(db_folder, db_group, 0)
-            rf_fp.access = root_access
-            dm.save_object(rf_fp)
-            # Set or clear test_images folder access
-            if test_folder_access is not None:
-                db_folder = dm.get_folder(folder_path='test_images')
-                tf_fp = dm.get_folder_permission(db_folder, db_group)
-                if not tf_fp: tf_fp = FolderPermission(db_folder, db_group, 0)
-                tf_fp.access = test_folder_access
-                dm.save_object(tf_fp)
-            else:
-                db_folder = dm.get_folder(folder_path='test_images')
-                tf_fp = dm.get_folder_permission(db_folder, db_group)
-                if tf_fp is not None: dm.delete_object(tf_fp)
-            pm.reset()
-            # v1.23 Also clear cached permissions for the task server process
-            cm.clear()
-        try:
-            # Create a temp file we can rename, move, delete
-            copy_file('test_images/cathedral.jpg', temp_image)
-            db_image = auto_sync_existing_file(temp_image, dm, tm)
-            # Reset user permissions to None
-            set_default_public_permission(FolderPermission.ACCESS_NONE)
-            setup_fp_user(FolderPermission.ACCESS_NONE)
-            # Folder list API requires view permission
-            rv = self.app.get('/api/list?path=test_images')
-            assert rv.status_code == API_CODES.UNAUTHORISED
-            setup_fp_user(FolderPermission.ACCESS_VIEW)
-            rv = self.app.get('/api/list?path=test_images')
-            assert rv.status_code == API_CODES.SUCCESS
-            # Image details API requires view permission
-            setup_fp_user(FolderPermission.ACCESS_NONE)
-            rv = self.app.get('/api/details?src=' + db_image.src)
-            assert rv.status_code == API_CODES.UNAUTHORISED
-            setup_fp_user(FolderPermission.ACCESS_VIEW)
-            rv = self.app.get('/api/details?src=' + db_image.src)
-            assert rv.status_code == API_CODES.SUCCESS
-            # Image data API - read - requires view permission
-            setup_fp_user(FolderPermission.ACCESS_NONE)
-            rv = self.app.get('/api/admin/images/%d/' % db_image.id)
-            assert rv.status_code == API_CODES.UNAUTHORISED
-            setup_fp_user(FolderPermission.ACCESS_VIEW)
-            rv = self.app.get('/api/admin/images/%d/' % db_image.id)
-            assert rv.status_code == API_CODES.SUCCESS
-            # Image data API - write - requires edit permission
-            rv = self.app.put('/api/admin/images/%d/' % db_image.id,
-                              data={ 'title': '', 'description': '' })
-            assert rv.status_code == API_CODES.UNAUTHORISED
-            setup_fp_user(FolderPermission.ACCESS_EDIT)
-            rv = self.app.put('/api/admin/images/%d/' % db_image.id,
-                              data={ 'title': '', 'description': '' })
-            assert rv.status_code == API_CODES.SUCCESS
-            # Image file API - rename - requires upload permission
-            rv = self.app.put('/api/admin/filesystem/images/%d/' % db_image.id,
-                              data={ 'path': temp_image2 })
-            assert rv.status_code == API_CODES.UNAUTHORISED
-            setup_fp_user(FolderPermission.ACCESS_UPLOAD)
-            rv = self.app.put('/api/admin/filesystem/images/%d/' % db_image.id,
-                              data={ 'path': temp_image2 })
-            assert rv.status_code == API_CODES.SUCCESS
-            # Image file API - move - requires delete (source) and upload (dest) permissions
-            rv = self.app.put('/api/admin/filesystem/images/%d/' % db_image.id,
-                              data={ 'path': temp_image3 })
-            assert rv.status_code == API_CODES.UNAUTHORISED
-            setup_fp_user(FolderPermission.ACCESS_UPLOAD, FolderPermission.ACCESS_DELETE)
-            rv = self.app.put('/api/admin/filesystem/images/%d/' % db_image.id,
-                              data={ 'path': temp_image3 })
-            assert rv.status_code == API_CODES.SUCCESS
-            # Image file API - delete - requires delete permission
-            rv = self.app.delete('/api/admin/filesystem/images/%d/' % db_image.id)
-            assert rv.status_code == API_CODES.UNAUTHORISED
-            setup_fp_user(FolderPermission.ACCESS_DELETE)
-            rv = self.app.delete('/api/admin/filesystem/images/%d/' % db_image.id)
-            assert rv.status_code == API_CODES.SUCCESS
-            # Image file API - create folder - requires create folder permission
-            setup_fp_user(FolderPermission.ACCESS_NONE, FolderPermission.ACCESS_DELETE)
-            rv = self.app.post('/api/admin/filesystem/folders/', data={ 'path': temp_folder })
-            assert rv.status_code == API_CODES.UNAUTHORISED
-            setup_fp_user(FolderPermission.ACCESS_NONE, FolderPermission.ACCESS_CREATE_FOLDER)
-            rv = self.app.post('/api/admin/filesystem/folders/', data={ 'path': temp_folder })
-            assert rv.status_code == API_CODES.SUCCESS
-            folder_json = json.loads(rv.data)
-            folder_id = folder_json['data']['id']
-            # Image file API - rename folder - requires create folder permission
-            setup_fp_user(FolderPermission.ACCESS_NONE, FolderPermission.ACCESS_DELETE)
-            rv = self.app.put('/api/admin/filesystem/folders/%d/' % folder_id, data={ 'path': temp_folder2 })
-            assert rv.status_code == API_CODES.UNAUTHORISED
-            setup_fp_user(FolderPermission.ACCESS_NONE, FolderPermission.ACCESS_CREATE_FOLDER)
-            rv = self.app.put('/api/admin/filesystem/folders/%d/' % folder_id, data={ 'path': temp_folder2 })
-            assert rv.status_code == API_CODES.SUCCESS, 'Got '+str(rv.status_code)
-            # Image file API - move folder - requires delete folder (source) and create folder (dest) permissions
-            setup_fp_user(FolderPermission.ACCESS_CREATE_FOLDER, FolderPermission.ACCESS_CREATE_FOLDER)
-            rv = self.app.put('/api/admin/filesystem/folders/%d/' % folder_id, data={ 'path': temp_folder3 })
-            assert rv.status_code == API_CODES.UNAUTHORISED
-            setup_fp_user(FolderPermission.ACCESS_CREATE_FOLDER, FolderPermission.ACCESS_DELETE_FOLDER)
-            rv = self.app.put('/api/admin/filesystem/folders/%d/' % folder_id, data={ 'path': temp_folder3 })
-            assert rv.status_code == API_CODES.SUCCESS, 'Got '+str(rv.status_code)
-            # Image file API - delete folder - requires delete folder permission
-            rv = self.app.delete('/api/admin/filesystem/folders/%d/' % folder_id)
-            assert rv.status_code == API_CODES.UNAUTHORISED
-            setup_fp_user(FolderPermission.ACCESS_DELETE_FOLDER)
-            rv = self.app.delete('/api/admin/filesystem/folders/%d/' % folder_id)
-            assert rv.status_code == API_CODES.SUCCESS, 'Got '+str(rv.status_code)
-        finally:
-            delete_file(temp_image)
-            delete_file(temp_image2)
-            delete_file(temp_image3)
-            delete_dir(temp_folder)
-            delete_dir(temp_folder2)
-            delete_dir(temp_folder3)
-            set_default_public_permission(FolderPermission.ACCESS_DOWNLOAD)
-
-    # CSRF protection should be active for web sessions but not for API tokens
-    def test_csrf(self):
-        setup_user_account('deleteme', 'none')
-        deluser = dm.get_user(username='deleteme')
-        self.assertIsNotNone(deluser)
-        try:
-            setup_user_account('kryten', 'admin_users', allow_api=True)
-            self.login('kryten', 'kryten')
-            # Enable CSRF
-            flask_app.config['TESTING'] = False
-            # Web operations should be blocked without a CSRF token
-            rv = self.app.delete('/api/admin/users/' + str(deluser.id) + '/')
-            self.assertEqual(rv.status_code, API_CODES.INVALID_PARAM)
-            self.assertIn('missing CSRF token', rv.data)
-            # But allowed if caller has an API token
-            token = self.api_login('kryten', 'kryten')
-            creds = base64.b64encode(token + ':password')
-            rv = self.app.delete('/api/admin/users/' + str(deluser.id) + '/', headers={
-                'Authorization': 'Basic ' + creds
-            })
-            self.assertEqual(rv.status_code, API_CODES.SUCCESS)
-        finally:
-            flask_app.config['TESTING'] = True
-
-    # Test unicode characters in filenames, especially dashes!
-    def test_unicode_filenames(self):
-        temp_dir = u'\u00e2 te\u00dft \u2014 of \u00e7har\u0292'
-        temp_filename = temp_dir + '.jpg'
-        temp_file = os.path.join(temp_dir, temp_filename)
-        temp_file2 = os.path.join(temp_dir, u're\u00f1\u00e3med.jpg')
-        temp_new_dir = os.path.join(temp_dir, u'New F\u00f6lder')
-        try:
-            with flask_app.test_request_context():
-                list_url = internal_url_for('api.imagelist', path=temp_dir, attributes=1)
-                details_url = internal_url_for('api.imagedetails', src=temp_file)
-
-            # Create test folder and file
-            make_dirs(temp_dir)
-            copy_file('test_images/thames.jpg', temp_file)
-            # Test directory listing
-            rv = self.app.get(list_url)
-            assert rv.status_code == API_CODES.SUCCESS
-            obj = json.loads(rv.data)
-            assert len(obj['data']) == 1
-            entry = obj['data'][0]
-            assert url_quote_plus(temp_dir, safe='/') in entry['url'], 'Returned URL is \'' + entry['url'] + '\''
-            assert unicode_to_utf8(entry['filename']) == unicode_to_utf8(temp_filename)
-            # Test viewing details
-            rv = self.app.get(details_url)
-            assert rv.status_code == API_CODES.SUCCESS
-            obj = json.loads(rv.data)
-            assert unicode_to_utf8(obj['data']['src']) == unicode_to_utf8(temp_file), \
-                   'Returned src is \'' + obj['data']['src'] + '\''
-            # Test data API - images
-            setup_user_account('kryten', 'admin_files')
-            self.login('kryten', 'kryten')
-            db_img = dm.get_image(src=temp_file)
-            assert db_img is not None
-            rv = self.app.get('/api/admin/images/%d/' % db_img.id)
-            assert rv.status_code == API_CODES.SUCCESS, rv.data
-            obj = json.loads(rv.data)
-            assert unicode_to_utf8(obj['data']['src']) == unicode_to_utf8(temp_file), \
-                   'Returned src is \'' + obj['data']['src'] + '\''
-            # Test file API - rename the image
-            rv = self.app.put('/api/admin/filesystem/images/%d/' % db_img.id, data={ 'path': temp_file2 })
-            assert rv.status_code == API_CODES.SUCCESS, rv.data
-            assert path_exists(temp_file2, require_file=True)
-            # Test file API - create a unicode sub-folder
-            rv = self.app.post('/api/admin/filesystem/folders/', data={ 'path': temp_new_dir })
-            assert rv.status_code == API_CODES.SUCCESS, str(rv)
-            assert path_exists(temp_new_dir, require_directory=True)
-        finally:
-            delete_dir(temp_dir, recursive=True)
-
-    # Test that bad filenames are filtered by the APIs
-    def test_bad_filenames(self):
-        try:
-            setup_user_account('kryten', 'admin_files')
-            self.login('kryten', 'kryten')
-            # Create a folder
-            rv = self.app.post('/api/admin/filesystem/folders/', data={
-                'path': u'/bell\x07/etc/* | more/'
-            })
-            self.assertEqual(rv.status_code, API_CODES.SUCCESS)
-            json_folder = json.loads(rv.data)['data']
-            self.assertGreater(json_folder['id'], 0)
-            # The bell byte, *, | and surrounding spaces should be gone
-            self.assertEqual(json_folder['path'], u'/bell/etc/more')
-            self.assertTrue(path_exists(u'/bell/etc/more', require_directory=True))
-            # Rename it
-            rv = self.app.put('/api/admin/filesystem/folders/%d/' % json_folder['id'], data={
-                'path': u'/bell/etc/m\xf6re\x07bells'
-            })
-            self.assertEqual(rv.status_code, API_CODES.SUCCESS)
-            json_folder = json.loads(rv.data)['data']
-            # The bell byte should be gone, the umlaut o remaining
-            self.assertEqual(json_folder['path'], u'/bell/etc/m\xf6rebells')
-            # Put a file in there
-            copy_file(u'test_images/cathedral.jpg', u'/bell/etc/m\xf6rebells/cathedral.jpg')
-            db_img = auto_sync_file(u'/bell/etc/m\xf6rebells/cathedral.jpg', dm, tm)
-            self.assertIsNotNone(db_img)
-            # Rename the file
-            rv = self.app.put('/api/admin/filesystem/images/%d/' % db_img.id, data={
-                'path': u'/bell/etc/m\xf6rebells/cath\xebdral*\x09echo>\'hi\'.jpg'
-            })
-            self.assertEqual(rv.status_code, API_CODES.SUCCESS)
-            json_file = json.loads(rv.data)['data']
-            # The tab, *, > and ' should be gone, the umlaut e remaining
-            self.assertEqual(json_file['src'], u'bell/etc/m\xf6rebells/cath\xebdralechohi.jpg')
-        finally:
-            delete_dir(u'/bell', recursive=True)
-
-    # Flask by default encodes JSON dates in the awful RFC1123 format, so we override that
-    def test_json_date_encoding(self):
-        # Create a dummy task with a date on it
-        dt_time = datetime.datetime(2100, 1, 1, 12, 13, 15)
-        task = Task(
-            None, 'Unit test dummy task', 'noop',
-            cPickle.dumps({}, protocol=cPickle.HIGHEST_PROTOCOL),
-            Task.PRIORITY_NORMAL, 'debug', 'error', 0
-        )
-        task.status = Task.STATUS_COMPLETE
-        task.keep_until = dt_time
-        db_task = dm.save_object(task, refresh=True)
-        try:
-            # Get the task with the API
-            self.login('admin', 'admin')
-            rv = self.app.get('/api/admin/tasks/' + str(db_task.id) + '/')
-            self.assertEqual(rv.status_code, 200)
-            api_obj = json.loads(rv.data)['data']
-            # Date format should be ISO8601
-            self.assertEqual(api_obj['keep_until'], '2100-01-01T12:13:15Z')
-        finally:
-            dm.delete_object(db_task)
-
-    # v1.23 Tasks can now store a result - None, object, or Exception
-    def test_json_exception_encoding(self):
-        # Create a dummy task with an exception result
-        task = Task(
-            None, 'Unit test dummy task', 'noop',
-            cPickle.dumps({}, protocol=cPickle.HIGHEST_PROTOCOL),
-            Task.PRIORITY_NORMAL, 'debug', 'error', 0
-        )
-        task.status = Task.STATUS_COMPLETE
-        task.result = cPickle.dumps(ValueError('Warp failure'), protocol=cPickle.HIGHEST_PROTOCOL)
-        db_task = dm.save_object(task, refresh=True)
-        try:
-            # Get the task with the API
-            self.login('admin', 'admin')
-            rv = self.app.get('/api/admin/tasks/' + str(db_task.id) + '/')
-            self.assertEqual(rv.status_code, 200)
-            res = json.loads(rv.data)['data']['result']
-            self.assertIn('exception', res)
-            self.assertEqual(res['exception']['type'], 'ValueError')
-            self.assertEqual(res['exception']['message'], 'Warp failure')
-        finally:
-            dm.delete_object(db_task)
-
-
-class ImageServerTestsWebPages(BaseTestCase):
-    @classmethod
-    def setUpClass(cls):
-        super(ImageServerTestsWebPages, cls).setUpClass()
-        # Create a plain user for testing pages that require login
-        setup_user_account('webuser', 'none')
-
-    # Utility to call a page requiring login, with and without login
-    def call_page_requiring_login(self, url, admin_login=False, required_text=None):
-        rv = self.app.get(url)
-        self.assertEqual(rv.status_code, 302)
-        if admin_login:
-            self.login('admin', 'admin')
-        else:
-            self.login('webuser', 'webuser')
-        rv = self.app.get(url)
-        self.assertEqual(rv.status_code, 200)
-        if required_text:
-            self.assertIn(required_text, rv.data)
-
-    # Login page
-    def test_login_page(self):
-        rv = self.app.get('/login/')
-        self.assertEqual(rv.status_code, 200)
-
-    # Login action
-    def test_login(self):
-        self.login('admin', 'admin')
-
-    # Logout action
-    def test_logout(self):
-        self.logout()
-
-    # Home page
-    def test_index_page(self):
-        from imageserver import __about__
-        rv = self.app.get('/')
-        self.assertEqual(rv.status_code, 200)
-        self.assertIn(
-            __about__.__title__ + ' v' + __about__.__version__,
-            rv.data
-        )
-
-    # Help page
-    def test_help_page(self):
-        self.call_page_requiring_login(
-            '/help/', False,
-            'This guide is aimed at web site editors'
-        )
-
-    # File upload page
-    def test_file_upload_page(self):
-        self.call_page_requiring_login('/upload/', False)
-
-    # File upload complete page, populated
-    def test_file_upload_complete_page(self):
-        self.login('admin', 'admin')
-        # Copy a test file to upload
-        src_file = get_abs_path('test_images/cathedral.jpg')
-        dst_file = '/tmp/qis_uploadfile.jpg'
-        shutil.copy(src_file, dst_file)
-        try:
-            # Upload
-            rv = self.file_upload(self.app, dst_file, 'test_images')
-            self.assertEqual(rv.status_code, 200)
-            # Test upload complete page
-            rv = self.app.get('/uploadcomplete/')
-            self.assertEqual(rv.status_code, 200)
-            self.assertIn('1 image was uploaded successfully.', rv.data)
-            # #2575 The thumbnail needs to set "&format=jpg" otherwise it breaks for
-            #       browser-unsupported types e.g. TIF, PDF files
-            self.assertIn('src=test_images/tmp_qis_uploadfile.jpg&amp;format=jpg', rv.data)
-        finally:
-            # Remove the test files and data
-            os.remove(dst_file)
-            delete_file('test_images/tmp_qis_uploadfile.jpg')
-            db_img = dm.get_image(src='test_images/tmp_qis_uploadfile.jpg')
-            if db_img:
-                dm.delete_image(db_img, True)
-
-    # File upload complete page, no uploads
-    def test_file_upload_complete_page_blank(self):
-        cm.clear()
-        self.call_page_requiring_login(
-            '/uploadcomplete/',
-            False,
-            'You don\'t seem to have uploaded any images recently.'
-        )
-
-    # Browse index page
-    def test_browse_index_page(self):
-        self.call_page_requiring_login('/list/', False, 'Listing of /')
-
-    # Browse folder page
-    def test_browse_folder_page(self):
-        self.call_page_requiring_login(
-            '/list/?path=/test_images',
-            False,
-            'blue bells.jpg'
-        )
-
-    # Browse folder page, non-existent should still be OK
-    def test_browse_folder_page_non_exist(self):
-        self.call_page_requiring_login(
-            '/list/?path=/test_images/qwerty',
-            False,
-            'Sorry, this folder does not exist.'
-        )
-
-    # #2475 Browse folder page, error reading directory should still be OK
-    #       (OK as in returning a nice error rather than the HTTP 500 it used to)
-    def test_browse_folder_page_bad_folder(self):
-        self.call_page_requiring_login(
-            '/list/?path=/test_images\x00uh oh',
-            False,
-            'must be encoded string without NULL bytes'
-        )
-
-    # Image detail page
-    def test_image_detail_page(self):
-        self.call_page_requiring_login(
-            '/details/?src=/test_images/blue bells.jpg',
-            False,
-            '/test_images/blue bells.jpg'
-        )
-
-    # Image detail page, non-existent should still be OK
-    def test_image_detail_page_non_exist(self):
-        self.call_page_requiring_login(
-            '/details/?src=/test_images/qwerty.jpg',
-            False,
-            'This file does not exist.'
-        )
-
-    # Image publish page
-    def test_image_publish_page(self):
-        self.call_page_requiring_login(
-            '/publish/?src=/test_images/blue bells.jpg',
-            False
-        )
-
-    # Test page accesses requiring system permissions
-    def test_system_permission_pages(self):
-        def test_pages(expect_code):
-            rv = self.app.get('/reports/top10/')
-            self.assertEqual(rv.status_code, expect_code)
-            rv = self.app.get('/reports/systemstats/')
-            self.assertEqual(rv.status_code, expect_code)
-            rv = self.app.get('/admin/users/')
-            self.assertEqual(rv.status_code, expect_code)
-            rv = self.app.get('/admin/users/1/')
-            self.assertEqual(rv.status_code, expect_code)
-            rv = self.app.get('/admin/groups/')
-            self.assertEqual(rv.status_code, expect_code)
-            rv = self.app.get('/admin/groups/1/')
-            self.assertEqual(rv.status_code, expect_code)
-        # Not logged in
-        test_pages(302)
-        rv = self.app.get('/account/')
-        self.assertEqual(rv.status_code, 302)
-        # Logged in, no access
-        self.login('webuser', 'webuser')
-        test_pages(403)
-        # But allow access to edit own account
-        rv = self.app.get('/account/')
-        self.assertEqual(rv.status_code, 200)
-        # Logged in, with access
-        self.login('admin', 'admin')
-        test_pages(200)
-        rv = self.app.get('/account/')
-        self.assertEqual(rv.status_code, 200)
-
-    # Test that the markdown rendering is working
-    def test_markdown_support(self):
-        self.call_page_requiring_login(
-            '/api/help/',
-            False,
-            'JSON is language independent'
-        )
-
-    # Test that the markdown substitutions are working
-    def test_markdown_subs(self):
-        # API help - it's "url: 'http://images.example.com/api/v1/list'" in the Markdown
-        self.call_page_requiring_login(
-            '/api/help/',
-            False,
-            "url: 'http://localhost/api/v1/list'"
-        )
-        # Image help
-        self.login('webuser', 'webuser')
-        rv = self.app.get('/help/')
-        self.assertEqual(rv.status_code, 200)
-        # Image help - subs //images.example.com/
-        self.assertNotIn('//images.example.com/', rv.data)
-        self.assertIn('//localhost/', rv.data)
-        # Image help - subs buildings
-        self.assertNotIn('buildings', rv.data)
-        self.assertIn('test_images', rv.data)
-        # Image help - subs quru.png
-        self.assertNotIn('quru.png', rv.data)
-        self.assertIn('quru110.png', rv.data)
-        # Image help - subs quru-padded.png
-        self.assertNotIn('quru-padded.png', rv.data)
-        self.assertIn('quru470.png', rv.data)
-        # Image help - subs logos
-        self.assertNotIn('logos', rv.data)
-        self.assertIn('test_images', rv.data)
-        # Image help - subs the server-specific settings placeholder text
-        self.assertNotIn('View this page from within QIS to see the default image settings for your server.', rv.data)
-        self.assertIn('The following settings are in force on your server.', rv.data)
-
-    # The simple viewer help + demo
-    def test_simple_viewer_page(self):
-        self.call_page_requiring_login('/simpleview/')
-
-    def test_simple_viewer_page_help(self):
-        self.call_page_requiring_login('/simpleview/help/', required_text='A demo page is')
-
-    # The canvas viewer help + demo
-    def test_canvas_viewer_page(self):
-        self.call_page_requiring_login('/canvasview/')
-
-    def test_canvas_viewer_page_help(self):
-        self.call_page_requiring_login('/canvasview/help/', required_text='A demo page is')
-
-    # The gallery viewer help + demo
-    def test_gallery_viewer_page(self):
-        self.call_page_requiring_login('/gallery/')
-
-    def test_gallery_viewer_page_help(self):
-        self.call_page_requiring_login('/gallery/help/', required_text='A demo page is')
-
-    # The slideshow viewer help + demo
-    def test_slideshow_viewer_page(self):
-        self.call_page_requiring_login('/slideshow/')
-
-    def test_slideshow_viewer_page_help(self):
-        self.call_page_requiring_login('/slideshow/help/', required_text='A demo page is')
+        self.assertRaises(ValueError, TemplateAttrs, 'badtemplate', bad_dict)
+        # New dict format, bad values
+        bad_dict = {
+            'filename': {'value': 'some/path'},
+            'expiry_secs': {'value': -2}
+        }
+        self.assertRaises(ValueError, TemplateAttrs, 'badtemplate', bad_dict)
+        bad_dict = {
+            'filename': {'value': 'some/path'},
+            'expiry_secs': {'value': 'not an int'}
+        }
+        self.assertRaises(ValueError, TemplateAttrs, 'badtemplate', bad_dict)
+        bad_dict = {
+            'filename': {'value': 'some/path'},
+            'expiry_secs': {'value': 50000},
+            'record_stats': {'value': 'not a bool'}
+        }
+        self.assertRaises(ValueError, TemplateAttrs, 'badtemplate', bad_dict)

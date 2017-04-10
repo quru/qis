@@ -55,7 +55,7 @@ from session_manager import get_session_user
 from session_manager import logged_in as session_logged_in
 from util import filepath_parent, invoke_http_async, validate_string
 from util import parse_boolean, parse_colour, parse_float, parse_int, parse_tile_spec
-from util import unicode_to_utf8, etag
+from util import default_value, etag, unicode_to_utf8
 from views_util import log_security_error
 
 
@@ -131,30 +131,19 @@ def image():
         # eRez compatibility mode
         src = erez_params_compat(src)
 
-        # Tweak strings as necessary and convert non-string parameters
-        # to the correct data types
+        # Convert non-string parameters to the correct data types
         try:
             # Image options
             if page is not None:
                 page = parse_int(page)
-            if iformat is not None:
-                iformat = iformat.lower()
-            if template is not None:
-                template = template.lower()
             if width is not None:
                 width = parse_int(width)
             if height is not None:
                 height = parse_int(height)
-            if halign is not None:
-                halign = halign.lower()
-            if valign is not None:
-                valign = valign.lower()
             if autosizefit is not None:
                 autosizefit = parse_boolean(autosizefit)
             if rotation is not None:
                 rotation = parse_float(rotation)
-            if flip is not None:
-                flip = flip.lower()
             if top is not None:
                 top = parse_float(top)
             if left is not None:
@@ -173,18 +162,10 @@ def image():
                 sharpen = parse_int(sharpen)
             if ov_size is not None:
                 ov_size = parse_float(ov_size)
-            if ov_pos is not None:
-                ov_pos = ov_pos.lower()
             if ov_opacity is not None:
                 ov_opacity = parse_float(ov_opacity)
-            if icc_profile is not None:
-                icc_profile = icc_profile.lower()
-            if icc_intent is not None:
-                icc_intent = icc_intent.lower()
             if icc_bpc is not None:
                 icc_bpc = parse_boolean(icc_bpc)
-            if colorspace is not None:
-                colorspace = colorspace.lower()
             if strip is not None:
                 strip = parse_boolean(strip)
             if dpi is not None:
@@ -479,8 +460,10 @@ def make_image_response(image_wrapper, is_original, stats=None, as_attachment=No
     response.headers['X-From-Cache'] = str(image_wrapper.is_from_cache())
 
     # URL attachment param overrides what the returned object wants
-    attach = as_attachment if (as_attachment is not None) else \
-             image_wrapper.is_attachment()
+    attach = (
+        as_attachment if as_attachment is not None
+        else image_wrapper.is_attachment()
+    )
     if is_original or attach:
         fname = image_attrs.filename(with_path=False, replace_format=True)
         fname = unicode_to_utf8(fname)
@@ -521,7 +504,10 @@ def make_304_response(image_attrs, is_original, last_modified_time):
         response,
         image_attrs,
         last_modified_time,
-        image_engine._get_expiry_secs(image_attrs)
+        default_value(
+            image_engine.get_image_template(image_attrs).expiry_secs(),
+            image_engine.DEFAULT_EXPIRY_SECS
+        )
     )
 
     if app.config['DEBUG']:
@@ -565,10 +551,11 @@ def _etag_is_valid(image_attrs, check_etag, is_original):
     image described by image_attrs matches the given ETag.
     Returns (False, new_modified_time) if the current ETag value is different.
     """
-    modified_time = image_engine.get_image_original_modified_time(image_attrs) \
-                    if is_original else \
-                    image_engine.get_image_modified_time(image_attrs)
-
+    modified_time = (
+        image_engine.get_image_original_modified_time(image_attrs)
+        if is_original else
+        image_engine.get_image_modified_time(image_attrs)
+    )
     if modified_time == 0:
         # Return False to re-generate the image and re-store the modified time
         return (False, 0)
@@ -611,9 +598,9 @@ def _public_image_limits_pre_image_checks(req_width, req_height, req_autosizefit
         if req_template:
             try:
                 templ = image_engine.get_template(req_template)
-                template_w = templ.image_attrs.width() or 0
-                template_h = templ.image_attrs.height() or 0
-            except KeyError:
+                template_w = templ.get_image_attrs().width() or 0
+                template_h = templ.get_image_attrs().height() or 0
+            except ValueError:
                 # Validation (yet to come) will reject the bad template name
                 pass
 

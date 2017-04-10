@@ -1,10 +1,11 @@
 <select name="{{ web_name }}" id="publish_field_{{ key }}" class="publish_field" autocomplete="off">
-	<option value="" selected></option>
+	<option value="" {% if not default %}selected{% endif %}></option>
 	{% set icc_dict = validator.icc_choices() %}
 	{% for cspace in icc_dict %}
 	<optgroup label="{{ cspace }}">
 	{% for profile in icc_dict[cspace] %}
-		<option value="{{ profile }}" data-colorspace="{{ cspace|lower }}">{{ profile|capitalize }}</option>
+		<option value="{{ profile }}" data-colorspace="{{ cspace|lower }}"
+		        {% if default == profile %}selected{% endif %}>{{ profile|capitalize }}</option>
 	{% endfor %}
 	</optgroup>
 	{% endfor %}

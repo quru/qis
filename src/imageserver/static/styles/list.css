@@ -47,3 +47,51 @@ td.count {
 	text-align: right;
 	padding-right: 2em;
 }
+
+.view_icons {
+	margin-top: 0.5em;
+}
+
+.grid {
+	/* Match the table styles used for list view */
+	font-size: 95%;
+	/* Emulate the blank first tr of the list view */
+	margin-top: 2em;
+}
+.grid-row,
+.grid-cell {
+	/* Match the tr and td styles used for list view */
+	vertical-align: top;
+	line-height: 1.6;
+	padding: 2px;
+}
+.grid-cell {
+	display: inline-block;
+	margin: 1em 0.5em 0.8em 1em;
+	width: 200px;   /* expects preview image of 200x200 */
+	height: 240px;  /* plus 40px for filename and info  */
+	padding: 10px;
+	overflow: hidden;
+}
+.grid-cell.single-line {
+	line-height: 230px;
+	text-align: center;
+	vertical-align: middle;
+}
+.grid-cell.directory {
+	text-align: center;
+}
+.grid-cell .image-placeholder {
+	/* For thumbnails that are returned smaller than 200x200 */
+	width: 200px;
+	height: 200px;
+	line-height: 200px;
+	text-align: center;
+	vertical-align: middle;
+	/* For all thumbnails */
+	margin-bottom: 3px;
+}
+.grid-cell .icon-placeholder {
+	/* For icons that are smaller than 200x200 */
+	height: 55px;
+}

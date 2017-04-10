@@ -479,14 +479,6 @@ def filepath_components(filepath):
     return (filename, fullpath, path_list)
 
 
-def round_crop(crop_val):
-    """
-    Returns an image cropping float value rounded to a standard number
-    of decimal places.
-    """
-    return round(crop_val, 5)
-
-
 def adjust_query_string(qs, add_update_params=None, del_params=None):
     """
     Adjusts query string qs, updating or adding new parameters with the dictionary
@@ -779,6 +771,20 @@ def secure_filename(filename, keep_unicode=False):
     return filename
 
 
+def timefunc(f):
+    """
+    A function decorator that prints out how long the function took to execute.
+    For debugging use only.
+    """
+    def f_timer(*args, **kwargs):
+        start = time.time()
+        result = f(*args, **kwargs)
+        end = time.time()
+        print f.__name__, 'took', round((end - start) * 1000, 3), 'millis'
+        return result
+    return f_timer
+
+
 class SimpleODict(DictMixin):
     """
     A dictionary-like class (suitable for simple dictionary use cases) that
@@ -853,8 +859,9 @@ class SimpleODict(DictMixin):
 
 class KeyValueCache(object):
     """
-    Implements a simple key/value in-memory cache,
-    with an internal lock to ensure thread safety.
+    Implements a simple key/value in-memory cache, with an internal lock to
+    ensure thread safety. This object is for simple use cases within one Python
+    process. Use something like Memcached for a scalable system-wide cache.
     """
     def __init__(self):
         self._lock = threading.Lock()
@@ -882,6 +889,24 @@ class KeyValueCache(object):
         """
         with self._lock:
             self._cache.update(kv_dict)
+
+    def keys(self):
+        """
+        Returns the list of keys currently stored in this cache.
+        In a multi-threaded environment this list may be immediately obsolete.
+        """
+        with self._lock:
+            keys = self._cache.keys()
+        return keys
+
+    def values(self):
+        """
+        Returns the list of values currently stored in this cache.
+        In a multi-threaded environment this list may be immediately obsolete.
+        """
+        with self._lock:
+            values = self._cache.values()
+        return values
 
     def clear(self):
         """

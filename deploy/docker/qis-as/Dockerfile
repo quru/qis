@@ -32,7 +32,7 @@ RUN locale-gen en_GB.UTF-8 && update-locale LANG=en_GB.UTF-8 LC_ALL=en_GB.UTF-8
 RUN pip install -U pip virtualenv
 
 # Build variables
-ARG QIS_VERSION=1.51
+ARG QIS_VERSION=2.40
 ARG QIS_USER=qis
 ARG QIS_INSTALL_DIR=/opt/qis
 ARG WEB_USER=www-data
@@ -74,8 +74,8 @@ RUN cd /tmp && \
     cp -r images $QIS_INSTALL_DIR && \
     cp -r licences $QIS_INSTALL_DIR && \
     cp -r logs $QIS_INSTALL_DIR && \
+    rm -rf src/tests src/*.sh src/runserver.py && \
     cp -r src $QIS_INSTALL_DIR && \
-    cp -r templates $QIS_INSTALL_DIR && \
     cp deploy/ubuntu14/wsgi.conf /etc/apache2/sites-available/qis-wsgi.conf && \
     cp deploy/ubuntu14/httpd.conf.sample /etc/apache2/sites-available/001-qis.conf && \
     cp deploy/ubuntu14/httpd-ssl.conf.sample /etc/apache2/sites-available/002-qis-ssl.conf && \

@@ -44,7 +44,7 @@ from flask_app import app, logger, permissions_engine
 from flask_util import internal_url_for, external_url_for
 from models import FolderPermission, SystemPermissions
 from session_manager import get_session_user, logged_in
-from util import get_file_extension
+from util import get_file_extension, SimpleODict
 
 
 @app.template_filter('datetimeformat')
@@ -87,7 +87,7 @@ def urlencode_filter(strval):
 @app.template_filter('fileextension')
 def file_extension_filter(filename):
     """
-    A template filter to return the file extension of a file name.
+    A template filter to return the lower case file extension of a file name.
     """
     return get_file_extension(filename)
 
@@ -159,6 +159,7 @@ def register_template_funcs():
     app.add_template_global(wrap_is_folder_permitted, 'is_folder_permitted')
     app.add_template_global(internal_url_for, 'url_for')
     app.add_template_global(external_url_for, 'external_url_for')
+    app.add_template_global(url_for_thumbnail, 'url_for_thumbnail')
 
 
 def wrap_is_permitted(flag):
@@ -179,6 +180,27 @@ def wrap_is_folder_permitted(folder, folder_access):
     return permissions_engine.is_folder_permitted(
         folder, folder_access, get_session_user()
     )
+
+
+def url_for_thumbnail(src, external=False, stats=False):
+    """
+    Returns the URL for a thumbnail image of an image src.
+    Use this function to generate standard-sized and standard-formatted
+    thumbnail images in the UI so that they are cached correctly.
+    """
+    url_args = SimpleODict(
+        src=src,
+        width='200',             # Also update the getPreviewImageURL()
+        height='200',            # function in preview_popup.js
+        format='jpg',            # if you change any if these...
+        colorspace='srgb',
+        strip='1'
+    )
+    if not stats:
+        url_args['stats'] = '0'  # stats does not affect caching
+
+    url_fn = external_url_for if external else internal_url_for
+    return url_fn('image', **url_args)
 
 
 def log_security_error(error, request):

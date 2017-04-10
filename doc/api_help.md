@@ -172,9 +172,13 @@ a token is still required however.
 
 <a name="api_list"></a>
 ## list
-Retrieves the list of the images within a folder path, returning the filename, a URL to display
-the image, and optionally additional image attributes. This function returns a maximum of 1,000
-images by default.
+Retrieves the ordered list of the images within a folder path, returning the filename,
+a URL to display the image, and optionally additional image attributes.
+
+To avoid performance issues, this function returns a maximum of 1,000 results.
+To read the full set of results you can use the `start` and `limit` parameters
+to implement paging. The end of the results list is reached when you get back
+less than `limit` results.
 
 ### URL
 * `/api/v1/list`
@@ -184,11 +188,13 @@ images by default.
 
 ### Parameters
 * `path` - Mandatory, text - Specifies the folder path to list
-* `attributes` - Optional, boolean - When true, adds the unique ID, title, description, width and
-	height fields from the image database to the returned objects. Set to false for improved
-	performance if these fields are not required.
-* `limit` - Optional, integer - The maximum number of results to return, default `1000`. Or set to
-    `0` to specify no limit.
+* `attributes` - Optional, boolean - When `true`, adds the unique ID, title, description,
+    width and height fields from the image database to the returned objects.
+    Set to `false` for improved performance if these fields are not required.
+* `start` - Optional, integer - The zero-based result number to start from,
+    default `0`.
+* `limit` - Optional, integer - The maximum number of results to return,
+    default `1000`, maximum value `1000`.
 * _`[any]`_ - Optional, mixed - Any additional parameters are appended to the returned image URLs so
 	that for example the required image sizes can be specified
 
@@ -197,11 +203,13 @@ images by default.
 * If no authentication token has been provided, the folder must be publicly accessible
 
 ### Returns
-An array of 0 or more objects.
+An array of 0 or more objects in alphabetical order of filename.
+If the array length equals `limit`, you can make a second call with the `start`
+parameter set to get the next page of results.
 
 ### Examples
 
-	$ curl 'http://images.example.com/api/v1/list?path=myfolder'
+	$ curl 'http://images.example.com/api/v1/list?path=myfolder&limit=3'
 	{
 	  "data": [
 	    {
@@ -216,6 +224,18 @@ An array of 0 or more objects.
 	      "filename": "image3.jpg",
 	      "url": "http://images.example.com/image?src=myfolder/image3.jpg"
 	    }
+	  ],
+	  "message": "OK",
+	  "status": 200
+	}
+
+	$ curl 'http://images.example.com/api/v1/list?path=myfolder&start=3&limit=1'
+	{
+	  "data": [
+	    {
+	      "filename": "image4.jpg",
+	      "url": "http://images.example.com/image?src=myfolder/image4.jpg" 
+        }
 	  ],
 	  "message": "OK",
 	  "status": 200
@@ -529,64 +549,117 @@ The image `status` field has value `1` for active, or `0` for deleted.
 
 <a name="api_data_templates"></a>
 ## image templates
-Gets the content of an image template.
+Lists all image templates, or gets, creates, updates, or deletes a single template.
+
+A template combines a number of imaging operations into a named group, or a preset,
+as described in the [imaging guide](image_help.md#option_tmp).
 
 ### URL
-* `/api/v1/admin/templates/[template_name]/`
+* `/api/v1/admin/templates/` for `GET` (list templates) and `POST`
+* `/api/v1/admin/templates/[template id]/` for `GET`, `PUT`, and `DELETE`
 
 ### Supported methods
 * `GET`
+* `POST`
+* `PUT`
+* `DELETE`
 
 ### Parameters
-* None
+* None for `GET` or `DELETE`
+* For `POST` and `PUT`:
+	* `name` - Mandatory, text - A unique name for the template
+	* `description` - Mandatory, text - A description for the template
+	* `template` - Mandatory, JSON text - A set of field/value-object pairs
+	    that define the preset imaging operations. See the examples below for
+	    the list of possible field names. Fields to remain unchanged can either
+	    have their values set to `null` or simply be omitted from the JSON.
 
 ### Permissions required
-* None
+* None for `GET`
+* Super user for `POST`, `PUT`, `DELETE`
 
 ### Returns
-An object containing the image generation parameter names and values defined in the template.
-Values are `null` if the template does not set them.
+A list of template objects (for the list URL), a single template object
+(for most other URLs), or nothing (after a delete).
+
+In the template object, the `template` field contains image generation
+parameter names and values. Note that some parameters are named differently
+here than in the `image` [web interface](image_help.md).
+
+Values are either `null` or excluded from the output if the template does not set
+them. Existing older templates may also be missing fields that have been added in
+more recent versions of the software.
 
 ### Example
 
-	$ curl -u <token>:unused 'https://images.example.com/api/v1/admin/templates/smalljpeg/'
+	$ curl -u <token>:unused 'https://images.example.com/api/v1/admin/templates/1/'
 	{
 	  "data": {
-	    "align_h": null,
-	    "align_v": null,
-	    "attachment": null,
-	    "bottom": null,
-	    "colorspace": "rgb",
-	    "crop_fit": null,
-	    "dpi_x": 72,
-	    "dpi_y": 72,
-	    "expiry_secs": null,
-	    "filename": "smalljpeg",
-	    "fill": null,
-	    "flip": null,
-	    "format": "jpg",
-	    "height": 200,
-	    "icc_bpc": null,
-	    "icc_intent": null,
-	    "icc_profile": null,
-	    "left": null,
-	    "overlay_opacity": null,
-	    "overlay_pos": null,
-	    "overlay_size": null,
-	    "overlay_src": null,
-	    "page": null,
-	    "quality": 70,
-	    "record_stats": null,
-	    "right": null,
-	    "rotation": null,
-	    "sharpen": 50,
-	    "size_fit": null,
-	    "strip": true,
-	    "template": null,
-	    "tile": null,
-	    "top": null,
-	    "width": 200
+	    "description": "Defines a 200x200 JPG image that would be suitable for use as a thumbnail image on a web site.",
+	    "id": 1,
+	    "name": "SmallJpeg",
+	    "template": {
+	      "align_h": { "value": "C0.5" },
+	      "align_v": { "value": "C0.5" },
+	      "attachment": { "value": false },
+	      "bottom": { "value": null },
+	      "colorspace": { "value": "rgb" },
+	      "crop_fit": { "value": false },
+	      "dpi_x": { "value": null },
+	      "dpi_y": { "value": null },
+	      "expiry_secs": { "value": null },
+	      "fill": { "value": "#ffffff" },
+	      "flip": { "value": "" },
+	      "format": { "value": "jpg" },
+	      "height": { "value": 200 },
+	      "icc_bpc": { "value": false },
+	      "icc_intent": { "value": "" },
+	      "icc_profile": { "value": "" },
+	      "left": { "value": null },
+	      "overlay_opacity": { "value": null },
+	      "overlay_pos": { "value": "" },
+	      "overlay_size": { "value": null },
+	      "overlay_src": { "value": "" },
+	      "page": { "value": null },
+	      "quality": { "value": 80 },
+	      "record_stats": { "value": false },
+	      "right": { "value": null },
+	      "rotation": { "value": null },
+	      "sharpen": { "value": null },
+	      "size_fit": { "value": false },
+	      "strip": { "value": true },
+	      "tile": { "value": null },
+	      "top": { "value": null },
+	      "width": { "value": 200 }
+	    }
 	  },
+	  "message": "OK",
+	  "status": 200
+	}
+
+	$ curl -X POST -u <token>:unused -F 'name=grey-thumb' \
+	       -F 'description=Defines a greyscale thumbnail with a black fill' \
+	       -F 'template={ "colorspace":{"value":"grey"}, "width":{"value":400}, "height":{"value":400}, "fill":{"value":"black"} }' \
+	       'https://images.example.com/api/v1/admin/templates/'
+	{
+	  "data": {
+	    "description": "Defines a greyscale thumbnail with a black fill",
+	    "id": 3,
+	    "name": "grey-thumb",
+	    "template": {
+	      "colorspace": { "value": "grey" },
+	      "fill": { "value": "black" },
+	      "height": { "value": 400 },
+	      "width": { "value": 400 }
+	    }
+	  },
+	  "message": "OK",
+	  "status": 200
+	}
+
+	$ curl -X DELETE -u <token>:unused 'https://images.example.com/api/v1/admin/templates/3/'
+	{
+	  "data": null,
 	  "message": "OK",
 	  "status": 200
 	}
@@ -611,7 +684,7 @@ Lists all user accounts, or gets, creates, updates, or deletes a single user acc
 	* `first_name` - Mandatory, text - The user's first name
 	* `last_name` - Mandatory, text - The user's last name
 	* `email` - Mandatory, text - The user's email address
-	* `username` - Mandatory, text - The account username
+	* `username` - Mandatory, text - A unique username for the account
 	* `password` - Mandatory for `POST`, optional for `PUT`, text - The account password
 	* `auth_type` - Mandatory, integer - Should be set to `1`
 	* `allow_api` - Mandatory, boolean - Whether this account should be allowed to request
@@ -708,7 +781,7 @@ controls.
 ### Parameters
 * None for `GET` or `DELETE`
 * For `POST` and `PUT`:
-	* `name` - Mandatory, text - the name of the group
+	* `name` - Mandatory, text - the unique name of the group
 	* `description` - Mandatory, text - a description of the group
 	* `group_type` - Mandatory, integer - set to `1` for required system groups that must not
 	  be deleted, set to `2` for normal, user-defined groups

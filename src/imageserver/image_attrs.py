@@ -35,9 +35,12 @@ import re
 import threading
 
 from flask_app import app
-from util import filepath_filename, filepath_parent, filepath_normalize
-from util import get_file_extension, round_crop, unicode_to_ascii
-from util import validate_number, validate_tile_spec
+
+from util import (
+    filepath_filename, filepath_parent, filepath_normalize,
+    get_file_extension, unicode_to_ascii,
+    validate_number, validate_tile_spec
+)
 
 # We'll cache the image attribute validators. One copy per thread as I suspect
 # - e.g. the RegexValidator construction - probably isn't thread safe.
@@ -170,11 +173,9 @@ class ImageAttrs():
     Setting an attribute value to None (or not specifying a value) means
     "leave this attribute unchanged" with respect to the original image.
 
-    Users of this class should call validate() at some point before using
-    the attribute values.
+    Before using the attribute values, call normalise_values() to standardise
+    strings and remove unnecessary values, and validate() to check for bad values.
     """
-    class_version = 1500
-
     def __init__(self, src, db_id=-1, page=None,
                  iformat=None, template=None, width=None, height=None,
                  align_h=None, align_v=None, rotation=None, flip=None,
@@ -183,41 +184,44 @@ class ImageAttrs():
                  overlay_src=None, overlay_size=None, overlay_pos=None, overlay_opacity=None,
                  icc_profile=None, icc_intent=None, icc_bpc=None, colorspace=None,
                  strip=None, dpi=None, tile_spec=None):
-        self._version = self.__class__.class_version
+        """
+        Constructs a new image attributes object.
+        See this class's attribute methods for allowed parameter values.
+        """
         self._filename = filepath_normalize(src)
-        self._filename_ext = get_file_extension(self._filename)
         self._db_id = db_id
         self._page = page
-        self._format = self._no_blank(iformat)
-        self._template = self._no_blank(template)
+        self._format = iformat
+        self._template = template
         self._width = width
         self._height = height
-        self._align_h = self._no_blank(align_h)
-        self._align_v = self._no_blank(align_v)
+        self._align_h = align_h
+        self._align_v = align_v
         self._rotation = rotation
-        self._flip = self._no_blank(flip)
+        self._flip = flip
         self._top = top
         self._left = left
         self._bottom = bottom
         self._right = right
         self._crop_fit = crop_fit
         self._size_fit = size_fit
-        self._fill = self._no_blank(fill)
+        self._fill = fill
         self._quality = quality
         self._sharpen = sharpen
-        self._overlay_src = self._no_blank(overlay_src)
+        self._overlay_src = overlay_src
         self._overlay_size = overlay_size
-        self._overlay_pos = self._no_blank(overlay_pos)
+        self._overlay_pos = overlay_pos
         self._overlay_opacity = overlay_opacity
-        self._icc_profile = self._no_blank(icc_profile)
-        self._icc_intent = self._no_blank(icc_intent)
+        self._icc_profile = icc_profile
+        self._icc_intent = icc_intent
         self._icc_bpc = icc_bpc
-        self._colorspace = self._no_blank(colorspace)
+        self._colorspace = colorspace
         self._strip = strip
         self._dpi_x = dpi
         self._dpi_y = dpi
         self._tile = tile_spec
-        self._round_floats()
+        self._normalise_strings()
+        self._normalise_floats()
 
     def __str__(self):
         filename = unicode_to_ascii(self.filename(with_path=False))
@@ -228,15 +232,6 @@ class ImageAttrs():
 
     def __unicode__(self):
         return unicode(self.__str__())
-
-    def to_dict(self):
-        """
-        Returns a dictionary of fields and values represented by this object.
-        """
-        dct = {}
-        for attr in self.validators().keys():
-            dct[attr] = getattr(self, "_%s" % attr)
-        return dct
 
     def filename(self, with_path=True, append_format=False, replace_format=False):
         """
@@ -317,7 +312,7 @@ class ImageAttrs():
 
     def template(self):
         """
-        Returns the template attribute if it was supplied, or None
+        Returns the template name attribute if it was supplied, or None
         """
         return self._template
 
@@ -501,7 +496,7 @@ class ImageAttrs():
         """
         # These are lazy-loaded choices not available at import time
         formats = lambda: [""] + app.image_engine.get_image_formats()
-        templates = lambda: [""] + app.image_engine.get_template_names()
+        templates = lambda: [""] + app.image_engine.get_template_names(True)
         iccs = lambda: [""] + app.image_engine.get_icc_profile_names()
         # These are hard-coded choices
         ov_positions = ("", "c", "n", "e", "s", "w", "ne", "nw", "se", "sw")
@@ -509,43 +504,37 @@ class ImageAttrs():
         colorspaces = ("", "srgb", "rgb", "cmyk", "gray", "grey")
 
         return {
-            "filename": (LengthValidator(1, 1024), 'src'),
-            "page": (RangeValidator(0, 999999), 'page'),
-            "format": (ChoiceValidator(formats), 'format'),
-            "template": (ChoiceValidator(templates), 'tmp'),
-            "width": (
-                RangeValidator(0, app.config['MAX_IMAGE_DIMENSION']),
-                'width'
-            ),
-            "height": (
-                RangeValidator(0, app.config['MAX_IMAGE_DIMENSION']),
-                'height'
-            ),
-            "align_h": (AlignValidator(("l", "c", "r")), 'halign'),
-            "align_v": (AlignValidator(("t", "c", "b")), 'valign'),
-            "rotation": (RealRangeValidator(-360.0, 360.0), 'angle'),
-            "flip": (ChoiceValidator(("", "h", "v")), 'flip'),
-            "top": (RealRangeValidator(0.0, 1.0), 'top'),
-            "left": (RealRangeValidator(0.0, 1.0), 'left'),
-            "bottom": (RealRangeValidator(0.0, 1.0), 'bottom'),
-            "right": (RealRangeValidator(0.0, 1.0), 'right'),
-            "crop_fit": (BooleanValidator(), 'autocropfit'),
-            "size_fit": (BooleanValidator(), 'autosizefit'),
-            "fill": (LengthValidator(3, 32), 'fill'),
-            "quality": (RangeValidator(1, 100), 'quality'),
-            "sharpen": (RangeValidator(-500, 500), 'sharpen'),
-            "overlay_src": (LengthValidator(1, 1024), 'overlay'),
-            "overlay_pos": (ChoiceValidator(ov_positions), 'ovpos'),
-            "overlay_size": (RealRangeValidator(0.0, 1.0), 'ovsize'),
-            "overlay_opacity": (RealRangeValidator(0.0, 1.0), 'ovopacity'),
-            "icc_profile": (ICCProfileValidator(iccs), 'icc'),
-            "icc_intent": (ChoiceValidator(intents), 'intent'),
-            "icc_bpc": (BooleanValidator(), 'bpc'),
-            "colorspace": (ChoiceValidator(colorspaces), 'colorspace'),
-            "strip": (BooleanValidator(), 'strip'),
-            "dpi_x": (RangeValidator(0, 32000), 'dpi'),
-            "dpi_y": (RangeValidator(0, 32000), 'dpi'),
-            "tile": (TileValidator(app.config['MAX_GRID_TILES']), 'tile')
+            "filename": (LengthValidator(1, 1024), "src"),
+            "page": (RangeValidator(0, 999999), "page"),
+            "format": (ChoiceValidator(formats), "format"),
+            "template": (ChoiceValidator(templates), "tmp"),
+            "width": (RangeValidator(0, app.config["MAX_IMAGE_DIMENSION"]), "width"),
+            "height": (RangeValidator(0, app.config["MAX_IMAGE_DIMENSION"]), "height"),
+            "align_h": (AlignValidator(("l", "c", "r")), "halign"),
+            "align_v": (AlignValidator(("t", "c", "b")), "valign"),
+            "rotation": (RealRangeValidator(-360.0, 360.0), "angle"),
+            "flip": (ChoiceValidator(("", "h", "v")), "flip"),
+            "top": (RealRangeValidator(0.0, 1.0), "top"),
+            "left": (RealRangeValidator(0.0, 1.0), "left"),
+            "bottom": (RealRangeValidator(0.0, 1.0), "bottom"),
+            "right": (RealRangeValidator(0.0, 1.0), "right"),
+            "crop_fit": (BooleanValidator(), "autocropfit"),
+            "size_fit": (BooleanValidator(), "autosizefit"),
+            "fill": (LengthValidator(3, 32), "fill"),
+            "quality": (RangeValidator(1, 100), "quality"),
+            "sharpen": (RangeValidator(-500, 500), "sharpen"),
+            "overlay_src": (LengthValidator(1, 1024), "overlay"),
+            "overlay_pos": (ChoiceValidator(ov_positions), "ovpos"),
+            "overlay_size": (RealRangeValidator(0.0, 1.0), "ovsize"),
+            "overlay_opacity": (RealRangeValidator(0.0, 1.0), "ovopacity"),
+            "icc_profile": (ICCProfileValidator(iccs), "icc"),
+            "icc_intent": (ChoiceValidator(intents), "intent"),
+            "icc_bpc": (BooleanValidator(), "bpc"),
+            "colorspace": (ChoiceValidator(colorspaces), "colorspace"),
+            "strip": (BooleanValidator(), "strip"),
+            "dpi_x": (RangeValidator(0, 32000), "dpi"),
+            "dpi_y": (RangeValidator(0, 32000), "dpi"),
+            "tile": (TileValidator(app.config["MAX_GRID_TILES"]), "tile")
         }
 
     @staticmethod
@@ -596,9 +585,8 @@ class ImageAttrs():
         ValueError if an attribute value is invalid, otherwise returns with no value.
         """
         try:
-            validators = self.validators_flat()
-            for (attr, validator, web_attr) in validators:
-                val = getattr(self, "_%s" % attr)
+            for (attr, validator, web_attr) in ImageAttrs.validators_flat():
+                val = getattr(self, "_" + attr)
                 if val is not None:
                     validator(val)
         except ValueError as e:
@@ -612,8 +600,8 @@ class ImageAttrs():
         (excluding template name) has been given a value.
 
         Because the template name is not considered by this function, callers
-        should ensure that apply_template_values() has been invoked as
-        required before calling this function.
+        should ensure that template values have been applied as required
+        before calling this function.
         """
         # aligns, fill, crop_fit, size_fit, overlay_*, ICC intent and BPC
         # require other attributes to be set to have any effect,
@@ -891,8 +879,8 @@ class ImageAttrs():
 
         Note: the template attribute is not included in the returned key,
         because template definitions may change during the lifetime of the
-        cache. When a template is specified, callers should ensure that
-        apply_template_values() has first been invoked.
+        cache. When a template is specified, callers should ensure that the
+        template values have first been applied.
         """
         assert self._db_id > 0, 'Image database ID must be set to create cache key'
         key_parts = [_prefix + str(self._db_id)]
@@ -988,130 +976,48 @@ class ImageAttrs():
 
         return ','.join(key_parts)
 
-    def apply_template_values(
-        self, override_values, page, iformat,
-        width, height, align_h, align_v,
-        rotation, flip,
-        top, left, bottom, right, crop_fit,
-        size_fit, fill, quality, sharpen,
-        overlay_src, overlay_size, overlay_pos, overlay_opacity,
-        icc_profile, icc_intent, icc_bpc,
-        colorspace, strip, dpi
-    ):
+    @staticmethod
+    def from_dict(attr_dict):
         """
-        Applies a set of new image attributes to this object.
-        If override_values is False, each new attribute value will only be applied
-        if there is no existing value for that attribute.
+        Returns a new ImageAttrs, populated from the given dictionary,
+        normalised and validated. This is the opposite of to_dict().
+        Raises a ValueError if any of the dictionary values fail validation.
         """
-        if override_values or self._format is None:
-            self._format = self._no_blank(iformat)
+        new_obj = ImageAttrs('')
+        new_obj.apply_dict(attr_dict, True, True, True)
+        return new_obj
 
-        if override_values or self._page is None:
-            self._page = page
-
-        if override_values or self._width is None:
-            self._width = width
-
-        if override_values or self._height is None:
-            self._height = height
-
-        if override_values or self._align_h is None:
-            self._align_h = align_h
-
-        if override_values or self._align_v is None:
-            self._align_v = align_v
-
-        if override_values or self._rotation is None:
-            self._rotation = rotation
-
-        if override_values or self._flip is None:
-            self._flip = self._no_blank(flip)
-
-        if override_values or self._top is None:
-            self._top = top
-
-        if override_values or self._left is None:
-            self._left = left
-
-        if override_values or self._bottom is None:
-            self._bottom = bottom
-
-        if override_values or self._right is None:
-            self._right = right
-
-        if override_values or self._crop_fit is None:
-            self._crop_fit = crop_fit
-
-        if override_values or self._size_fit is None:
-            self._size_fit = size_fit
-
-        if override_values or self._fill is None:
-            self._fill = self._no_blank(fill)
-
-        if override_values or self._quality is None:
-            self._quality = quality
-
-        if override_values or self._sharpen is None:
-            self._sharpen = sharpen
-
-        if override_values or self._overlay_src is None:
-            self._overlay_src = self._no_blank(overlay_src)
-
-        if override_values or self._overlay_size is None:
-            self._overlay_size = overlay_size
-
-        if override_values or self._overlay_pos is None:
-            self._overlay_pos = self._no_blank(overlay_pos)
-
-        if override_values or self._overlay_opacity is None:
-            self._overlay_opacity = overlay_opacity
-
-        if override_values or self._icc_profile is None:
-            self._icc_profile = self._no_blank(icc_profile)
-
-        if override_values or self._icc_intent is None:
-            self._icc_intent = self._no_blank(icc_intent)
-
-        if override_values or self._icc_bpc is None:
-            self._icc_bpc = icc_bpc
-
-        if override_values or self._colorspace is None:
-            self._colorspace = self._no_blank(colorspace)
-
-        if override_values or self._strip is None:
-            self._strip = strip
-
-        if override_values or self._dpi_x is None:
-            self._dpi_x = dpi
-
-        if override_values or self._dpi_y is None:
-            self._dpi_y = dpi
-
-        self._round_floats()
-
-    def apply_default_values(
-        self, iformat=None, colorspace=None, strip=None, dpi=None
-    ):
+    def to_dict(self):
         """
-        Applies optional default image attributes for this object.
-        Each new attribute value will only be applied if it is not None and if
-        there is no existing value for that attribute.
+        Returns a dictionary of fields and values represented by this object.
+        The database ID field is not included, since an ID can be associated
+        with different file paths over time.
+        This is the opposite of from_dict().
         """
-        if iformat and self._format is None:
-            self._format = self._no_blank(iformat)
+        dct = {}
+        for attr, _, _ in ImageAttrs.validators_flat():
+            dct[attr] = getattr(self, "_" + attr)
+        return dct
 
-        if colorspace and self._colorspace is None and self._icc_profile is None:
-            # Note we only do this if the ICC profile is blank too
-            self._colorspace = self._no_blank(colorspace)
-
-        if strip and self._strip is None:
-            self._strip = strip
-
-        if dpi and self._dpi_x is None:
-            self._dpi_x = dpi
-
-        if dpi and self._dpi_y is None:
-            self._dpi_y = dpi
+    def apply_dict(self, attr_dict, override_values=True, validate=True, normalise=True):
+        """
+        Applies a set image attributes to this object from a dictionary.
+        If override_values is False, each new attribute value will only
+        be applied if there is no existing value for that attribute.
+        Raises a ValueError if any of the dictionary values fail validation.
+        """
+        for attr, _, _ in ImageAttrs.validators_flat():
+            dict_val = attr_dict.get(attr)
+            if dict_val is not None and dict_val != '':
+                obj_key = "_" + attr
+                if override_values or getattr(self, obj_key) is None:
+                    setattr(self, obj_key, dict_val)
+        self._normalise_strings()
+        self._normalise_floats()
+        if validate:
+            self.validate()
+        if normalise:
+            self.normalise_values()
 
     def normalise_values(self):
         """
@@ -1123,9 +1029,9 @@ class ImageAttrs():
         It is necessary to call this function before calling attributes_change_image
         or suitable_for_base.
 
-        But this function should not be called until after apply_template_values
-        and apply_default_values, so that attribute removal is not performed until
-        all possible parameters have been applied.
+        But this function should not be called until after any template values
+        and default values have been applied, so that attribute removal is
+        not performed until all possible parameters are present.
         """
         if self._page == 0 or self._page == 1:
             self._page = None
@@ -1239,10 +1145,9 @@ class ImageAttrs():
             self._align_v = None
 
         # The imaging back-end currently treats RGB == SRGB
-        # Normalise greys
         if self._colorspace == 'srgb':
             self._colorspace = 'rgb'
-
+        # Normalise greys
         if self._colorspace == 'grey':
             self._colorspace = 'gray'
 
@@ -1258,14 +1163,50 @@ class ImageAttrs():
             self._icc_intent = None
             self._icc_bpc = None
 
-    def _no_blank(self, strval):
+    def _normalise_strings(self):
         """
-        Returns strval if it has a value, or None if strval is either None
-        or an empty string.
+        Converts string attributes (except file paths) to lower case,
+        and removes empty strings.
         """
-        return strval or None
+        self._filename_ext = get_file_extension(self._filename)
+        # Keep the case of file paths intact
+        self._overlay_src = self._no_blank(self._overlay_src, False)
 
-    def _float_to_str(self, f):
+        # For everything else we use lower case
+        for attr in ['_format', '_template', '_align_h', '_align_v',
+                     '_flip', '_fill', '_overlay_pos',
+                     '_icc_profile', '_icc_intent', '_colorspace']:
+            setattr(
+                self, attr, self._no_blank(getattr(self, attr), True)
+            )
+
+    def _normalise_floats(self):
+        """
+        Rounds float attributes to a standard number of decimal places.
+        """
+        if self._align_h is not None:
+            self._align_h = self._align_h[:8]
+        if self._align_v is not None:
+            self._align_v = self._align_v[:8]
+
+        for attr in ['_rotation', '_top', '_left', '_bottom', '_right',
+                     '_overlay_size', '_overlay_opacity']:
+            val = getattr(self, attr)
+            if val is not None:
+                setattr(self, attr, self._round_crop(val))
+
+    @staticmethod
+    def _no_blank(strval, lowercase):
+        """
+        Returns strval if it has a value (optionally converted to lower case),
+        or None if strval is either None or an empty string.
+        """
+        if strval:
+            return strval.lower() if lowercase else strval
+        return None
+
+    @staticmethod
+    def _float_to_str(f):
         """
         Returns f as a string, without scientific notation.
         E.g. 0.00005 is returned as '0.00005' where a simple
@@ -1274,33 +1215,13 @@ class ImageAttrs():
         s = ('%.5f' % f).rstrip('0')
         return (s + '0') if s.endswith('.') else s
 
-    def _round_floats(self):
+    @staticmethod
+    def _round_crop(crop_val):
         """
-        Rounds float attributes to a standard number of decimal places
+        Returns an image cropping float value rounded to a
+        standard number of decimal places.
         """
-        if self._align_h is not None and len(self._align_h) > 8:
-            self._align_h = self._align_h[:8]
-
-        if self._align_v is not None and len(self._align_v) > 8:
-            self._align_v = self._align_v[:8]
-
-        if self._rotation is not None:
-            self._rotation = round_crop(self._rotation)
-
-        if self._top is not None:
-            self._top = round_crop(self._top)
-
-        if self._left is not None:
-            self._left = round_crop(self._left)
-
-        if self._bottom is not None:
-            self._bottom = round_crop(self._bottom)
-
-        if self._right is not None:
-            self._right = round_crop(self._right)
-
-        if self._overlay_size is not None:
-            self._overlay_size = round_crop(self._overlay_size)
-
-        if self._overlay_opacity is not None:
-            self._overlay_opacity = round_crop(self._overlay_opacity)
+        try:
+            return round(crop_val, 5)
+        except:
+            return crop_val

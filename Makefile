@@ -1,6 +1,6 @@
 PYTHON_VER := $(shell python -c 'import platform; print platform.python_version()[:3]')
 PYTHON := python${PYTHON_VER}
-VENV_NAME := qis_venv
+VENV_NAME := qis_v2
 VENV_PATH := ~/.virtualenvs/${VENV_NAME}
 VENV_ACTIVATE := . ${VENV_PATH}/bin/activate
 QISMAGICK_SO := ${VENV_PATH}/lib/${PYTHON}/site-packages/qismagick.so

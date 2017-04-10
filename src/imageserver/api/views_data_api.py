@@ -31,6 +31,7 @@
 
 import copy
 from functools import wraps
+import json
 import sys
 
 from flask import request, session
@@ -42,10 +43,11 @@ from imageserver.api_util import make_api_success_response
 from imageserver.errors import DoesNotExistError, ParameterError, SecurityError
 from imageserver.flask_app import data_engine, image_engine, permissions_engine
 from imageserver.flask_util import api_permission_required, _check_internal_request
-from imageserver.models import Group, ImageHistory, User
-from imageserver.models import FolderPermission, SystemPermissions
+from imageserver.models import Group, ImageHistory, ImageTemplate, User
+from imageserver.models import FolderPermission, Property, SystemPermissions
 from imageserver.session_manager import get_session_user, get_session_user_id
-from imageserver.session_manager import log_out
+from imageserver.session_manager import log_out, reset_user_sessions
+from imageserver.template_attrs import TemplateAttrs
 from imageserver.util import get_string_changes, generate_password
 from imageserver.util import object_to_dict, object_to_dict_list
 from imageserver.util import parse_boolean, parse_int
@@ -144,18 +146,111 @@ class ImageAPI(MethodView):
 
 class TemplateAPI(MethodView):
     """
-    Provides the REST admin API to get image template data.
+    Provides the REST admin API to list, create, get, update or delete
+    image templates.
 
     Required access:
-    - None (caller must only be logged in)
+    - None to get or list the templates (caller must only be logged in)
+    - Otherwise requires super user
     """
+    # ImageAttrs fields we don't want to store or return in the JSON
+    HIDE_FIELDS = ['filename', 'template']
+
     @add_api_error_handler
-    def get(self, template_name):
+    def get(self, template_id=None):
+        if template_id is None:
+            # List templates
+            tlist = data_engine.list_objects(ImageTemplate, ImageTemplate.name)
+            tdictlist = object_to_dict_list(tlist)
+            for tdict in tdictlist:
+                self._del_keys(tdict['template'], TemplateAPI.HIDE_FIELDS)
+            return make_api_success_response(tdictlist)
+        else:
+            # Get single template
+            template_info = data_engine.get_image_template(template_id)
+            if template_info is None:
+                raise DoesNotExistError(str(template_id))
+            tdict = object_to_dict(template_info)
+            self._del_keys(tdict['template'], TemplateAPI.HIDE_FIELDS)
+            return make_api_success_response(tdict)
+
+    @add_api_error_handler
+    def post(self):
+        permissions_engine.ensure_permitted(
+            SystemPermissions.PERMIT_SUPER_USER, get_session_user()
+        )
+        params = self._get_validated_object_parameters(request.form)
+        template = ImageTemplate(
+            params['name'],
+            params['description'],
+            params['template']
+        )
+        template = data_engine.save_object(template, refresh=True)
+        image_engine.reset_templates()
+        return self.get(template.id)
+
+    @add_api_error_handler
+    def put(self, template_id):
+        permissions_engine.ensure_permitted(
+            SystemPermissions.PERMIT_SUPER_USER, get_session_user()
+        )
+        params = self._get_validated_object_parameters(request.form)
+        template = data_engine.get_image_template(template_id)
+        if template is None:
+            raise DoesNotExistError(str(template_id))
+        template.name = params['name']
+        template.description = params['description']
+        template.template = params['template']
+        data_engine.save_object(template)
+        image_engine.reset_templates()
+        return self.get(template.id)
+
+    @add_api_error_handler
+    def delete(self, template_id):
+        permissions_engine.ensure_permitted(
+            SystemPermissions.PERMIT_SUPER_USER, get_session_user()
+        )
+        template_info = data_engine.get_image_template(template_id)
+        if template_info is None:
+            raise DoesNotExistError(str(template_id))
+        db_default_template = data_engine.get_object(Property, Property.DEFAULT_TEMPLATE)
+        if template_info.name.lower() == db_default_template.value.lower():
+            raise ParameterError('The system default template cannot be deleted')
+        data_engine.delete_object(template_info)
+        image_engine.reset_templates()
+        return make_api_success_response()
+
+    @add_parameter_error_handler
+    def _get_validated_object_parameters(self, data_dict):
+        params = {
+            'name': data_dict['name'].strip(),
+            'description': data_dict['description'],
+            'template': data_dict['template']
+        }
+        validate_string(params['name'], 1, 120)
+        validate_string(params['description'], 0, 5 * 1024)
+        validate_string(params['template'], 2, 100 * 1024)
+        # Validate the JSON syntax
         try:
-            template = image_engine.get_template(template_name)
-            return make_api_success_response(template.to_dict())
-        except KeyError:
-            raise DoesNotExistError(template_name)
+            template_dict = json.loads(params['template'])
+        except ValueError as e:
+            raise ValueError(u'template: ' + unicode(e))
+        # Validate the JSON data values
+        self._del_keys(template_dict, TemplateAPI.HIDE_FIELDS)
+        template_attrs = TemplateAttrs(params['name'], template_dict)
+        # Return the template as a validated dict
+        params['template'] = template_attrs.get_raw_dict()
+        return params
+
+    def _del_keys(self, dct, keys_list):
+        """
+        Deletes the keys in keys_list from dictionary dct.
+        """
+        for k in keys_list:
+            try:
+                del dct[k]
+            except KeyError:
+                pass
 
 
 class UserAPI(MethodView):
@@ -227,6 +322,8 @@ class UserAPI(MethodView):
         if user.auth_type != User.AUTH_TYPE_LDAP and params['password']:
             user.set_password(params['password'])
         data_engine.save_object(user)
+        # Reset session caches
+        reset_user_sessions(user)
         # Do not give out anything password related
         udict = object_to_dict(user)
         del udict['password']
@@ -243,6 +340,8 @@ class UserAPI(MethodView):
         # If this is the current user, log out
         if get_session_user_id() == user_id:
             log_out()
+        # Reset session caches
+        reset_user_sessions(user)
         # Do not give out anything password related
         udict = object_to_dict(user)
         del udict['password']
@@ -332,8 +431,9 @@ class GroupAPI(MethodView):
             group.name = params['name']
         permissions_changed = self._set_permissions(group, params)
         data_engine.save_object(group)
-        # Reset permissions cache
+        # Reset permissions and session caches
         if permissions_changed:
+            reset_user_sessions(group.users)
             permissions_engine.reset()
             _check_for_user_lockout(backup_group)
         # Do not give out anything password related
@@ -348,14 +448,15 @@ class GroupAPI(MethodView):
         permissions_engine.ensure_permitted(
             SystemPermissions.PERMIT_ADMIN_PERMISSIONS, get_session_user()
         )
-        group = data_engine.get_group(group_id=group_id)
+        group = data_engine.get_group(group_id=group_id, load_users=True)
         if group is None:
             raise DoesNotExistError(str(group_id))
         try:
             data_engine.delete_group(group)
         except ValueError as e:
             raise ParameterError(str(e))
-        # Reset permissions cache
+        # Reset permissions and session caches
+        reset_user_sessions(group.users)
         permissions_engine.reset()
         return make_api_success_response()
 
@@ -434,6 +535,7 @@ class UserGroupAPI(MethodView):
             if user not in group.users:
                 group.users.append(user)
                 data_engine.save_object(group)
+                reset_user_sessions(user)
                 permissions_engine.reset()
         return make_api_success_response()
 
@@ -449,6 +551,7 @@ class UserGroupAPI(MethodView):
             if member.id == user_id:
                 del group.users[idx]
                 data_engine.save_object(group)
+                reset_user_sessions(member)
                 permissions_engine.reset()
                 _check_for_user_lockout(backup_group)
                 break
@@ -565,6 +668,42 @@ class FolderPermissionAPI(MethodView):
         return params
 
 
+class PropertyAPI(MethodView):
+    """
+    Provides the REST admin API to get or update system properties.
+    This API is not intended for general consumption, but any super user can use it.
+
+    Required access:
+    - Super user
+    """
+    @add_api_error_handler
+    def get(self, property_id):
+        db_prop = data_engine.get_object(Property, property_id)
+        if db_prop is None:
+            raise DoesNotExistError(str(property_id))
+        return make_api_success_response(object_to_dict(db_prop))
+
+    @add_api_error_handler
+    def put(self, property_id):
+        params = self._get_validated_object_parameters(request.form)
+        db_prop = data_engine.get_object(Property, property_id)
+        if db_prop is None:
+            raise DoesNotExistError(str(property_id))
+        db_prop.value = params['value']
+        data_engine.save_object(db_prop)
+        if property_id == Property.DEFAULT_TEMPLATE:
+            image_engine.reset_templates()
+        return make_api_success_response(object_to_dict(db_prop))
+
+    @add_parameter_error_handler
+    def _get_validated_object_parameters(self, data_dict):
+        params = {
+            'value': data_dict['value']
+        }
+        validate_string(params['value'], 0, 10000)
+        return params
+
+
 def _user_api_permission_required(f):
     """
     A decorator that replaces api_permission_required() to implement custom
@@ -575,12 +714,16 @@ def _user_api_permission_required(f):
     """
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        res = _check_internal_request(request, session, False, True, SystemPermissions.PERMIT_ADMIN_USERS)
+        res = _check_internal_request(
+            request, session, False, True, SystemPermissions.PERMIT_ADMIN_USERS
+        )
         # If not admin_users, allow GET and PUT for current user's record
         if res:
-            allow = (request.method == 'GET' or request.method == 'PUT') and \
-                    'user_id' in kwargs and \
-                    kwargs['user_id'] == get_session_user_id()
+            allow = (
+                request.method in ['GET', 'PUT'] and
+                'user_id' in kwargs and
+                kwargs['user_id'] == get_session_user_id()
+            )
             if not allow:
                 return res
         return f(*args, **kwargs)
@@ -697,8 +840,23 @@ api_add_url_rules(
 
 _dapi_template_views = api_permission_required(TemplateAPI.as_view('admin.template'))
 api_add_url_rules(
-    [url_version_prefix + '/admin/templates/<template_name>/',
-     '/admin/templates/<template_name>/'],
+    [url_version_prefix + '/admin/templates/',
+     '/admin/templates/'],
     view_func=_dapi_template_views,
-    methods=['GET']
+    methods=['GET', 'POST']
+)
+api_add_url_rules(
+    [url_version_prefix + '/admin/templates/<int:template_id>/',
+     '/admin/templates/<int:template_id>/'],
+    view_func=_dapi_template_views,
+    methods=['GET', 'PUT', 'DELETE']
+)
+
+_dapi_property_views = api_permission_required(PropertyAPI.as_view('admin.property'),
+                                               SystemPermissions.PERMIT_SUPER_USER)
+api_add_url_rules(
+    [url_version_prefix + '/admin/properties/<property_id>/',
+     '/admin/properties/<property_id>/'],
+    view_func=_dapi_property_views,
+    methods=['GET', 'PUT']
 )

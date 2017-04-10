@@ -27,15 +27,42 @@
 	Notable modifications:
 	Date       By    Details
 	=========  ====  ============================================================
+	01Oct2015  Matt  Added template admin
 */
 "use strict";
 var GenericListPage={};GenericListPage.initPopupLinks=function(b,c){var a=$$(".popuplink");a.each(function(d){popup_convert_anchor(d,b,c,function(){window.location.reload();
 });});};GenericListPage.initDeleteLinks=function(b){var c=b.substring(0,1).toUpperCase()+b.substring(1);
 var a=$$(".delform");a.each(function(d){setAjaxJsonForm(d,function(){return confirm("Are you sure you want to delete "+b+" '"+d.del_name.value+"'?");
 },null,function(){alert(c+" deleted successfully.");window.location.reload();},function(e,g){var f=getAPIError(e,g);
-alert("Sorry, this "+b+" was not deleted.\n\n"+f.message);});});};var UserList={};UserList.onInit=function(){GenericListPage.initPopupLinks(575,650);
+alert("Sorry, this "+b+" was not deleted.\n\n"+f.message);});});};var TemplateList={};TemplateList.onInit=function(){GenericListPage.initPopupLinks(575,650);
+GenericListPage.initDeleteLinks("template");setAjaxJsonForm("deftemplform",TemplateList.changeDefaultTemplate,TemplateList.onDefTemplSubmit,TemplateList.onDefTemplSuccess,TemplateList.onDefTemplError);
+};TemplateList.changeDefaultTemplate=function(){return confirm("Are you sure you want to change the default image template?\n\nSome or all of your images may need to be re-generated.");
+};TemplateList.onDefTemplSubmit=function(){DataMaintenance.disableButtons();};TemplateList.onDefTemplSuccess=function(){DataMaintenance.enableButtons();
+window.location.reload();};TemplateList.onDefTemplError=function(a,c){DataMaintenance.enableButtons();
+var b=getAPIError(a,c);alert("Sorry, your changes were not saved.\n\n"+b.message);};var UserList={};UserList.onInit=function(){GenericListPage.initPopupLinks(575,650);
 GenericListPage.initDeleteLinks("user");};var GroupList={};GroupList.onInit=function(){GenericListPage.initPopupLinks(700,650);
-GenericListPage.initDeleteLinks("group");};var UserEdit={};UserEdit.onInit=function(){GenericPopup.initButtons();
+GenericListPage.initDeleteLinks("group");};var TemplateEdit={};TemplateEdit.onInit=function(){GenericPopup.initButtons();
+setAjaxJsonForm("editform",TemplateEdit.validate,GenericPopup.defaultSubmitting,GenericPopup.defaultSubmitSuccess,TemplateEdit.onSubmitError);
+addEventEx("publish_field_fill","change",TemplateEdit.onFillChanged);addEventEx("publish_field_autofill","change",TemplateEdit.onAutoFillChanged);
+addEventEx("publish_field_transfill","change",TemplateEdit.onTransFillChanged);addEventEx("overlay_src_browse","click",TemplateEdit.onBrowseOverlay);
+$$("img.help").each(function(a){addEventEx(a,"click",function(){TemplateEdit.toggleHelp(a);});});TemplateEdit.popupHelp=new IframePopup($$(".preview_popup")[0],true,function(){TemplateEdit.showingHelp=false;
+});};TemplateEdit.validate=function(){form_clearErrors("editform");if(validate_isempty("name")){form_setError("name");
+alert("You must enter a name for the template.");return false;}$$(".publish_field").each(function(a){if((a.type==="number")&&a.value&&isNaN(parseFloat(a.value))){form_setError(a.name);
+alert("The value for "+a.name+" must be a number.");return false;}});TemplateEdit.setTemplateJSON();return true;
+};TemplateEdit.onSubmitError=function(a,c){GenericPopup.enableButtons();var b=getAPIError(a,c);if(b.status==APICodes.ALREADY_EXISTS){form_setError("name");
+alert("A template with this name already exists, please choose another name.");}else{alert("Sorry, your changes were not saved.\n\n"+b.message);
+}};TemplateEdit.onFileSelected=function(a){$("publish_field_overlay_src").value=a;};TemplateEdit.setTemplateJSON=function(){var a={};
+$$(".publish_field").each(function(d){var b=d.id.substring(14);if(d.type==="checkbox"){a[b]={value:d.checked};
+}else{if(d.type==="number"){var e=(d.value&&!isNaN(parseFloat(d.value)))?parseFloat(d.value):null;a[b]={value:e};
+}else{if(d.selectedIndex!==undefined&&d.options!==undefined){var c=(d.selectedIndex>=0)?d.options[d.selectedIndex].value:null;
+a[b]={value:c};}else{a[b]={value:d.value};}}}});if(a.autofill["value"]){a.fill["value"]="auto";}if(a.transfill["value"]){a.fill["value"]="none";
+}delete a.autofill;delete a.transfill;$("template").value=JSON.stringify(a);};TemplateEdit.onFillChanged=function(){$("publish_field_autofill").checked=false;
+$("publish_field_transfill").checked=false;};TemplateEdit.onAutoFillChanged=function(){if(this.checked){$("publish_field_transfill").checked=false;
+$("publish_field_fill").value="#ffffff";}};TemplateEdit.onTransFillChanged=function(){if(this.checked){$("publish_field_autofill").checked=false;
+$("publish_field_fill").value="#ffffff";}};TemplateEdit.onBrowseOverlay=function(){popup_iframe($(this).getProperty("data-browse-url"),575,650);
+return false;};TemplateEdit.toggleHelp=function(b){if(TemplateEdit.showingHelp){TemplateEdit.popupHelp.hide();
+TemplateEdit.showingHelp=false;}else{var c=$(b).getProperty("data-anchor"),a=(TemplateAdminConfig.help_url+"#"+c);
+TemplateEdit.popupHelp.showAt(b,a);TemplateEdit.showingHelp=true;}return false;};var UserEdit={};UserEdit.onInit=function(){GenericPopup.initButtons();
 setAjaxJsonForm("editform",UserEdit.validate,GenericPopup.defaultSubmitting,GenericPopup.defaultSubmitSuccess,UserEdit.onSubmitError);
 };UserEdit.validate=function(){form_clearErrors("editform");if(!validate_isempty("email")&&!validate_email("email")){form_setError("email");
 alert("The user's email address does not appear to be valid.");return false;}if(validate_isempty("username")){form_setError("username");
@@ -104,7 +131,9 @@ FolderPermissions.onFormError=function(a,c){DataMaintenance.enableButtons();var 
 TracePermissions.setLoadingMessage("Please wait...");window.location=b+"&user="+a;};TracePermissions.setLoadingMessage=function(a){$("trace_container").innerHTML=a;
 };function submitParentForm(d){var e=d.getParent();if(e&&(e.tagName.toLowerCase()=="form")){var c=e.retrieve("events");
 if(c&&c.submit){var b=c.submit.keys;for(var a=0;a<b.length;a++){if(b[a]()===false){return false;}}}e.submit();
-}return false;}function onInit(){switch($(document.body).id){case"user_list":UserList.onInit();break;
-case"user_edit":UserEdit.onInit();break;case"group_list":GroupList.onInit();break;case"group_edit":GroupEdit.onInit();
-break;case"data_maintenance":DataMaintenance.onInit();break;case"folder_permissions":FolderPermissions.onInit();
-break;case"trace_permissions":TracePermissions.onInit();break;}}window.addEvent("domready",onInit);
+}return false;}function onFileSelected(a){switch($(document.body).id){case"template_edit":TemplateEdit.onFileSelected(a);
+break;}}function onInit(){switch($(document.body).id){case"template_list":TemplateList.onInit();break;
+case"template_edit":TemplateEdit.onInit();break;case"user_list":UserList.onInit();break;case"user_edit":UserEdit.onInit();
+break;case"group_list":GroupList.onInit();break;case"group_edit":GroupEdit.onInit();break;case"data_maintenance":DataMaintenance.onInit();
+break;case"folder_permissions":FolderPermissions.onInit();break;case"trace_permissions":TracePermissions.onInit();
+break;}}window.addEvent("domready",onInit);

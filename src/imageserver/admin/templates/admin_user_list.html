@@ -26,9 +26,9 @@
 		{{ users|length }} user{{ users|length|pluralize }}
 		(<a class="popuplink" href="{{ url_for('admin.user_edit', user_id=0, embed=1) }}">add a new user</a>)
 	</div>
-	<br/>
-	<table summary="Listing of {{ page_heading }}">
-	
+
+	<table class="list_table" summary="Listing of {{ page_heading }}">
+
 		{% set row_class = cycler('even', 'odd') %}
 		<tr class="{{ row_class.next() }} header">
 			<td></td>
@@ -37,10 +37,10 @@
 			<td>Email</td>
 			<td>Action</td>
 		</tr>
-	
+
 		{% for user in users %}
 		{% set edit_url = url_for('admin.user_edit', user_id=user.id, embed=1) %}
-		
+
 		<tr class="{{ row_class.next() }}">
 			<td>
 				{% if user.status == 0 %}

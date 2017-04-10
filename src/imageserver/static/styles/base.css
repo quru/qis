@@ -39,7 +39,7 @@ iframe {
 
 /* Hyperlink styles
  */
-a:link, a:visited, a:hover, a:active {
+a {
 	text-decoration: none;
 	color: black;
 	border-bottom: 1px dotted black;
@@ -63,14 +63,16 @@ h1 {
 	font-size: 180%;
 }
 h1 span {
-	font-size: 56%;
+	/* back to 100% = font-size: 56%; / to 95% (table text) = 53% */
+	font-size: 53%;
 }
 h2 {
 	font-size: 130%;
 	margin-bottom: 0.3em;
 }
 h2 span {
-	font-size: 77%;
+	/* back to 100% = font-size: 77%; / to 95% (table text) = 73% */
+	font-size: 73%;
 }
 h3, h4 {
 	font-size: 110%;
@@ -78,7 +80,8 @@ h3, h4 {
 	font-style: italic;
 }
 h3 span, h4 span {
-	font-size: 91%;
+	/* back to 100% = font-size: 91%; / to 95% (table text) = 86% */
+	font-size: 86%;
 }
 
 /* Misc HTML element styles
@@ -114,6 +117,11 @@ textarea {
 	border: 1px solid gray;
 }
 
+fieldset {
+	/* Firefox fieldsets are padded by default, but this looks better */
+	padding: 0.5em;
+}
+
 /* Standard table style
  */
 table {
@@ -135,13 +143,8 @@ table a:hover {
 tr {
 	margin: 0;
 	padding: 0;
-	line-height: 160%;
+	line-height: 1.6;
 	vertical-align: top;
-}
-tr.odd {
-	background-color: #f0f0f0;
-}
-tr.even {
 }
 tr.header {
 	font-style: italic;
@@ -153,13 +156,15 @@ td {
 
 /* Forms
  */
-form label {
+form label,
+fieldset label {
 	display: inline-block;
 	width: 10em;
 	vertical-align: top;
 }
+fieldset,
 form div,
-form fieldset {
+fieldset div {
 	line-height: 1.5em;
 	margin-top: 0.2em;
 	margin-bottom: 0.2em;
@@ -167,10 +172,16 @@ form fieldset {
 	border: none;
 }
 
+.fieldset_merge {
+	margin-top: -1.3em;
+}
+
 /* Common classes
  */
 .action_menu_owner {
 	cursor: pointer;
+	display: inline-block;
+	margin-top: 0.5em;
 }
 .action_menu {
 	position: absolute;
@@ -198,6 +209,17 @@ li.spacer {
 
 .clickable {
 	cursor: pointer;
+}
+
+.no-underline {
+	border-bottom: none;
+}
+
+.odd {
+	background-color: #f0f0f0;
+}
+.even {
+	background-color: #ffffff;
 }
 
 .error {
@@ -239,7 +261,7 @@ img.disabled {
 }
 
 .subtlebg {
-	background-color: #fafafa;  /* same as tr.odd */
+	background-color: #f0f0f0;  /* same as tr.odd */
 }
 
 .highlight {
@@ -262,6 +284,7 @@ a:hover .highlight {
 .right {
 	text-align: right;
 }
+
 .sticky {
 	position: sticky;
 	top: 0px;
@@ -392,20 +415,20 @@ a:hover .highlight {
 
 /* Image preview popup
  */
-#preview_popup {
+.preview_popup {
 	position: absolute;
 	top: 1px;
 	left: -1000px;
 	visibility: hidden;
 	clear: both;
 }
-#preview_popup img {
+.preview_popup img {
 	vertical-align: middle;
 }
-#preview_popup span { /* IE<8 fix, trigger hasLayout, also see JS */
+.preview_popup span { /* IE<8 fix, trigger hasLayout, also see JS */
 	display: inline-block;
 }
-#preview_popup_left {
+.preview_popup_left {
 	width: 20px;
 	height: 200px;
 	position: relative;
@@ -415,8 +438,8 @@ a:hover .highlight {
 	background-position: center;
 	background-repeat: no-repeat;
 }
-#preview_popup_right {
-	width: 220px;
+.preview_popup_right {
+	width: 220px;        /* expects preview image of 200x200 */
 	height: 200px;
 	line-height: 200px;
 	position: relative;
@@ -424,4 +447,22 @@ a:hover .highlight {
 	margin-left: 19px;
 	text-align: center;
 	background-color: #ffffff;
+}
+
+/* Image preview popup - iframe mode
+ */
+.iframe .preview_popup_left,
+.iframe .preview_popup_right {
+	height: 400px;
+}
+.iframe .preview_popup_right {
+	width: 650px;
+}
+
+.preview_popup iframe {
+	width: 96%;
+	height: 100%;
+	margin-left: auto;
+	margin-right: auto;
+	border: none;
 }

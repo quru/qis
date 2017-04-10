@@ -85,33 +85,6 @@ PUBLIC_MAX_IMAGE_HEIGHT = 0
 # Values below 1000000 (1 megapixel) will be ignored and disable this feature.
 AUTO_PYRAMID_THRESHOLD = 10000000
 
-# Default return image format (as a file extension, e.g. "jpg").
-# Use an empty string "" to return images in their original format.
-# These values can be overridden using image templates.
-IMAGE_FORMAT_DEFAULT = ""
-IMAGE_QUALITY_DEFAULT = 80
-# Default colour space can be "RGB", "CMYK", "GRAY",
-# or "" to return images in their original colour space.
-IMAGE_COLORSPACE_DEFAULT = "RGB"
-
-# Default return image resolution (DPI). Use a value of 0 to return images in
-# their original resolution. This value can be overridden using image templates.
-IMAGE_DPI_DEFAULT = 0
-
-# Default choice for whether to strip images of their embedded EXIF/IPTC/XMP data
-# and colour profiles. This results in smaller image file sizes, but with the loss
-# of colour rendering information, camera settings, author's name and copyright text, etc.
-# This value can be overridden using image templates.
-IMAGE_STRIP_DEFAULT = True
-
-# The default HTTP header cache-control/expiry time in seconds.
-# Set as 0 to skip these headers and rely on web browsers' default behaviour.
-# Set as -1 to return images that expire immediately.
-# Set as 31536000 (1 year) to return images that (in effect) never expire.
-# Set as 7 days or more to satisfy online performance analysers such as Pagespeed.
-# This value can be overridden using image templates.
-IMAGE_EXPIRY_TIME_DEFAULT = 60 * 60 * 24 * 7
-
 # The maximum time in seconds to wait for another client to finish generating
 # the requested image before either returning a "server too busy" error or
 # going on to generate a duplicate image. Allowed range 10 to 120 seconds.
@@ -164,7 +137,6 @@ DOCS_BASE_DIR = INSTALL_DIR + "/doc/"
 ICC_BASE_DIR = INSTALL_DIR + "/icc/"
 IMAGES_BASE_DIR = INSTALL_DIR + "/images/"
 LOGGING_BASE_DIR = INSTALL_DIR + "/logs/"
-TEMPLATES_BASE_DIR = INSTALL_DIR + "/templates/"
 
 # The path where temporary imaging files are stored.
 # Old temporary files will be periodically deleted.

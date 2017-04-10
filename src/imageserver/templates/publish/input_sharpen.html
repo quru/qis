@@ -1,15 +1,15 @@
 <select name="{{ web_name }}_choices" id="publish_field_{{ key }}_choices" autocomplete="off">
-	<option value="-500">Blur +5</option>
-	<option value="-300">Blur +4</option>
-	<option value="-200">Blur +3</option>
-	<option value="-100">Blur +2</option>
-	<option value="-50">Blur +1</option>
-	<option value="" selected>None</option>
-	<option value="50">Sharpen +1</option>
-	<option value="100">Sharpen +2</option>
-	<option value="200">Sharpen +3</option>
-	<option value="300">Sharpen +4</option>
-	<option value="500">Sharpen +5</option>
+	<option value="-500" {% if default == -500 %}selected{% endif %}>Blur +5</option>
+	<option value="-300" {% if default == -300 %}selected{% endif %}>Blur +4</option>
+	<option value="-200" {% if default == -200 %}selected{% endif %}>Blur +3</option>
+	<option value="-100" {% if default == -100 %}selected{% endif %}>Blur +2</option>
+	<option value="-50"  {% if default == -50 %}selected{% endif %}>Blur +1</option>
+	<option value=""     {% if not default %}selected{% endif %}>None</option>
+	<option value="50"   {% if default == 50 %}selected{% endif %}>Sharpen +1</option>
+	<option value="100"  {% if default == 100 %}selected{% endif %}>Sharpen +2</option>
+	<option value="200"  {% if default == 200 %}selected{% endif %}>Sharpen +3</option>
+	<option value="300"  {% if default == 300 %}selected{% endif %}>Sharpen +4</option>
+	<option value="500"  {% if default == 500 %}selected{% endif %}>Sharpen +5</option>
 </select>
 {% include "publish/input_RangeValidator.html" %}
 {% include "publish/input_helper_js.html" %}

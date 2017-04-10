@@ -1,24 +1,24 @@
 <select name="{{ web_name }}" id="publish_field_{{ key }}" class="publish_field" autocomplete="off">
 {% if validator.choices|join == 'hv' %}
-	<option value="" selected>None</option>
-	<option value="h">Horizontal</option>
-	<option value="v">Vertical</option>
+	<option value=""   {% if not default %}selected{% endif %}>None</option>
+	<option value="h"  {% if default == 'h' %}selected{% endif %}>Horizontal</option>
+	<option value="v"  {% if default == 'v' %}selected{% endif %}>Vertical</option>
 {% elif validator.choices|join == 'cneswnenwsesw' %}
-	<option value="" selected></option>
-	<option value="nw">Left top</option>
-	<option value="w">Left middle</option>
-	<option value="sw">Left bottom</option>
-	<option value="n">Centre top</option>
-	<option value="c">Centre middle</option>
-	<option value="s">Centre bottom</option>
-	<option value="ne">Right top</option>
-	<option value="e">Right middle</option>
-	<option value="se">Right bottom</option>
+	<option value=""   {% if not default %}selected{% endif %}></option>
+	<option value="nw" {% if default == 'nw' %}selected{% endif %}>Left top</option>
+	<option value="w"  {% if default == 'w' %}selected{% endif %}>Left middle</option>
+	<option value="sw" {% if default == 'sw' %}selected{% endif %}>Left bottom</option>
+	<option value="n"  {% if default == 'n' %}selected{% endif %}>Centre top</option>
+	<option value="c"  {% if default == 'c' %}selected{% endif %}>Centre middle</option>
+	<option value="s"  {% if default == 's' %}selected{% endif %}>Centre bottom</option>
+	<option value="ne" {% if default == 'ne' %}selected{% endif %}>Right top</option>
+	<option value="e"  {% if default == 'e' %}selected{% endif %}>Right middle</option>
+	<option value="se" {% if default == 'se' %}selected{% endif %}>Right bottom</option>
 {% elif 'cmyk' in validator.choices %}
-	<option value="" selected></option>
-	<option value="rgb">RGB</option>
-	<option value="cmyk">CMYK</option>
-	<option value="gray">GRAY</option>
+	<option value=""     {% if not default %}selected{% endif %}></option>
+	<option value="rgb"  {% if default == 'rgb' %}selected{% endif %}>RGB</option>
+	<option value="cmyk" {% if default == 'cmyk' %}selected{% endif %}>CMYK</option>
+	<option value="gray" {% if default == 'gray' %}selected{% endif %}>GRAY</option>
 {% else %}
 	{% for choice in validator.choices|sort %}
 		{% if choice == default %}

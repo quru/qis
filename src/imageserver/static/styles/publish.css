@@ -121,29 +121,10 @@ input[type="color"] {
 	vertical-align: middle;
 }
 
-/* Pop-up help (these override base.css) */
+/* Pop-up help */
 
 img.help {
 	vertical-align: middle;
-}
-#preview_popup,
-#preview_popup_left,
-#preview_popup_right {
-	height: 400px;
-}
-#preview_popup_left {
-	z-index: 202;
-}
-#preview_popup_right {
-	width: 650px;
-	z-index: 201;
-}
-#preview_popup iframe {
-	width: 96%;
-	height: 100%;
-	margin-left: auto;
-	margin-right: auto;
-	border: none;
 }
 
 /* Output */

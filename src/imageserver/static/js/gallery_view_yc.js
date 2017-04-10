@@ -114,7 +114,7 @@ if(this.events){_fire_event(this.events.onfullscreen,this.ctrEl._gallery,["",tru
 break;case 37:case 40:a.stop();if(this.ctrEl._gallery){this.ctrEl._gallery.moveRelative(-1);}break;case 39:case 38:a.stop();
 if(this.ctrEl._gallery){this.ctrEl._gallery.moveRelative(1);}break;}};GalleryViewMask.prototype.fullscreenResize=function(b){var a=this.fullscreenGetCoords();
 this.ctrEl.setStyles({left:a.left+"px",top:a.top+"px",width:a.width+"px",height:a.height+"px"});if(this.ctrEl._gallery){this.ctrEl._gallery.layout();
-}};GalleryViewMask.prototype.fullscreenGetCoords=function(){var c=window.getSize(),a=this.fullScreenFixed?{x:0,y:0}:window.getScroll(),f=Math.min(Math.round(c.x/40),Math.round(c.y/40));
+}};GalleryViewMask.prototype.fullscreenGetCoords=function(){var c=window.innerWidth?{x:window.innerWidth,y:window.innerHeight}:window.getSize(),a=this.fullScreenFixed?{x:0,y:0}:window.getScroll(),f=Math.min(Math.round(c.x/40),Math.round(c.y/40));
 var d=(a.x+f),e=(a.y+f),b=(c.x-(2*f)),g=(c.y-(2*f));return{left:d,top:e,width:Math.max(b,250),height:Math.max(g,250)};
 };function gallery_view_init(b,c,d){b=document.id(b);if(b){var a=new GalleryView(b,c,d);a.init();b._gallery=a;
 }return false;}function gallery_view_resize(a){a=document.id(a);if(a&&a._gallery){a._gallery.layout();

@@ -27,6 +27,7 @@
 	Notable modifications:
 	Date       By    Details
 	=========  ====  ============================================================
+	01Oct2015  Matt  Added template admin
 */
 
 "use strict";
@@ -64,6 +65,37 @@ GenericListPage.initDeleteLinks = function(objName) {
 	});
 };
 
+/*** Template list page ***/
+
+var TemplateList = {};
+TemplateList.onInit = function() {
+	GenericListPage.initPopupLinks(575, 650);
+	GenericListPage.initDeleteLinks('template');
+	setAjaxJsonForm(
+		'deftemplform',
+		TemplateList.changeDefaultTemplate,
+		TemplateList.onDefTemplSubmit,
+		TemplateList.onDefTemplSuccess,
+		TemplateList.onDefTemplError
+	);
+};
+TemplateList.changeDefaultTemplate = function() {
+	return confirm('Are you sure you want to change the default image template?\n\n' +
+	               'Some or all of your images may need to be re-generated.');
+};
+TemplateList.onDefTemplSubmit = function() {
+	DataMaintenance.disableButtons();
+};
+TemplateList.onDefTemplSuccess = function() {
+	DataMaintenance.enableButtons();
+	window.location.reload();
+};
+TemplateList.onDefTemplError = function(httpStatus, responseText) {
+	DataMaintenance.enableButtons();
+	var err = getAPIError(httpStatus, responseText);
+	alert('Sorry, your changes were not saved.\n\n' + err.message);
+};
+
 /*** User list page ***/
 
 var UserList = {};
@@ -78,6 +110,129 @@ var GroupList = {};
 GroupList.onInit = function() {
 	GenericListPage.initPopupLinks(700, 650);
 	GenericListPage.initDeleteLinks('group');
+};
+
+/*** Template edit page ***/
+
+var TemplateEdit = {};
+TemplateEdit.onInit = function() {
+	GenericPopup.initButtons();
+	setAjaxJsonForm(
+		'editform',
+		TemplateEdit.validate,
+		GenericPopup.defaultSubmitting,
+		GenericPopup.defaultSubmitSuccess,
+		TemplateEdit.onSubmitError
+	);
+	// These are borrowed from publish.js
+	addEventEx('publish_field_fill', 'change', TemplateEdit.onFillChanged);
+	addEventEx('publish_field_autofill', 'change', TemplateEdit.onAutoFillChanged);
+	addEventEx('publish_field_transfill', 'change', TemplateEdit.onTransFillChanged);
+	addEventEx('overlay_src_browse', 'click', TemplateEdit.onBrowseOverlay);
+	$$('img.help').each(function(img) {
+		addEventEx(img, 'click', function() { TemplateEdit.toggleHelp(img); });
+	});
+	// Popup help (see preview_popup.js)
+	TemplateEdit.popupHelp = new IframePopup(
+		$$('.preview_popup')[0], true, function() {
+			TemplateEdit.showingHelp = false;
+		}
+	);
+};
+TemplateEdit.validate = function() {
+	form_clearErrors('editform');
+	
+	if (validate_isempty('name')) {
+		form_setError('name');
+		alert('You must enter a name for the template.');
+		return false;
+	}
+	// Ensure numbers are numbers
+	$$('.publish_field').each(function(el) {
+		if ((el.type === "number") && el.value && isNaN(parseFloat(el.value))) {
+			form_setError(el.name);
+			alert('The value for ' + el.name + ' must be a number.');
+			return false;
+		}
+	});
+
+	// Populate the 'template' hidden field and allow form submission to continue
+	TemplateEdit.setTemplateJSON();
+	return true;
+};
+TemplateEdit.onSubmitError = function(httpStatus, responseText) {
+	GenericPopup.enableButtons();
+	var err = getAPIError(httpStatus, responseText);
+	if (err.status == APICodes.ALREADY_EXISTS) {
+		form_setError('name');
+		alert('A template with this name already exists, please choose another name.');
+	}
+	else
+		alert('Sorry, your changes were not saved.\n\n' + err.message);
+};
+TemplateEdit.onFileSelected = function(src) {
+	$('publish_field_overlay_src').value = src;	
+};
+TemplateEdit.setTemplateJSON = function() {
+	var values = {};
+	// Get all template field values
+	$$('.publish_field').each(function(el) {
+		var key = el.id.substring(14);  // Strip "publish_field_" from "publish_field_key"
+		if (el.type === "checkbox") {
+			values[key] = {'value': el.checked};
+		} else if (el.type === "number") {
+			var nval = (el.value && !isNaN(parseFloat(el.value))) ? parseFloat(el.value) : null;
+			values[key] = {'value': nval};
+		} else if (el.selectedIndex !== undefined && el.options !== undefined) {
+			var sval = (el.selectedIndex >= 0) ? el.options[el.selectedIndex].value : null;
+			values[key] = {'value': sval};
+		} else {
+			values[key] = {'value': el.value};
+		}
+	});
+	// Special field handling - fill
+	if (values['autofill']['value']) values['fill']['value'] = 'auto';
+	if (values['transfill']['value']) values['fill']['value'] = 'none';
+	delete values['autofill'];
+	delete values['transfill'];
+	// Set template hidden value
+	$('template').value = JSON.stringify(values);
+};
+
+/* These are borrowed from publish.js
+ */
+TemplateEdit.onFillChanged = function() {
+	$('publish_field_autofill').checked = false;
+	$('publish_field_transfill').checked = false;
+};
+TemplateEdit.onAutoFillChanged = function() {
+	if (this.checked) {
+		$('publish_field_transfill').checked = false;
+		$('publish_field_fill').value = '#ffffff';
+	}
+};
+TemplateEdit.onTransFillChanged = function() {
+	if (this.checked) {
+		$('publish_field_autofill').checked = false;
+		$('publish_field_fill').value = '#ffffff';		
+	}
+};
+TemplateEdit.onBrowseOverlay = function() {
+	popup_iframe($(this).getProperty('data-browse-url'), 575, 650);
+	return false;
+};
+TemplateEdit.toggleHelp = function(el) {
+	if (TemplateEdit.showingHelp) {
+		TemplateEdit.popupHelp.hide();
+		TemplateEdit.showingHelp = false;
+	}
+	else {
+		var section = $(el).getProperty('data-anchor'),
+		    url = (TemplateAdminConfig.help_url + '#' + section);
+		TemplateEdit.popupHelp.showAt(el, url);
+		TemplateEdit.showingHelp = true;
+	}
+	return false;
 };
 
 /*** User edit page ***/
@@ -472,10 +627,25 @@ function submitParentForm(el) {
 	return false;
 }
 
+// Invoked (by the file selection window) when a file is selected
+function onFileSelected(src) {
+	switch ($(document.body).id) {
+		case 'template_edit':
+			TemplateEdit.onFileSelected(src);
+			break;
+	}
+}
+
 /*** Common page initialise ***/
 
 function onInit() {
 	switch ($(document.body).id) {
+		case 'template_list':
+			TemplateList.onInit();
+			break;
+		case 'template_edit':
+			TemplateEdit.onInit();
+			break;
 		case 'user_list':
 			UserList.onInit();
 			break;

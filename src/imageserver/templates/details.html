@@ -39,6 +39,56 @@
 {% set disabled_attrs='class="disabled" title="You do not have permission to use this function"'|safe %}
 
 {% block body %}
+	<h2>
+		Image details
+		<span>(<a href="{{ url_for('browse', path=path, _anchor=filename) }}">back to image folder</a>)</span>
+		{% if file_info %}
+		<span>(<a href="{{ url_for('browse_navigate', src=src, dir='back') }}"><img src="{{ url_for('static', filename='images/icon-back.png') }}" /> previous</a>)</span>
+		<span>(<a href="{{ url_for('browse_navigate', src=src, dir='fwd') }}">next <img src="{{ url_for('static', filename='images/icon-forward.png') }}" /></a>)</span>
+		{% endif %}
+	</h2>
+	{% if err_msg %}
+		<br/>
+		<div class="error">{{ err_msg|newlines }}</div>
+	{% else %}
+		{% if db_info and db_info.status == STATUS_ACTIVE %}
+			<div id="image_action_menu_owner" class="action_menu_owner">
+				<img src="{{ url_for('static', filename='images/icon-action.png') }}" />
+				&nbsp;<span class="smalltext">Image actions</span>
+			</div>
+			<div id="image_action_menu" class="action_menu border shadow">
+				<ul>
+					{% if is_folder_permitted(db_info.folder, FolderPermission.ACCESS_DOWNLOAD) %}
+					<li><a href="{{ url_for('original', src=src, attach=1) }}">Download original</a></li>
+					<li><a id="file_publish" href="{{ url_for('publish', src=src) }}">Publish image</a></li>
+					{% else %}
+					<li {{ disabled_attrs }}>Download original</li>
+					<li {{ disabled_attrs }}>Publish image</li>
+					{% endif %}
+					<li class="spacer">&nbsp;</li>
+					{% if is_folder_permitted(db_info.folder, FolderPermission.ACCESS_UPLOAD) %}
+					<li><a id="file_reset" href="{{ url_for('details', src=src, reset=1) }}">Reset</a></li>
+					<li><a id="file_rename" href="#">Rename file</a></li>
+					{% else %}
+					<li {{ disabled_attrs }}>Reset</li>
+					<li {{ disabled_attrs }}>Rename file</li>
+					{% endif %}
+					{% if is_folder_permitted(db_info.folder, FolderPermission.ACCESS_DELETE) %}
+					<li><a id="file_move" href="#">Move file</a></li>
+					<li class="spacer">&nbsp;</li>
+					<li><a id="file_delete" href="#">Delete file</a></li>
+					{% else %}
+					<li {{ disabled_attrs }}>Move file</li>
+					<li class="spacer">&nbsp;</li>
+					<li {{ disabled_attrs }}>Delete file</li>
+					{% endif %}
+				</ul>
+			</div>
+		{% endif %}
+	{% endif %}
+
+	<div class="clear"></div>
+
 	{% if file_info and db_info and db_info.status == STATUS_ACTIVE %}
 		<div class="float">
 			<div id="viewport" class="imageviewer border shadow">
@@ -54,68 +104,26 @@
 
 	<!-- File info -->
 	<div class="float">
-		<h2>Image details <span>(<a href="{{ url_for('browse', path=path) }}">back to image folder</a>)</span></h2>
-		
-		{% if err_msg %}
-			<br/>
-			<div class="error">{{ err_msg|newlines }}</div>
-		{% else %}
-			{% if db_info and db_info.status == STATUS_ACTIVE %}
-				<img src="{{ url_for('static', filename='images/icon-action.png') }}"
-				      class="action_menu_owner" 
-				      id="image_action_menu_owner" />
-				
-				<div id="image_actions_container">
-					<div id="image_action_menu" class="action_menu border shadow">
-						<ul>
-							{% if is_folder_permitted(db_info.folder, FolderPermission.ACCESS_DOWNLOAD) %}
-							<li><a href="{{ url_for('original', src=src, attach=1) }}">Download original</a></li>
-							<li><a id="file_publish" href="{{ url_for('publish', src=src) }}">Publish image</a></li>
-							{% else %}
-							<li {{ disabled_attrs }}>Download original</li>
-							<li {{ disabled_attrs }}>Publish image</li>
-							{% endif %}
-							<li class="spacer">&nbsp;</li>
-							{% if is_folder_permitted(db_info.folder, FolderPermission.ACCESS_UPLOAD) %}
-							<li><a id="file_reset" href="{{ url_for('details', src=src, reset=1) }}">Reset</a></li>
-							<li><a id="file_rename" href="#">Rename file</a></li>
-							{% else %}
-							<li {{ disabled_attrs }}>Reset</li>
-							<li {{ disabled_attrs }}>Rename file</li>
-							{% endif %}
-							{% if is_folder_permitted(db_info.folder, FolderPermission.ACCESS_DELETE) %}
-							<li><a id="file_move" href="#">Move file</a></li>
-							<li class="spacer">&nbsp;</li>
-							<li><a id="file_delete" href="#">Delete file</a></li>
-							{% else %}
-							<li {{ disabled_attrs }}>Move file</li>
-							<li class="spacer">&nbsp;</li>
-							<li {{ disabled_attrs }}>Delete file</li>
-							{% endif %}
-						</ul>
-					</div>
-				</div>
-			{% endif %}
-		
-			<h3>File</h3>
-			<table class="datatable" summary="File details for {{ src }}">
-				{% if not file_info %}
-					{% if not db_info %}
-					<tr class="odd"><td>This file does not exist.</td></tr>
-					{% else %}
-					<tr class="odd"><td>This file no longer exists.</td></tr>
-					{% endif %}
+		<h3>File</h3>
+		<table class="datatable" summary="File details for {{ src }}">
+			{% if not file_info %}
+				{% if err_msg %}
+				<tr class="odd"><td>Error reading file information.</td></tr>
+				{% elif not db_info %}
+				<tr class="odd"><td>This file does not exist.</td></tr>
 				{% else %}
-					<tr class="odd"><td class="label">File path</td><td>{{ file_info.path }}</td></tr>
-					<tr class="even"><td class="label">File size</td><td>{{ file_info.size|filesizeformat }}</td></tr>
-					<tr class="odd"><td class="label">File date</td><td>{{ file_info.modified|datetimeformat(True) }} {{ timezone }}</td></tr>
-					{% if image_info %}
-						<tr class="even"><td class="label">Image width</td><td>{{ image_info.width }}</td></tr>
-						<tr class="odd"><td class="label">Image height</td><td>{{ image_info.height }}</td></tr>
-					{% endif %}
+				<tr class="odd"><td>This file no longer exists.</td></tr>
 				{% endif %}
-			</table>
-		{% endif %}
+			{% else %}
+				<tr class="odd"><td class="label">File path</td><td>{{ file_info.path }}</td></tr>
+				<tr class="even"><td class="label">File size</td><td>{{ file_info.size|filesizeformat }}</td></tr>
+				<tr class="odd"><td class="label">File date</td><td>{{ file_info.modified|datetimeformat(True) }} {{ timezone }}</td></tr>
+				{% if image_info %}
+					<tr class="even"><td class="label">Image width</td><td>{{ image_info.width }}</td></tr>
+					<tr class="odd"><td class="label">Image height</td><td>{{ image_info.height }}</td></tr>
+				{% endif %}
+			{% endif %}
+		</table>
 	</div>
 
 	<!-- Database fields -->

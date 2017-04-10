@@ -28,21 +28,27 @@
 # Date       By    Details
 # =========  ====  ============================================================
 # 19Mar2015  Matt  Added DatabaseModel base class
+# 03Sep2015  Matt  Change classes to SQLAlchemy declarative syntax
 #
 
 import os.path
 
-from sqlalchemy import text
+from sqlalchemy import func
 from sqlalchemy import ForeignKey
 from sqlalchemy import BigInteger, Boolean, Column, DateTime, Float, Index
-from sqlalchemy import Integer, LargeBinary, String, Table, Text
+from sqlalchemy import Integer, LargeBinary, String, Text
+from sqlalchemy.dialects.postgresql import JSON
+from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import backref, relationship
 from werkzeug.security import generate_password_hash, check_password_hash
 
+Base = declarative_base()
+CacheBase = declarative_base()
 
-class DatabaseModel(object):
+
+class BaseMixin(object):
     """
-    Base class for all our database models.
+    Base mixin for all our database models.
     """
     def __unicode__(self):
         return unicode(self.__class__.__name__)
@@ -68,34 +74,26 @@ class IDEqualityMixin(object):
         return self.id if self.id > 0 else object.__hash__(self)
 
 
-class CacheEntry(DatabaseModel):
+class CacheEntry(CacheBase, BaseMixin):
     """
     SQLAlchemy ORM wrapper for an entry in the image cache control database.
     """
-    __table_name__ = 'cachectl'
+    key = Column(String(256), nullable=False, primary_key=True)
+    valuesize = Column(BigInteger, nullable=False)
+    searchfield1 = Column(BigInteger, nullable=True)
+    searchfield2 = Column(BigInteger, nullable=True)
+    searchfield3 = Column(BigInteger, nullable=True)
+    searchfield4 = Column(BigInteger, nullable=True)
+    searchfield5 = Column(BigInteger, nullable=True)
+    extradata = Column(LargeBinary, nullable=True)
 
-    @staticmethod
-    def get_alchemy_mapping(alchemy_metadata):
-        return Table(
-            CacheEntry.__table_name__, alchemy_metadata,
-            # Cache object control
-            Column('key', String(256), nullable=False, primary_key=True),
-            Column('valuesize', BigInteger, nullable=False),
-            # User searchable fields
-            Column('searchfield1', BigInteger, nullable=True),
-            Column('searchfield2', BigInteger, nullable=True),
-            Column('searchfield3', BigInteger, nullable=True),
-            Column('searchfield4', BigInteger, nullable=True),
-            Column('searchfield5', BigInteger, nullable=True),
-            # Value metadata
-            Column('metadata', LargeBinary, nullable=True),
-            # Indexes
-            # Index('idx_cc_key', 'key', unique=True),  # Auto-created from primary_key
-            Index('idx_cc_search', 'searchfield1', 'searchfield2')
-        )
+    __tablename__ = 'cachectl'
+    __table_args__ = (
+        Index('idx_cc_search', searchfield1, searchfield2),
+    )
 
     def __init__(self, key, valuesize, searchfield1=None, searchfield2=None,
-                 searchfield3=None, searchfield4=None, searchfield5=None, metadata=None):
+                 searchfield3=None, searchfield4=None, searchfield5=None, extradata=None):
         self.key = key
         self.valuesize = valuesize
         self.searchfield1 = searchfield1
@@ -103,46 +101,42 @@ class CacheEntry(DatabaseModel):
         self.searchfield3 = searchfield3
         self.searchfield4 = searchfield4
         self.searchfield5 = searchfield5
-        self.metadata = metadata
+        self.extradata = extradata
 
 
-class User(DatabaseModel, IDEqualityMixin):
+class User(Base, BaseMixin, IDEqualityMixin):
     """
     SQLAlchemy ORM wrapper for a basic user record.
     """
-    __table_name__ = 'users'
-
     AUTH_TYPE_PASSWORD = 1
     AUTH_TYPE_LDAP = 2
 
     STATUS_DELETED = 0
     STATUS_ACTIVE = 1
 
-    @staticmethod
-    def get_alchemy_mapping(alchemy_metadata):
-        return Table(
-            User.__table_name__, alchemy_metadata,
-            Column('id', Integer, nullable=False, autoincrement=True, primary_key=True),
-            Column('first_name', String(120), nullable=False),
-            Column('last_name', String(120), nullable=False),
-            Column('email', String(120), nullable=False),
-            Column('username', String(120), nullable=False),
-            Column('password', String(120), nullable=False),
-            Column('auth_type', Integer, nullable=False),
-            Column('allow_api', Boolean, nullable=False),
-            Column('status', Integer, nullable=False),
-            # Indexes
-            # Index('idx_us_id', 'id', unique=True),  # Auto-created from primary_key
-            Index('idx_us_username', text('lower(username)'), unique=True)
-        )
+    id = Column(Integer, nullable=False, autoincrement=True, primary_key=True)
+    first_name = Column(String(120), nullable=False)
+    last_name = Column(String(120), nullable=False)
+    email = Column(String(120), nullable=False)
+    username = Column(String(120), nullable=False)
+    password = Column(String(120), nullable=False)
+    auth_type = Column(Integer, nullable=False)
+    allow_api = Column(Boolean, nullable=False)
+    status = Column(Integer, nullable=False)
 
-    @staticmethod
-    def get_alchemy_mapping_properties(table, user_group_table):
-        return {
-            'groups': relationship(Group, secondary=user_group_table, order_by=lambda: Group.name)
-        }
+    groups = relationship(
+        'Group',
+        secondary=lambda: UserGroup.__table__,
+        order_by=lambda: Group.name
+    )
 
-    def __init__(self, first_name, last_name, email, username, password, auth_type, allow_api, status):
+    __tablename__ = 'users'
+    __table_args__ = (
+        Index('idx_us_username', func.lower(username), unique=True),
+    )
+
+    def __init__(self, first_name, last_name, email, username, password,
+                 auth_type, allow_api, status):
         self.id = None
         self.first_name = first_name
         self.last_name = last_name
@@ -169,12 +163,10 @@ class User(DatabaseModel, IDEqualityMixin):
         return fname
 
 
-class Group(DatabaseModel, IDEqualityMixin):
+class Group(Base, BaseMixin, IDEqualityMixin):
     """
     SQLAlchemy ORM wrapper for a group record.
     """
-    __table_name__ = 'groups'
-
     ID_PUBLIC = 1
     ID_EVERYONE = 2
     ID_ADMINS = 3
@@ -183,26 +175,31 @@ class Group(DatabaseModel, IDEqualityMixin):
     GROUP_TYPE_LOCAL = 2
     GROUP_TYPE_LDAP = 3
 
-    @staticmethod
-    def get_alchemy_mapping(alchemy_metadata):
-        return Table(
-            Group.__table_name__, alchemy_metadata,
-            Column('id', Integer, nullable=False, autoincrement=True, primary_key=True),
-            Column('name', String(120), nullable=False),
-            Column('description', Text, nullable=False),
-            Column('group_type', Integer, nullable=False),
-            # Indexes
-            # Index('idx_gp_id', 'id', unique=True),  # Auto-created from primary_key
-            Index('idx_gp_name', 'name', unique=True)
-        )
+    id = Column(Integer, nullable=False, autoincrement=True, primary_key=True)
+    name = Column(String(120), nullable=False)
+    description = Column(Text, nullable=False)
+    group_type = Column(Integer, nullable=False)
 
-    @staticmethod
-    def get_alchemy_mapping_properties(table, user_group_table):
-        return {
-            'users': relationship(User, secondary=user_group_table, order_by=lambda: User.username),
-            'permissions': relationship(SystemPermissions, lazy='joined', uselist=False, cascade='all, delete-orphan'),
-            'folder_permissions': relationship(FolderPermission, cascade='all, delete-orphan')
-        }
+    users = relationship(
+        'User',
+        secondary=lambda: UserGroup.__table__,
+        order_by=lambda: User.username
+    )
+    permissions = relationship(
+        'SystemPermissions',
+        lazy='joined',
+        uselist=False,
+        cascade='all, delete-orphan'
+    )
+    folder_permissions = relationship(
+        'FolderPermission',
+        cascade='all, delete-orphan'
+    )
+
+    __tablename__ = 'groups'
+    __table_args__ = (
+        Index('idx_gp_name', name, unique=True),
+    )
 
     def __init__(self, name, description, group_type):
         self.id = None
@@ -214,33 +211,24 @@ class Group(DatabaseModel, IDEqualityMixin):
         return self.name
 
 
-class UserGroup(DatabaseModel):
+class UserGroup(Base, BaseMixin):
     """
     SQLAlchemy ORM wrapper for a user-group link record.
     This class is only used internally by SQLAlchemy - these records are
     normally maintained via the user.groups or group.users properties.
     """
-    __table_name__ = 'usergroups'
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False, primary_key=True)
+    group_id = Column(Integer, ForeignKey('groups.id'), nullable=False, primary_key=True)
 
-    @staticmethod
-    def get_alchemy_mapping(alchemy_metadata):
-        return Table(
-            UserGroup.__table_name__, alchemy_metadata,
-            Column('user_id', Integer, ForeignKey('users.id'), nullable=False, primary_key=True),
-            Column('group_id', Integer, ForeignKey('groups.id'), nullable=False, primary_key=True),
-            # Indexes
-            # Index('idx_ugp_pk', 'user_id', 'group_id', unique=True)  # Auto-created from primary_key
-        )
+    __tablename__ = 'usergroups'
 
 
-class SystemPermissions(DatabaseModel):
+class SystemPermissions(Base, BaseMixin):
     """
     SQLAlchemy ORM wrapper for a system permissions record.
     These control access to global functions
     (all other permissions being based on the file-system/folder tree).
     """
-    __table_name__ = 'syspermissions'
-
     PERMIT_FOLIOS = 'folios'
     PERMIT_REPORTS = 'reports'
     PERMIT_ADMIN_USERS = 'admin_users'
@@ -249,27 +237,18 @@ class SystemPermissions(DatabaseModel):
     PERMIT_ADMIN_PERMISSIONS = 'admin_permissions'
     PERMIT_SUPER_USER = 'admin_all'
 
-    @staticmethod
-    def get_alchemy_mapping(alchemy_metadata):
-        return Table(
-            SystemPermissions.__table_name__, alchemy_metadata,
-            Column('group_id', Integer, ForeignKey('groups.id'), nullable=False, unique=True, primary_key=True),
-            Column('folios', Boolean, nullable=False),
-            Column('reports', Boolean, nullable=False),
-            Column('admin_users', Boolean, nullable=False),
-            Column('admin_files', Boolean, nullable=False),
-            Column('admin_folios', Boolean, nullable=False),
-            Column('admin_permissions', Boolean, nullable=False),
-            Column('admin_all', Boolean, nullable=False),
-            # Indexes
-            # Index('idx_sysp_id', 'group_id', unique=True),  # Auto-created from primary_key
-        )
+    group_id = Column(Integer, ForeignKey('groups.id'), nullable=False, unique=True, primary_key=True)
+    folios = Column(Boolean, nullable=False)
+    reports = Column(Boolean, nullable=False)
+    admin_users = Column(Boolean, nullable=False)
+    admin_files = Column(Boolean, nullable=False)
+    admin_folios = Column(Boolean, nullable=False)
+    admin_permissions = Column(Boolean, nullable=False)
+    admin_all = Column(Boolean, nullable=False)
 
-    @staticmethod
-    def get_alchemy_mapping_properties(table):
-        return {
-            'group': relationship(Group)
-        }
+    group = relationship('Group')
+
+    __tablename__ = 'syspermissions'
 
     def __init__(self, group, folios, reports, admin_users, admin_files,
                  admin_folios, admin_permissions, admin_all):
@@ -286,39 +265,31 @@ class SystemPermissions(DatabaseModel):
         return u'SystemPermissions: Group ' + str(self.group_id)
 
 
-class Folder(DatabaseModel, IDEqualityMixin):
+class Folder(Base, BaseMixin, IDEqualityMixin):
     """
     SQLAlchemy ORM wrapper for a disk folder record.
     """
-    __table_name__ = 'folders'
-
     STATUS_DELETED = 0
     STATUS_ACTIVE = 1
 
-    @staticmethod
-    def get_alchemy_mapping(alchemy_metadata):
-        return Table(
-            Folder.__table_name__, alchemy_metadata,
-            Column('id', BigInteger, nullable=False, autoincrement=True, primary_key=True),
-            Column('name', String(1024), nullable=False),
-            Column('path', String(1024), nullable=False),
-            Column('parent_id', BigInteger, ForeignKey('folders.id'), nullable=True),
-            Column('status', Integer, nullable=False),
-            # Indexes
-            # Index('idx_fr_id', 'id', unique=True),  # Auto-created from primary_key
-            Index('idx_fr_path', 'path', unique=True),
-            Index('idx_fr_parent', 'parent_id')
-        )
+    id = Column(BigInteger, nullable=False, autoincrement=True, primary_key=True)
+    name = Column(String(1024), nullable=False)
+    path = Column(String(1024), nullable=False)
+    parent_id = Column(BigInteger, ForeignKey('folders.id'), nullable=True)
+    status = Column(Integer, nullable=False)
 
-    @staticmethod
-    def get_alchemy_mapping_properties(table):
-        return {
-            'children': relationship(
-                Folder, join_depth=1,
-                backref=backref('parent', remote_side=table.c.id),
-                order_by=lambda: Folder.name
-            )
-        }
+    children = relationship(
+        'Folder',
+        join_depth=1,
+        backref=backref('parent', remote_side=lambda: Folder.__table__.c.id),
+        order_by=lambda: Folder.name
+    )
+
+    __tablename__ = 'folders'
+    __table_args__ = (
+        Index('idx_fr_path', path, unique=True),
+        Index('idx_fr_parent', parent_id),
+    )
 
     def __init__(self, name, path, parent, status):
         self.id = None
@@ -335,13 +306,11 @@ class Folder(DatabaseModel, IDEqualityMixin):
         return self.path == '' or self.path == os.path.sep
 
 
-class FolderPermission(DatabaseModel, IDEqualityMixin):
+class FolderPermission(Base, BaseMixin, IDEqualityMixin):
     """
     SQLAlchemy ORM wrapper for a folder permissions record.
     These specify the image access levels across the folder tree, by group.
     """
-    __table_name__ = 'folderpermissions'
-
     ACCESS_NONE = 0
     ACCESS_VIEW = 10
     ACCESS_DOWNLOAD = 20
@@ -352,25 +321,18 @@ class FolderPermission(DatabaseModel, IDEqualityMixin):
     ACCESS_DELETE_FOLDER = 70
     ACCESS_ALL = ACCESS_DELETE_FOLDER
 
-    @staticmethod
-    def get_alchemy_mapping(alchemy_metadata):
-        return Table(
-            FolderPermission.__table_name__, alchemy_metadata,
-            Column('id', BigInteger, nullable=False, autoincrement=True, primary_key=True),
-            Column('folder_id', BigInteger, ForeignKey('folders.id'), nullable=False),
-            Column('group_id', Integer, ForeignKey('groups.id'), nullable=False),
-            Column('access', Integer, nullable=False),
-            # Indexes
-            # Index('idx_fp_id', 'id', unique=True),  # Auto-created from primary_key
-            Index('idx_fp_pk', 'folder_id', 'group_id', unique=True)
-        )
+    id = Column(BigInteger, nullable=False, autoincrement=True, primary_key=True)
+    folder_id = Column(BigInteger, ForeignKey('folders.id'), nullable=False)
+    group_id = Column(Integer, ForeignKey('groups.id'), nullable=False)
+    access = Column(Integer, nullable=False)
 
-    @staticmethod
-    def get_alchemy_mapping_properties(table):
-        return {
-            'group': relationship(Group),
-            'folder': relationship(Folder)
-        }
+    group = relationship('Group')
+    folder = relationship('Folder')
+
+    __tablename__ = 'folderpermissions'
+    __table_args__ = (
+        Index('idx_fp_pk', folder_id, group_id, unique=True),
+    )
 
     def __init__(self, folder, group, access):
         self.id = None
@@ -384,42 +346,34 @@ class FolderPermission(DatabaseModel, IDEqualityMixin):
         )
 
 
-class Image(DatabaseModel, IDEqualityMixin):
+class Image(Base, BaseMixin, IDEqualityMixin):
     """
     SQLAlchemy ORM wrapper for an image record.
     """
-    __table_name__ = 'images'
-
     STATUS_DELETED = 0
     STATUS_ACTIVE = 1
 
-    @staticmethod
-    def get_alchemy_mapping(alchemy_metadata):
-        return Table(
-            Image.__table_name__, alchemy_metadata,
-            Column('id', BigInteger, nullable=False, autoincrement=True, primary_key=True),
-            Column('src', String(1024), nullable=False),
-            Column('folder_id', BigInteger, ForeignKey('folders.id'), nullable=False),
-            Column('title', String(255), nullable=False),
-            Column('description', Text, nullable=False),
-            Column('width', Integer, nullable=False),
-            Column('height', Integer, nullable=False),
-            Column('status', Integer, nullable=False),
-            # Indexes
-            # Index('idx_im_id', 'id', unique=True),  # Auto-created from primary_key
-            Index('idx_im_src', 'src', unique=True),
-            Index('idx_im_folder', 'folder_id', 'status')
-        )
+    id = Column(BigInteger, nullable=False, autoincrement=True, primary_key=True)
+    src = Column(String(1024), nullable=False)
+    folder_id = Column(BigInteger, ForeignKey('folders.id'), nullable=False)
+    title = Column(String(255), nullable=False)
+    description = Column(Text, nullable=False)
+    width = Column(Integer, nullable=False)
+    height = Column(Integer, nullable=False)
+    status = Column(Integer, nullable=False)
 
-    @staticmethod
-    def get_alchemy_mapping_properties(table):
-        return {
-            'folder': relationship(Folder, lazy='joined'),
-            'history': relationship(
-                lambda: ImageHistory, order_by=lambda: ImageHistory.id,
-                cascade='all, delete-orphan'
-            )
-        }
+    folder = relationship('Folder', lazy='joined')
+    history = relationship(
+        'ImageHistory',
+        order_by=lambda: ImageHistory.id,
+        cascade='all, delete-orphan'
+    )
+
+    __tablename__ = 'images'
+    __table_args__ = (
+        Index('idx_im_src', src, unique=True),
+        Index('idx_im_folder', folder_id, status),
+    )
 
     def __init__(self, src, folder, title, description, width, height, status):
         self.id = None
@@ -435,40 +389,56 @@ class Image(DatabaseModel, IDEqualityMixin):
         return self.src + ' [' + str(self.width) + ',' + str(self.height) + ']'
 
 
-class ImageHistory(DatabaseModel, IDEqualityMixin):
+class ImageTemplate(Base, BaseMixin, IDEqualityMixin):
+    """
+    SQLAlchemy ORM wrapper for an image processing template.
+    """
+    id = Column(Integer, nullable=False, autoincrement=True, primary_key=True)
+    name = Column(String(120), nullable=False)
+    description = Column(Text, nullable=False)
+    template = Column(JSON, nullable=False)
+
+    __tablename__ = 'imagetemplates'
+    __table_args__ = (
+        Index('idx_it_name', func.lower(name), unique=True),
+    )
+
+    def __init__(self, name, description, template_dict):
+        self.id = None
+        self.name = name
+        self.description = description
+        self.template = template_dict
+
+    def __unicode__(self):
+        return self.name
+
+
+class ImageHistory(Base, BaseMixin, IDEqualityMixin):
     """
     SQLAlchemy ORM wrapper for an image history (audit) record.
     """
-    __table_name__ = 'imagesaudit'
-
     ACTION_DELETED = 0
     ACTION_CREATED = 1
     ACTION_REPLACED = 2
     ACTION_EDITED = 3
     ACTION_MOVED = 4
 
-    @staticmethod
-    def get_alchemy_mapping(alchemy_metadata):
-        return Table(
-            ImageHistory.__table_name__, alchemy_metadata,
-            Column('id', BigInteger, nullable=False, autoincrement=True, primary_key=True),
-            Column('image_id', BigInteger, ForeignKey('images.id'), nullable=False),
-            Column('user_id', Integer, ForeignKey('users.id'), nullable=True),
-            Column('action', Integer, nullable=False),
-            Column('action_info', Text, nullable=False),
-            Column('action_time', DateTime, nullable=False),
-            # Indexes
-            Index('idx_ia_image_action', 'image_id', 'action', unique=False),
-            Index('idx_ia_user', 'user_id', unique=False),
-            Index('idx_ia_time', 'action_time', unique=False)
-        )
+    id = Column(BigInteger, nullable=False, autoincrement=True, primary_key=True)
+    image_id = Column(BigInteger, ForeignKey('images.id'), nullable=False)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=True)
+    action = Column(Integer, nullable=False)
+    action_info = Column(Text, nullable=False)
+    action_time = Column(DateTime, nullable=False)
 
-    @staticmethod
-    def get_alchemy_mapping_properties(table):
-        return {
-            'image': relationship(Image),
-            'user': relationship(User, lazy='joined', innerjoin=False)
-        }
+    image = relationship('Image')
+    user = relationship('User', lazy='joined', innerjoin=False)
+
+    __tablename__ = 'imagesaudit'
+    __table_args__ = (
+        Index('idx_ia_image_action', image_id, action, unique=False),
+        Index('idx_ia_user', user_id, unique=False),
+        Index('idx_ia_time', action_time, unique=False),
+    )
 
     def __init__(self, image, user, action, action_info, action_time):
         self.id = None
@@ -483,31 +453,27 @@ class ImageHistory(DatabaseModel, IDEqualityMixin):
                str(self.action) + ' at ' + str(self.action_time)
 
 
-class ImageStats(DatabaseModel, IDEqualityMixin):
+class ImageStats(Base, BaseMixin, IDEqualityMixin):
     """
     SQLAlchemy ORM wrapper for an image statistics record.
     """
-    __table_name__ = 'imagestats'
+    id = Column(BigInteger, nullable=False, autoincrement=True, primary_key=True)
+    image_id = Column(BigInteger, ForeignKey('images.id'), nullable=False)
+    requests = Column(BigInteger, nullable=False)
+    views = Column(BigInteger, nullable=False)
+    cached_views = Column(BigInteger, nullable=False)
+    downloads = Column(BigInteger, nullable=False)
+    total_bytes = Column(BigInteger, nullable=False)
+    request_seconds = Column(Float, nullable=False)
+    max_request_seconds = Column(Float, nullable=False)
+    from_time = Column(DateTime, nullable=False)
+    to_time = Column(DateTime, nullable=False)
 
-    @staticmethod
-    def get_alchemy_mapping(alchemy_metadata):
-        return Table(
-            ImageStats.__table_name__, alchemy_metadata,
-            Column('id', BigInteger, nullable=False, autoincrement=True, primary_key=True),
-            Column('image_id', BigInteger, ForeignKey('images.id'), nullable=False),
-            Column('requests', BigInteger, nullable=False),
-            Column('views', BigInteger, nullable=False),
-            Column('cached_views', BigInteger, nullable=False),
-            Column('downloads', BigInteger, nullable=False),
-            Column('total_bytes', BigInteger, nullable=False),
-            Column('request_seconds', Float, nullable=False),
-            Column('max_request_seconds', Float, nullable=False),
-            Column('from_time', DateTime, nullable=False),
-            Column('to_time', DateTime, nullable=False),
-            # Indexes
-            Index('idx_is_image', 'image_id', 'from_time', unique=False),
-            Index('idx_is_time', 'from_time', unique=False)
-        )
+    __tablename__ = 'imagestats'
+    __table_args__ = (
+        Index('idx_is_image', image_id, from_time, unique=False),
+        Index('idx_is_time', from_time, unique=False),
+    )
 
     def __init__(self, image_id, req_count, view_count, view_cached_count, download_count,
                  total_bytes, request_seconds, max_request_seconds, from_time, to_time):
@@ -528,32 +494,28 @@ class ImageStats(DatabaseModel, IDEqualityMixin):
                ', d=' + str(self.downloads) + ' at ' + str(self.to_time)
 
 
-class SystemStats(DatabaseModel, IDEqualityMixin):
+class SystemStats(Base, BaseMixin, IDEqualityMixin):
     """
     SQLAlchemy ORM wrapper for a system statistics record.
     """
-    __table_name__ = 'systemstats'
+    id = Column(BigInteger, nullable=False, autoincrement=True, primary_key=True)
+    requests = Column(BigInteger, nullable=False)
+    views = Column(BigInteger, nullable=False)
+    cached_views = Column(BigInteger, nullable=False)
+    downloads = Column(BigInteger, nullable=False)
+    total_bytes = Column(BigInteger, nullable=False)
+    request_seconds = Column(Float, nullable=False)
+    max_request_seconds = Column(Float, nullable=False)
+    cpu_pc = Column(Float, nullable=False)
+    memory_pc = Column(Float, nullable=False)
+    cache_pc = Column(Float, nullable=False)
+    from_time = Column(DateTime, nullable=False)
+    to_time = Column(DateTime, nullable=False)
 
-    @staticmethod
-    def get_alchemy_mapping(alchemy_metadata):
-        return Table(
-            SystemStats.__table_name__, alchemy_metadata,
-            Column('id', BigInteger, nullable=False, autoincrement=True, primary_key=True),
-            Column('requests', BigInteger, nullable=False),
-            Column('views', BigInteger, nullable=False),
-            Column('cached_views', BigInteger, nullable=False),
-            Column('downloads', BigInteger, nullable=False),
-            Column('total_bytes', BigInteger, nullable=False),
-            Column('request_seconds', Float, nullable=False),
-            Column('max_request_seconds', Float, nullable=False),
-            Column('cpu_pc', Float, nullable=False),
-            Column('memory_pc', Float, nullable=False),
-            Column('cache_pc', Float, nullable=False),
-            Column('from_time', DateTime, nullable=False),
-            Column('to_time', DateTime, nullable=False),
-            # Indexes
-            Index('idx_ss_time', 'from_time', unique=True)
-        )
+    __tablename__ = 'systemstats'
+    __table_args__ = (
+        Index('idx_ss_time', from_time, unique=True),
+    )
 
     def __init__(self, req_count, view_count, view_cached_count, download_count,
                  total_bytes, request_seconds, max_request_seconds,
@@ -577,12 +539,10 @@ class SystemStats(DatabaseModel, IDEqualityMixin):
         return u'SystemStats: To ' + str(self.to_time)
 
 
-class Task(DatabaseModel, IDEqualityMixin):
+class Task(Base, BaseMixin, IDEqualityMixin):
     """
     SQLAlchemy ORM wrapper for a background task record.
     """
-    __table_name__ = 'tasks'
-
     STATUS_PENDING = 0
     STATUS_ACTIVE = 1
     STATUS_COMPLETE = 2
@@ -591,34 +551,29 @@ class Task(DatabaseModel, IDEqualityMixin):
     PRIORITY_NORMAL = 20
     PRIORITY_LOW = 30
 
-    @staticmethod
-    def get_alchemy_mapping(alchemy_metadata):
-        return Table(
-            Task.__table_name__, alchemy_metadata,
-            Column('id', BigInteger, nullable=False, autoincrement=True, primary_key=True),
-            Column('user_id', Integer, ForeignKey('users.id'), nullable=True),
-            Column('name', String(100), nullable=False),
-            Column('funcname', String(100), nullable=False),
-            Column('params', LargeBinary, nullable=True),
-            Column('priority', Integer, nullable=False),
-            Column('log_level', String(8), nullable=False),
-            Column('error_log_level', String(8), nullable=False),
-            Column('status', Integer, nullable=False),
-            Column('result', LargeBinary, nullable=True),
-            Column('lock_id', String(50), nullable=True),
-            Column('keep_for', Integer, nullable=False),
-            Column('keep_until', DateTime, nullable=True),
-            # Indexes
-            Index('idx_tk_function', 'funcname', 'params', unique=True)
-        )
+    id = Column(BigInteger, nullable=False, autoincrement=True, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=True)
+    name = Column(String(100), nullable=False)
+    funcname = Column(String(100), nullable=False)
+    params = Column(LargeBinary, nullable=True)
+    priority = Column(Integer, nullable=False)
+    log_level = Column(String(8), nullable=False)
+    error_log_level = Column(String(8), nullable=False)
+    status = Column(Integer, nullable=False)
+    result = Column(LargeBinary, nullable=True)
+    lock_id = Column(String(50), nullable=True)
+    keep_for = Column(Integer, nullable=False)
+    keep_until = Column(DateTime, nullable=True)
 
-    @staticmethod
-    def get_alchemy_mapping_properties(table):
-        return {
-            'user': relationship(User, lazy='joined', innerjoin=False)
-        }
+    user = relationship('User', lazy='joined', innerjoin=False)
 
-    def __init__(self, user, name, funcname, params, priority, log_level, error_log_level, keep_for):
+    __tablename__ = 'tasks'
+    __table_args__ = (
+        Index('idx_tk_function', funcname, params, unique=True),
+    )
+
+    def __init__(self, user, name, funcname, params, priority,
+                 log_level, error_log_level, keep_for):
         self.id = None
         self.user = user
         self.name = name
@@ -637,23 +592,18 @@ class Task(DatabaseModel, IDEqualityMixin):
         return u'Task: ' + self.name
 
 
-class Property(DatabaseModel):
+class Property(Base, BaseMixin):
     """
     SQLAlchemy ORM wrapper for a simple key/value properties store.
     """
-    __table_name__ = 'properties'
-
     FOLDER_PERMISSION_VERSION = 'fp_version'
+    IMAGE_TEMPLATES_VERSION = 'template_version'
+    DEFAULT_TEMPLATE = 'pubimage_default_template'
 
-    @staticmethod
-    def get_alchemy_mapping(alchemy_metadata):
-        return Table(
-            Property.__table_name__, alchemy_metadata,
-            Column('key', String(50), nullable=False, unique=True, primary_key=True),
-            Column('value', Text, nullable=True),
-            # Indexes
-            # Index('idx_prop_pk', 'key', unique=True)  # Auto-created from primary_key
-        )
+    key = Column(String(50), nullable=False, unique=True, primary_key=True)
+    value = Column(Text, nullable=True)
+
+    __tablename__ = 'properties'
 
     def __init__(self, key, value):
         self.key = key

@@ -57,7 +57,7 @@ from imageserver.session_manager import get_session_user
 from imageserver.user_auth import authenticate_user
 from imageserver.util import add_sep, get_file_extension, secure_filename
 from imageserver.util import parse_boolean, parse_int
-from imageserver.util import validate_string
+from imageserver.util import validate_number, validate_string
 
 
 # API login - generates a token to use the API outside of the web site
@@ -107,7 +107,7 @@ def token():
     raise SecurityError('Incorrect username or password')
 
 
-# Returns a JSON encoded list of images in a folder (max 1000 by default),
+# Returns a JSON encoded list of images in a folder (max 1000),
 # optionally with the title, description, width, height attributes of each.
 # Any additional parameters are passed on for inclusion in the returned image URLs.
 @blueprint.route('/list', methods=['GET'])
@@ -119,8 +119,11 @@ def imagelist():
     try:
         from_path = request.args.get('path', '')
         want_info = parse_boolean(request.args.get('attributes', ''))
+        start = parse_int(request.args.get('start', '0'))
         limit = parse_int(request.args.get('limit', '1000'))
         validate_string(from_path, 1, 1024)
+        validate_number(start, 0, 999999999)
+        validate_number(limit, 1, 1000)
     except ValueError as e:
         raise ParameterError(e)
 
@@ -130,11 +133,13 @@ def imagelist():
         del image_params['path']
     if 'attributes' in image_params:
         del image_params['attributes']
+    if 'start' in image_params:
+        del image_params['start']
     if 'limit' in image_params:
         del image_params['limit']
 
     # Get directory listing
-    directory_info = get_directory_listing(from_path, False, limit)
+    directory_info = get_directory_listing(from_path, False, 2, start, limit)
     if not directory_info.exists():
         raise DoesNotExistError('Invalid path')
 
