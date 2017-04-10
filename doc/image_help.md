@@ -29,7 +29,7 @@ Software developers can refer to both this and the [API user's guide](/api/help/
 	* [overlay](#option_overlay), [ovsize](#option_ovsize), [ovpos](#option_ovpos), [ovopacity](#option_ovopacity)
 	* [icc](#option_icc) (colour profile), [intent](#option_intent), [bpc](#option_bpc) (black point compensation)
 	* [colorspace](#option_colorspace)
-	* [title](#option_tile)
+	* [tile](#option_tile)
 	* [attach](#option_attach)
 	* [xref](#option_xref)
 	* [stats](#option_stats)
