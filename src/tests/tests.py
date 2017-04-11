@@ -46,7 +46,8 @@ os.environ['QIS_SETTINGS'] = TESTING_SETTINGS
 
 # Possible paths to ImageMagick binaries, in order of preference
 IMAGEMAGICK_PATHS = [
-    "/opt/qis-ImageMagick/bin/",
+    "/opt/ImageMagick/bin/",
+    "/usr/local/bin/",
     ""
 ]
 
