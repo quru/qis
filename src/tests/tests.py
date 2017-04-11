@@ -649,6 +649,7 @@ class ImageServerTestsFast(BaseTestCase):
     def test_upload_usage_stats(self):
         from imageserver.tasks import upload_usage_stats
 
+        flask_app.config['USAGE_DATA_URL'] = 'http://dummy.url/'
         with mock.patch('requests.post') as mockpost:
             upload_usage_stats(logger=lm, data_manager=dm, settings=flask_app.config)
 
