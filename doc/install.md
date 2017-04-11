@@ -346,14 +346,22 @@ QIS logs and images directories:
 
 	$ sudo semodule --install=/opt/qis/deploy/fedora20/qis.pp
 	$ sudo semanage fcontext --add --type httpd_log_t "/opt/qis/logs(/.*)?"
-	$ sudo restorecon -r /opt/qis/logs
 	$ sudo semanage fcontext --add --type httpd_user_rw_content_t "/opt/qis/images(/.*)?"
-	$ sudo restorecon -r /opt/qis/images
+	$ sudo restorecon -rv /opt/qis/logs/
+    $ sudo restorecon -rv /opt/qis/images/
+    $ sudo restorecon -rv /opt/qis/conf/
 
 If you are using NFS (network file system) to access your image directories,
 you will also need to run:
 
 	$ sudo setsebool -P httpd_use_nfs on
+
+If you installed a TLS/SSL certificate for HTTPS support, set the security
+context of the new files (set the directory names here for where you installed
+the `crt/pem/key` files):
+
+    $ sudo restorecon -rv /etc/ssl/certs/
+    $ sudo restorecon -rv /etc/pki/tls/
 
 If you will be taking your QIS user accounts from LDAP you will need:
 
@@ -408,6 +416,10 @@ To review the other default settings, view the contents of the file
 `/opt/qis/src/imageserver/conf/base_settings.py`. You can override any of these settings
 in your `local_settings.py` file. Do not edit `base_settings.py` directly because this
 file will be overwritten the next time you upgrade QIS.
+
+If you are using SELinux, set the security context of the new settings file:
+
+    $ sudo restorecon -rv /opt/qis/conf/
 
 ## First run
 

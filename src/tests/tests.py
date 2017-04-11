@@ -46,9 +46,9 @@ os.environ['QIS_SETTINGS'] = TESTING_SETTINGS
 
 # Possible paths to ImageMagick binaries, in order of preference
 IMAGEMAGICK_PATHS = [
-    "/opt/ImageMagick/bin/",
-    "/usr/local/bin/",
-    ""
+    "/opt/ImageMagick/bin/",  # QIS custom build (currently unused)
+    "/usr/local/bin/",        # Installed from source
+    ""                        # Default / first found in the PATH
 ]
 
 print "Importing imageserver libraries"
@@ -312,7 +312,7 @@ def compare_images(img_path1, img_path2):
     result = output[1].strip()
     os.remove(diff_temp_nm)
     # ImageMagick compare switched "identical" PSNR to 0 in 6.9.5-4 and to "inf" in 6.9.7-10
-    psnr = float(result) if result not in ('0', 'inf') else 100
+    psnr = float(result) if result not in ('0', 'inf') else 1000
     return psnr
 
 
