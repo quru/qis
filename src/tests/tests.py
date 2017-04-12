@@ -481,6 +481,14 @@ class ImageServerTestsSlow(BaseTestCase):
         cache_img = cm.get(test_image_attrs.get_cache_key())
         assert cache_img is not None, 'Failed to find ' + test_image_attrs.get_cache_key() + '. xref URL did not appear to be invoked.'
 
+
+class ImageServerBackgroundTaskTests(BaseTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super(ImageServerBackgroundTaskTests, cls).setUpClass()
+        # Invoke @app.before_first_request to launch the aux servers
+        flask_app.test_client().get('/')
+
     # Similar to test_db_auto_population, but with the emphasis
     # on auto-detecting external changes to the file system
     def test_db_auto_sync(self):
@@ -503,8 +511,8 @@ class ImageServerTestsSlow(BaseTestCase):
             db_file_2 = dm.get_image(src=temp_file_2, load_history=True)
             assert db_folder and db_file_1 and db_file_2
             assert db_folder.status == Folder.STATUS_ACTIVE and \
-                   db_file_1.status == Image.STATUS_ACTIVE and \
-                   db_file_2.status == Image.STATUS_ACTIVE
+                db_file_1.status == Image.STATUS_ACTIVE and \
+                db_file_2.status == Image.STATUS_ACTIVE
             # Should have image creation history
             assert len(db_file_1.history) == 1
             assert len(db_file_2.history) == 1
@@ -519,15 +527,16 @@ class ImageServerTestsSlow(BaseTestCase):
             assert rv.status_code == 404
             # This should have triggered a background task to delete all data for temp_folder.
             # Wait a short time for the task to complete.
-            time.sleep(15)
-            # The db records should all now be present but with status deleted, including the folder and other image
+            time.sleep(20)
+            # The db records should all now be present but with status deleted,
+            # including the folder and other image
             db_folder = dm.get_folder(folder_path=temp_folder)
             db_file_1 = dm.get_image(src=temp_file_1, load_history=True)
             db_file_2 = dm.get_image(src=temp_file_2, load_history=True)
             assert db_folder and db_file_1 and db_file_2
             assert db_folder.status == Folder.STATUS_DELETED and \
-                   db_file_1.status == Image.STATUS_DELETED and \
-                   db_file_2.status == Image.STATUS_DELETED
+                db_file_1.status == Image.STATUS_DELETED and \
+                db_file_2.status == Image.STATUS_DELETED
             # Also we should have image deletion history
             assert len(db_file_1.history) == 2
             assert len(db_file_2.history) == 2
@@ -547,10 +556,10 @@ class ImageServerTestsSlow(BaseTestCase):
             db_file_2 = dm.get_image(src=temp_file_2, load_history=True)
             assert db_folder and db_file_1 and db_file_2
             assert db_folder.id == prev_folder_id and \
-                   db_file_1.id == prev_image_id_1 and \
-                   db_file_2.id == prev_image_id_2
+                db_file_1.id == prev_image_id_1 and \
+                db_file_2.id == prev_image_id_2
             assert db_folder.status == Folder.STATUS_ACTIVE and \
-                   db_file_1.status == Image.STATUS_ACTIVE
+                db_file_1.status == Image.STATUS_ACTIVE
             # And with image re-creation history
             assert len(db_file_1.history) == 3
             # But with the unviewed image still deleted at present
@@ -558,6 +567,38 @@ class ImageServerTestsSlow(BaseTestCase):
             assert len(db_file_2.history) == 2
         finally:
             delete_dir(temp_folder, recursive=True)
+
+    # Test the auto-pyramid generation, which is really a specialist case of
+    # test_base_image_detection with the base image generated as a background task
+    def test_auto_pyramid(self):
+        image_obj = auto_sync_existing_file('test_images/dorset.jpg', dm, tm)
+        orig_attrs = ImageAttrs(image_obj.src, image_obj.id)
+        im.finalise_image_attrs(orig_attrs)
+        w500_attrs = ImageAttrs(image_obj.src, image_obj.id, width=500)
+        im.finalise_image_attrs(w500_attrs)
+        # Clean
+        cm.clear()
+        im.reset_image(orig_attrs)
+        # Get the original
+        rv = self.app.get('/image?src=test_images/dorset.jpg')
+        assert rv.status_code == 200
+        orig_len = len(rv.data)
+        # Only the original should come back as base for a 500 version
+        base = im._get_base_image(w500_attrs)
+        assert base is None or len(base.data()) == orig_len
+        # Set the minimum auto-pyramid threshold and get a tile of the image
+        flask_app.config["AUTO_PYRAMID_THRESHOLD"] = 1000000
+        rv = self.app.get('/image?src=test_images/dorset.jpg&tile=1:4')
+        assert rv.status_code == 200
+        # Wait a bit for the pyramiding to finish
+        time.sleep(25)
+        # Now check the cache again for a base for the 500 version
+        base = im._get_base_image(w500_attrs)
+        assert base is not None, 'Auto-pyramid did not generate a smaller image'
+        # And it shouldn't be the original image either
+        assert len(base.data()) < orig_len
+        assert base.attrs().width() is not None
+        assert base.attrs().width() < 1600 and base.attrs().width() >= 500
 
     # Tests PDF bursting
     def test_pdf_bursting(self):
@@ -577,11 +618,11 @@ class ImageServerTestsSlow(BaseTestCase):
             rv = self.file_upload(self.app, dest_file, 'test_images')
             self.assertEqual(rv.status_code, 200)
             # Wait a short time for task to start
-            time.sleep(12)
+            time.sleep(15)
             # Check PDF images directory created
             assert path_exists(burst_path, require_directory=True), 'Burst folder has not been created'
             # Converting pdftest.pdf takes about 15 seconds
-            time.sleep(15)
+            time.sleep(20)
             # Check page 1 exists and looks like we expect
             rv = self.app.get('/original?src=' + burst_path + '/page-00001.png')
             assert rv.status_code == 200
@@ -607,7 +648,8 @@ class ImageServerTestsSlow(BaseTestCase):
             assert obj['data']['height'] == expect[1]
         finally:
             # Delete temp file and uploaded file and burst folder
-            if os.path.exists(dest_file): os.remove(dest_file)
+            if os.path.exists(dest_file):
+                os.remove(dest_file)
             delete_file(image_path)
             delete_dir(burst_path, recursive=True)
 
@@ -1710,37 +1752,6 @@ class ImageServerTestsFast(BaseTestCase):
         # Getting a GRAY version should not use the RGB base
         base = im._get_base_image(im.finalise_image_attrs(cspace_attrs))
         self.assertIsNone(base)
-
-    # Test the auto-pyramid generation, which is really a specialist case of test_base_image_detection
-    def test_auto_pyramid(self):
-        image_obj = auto_sync_existing_file('test_images/dorset.jpg', dm, tm)
-        orig_attrs = ImageAttrs(image_obj.src, image_obj.id)
-        im.finalise_image_attrs(orig_attrs)
-        w500_attrs = ImageAttrs(image_obj.src, image_obj.id, width=500)
-        im.finalise_image_attrs(w500_attrs)
-        # Clean
-        cm.clear()
-        im.reset_image(orig_attrs)
-        # Get the original
-        rv = self.app.get('/image?src=test_images/dorset.jpg')
-        assert rv.status_code == 200
-        orig_len = len(rv.data)
-        # Only the original should come back as base for a 500 version
-        base = im._get_base_image(w500_attrs)
-        assert base is None or len(base.data()) == orig_len
-        # Set the minimum auto-pyramid threshold and get a tile of the image
-        flask_app.config["AUTO_PYRAMID_THRESHOLD"] = 1000000
-        rv = self.app.get('/image?src=test_images/dorset.jpg&tile=1:4')
-        assert rv.status_code == 200
-        # Wait a bit for the pyramiding to finish
-        time.sleep(15)
-        # Now check the cache again for a base for the 500 version
-        base = im._get_base_image(w500_attrs)
-        assert base is not None, 'Auto-pyramid did not generate a smaller image'
-        # And it shouldn't be the original image either
-        assert len(base.data()) < orig_len
-        assert base.attrs().width() is not None
-        assert base.attrs().width() < 1600 and base.attrs().width() >= 500
 
     # Test the correct base images are used when creating tiles
     def test_tile_base_images(self):
