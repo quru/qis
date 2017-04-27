@@ -25,7 +25,7 @@ setup(
     packages=find_packages(package_dir, exclude=["tests", "tests.*"]),
 
     install_requires=[
-        "qismagick>=2.0.0",
+        "qismagick>=2.2.0",
         "Flask==0.12",
         "python-ldap==2.4.27",
         "pylibmc==1.5.1",
