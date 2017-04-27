@@ -885,6 +885,17 @@ class ImageServerTestsFast(BaseTestCase):
         assert rv.status_code == 200
         assert len(rv.data) < orig_len, 'Stripped image is not smaller than the original'
 
+    # #4705 Test that stripping of RGB colour profiles does not cause major colour loss
+    def test_rgb_profile_strip(self):
+        rv = self.app.get('/image?src=test_images/profile-pro-photo.jpg&width=900&height=600&format=png&quality=9&strip=0')
+        assert rv.status_code == 200
+        orig_len = len(rv.data)
+        rv = self.app.get('/image?src=test_images/profile-pro-photo.jpg&width=900&height=600&format=png&quality=9&strip=1')
+        assert rv.status_code == 200
+        assert len(rv.data) < orig_len, 'Stripped image is not smaller than the original'
+        # Now ensure it looks correct (not all dark and dull)
+        self.assertImageMatch(rv.data, 'strip-rgb-profile.png')
+
     # Test attachment option
     def test_attach_image(self):
         rv = self.app.get('/image?src=test_images/cathedral.jpg&attach=1')
