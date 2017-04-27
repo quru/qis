@@ -47,7 +47,7 @@ pip install wheel
 
 # Download and cache the sdists for everything
 echo -e '\nDownloading requirements'
-pip install --download $CACHE_DIR -r doc/requirements.txt
+pip download --dest $CACHE_DIR -r doc/requirements.txt
 
 # Extract the sdists and build them into (bdist_wheel) wheels
 echo -e '\nBuilding wheels of the requirements'
