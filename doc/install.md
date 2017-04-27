@@ -315,6 +315,21 @@ To raise the shared memory limit to 16GB, run commands:
 Then change (or add) the same values in `/etc/sysctl.conf`.
 You can also refer to the [Postgres documentation](http://www.postgresql.org/docs/9.2/static/kernel-resources.html).
 
+## Configuring the firewall
+
+If your system has a firewall enabled, you will need to allow web traffic to
+reach the server. How to do this is operating system specific. With `firewalld`
+(Fedora 15+, CentOS 7+, Red Hat 7+), run:
+
+    $ sudo firewall-cmd --zone=public --permanent --add-service=http
+    $ sudo firewall-cmd --zone=public --permanent --add-service=https
+    $ sudo firewall-cmd --reload
+
+With `ufw` (Ubuntu), run:
+
+    $ sudo ufw allow http
+    $ sudo ufw allow https
+
 ## Configuring Security Enhanced Linux (SELinux)
 
 If your operating system has SELinux enabled, you must define some additional
