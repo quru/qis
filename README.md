@@ -98,8 +98,11 @@ Management features in the web interface include:
 JavaScript library - image gallery (incorporating zooming viewer)  
 ![Embeddable gallery component](doc/images/mgmt_gallery_800.jpg)
 
-Web interface - folder browse  
+Web interface - folder browse - list view  
 ![Folder browse](doc/images/mgmt_folder_browse_800.jpg)
+
+Web interface - folder browse - grid view  
+![Folder browse](doc/images/mgmt_folder_grid_800.jpg)
 
 Web interface - image details  
 ![Image details view](doc/images/mgmt_image_view_800.jpg)
