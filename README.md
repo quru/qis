@@ -270,7 +270,7 @@ While still on the to-do list for version 2 is:
 
 An upgrade script is provided to migrate v1 installations to v2, including the
 import of image templates from flat files into the database. For more information
-on how to upgrade, see the [upgrading guide](./docs/upgrading.md).
+on how to upgrade, see the [upgrading guide](./doc/upgrading.md).
 
 ## Roadmap
 
