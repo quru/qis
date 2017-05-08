@@ -6,8 +6,6 @@ more consistent page layout_
 This version is the first release of v2.x and also becomes the new master
 branch in GitHub.
 
-TODO Update screenshots in README.md
-
 If upgrading from v1.x, see the [upgrading guide](upgrading.md).  
 If upgrading from v2.3:
 
