@@ -24,12 +24,12 @@ Previously QIS would run on Postgres 8.x but this is no longer the case.
 Follow the build instructions in the README file to build the QIS application
 package and the Python library dependencies for your platform:
 
-	Quru Image Server-2.4.0.tar.gz
-	dependencies.tar.gz
+    Quru Image Server-2.4.0.tar.gz
+    dependencies.tar.gz
 
 and from Quru obtain the latest ImageMagick interface for your platform:
 
-	qismagick-2.1.0-cp27-cp27mu-linux_x86_64.whl
+    qismagick-2.1.0-cp27-cp27mu-linux_x86_64.whl
 
 ### Installation and upgrade
 
