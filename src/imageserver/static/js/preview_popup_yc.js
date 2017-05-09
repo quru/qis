@@ -54,8 +54,8 @@ this.previewState.delayId=null;this.previewState.visible=false;this.previewState
 }};ImagePopup.prototype.getPreviewImageURL=function(f){f=$(f);var d=(f.get("tag")==="a")?f:f.getParent("a");
 if(d==null){return"";}var c=d.href.cleanQueryString().replace(/\+/g," ");var b=c.indexOf("?");var a=c.substring(0,b);
 var e=c.substring(b+1).parseQueryString();a=a.replace("details/","image");e.width="200";e.height="200";
-e.autosizefit="1";e.stats="0";e.strip="1";e.format="jpg";e.colorspace="srgb";return a+"?"+Object.toQueryString(e);
-};function IframePopup(c,b,a){c.addClass("iframe");this.previewUI={containerEl:c,arrowEl:c.getElement(".preview_popup_left"),contentEl:c.getElement(".preview_popup_right")};
+e.stats="0";e.strip="1";e.format="jpg";e.colorspace="srgb";return a+"?"+Object.toQueryString(e);};function IframePopup(c,b,a){c.addClass("iframe");
+this.previewUI={containerEl:c,arrowEl:c.getElement(".preview_popup_left"),contentEl:c.getElement(".preview_popup_right")};
 this.helpArrowHeight=this.previewUI.arrowEl.getSize().y;this.autoclose=b;this.onclosed=a;if(c.getStyle("visibility")==="hidden"){c.fade("hide");
 }}IframePopup.prototype.showAt=function(c,b){var f=$(c).getCoordinates(),e=this.previewUI.containerEl.getCoordinates(),g=f.right,d=(f.bottom-(f.height/2))-(e.height/2)+1;
 this.previewUI.arrowEl.setStyle("height",this.helpArrowHeight);if(d<10){var a=10-d;d+=a;this.previewUI.arrowEl.setStyle("height",this.helpArrowHeight-(a*2));
