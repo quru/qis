@@ -1,3 +1,11 @@
+# v2.5.0
+_Changes: Bundle Quru's image-defer.js library, add lazy loading images to the
+image publisher outputs, make the grid/thumbnail view in the folder browse use
+lazily loaded thumbnail images_
+
+Update the Python and web code  
+Restart the Apache service
+
 # v2.4.0
 _Changes: Adds new grid/thumbnail view for browsing folders in the admin UI,
 new file/folder/cog icons, labels for the folder and image action menus,

@@ -72,6 +72,7 @@ Image presentation features include:
   * Full-screen image view
   * Image carousel / slideshow
   * Image gallery / folder viewer
+  * Lazily-loaded images
 * Image publishing wizard
 * Access control via user-groups and folders
 
@@ -257,6 +258,8 @@ QIS version 2 brings these new features:
 * Built-in support for RAW digital camera image formats
 * Faster image serving for logged-in users (and authenticated API callers)
 * Bug fixes to the image publisher
+* A new JavaScript library for lazily loading images
+  * See Quru's [image-defer library](https://github.com/quru/image-defer)
 * Web interface improvements
   * New grid / thumbnail browse view
   * New icons and a more consistent page layout

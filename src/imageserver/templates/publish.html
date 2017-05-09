@@ -18,6 +18,7 @@
 	Date       By    Details
 	=========  ====  ============================================================
 	31Aug2016  Matt  v2.2 Replaced server defaults with default template
+    09May2017  Matt  v2.5 Add lazily loaded image output
 -->
 {% endblock %}
 
@@ -121,6 +122,7 @@
 					<select id="publish_type">
 						<option value="plain">Plain image URL</option>
 						<option value="img_tag">HTML image tag, static</option>
+                        <option value="img_tag_lazy">HTML image tag, lazy loaded</option>
 						<option value="img_srcset_tag">HTML5 image tag, responsive</option>
 						<option value="picture_tag">HTML5 picture tag, responsive</option>
 						<option value="img_tag_zoom">HTML image tag, click to launch zoom</option>
@@ -139,6 +141,7 @@
 		<div class="output_templates">
 			<div id="output_template_plain">{% include "publish/output_plain.html" %}</div>
 			<div id="output_template_img_tag">{% include "publish/output_img_tag.html" %}</div>
+            <div id="output_template_img_tag_lazy">{% include "publish/output_img_tag_lazy.html" %}</div>
 			<div id="output_template_img_srcset_tag">{% include "publish/output_img_srcset_tag.html" %}</div>
 			<div id="output_template_picture_tag">{% include "publish/output_picture_tag.html" %}</div>
 			<div id="output_template_img_tag_zoom">{% include "publish/output_img_tag_zoom.html" %}</div>

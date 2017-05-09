@@ -1,0 +1,11 @@
+{# This is a publisher output template.
+   Escape HTML so that it doesn't run when embedded in the host page.
+   Use {varname} for variable substitution.
+#}
+<!-- This line needs to go once into your HTML &lt;head&gt; or &lt;body&gt; section -->
+&lt;script type="text/javascript" src="{static_url}js/image-defer.min.js" defer&gt;&lt;/script&gt;
+
+<!-- This line defines the image and can go anywhere in your HTML &lt;body&gt; section. You should define CSS for 'lazy-image' to set the width and height of the image. -->
+&lt;img class="lazy-image"
+     src="{static_url}images/spacer.png"
+     data-defer-src="{image_url}"&gt;
