@@ -35,6 +35,7 @@
 	23Jan2013  Matt  Add folder actions menu handling
 	10Feb2015  Matt  Add support for HTTP 202 responses
 	06Oct2015  Matt  Refactored image popup JS into preview_popup.js
+	09May2017  Matt  Added support for lazily loaded images in grid view
 */
 
 "use strict";
@@ -67,6 +68,13 @@ function onInit() {
 	addEventEx('folder_rename', 'click', onFolderRenameClick);
 	addEventEx('folder_move', 'click', onFolderMoveClick);
 	addEventEx('folder_delete', 'click', onFolderDeleteClick);
+
+	// Lazily loaded images setup
+	if (!window.ImageDefer)
+	    window.ImageDefer = { options: {} };
+	ImageDefer.options.onImageRequested = lazyImageRequested;
+	ImageDefer.options.onImageLoaded = lazyImageLoaded;
+	ImageDefer.options.onImageUnloaded = lazyImageUnloaded;
 }
 
 // Invoked in browse mode when a folder is selected
@@ -278,6 +286,23 @@ function changePath(newPath) {
 	if (piEnd != -1)
 		url2 += url.substring(piEnd);
 	window.location.href = url2;
+}
+
+// Lazy loading images in grid/thumbnail view
+function lazyImageRequested(img) {
+    var placeholder = $(img).getParent('div');
+    placeholder.removeClass('loaded');
+    placeholder.addClass('loading');
+}
+function lazyImageLoaded(img) {
+    var placeholder = $(img).getParent('div');
+    placeholder.removeClass('loading');
+    placeholder.addClass('loaded');
+}
+function lazyImageUnloaded(img) {
+    var placeholder = $(img).getParent('div');
+    placeholder.removeClass('loading');
+    placeholder.removeClass('loaded');
 }
 
 window.addEvent('domready', onInit);

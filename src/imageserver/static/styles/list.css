@@ -95,3 +95,13 @@ td.count {
 	/* For icons that are smaller than 200x200 */
 	height: 55px;
 }
+
+.image-placeholder.lazy-load {
+    background: none;
+}
+.image-placeholder.lazy-load.loading {
+    background: url('../images/icon-wait-96.gif') center no-repeat;
+}
+.image-placeholder.lazy-load.loaded {
+    background: none;
+}

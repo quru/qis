@@ -8,8 +8,9 @@
     pathsep         - the path separator character
     image_formats   - a list of viewable image file extensions
 #}
+        <script src="{{ url_for('static', filename='js/image-defer.min.js') }}" type="text/javascript" defer></script>
 
-		<!-- Grid view (marker: test suite looks for me) -->
+		<!-- Grid view (marker: the test suite looks for me) -->
 		<div class="grid odd">
 
 		{# Offer a Back link if this isn't the root directory #}
@@ -51,9 +52,10 @@
 
 				{% if can_view %}
 				<div id="{{ entry.filename }}" class="grid-cell border even">
-					<div class="image-placeholder">
+					<div class="image-placeholder lazy-load">
 						<a class="no-underline" href="{{ view_url }}">
-						<img src="{{ thumb_url }}" />
+						<img src="{{ url_for('static', filename='images/spacer.png') }}"
+						     data-defer-src="{{ thumb_url }}" />
 						</a>
 					</div>
 					<div><a class="no-underline" href="{{ view_url }}">{{ entry.filename }}</a></div>

@@ -35,6 +35,7 @@
 	23Jan2013  Matt  Add folder actions menu handling
 	10Feb2015  Matt  Add support for HTTP 202 responses
 	06Oct2015  Matt  Refactored image popup JS into preview_popup.js
+	09May2017  Matt  Added support for lazily loaded images in grid view
 */
 "use strict";
 function onInit(){var b=$$(".preview_popup")[0];if(b){var a=new ImagePopup(b);a.attachToElements(".image_preview");
@@ -42,6 +43,8 @@ function onInit(){var b=$$(".preview_popup")[0];if(b){var a=new ImagePopup(b);a.
 return false;});});$$(".select_file").each(function(c){c.addEvent("click",function(){onFileSelectClick(c.getProperty("data-path"));
 return false;});});addEventEx("folder_create","click",onFolderCreateClick);addEventEx("folder_rename","click",onFolderRenameClick);
 addEventEx("folder_move","click",onFolderMoveClick);addEventEx("folder_delete","click",onFolderDeleteClick);
+if(!window.ImageDefer){window.ImageDefer={options:{}};}ImageDefer.options.onImageRequested=lazyImageRequested;
+ImageDefer.options.onImageLoaded=lazyImageLoaded;ImageDefer.options.onImageUnloaded=lazyImageUnloaded;
 }function onFolderSelectClick(a){if(window.parent&&window.parent.onFolderSelected){window.parent.onFolderSelected(a);
 }GenericPopup.closePage();}function onFileSelectClick(a){if(window.parent&&window.parent.onFileSelected){window.parent.onFileSelected(a);
 }GenericPopup.closePage();}function validateFolderName(b){var a=$("path_sep").value,c=b.indexOf(".");
@@ -68,4 +71,7 @@ if(this.status==APICodes.SUCCESS_TASK_ACCEPTED){alert("This task is taking a lon
 var g=$("parent_folder_path").value;}else{var h=j.data,g=encodeURIComponent(h.path);}changePath(g);},onFailure:function(h){wait_form_close();
 var g=getAPIError(h.status,h.responseText?h.responseText:h.statusText);alert(d+"\n\n"+g.message);}}).send();
 }function changePath(c){var b=window.location.href,e=b.lastIndexOf("path="),a=b.indexOf("&",e),d=b.substring(0,e+5)+c;
-if(a!=-1){d+=b.substring(a);}window.location.href=d;}window.addEvent("domready",onInit);
+if(a!=-1){d+=b.substring(a);}window.location.href=d;}function lazyImageRequested(a){var b=$(a).getParent("div");
+b.removeClass("loaded");b.addClass("loading");}function lazyImageLoaded(a){var b=$(a).getParent("div");
+b.removeClass("loading");b.addClass("loaded");}function lazyImageUnloaded(a){var b=$(a).getParent("div");
+b.removeClass("loading");b.removeClass("loaded");}window.addEvent("domready",onInit);
