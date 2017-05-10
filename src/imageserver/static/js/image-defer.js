@@ -30,9 +30,9 @@ var ImageDefer = ImageDefer || {};
 
 (function (options) {
 
-    this.version = '0.2';
+    this.version = '0.3';
 
-    // Public options - apply or set defaults (define ImageDefer.options externally to apply them here)
+    // Public options - apply or set defaults (define ImageDefer.options externally to set them here)
     this.options = {
         maxLoaded: options.maxLoaded || 100,
         onImageRequested: options.onImageRequested || null,
@@ -41,6 +41,9 @@ var ImageDefer = ImageDefer || {};
         scrollingStopMillis: options.scrollingStopMillis || 500,
         scrollingSkipRate: options.scrollingSkipRate || 0.8
     };
+    // v0.3 Options might go missing if someone accidentally replaces this with a new object, so prevent it
+    if (Object.defineProperty)
+        Object.defineProperty(this, 'options', { writable: false, configurable: false });
 
     // Private internal state
     var _state = {
@@ -106,7 +109,7 @@ var ImageDefer = ImageDefer || {};
 
     // Unloads hidden images if the max loaded limit has been reached
     this.trimImages = function() {
-        if (_state.imagesLoaded > this.options.maxLoaded) {
+        if (this.options.maxLoaded && (_state.imagesLoaded > this.options.maxLoaded)) {
             var vpPos = this.viewportPos(),
                 visibleBuckets = this.getBuckets(vpPos.top, vpPos.height),
                 unloadRequests = 0,
@@ -272,6 +275,10 @@ var ImageDefer = ImageDefer || {};
         var timeNow = Date.now(),
             scrollInfo = _state.scrollInfo.current;
 
+        // v0.3 Quick check to prevent infinite+rapid setTimeout loop
+        if ((this.options.scrollingStopMillis || 0) < 100)
+            this.options.scrollingStopMillis = 100;
+
         if ((timeNow - scrollInfo.time >= this.options.scrollingStopMillis * 0.9) &&
             (this.viewportPos().top === scrollInfo.pos)) {
             // Scrolling has stopped
@@ -279,7 +286,7 @@ var ImageDefer = ImageDefer || {};
             _state.scrollChecker = null;
             // console.log('Scrolling stopped, images currently loaded ' + _state.imagesLoaded);
             this.requestCallBack(this.lazyLoadImages);
-            if (_state.imagesLoaded > this.options.maxLoaded)
+            if (this.options.maxLoaded && (_state.imagesLoaded > this.options.maxLoaded))
                 this.requestCallBack(this.trimImages);
         }
         else {
