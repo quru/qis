@@ -16,6 +16,7 @@ DIST_DIR=$(pwd)/dist
 BUILD_DIR=$(pwd)/build
 WHEELS_DIR=$BUILD_DIR/wheels
 CACHE_DIR=$BUILD_DIR/cache
+QISMAGICK_DIR=~/qis-build/qismagick
 
 if [ "$PYTHON_VER" = "" ]; then
 	echo "You must specify which python version to use, e.g. package_deps.sh python2.7"
@@ -61,8 +62,8 @@ cd ../..
 
 # Add in the qismagick wheel, if present
 echo -e '\nAdding qismagick.so wheel'
-[ -d /tmp/qismagick ] && cp /tmp/qismagick/*.whl $WHEELS_DIR
-[ -d /tmp/qismagick ] || echo 'WARNING! /tmp/qismagick/*.whl not found (you will need to add it later)'
+[ -d $QISMAGICK_DIR ] && cp $QISMAGICK_DIR/*.whl $WHEELS_DIR
+[ -d $QISMAGICK_DIR ] || echo "WARNING! $QISMAGICK_DIR not found (you will need to add it later)"
 
 # Install all the wheels we made (into the virtualenv's lib directory)
 echo -e '\nInstalling all wheels into the build environment'

@@ -4,7 +4,7 @@ VENV_NAME := qis_v2
 VENV_PATH := ~/.virtualenvs/${VENV_NAME}
 VENV_ACTIVATE := . ${VENV_PATH}/bin/activate
 QISMAGICK_SO := ${VENV_PATH}/lib/${PYTHON}/site-packages/qismagick.so
-QISMAGICK_WHEEL_PATH := /tmp/qismagick/
+QISMAGICK_WHEEL_DIR := ~/qis-build/qismagick/
 
 distribute:
 	./package_deps.sh ${PYTHON}
@@ -31,7 +31,7 @@ ${VENV_PATH}/bin/flake8: venv
 
 venv: ${VENV_PATH}/bin/activate doc/requirements.txt setup.py ${QISMAGICK_SO}
 	${VENV_ACTIVATE} ; pip install --upgrade pip ; pip install --upgrade setuptools
-	${VENV_ACTIVATE} ; pip install --upgrade --force-reinstall --no-index --find-links file://$(QISMAGICK_WHEEL_PATH) qismagick
+	${VENV_ACTIVATE} ; pip install --upgrade --force-reinstall --no-index --find-links file://$(QISMAGICK_WHEEL_DIR) qismagick
 	${VENV_ACTIVATE} ; pip install --upgrade -r doc/requirements.txt
 
 ${VENV_PATH}/bin/activate:
