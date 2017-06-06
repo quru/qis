@@ -1,3 +1,9 @@
+# v2.5.1
+_Changes: Bug fix to Active Directory authentication_
+
+Update the Python and web code  
+Restart the Apache service
+
 # v2.5.0
 _Changes: Bundle Quru's image-defer.js library, add lazy loading images to the
 image publisher outputs, make the grid/thumbnail view in the folder browse use

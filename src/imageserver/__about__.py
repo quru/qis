@@ -33,7 +33,7 @@ __uri__ = "https://quru.com/qis/"
 __source_uri__ = "https://github.com/quru/qis"
 __platforms__ = ["Linux", "Unix", "Mac OSX"]
 
-__version__ = "2.5.0"
+__version__ = "2.5.1"
 
 __author__ = "Quru Ltd"
 __email__ = "info@quru.com"

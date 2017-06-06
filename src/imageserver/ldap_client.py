@@ -145,6 +145,7 @@ class _LDAP_Client(object):
 
         On success, a list of tuples is returned, with the format
           [ (dn, { attr_name: [attr_value, ...], ... }), ... ]
+        An empty list is returned if there were no search matches.
 
         An LDAP_Error is raised on failure.
         """
@@ -156,8 +157,10 @@ class _LDAP_Client(object):
                 search_filter,
                 attr_list
             )
-            # Add the DN if it was requested.
-            # For some reason it isn't always returned when it's in attr_list.
+            # v2.5.1 Check for the weird [(None, ['ldap://server/blah']), ...] negative result
+            if len(result) > 0 and not result[0][0]:
+                result = []
+            # Add the DN if it was requested, it isn't always returned even when in attr_list
             if len(result) > 0 and "dn" in attr_list:
                 attr_dict = result[0][1]
                 attr_dict["dn"] = [result[0][0]]
