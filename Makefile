@@ -4,7 +4,7 @@ VENV_NAME := qis_v2
 VENV_PATH := ~/.virtualenvs/${VENV_NAME}
 VENV_ACTIVATE := . ${VENV_PATH}/bin/activate
 QISMAGICK_SO := ${VENV_PATH}/lib/${PYTHON}/site-packages/qismagick.so
-QISMAGICK_WHEEL_DIR := ~/qis-build/qismagick/
+QISMAGICK_WHEEL_DIR := ~/qis-build/qismagick
 
 distribute:
 	./package_deps.sh ${PYTHON}
