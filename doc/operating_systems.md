@@ -7,6 +7,7 @@ with the operating system. Unfortunately, ImageMagick is released continuously
 and occasionally includes runs of unstable code changes.
 
 * Ubuntu 14.04 LTS - ImageMagick 6.7.7-10 - OK
+* Ubuntu 16.04 LTS - ImageMagick 6.8.9-9 - OK
 * Red Hat Enterprise Linux 6.5 - ImageMagick 6.5.4-7 - OK
 * Red Hat Enterprise Linux 6.7 to 6.8 - ImageMagick 6.7.2-7 - OK
 * Red Hat Enterprise Linux 7.3 - ImageMagick 6.7.8-9 - buggy colour management - see below
