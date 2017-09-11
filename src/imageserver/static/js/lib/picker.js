@@ -12,6 +12,7 @@
  * http://mootools.net/forge/p/mootools_datepicker
  * Plus commit for github issue #73
  * https://github.com/amitayh/mootools-datepicker/commit/0271f31f2b4540bad46adfdd76dc41e60df81330
+ * Plus changed .from() to .convert() for MooTools Core 1.6.0
  */
 
 /*
@@ -207,7 +208,7 @@ Locale.Set = new Class({
 		var value = Object.getFromPath(this.sets, key);
 		if (value != null){
 			var type = typeOf(value);
-			if (type == 'function') value = value.apply(null, Array.from(args));
+			if (type == 'function') value = value.apply(null, Array.convert(args));
 			else if (type == 'object') value = Object.clone(value);
 			return value;
 		}
@@ -233,7 +234,7 @@ Locale.Set = new Class({
 	},
 
 	inherit: function(names, set){
-		names = Array.from(names);
+		names = Array.convert(names);
 
 		if (set && !this.inherits.sets[set]) this.inherits.sets[set] = [];
 
@@ -681,12 +682,12 @@ Date.extend({
 	},
 
 	units: {
-		ms: Function.from(1),
-		second: Function.from(1000),
-		minute: Function.from(60000),
-		hour: Function.from(3600000),
-		day: Function.from(86400000),
-		week: Function.from(608400000),
+		ms: Function.convert(1),
+		second: Function.convert(1000),
+		minute: Function.convert(60000),
+		hour: Function.convert(3600000),
+		day: Function.convert(86400000),
+		week: Function.convert(608400000),
 		month: function(month, year){
 			var d = new Date;
 			return Date.daysInMonth(month != null ? month : d.get('mo'), year != null ? year : d.get('year')) * 86400000;
@@ -1249,9 +1250,9 @@ var Picker = new Class({
 	},
 
 	setTitle: function(content, fn){
-		if (!fn) fn = Function.from;
+		if (!fn) fn = Function.convert;
 		this.titleText.empty().adopt(
-			Array.from(content).map(function(item, i){
+			Array.convert(content).map(function(item, i){
 				return typeOf(item) == 'element'
 					? item
 					: new Element('div.column', {text: fn(item, this.options)}).addClass('column_' + (i + 1));
@@ -1323,8 +1324,8 @@ Picker.Attach = new Class({
 		if (typeOf(attachTo) == 'string') attachTo = document.id(attachTo);
 		if (typeOf(toggle) == 'string') toggle = document.id(toggle);
 
-		var elements = Array.from(attachTo),
-			toggles = Array.from(toggle),
+		var elements = Array.convert(attachTo),
+			toggles = Array.convert(toggle),
 			allElements = [].append(elements).combine(toggles),
 			self = this;
 
@@ -1398,8 +1399,8 @@ Picker.Attach = new Class({
 		if (typeOf(attachTo) == 'string') attachTo = document.id(attachTo);
 		if (typeOf(toggle) == 'string') toggle = document.id(toggle);
 
-		var elements = Array.from(attachTo),
-			toggles = Array.from(toggle),
+		var elements = Array.convert(attachTo),
+			toggles = Array.convert(toggle),
 			allElements = [].append(elements).combine(toggles),
 			self = this;
 
@@ -1517,7 +1518,7 @@ this.DatePicker = Picker.Date = new Class({
 			return (options.startView == what) && (options.startView = newViews[i]);
 		});
 
-		options.canAlwaysGoUp = options.canAlwaysGoUp ? Array.from(options.canAlwaysGoUp) : [];
+		options.canAlwaysGoUp = options.canAlwaysGoUp ? Array.convert(options.canAlwaysGoUp) : [];
 
 		// Set the min and max dates as Date objects
 		if (options.minDate){
