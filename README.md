@@ -260,6 +260,7 @@ QIS version 2 brings these new features:
 * Bug fixes to the image publisher
 * A new JavaScript library for lazily loading images
   * See Quru's [image-defer library](https://github.com/quru/image-defer)
+* Removed the requirement to use the MooTools library on the client side
 * Web interface improvements
   * New grid / thumbnail browse view
   * New icons and a more consistent page layout
@@ -287,7 +288,6 @@ Under consideration for future versions:
 * Image search and results
 * Modernise the public JavaScript APIs / viewers
   * Use HTML5 `data-` attributes for automatic initialisation
-  * Remove dependencies on the MooTools library (moving to vanilla JS, not jQuery!)
   * Reduce the number of included files
 * Image tags
   * System-defined e.g. assignment of an image category

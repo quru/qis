@@ -1,3 +1,12 @@
+# v2.6.0
+_Changes: Remove MooTools from public image viewers, gallery and slideshow_
+
+TODO MooTools library path has changed, potentially a breaking change if
+referenced by other code, otherwise just a 404.
+
+TODO Changing JS filenames to .min.js is a breaking change, provide symlinks
+to fix legacy paths.
+
 # v2.5.1
 _Changes: Bug fix to Active Directory authentication_
 

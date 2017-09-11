@@ -53,7 +53,7 @@ The following HTML fragment illustrates how to call an API function from a web p
 using JavaScript and the MooTools framework. If you are using a different JavaScript framework
 (or no framework), the required code will be different but the concepts are the same.
 
-	<script src="http://images.example.com/static/js/mootools-core.js" type="text/javascript"></script>
+	<script src="http://images.example.com/static/js/lib/mootools-core.js" type="text/javascript"></script>
 	
 	<script>
 		var ajaxRequest = new Request.JSON({

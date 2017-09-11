@@ -24,7 +24,7 @@ The simple viewer requires the [MooTools](http://mootools.net/) library, a once-
 alternative to the now-ubiquitous [jQuery](http://jquery.com/). You can include MooTools
 in your web page with the HTML:
 
-	<script src="http://images.example.com/static/js/mootools_yc.js" type="text/javascript"></script>
+	<script src="http://images.example.com/static/js/lib/mootools_yc.js" type="text/javascript"></script>
 
 If you want to supply your own MooTools library, the viewer requires MooTools Core and
 MooTools More with the Element.Measure and String.QueryString components.
