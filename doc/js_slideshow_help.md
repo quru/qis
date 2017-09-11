@@ -11,7 +11,7 @@ The slideshow requires the [MooTools](http://mootools.net/) library, a once-popu
 alternative to the now-ubiquitous [jQuery](http://jquery.com/). You can include MooTools
 in your web page with the HTML:
 
-	<script src="http://images.example.com/static/js/lib/mootools_yc.js" type="text/javascript"></script>
+	<script src="http://images.example.com/static/js/lib/mootools.min.js" type="text/javascript"></script>
 
 If you want to supply your own MooTools library, the viewer requires MooTools Core and
 MooTools More with the Assets, Element.Measure, Fx.Elements, and Request.JSONP components.
@@ -20,7 +20,7 @@ MooTools More with the Assets, Element.Measure, Fx.Elements, and Request.JSONP c
 
 To use the slideshow API, you only need the slideshow JavaScript file in your web page:
 
-	<script src="http://images.example.com/static/js/slideshow_view_yc.js" type="text/javascript"></script>
+	<script src="http://images.example.com/static/js/slideshow_view.min.js" type="text/javascript"></script>
 
 ### Adding a slideshow to a web page
 

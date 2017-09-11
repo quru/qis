@@ -24,7 +24,7 @@ The simple viewer requires the [MooTools](http://mootools.net/) library, a once-
 alternative to the now-ubiquitous [jQuery](http://jquery.com/). You can include MooTools
 in your web page with the HTML:
 
-	<script src="http://images.example.com/static/js/lib/mootools_yc.js" type="text/javascript"></script>
+	<script src="http://images.example.com/static/js/lib/mootools.min.js" type="text/javascript"></script>
 
 If you want to supply your own MooTools library, the viewer requires MooTools Core and
 MooTools More with the Element.Measure and String.QueryString components.
@@ -38,7 +38,7 @@ To use the simple viewer API, first add the viewer's CSS and JavaScript files to
 
 	<link href="http://images.example.com/static/styles/simple_view.css" rel="stylesheet" type="text/css">
 	
-	<script src="http://images.example.com/static/js/simple_view_yc.js" type="text/javascript"></script>
+	<script src="http://images.example.com/static/js/simple_view.min.js" type="text/javascript"></script>
 	
 CSS files should be included before the JavaScript, so that all CSS rules have been applied
 before the JavaScript starts to measure elements on the web page.

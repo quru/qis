@@ -21,8 +21,8 @@ in your web page:
 	<link href="http://images.example.com/static/styles/canvas_view.css" rel="stylesheet" type="text/css">
 	<link href="http://images.example.com/static/styles/gallery_view.css" rel="stylesheet" type="text/css">
 	
-	<script src="http://images.example.com/static/js/canvas_view_yc.js" type="text/javascript"></script>
-	<script src="http://images.example.com/static/js/gallery_view_yc.js" type="text/javascript"></script>
+	<script src="http://images.example.com/static/js/canvas_view.min.js" type="text/javascript"></script>
+	<script src="http://images.example.com/static/js/gallery_view.min.js" type="text/javascript"></script>
 
 CSS files should be included before the JavaScript, so that all CSS rules have been applied
 before the JavaScript starts to measure elements on the web page.

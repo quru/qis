@@ -11,7 +11,7 @@ The canvas viewer requires the [MooTools](http://mootools.net/) library, a once-
 alternative to the now-ubiquitous [jQuery](http://jquery.com/). You can include MooTools
 in your web page with the HTML:
 
-	<script src="http://images.example.com/static/js/lib/mootools_yc.js" type="text/javascript"></script>
+	<script src="http://images.example.com/static/js/lib/mootools.min.js" type="text/javascript"></script>
 
 If you want to supply your own MooTools library, the viewer requires MooTools Core and
 MooTools More with the Assets, Element.Measure, Fx.Slide, Mask, Request.JSONP, and
@@ -28,7 +28,7 @@ Explorer since version 9. If you want to use the canvas viewer in Internet Explo
 
 	<!-- Provide canvas support for Internet Explorer 6, 7, 8 -->
 	<!--[if lte IE 8]>
-	<script src="http://images.example.com/static/js/excanvas_yc.js" type="text/javascript"></script>
+	<script src="http://images.example.com/static/js/excanvas.min.js" type="text/javascript"></script>
 	<![endif]-->
 
 ## Implementation
@@ -37,7 +37,7 @@ To use the canvas viewer API, first add the viewer's CSS and JavaScript files to
 
 	<link href="http://images.example.com/static/styles/canvas_view.css" rel="stylesheet" type="text/css">
 	
-	<script src="http://images.example.com/static/js/canvas_view_yc.js" type="text/javascript"></script>
+	<script src="http://images.example.com/static/js/canvas_view.min.js" type="text/javascript"></script>
 
 CSS files should be included before the JavaScript, so that all CSS rules have been applied
 before the JavaScript starts to measure elements on the web page.

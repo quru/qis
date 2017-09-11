@@ -6,7 +6,7 @@
 	{% if settings.DEBUG %}
 	<script src="{{ url_for('admin.static', filename='js/admin.js') }}" type="text/javascript"></script>
 	{% else %}
-	<script src="{{ url_for('admin.static', filename='js/admin_yc.js') }}" type="text/javascript"></script>
+	<script src="{{ url_for('admin.static', filename='js/admin.min.js') }}" type="text/javascript"></script>
 	{% endif %}
 {% endblock %}
 

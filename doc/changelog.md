@@ -1,11 +1,20 @@
 # v2.6.0
-_Changes: Remove MooTools from public image viewers, gallery and slideshow_
+_Changes: Remove MooTools from public image viewers, gallery and slideshow,
+standardise Javascript file naming_
 
-TODO MooTools library path has changed, potentially a breaking change if
-referenced by other code, otherwise just a 404.
+This release contains 2 potentially breaking changes:
 
-TODO Changing JS filenames to .min.js is a breaking change, provide symlinks
-to fix legacy paths.
+* Minified Javascript file names have been renamed from `foo_yc.js`
+  to the more conventional format `foo.min.js`.
+* The path to the MooTools library has changed, as this library is now only used
+  internally, and is no longer required or suggested for use in public-facing code.
+
+For upgrading existing installations, an upgrade script has been provided to clean up
+legacy files and optionally to provide compatibility with the older Javascript file names.
+After upgrading to this version, run:
+
+    $ export QIS_HOME=/opt/qis
+    $ sudo -u qis $QIS_HOME/src/imageserver/scripts/v2.6_upgrade.sh
 
 # v2.5.1
 _Changes: Bug fix to Active Directory authentication_
