@@ -1,16 +1,17 @@
 # v2.6.0
-_Changes: Remove MooTools from public image viewers, gallery and slideshow,
-standardise Javascript file naming_
+_Changes: Remove MooTools library from the public image viewers, gallery and slideshow,
+standardise JavaScript file naming,
+upgrade MooTools library to 1.6.0 (now for internal use only)_
 
 This release contains 2 potentially breaking changes:
 
-* Minified Javascript file names have been renamed from `foo_yc.js`
+* Minified JavaScript file names have been renamed from `foo_yc.js`
   to the more conventional format `foo.min.js`.
 * The path to the MooTools library has changed, as this library is now only used
   internally, and is no longer required or suggested for use in public-facing code.
 
 For upgrading existing installations, an upgrade script has been provided to clean up
-legacy files and optionally to provide compatibility with the older Javascript file names.
+legacy files and optionally to provide compatibility with the older JavaScript file names.
 After upgrading to this version, run:
 
     $ export QIS_HOME=/opt/qis
