@@ -22,9 +22,8 @@
 
 	You should have received a copy of the GNU Affero General Public License
 	along with this program.  If not, see http://www.gnu.org/licenses/
-
-	Last Changed:  $Date$ $Rev$ by $Author$
-	
+*/
+/*
 	Notable modifications:
 	Date       By    Details
 	=========  ====  ============================================================

@@ -1,23 +1,46 @@
-#!/bin/bash -v
+#!/bin/bash -e -v
 
-# TODO combine helpers with image viewers before minimising
-#
-java -jar ../lib/yuicompressor-2.4.6.jar --preserve-semi --charset ISO-8859-1 --line-break 100 -o imageserver/admin/static/js/admin.min.js imageserver/admin/static/js/admin.js
-java -jar ../lib/yuicompressor-2.4.6.jar --preserve-semi --charset ISO-8859-1 --line-break 100 -o imageserver/reports/static/js/chart.min.js imageserver/reports/static/js/chart.js
-java -jar ../lib/yuicompressor-2.4.6.jar --preserve-semi --charset ISO-8859-1 --line-break 100 -o imageserver/reports/static/js/lib/mooflot.min.js imageserver/reports/static/js/lib/mooflot.js
-java -jar ../lib/yuicompressor-2.4.6.jar --preserve-semi --charset ISO-8859-1 --line-break 100 -o imageserver/reports/static/js/system_stats.min.js imageserver/reports/static/js/system_stats.js
-java -jar ../lib/yuicompressor-2.4.6.jar --preserve-semi --charset ISO-8859-1 --line-break 100 -o imageserver/static/js/account_edit.min.js imageserver/static/js/account_edit.js
-java -jar ../lib/yuicompressor-2.4.6.jar --preserve-semi --charset ISO-8859-1 --line-break 100 -o imageserver/static/js/base.min.js imageserver/static/js/base.js
-java -jar ../lib/yuicompressor-2.4.6.jar --preserve-semi --charset ISO-8859-1 --line-break 100 -o imageserver/static/js/canvas_view.min.js imageserver/static/js/canvas_view.js
-java -jar ../lib/yuicompressor-2.4.6.jar --preserve-semi --charset ISO-8859-1 --line-break 100 -o imageserver/static/js/details.min.js imageserver/static/js/details.js
-java -jar ../lib/yuicompressor-2.4.6.jar --preserve-semi --charset ISO-8859-1 --line-break 100 -o imageserver/static/js/details_edit.min.js imageserver/static/js/details_edit.js
-java -jar ../lib/yuicompressor-2.4.6.jar --preserve-semi --charset ISO-8859-1 --line-break 100 -o imageserver/static/js/excanvas.min.js imageserver/static/js/excanvas.js
-java -jar ../lib/yuicompressor-2.4.6.jar --preserve-semi --charset ISO-8859-1 --line-break 100 -o imageserver/static/js/gallery_view.min.js imageserver/static/js/gallery_view.js
-java -jar ../lib/yuicompressor-2.4.6.jar --preserve-semi --charset ISO-8859-1 --line-break 100 -o imageserver/static/js/lib/lassocrop.min.js imageserver/static/js/lib/lassocrop.js
-java -jar ../lib/yuicompressor-2.4.6.jar --preserve-semi --charset ISO-8859-1 --line-break 100 -o imageserver/static/js/lib/picker.min.js imageserver/static/js/lib/picker.js
-java -jar ../lib/yuicompressor-2.4.6.jar --preserve-semi --charset ISO-8859-1 --line-break 100 -o imageserver/static/js/list.min.js imageserver/static/js/list.js
-java -jar ../lib/yuicompressor-2.4.6.jar --preserve-semi --charset ISO-8859-1 --line-break 100 -o imageserver/static/js/preview_popup.min.js imageserver/static/js/preview_popup.js
-java -jar ../lib/yuicompressor-2.4.6.jar --preserve-semi --charset ISO-8859-1 --line-break 100 -o imageserver/static/js/publish.min.js imageserver/static/js/publish.js
-java -jar ../lib/yuicompressor-2.4.6.jar --preserve-semi --charset ISO-8859-1 --line-break 100 -o imageserver/static/js/simple_view.min.js imageserver/static/js/simple_view.js
-java -jar ../lib/yuicompressor-2.4.6.jar --preserve-semi --charset ISO-8859-1 --line-break 100 -o imageserver/static/js/slideshow_view.min.js imageserver/static/js/slideshow_view.js
-java -jar ../lib/yuicompressor-2.4.6.jar --preserve-semi --charset ISO-8859-1 --line-break 100 -o imageserver/static/js/upload.min.js imageserver/static/js/upload.js
+# Who needs Webpack anyway...
+
+BASE="$(pwd)"
+YUI_JAR="$BASE/../lib/yuicompressor-2.4.6.jar"
+COMPRESS="java -jar $YUI_JAR --preserve-semi --charset ISO-8859-1 --line-break 100"
+
+# Viewers
+cd imageserver/static/js
+$COMPRESS -o common_view.min.js    common_view.js
+$COMPRESS -o canvas_view.min.js    canvas_view.js
+$COMPRESS -o gallery_view.min.js   gallery_view.js
+$COMPRESS -o simple_view.min.js    simple_view.js
+$COMPRESS -o slideshow_view.min.js slideshow_view.js
+echo "" >> canvas_view.min.js    && cat common_view.min.js >> canvas_view.min.js
+echo "" >> gallery_view.min.js   && cat common_view.min.js >> gallery_view.min.js
+echo "" >> simple_view.min.js    && cat common_view.min.js >> simple_view.min.js
+echo "" >> slideshow_view.min.js && cat common_view.min.js >> slideshow_view.min.js
+cd "$BASE"
+
+# UI
+cd imageserver/static/js
+$COMPRESS -o base.min.js          base.js
+$COMPRESS -o account_edit.min.js  account_edit.js
+$COMPRESS -o details.min.js       details.js
+$COMPRESS -o details_edit.min.js  details_edit.js
+$COMPRESS -o list.min.js          list.js
+$COMPRESS -o preview_popup.min.js preview_popup.js
+$COMPRESS -o publish.min.js       publish.js
+$COMPRESS -o upload.min.js        upload.js
+$COMPRESS -o lib/lassocrop.min.js lib/lassocrop.js
+$COMPRESS -o lib/picker.min.js    lib/picker.js
+cd "$BASE"
+
+# Admin
+cd imageserver/admin/static/js
+$COMPRESS -o admin.min.js admin.js
+cd "$BASE"
+
+# Reports
+cd imageserver/reports/static/js
+$COMPRESS -o chart.min.js        chart.js
+$COMPRESS -o system_stats.min.js system_stats.js
+$COMPRESS -o lib/mooflot.min.js  lib/mooflot.js
+cd "$BASE"
