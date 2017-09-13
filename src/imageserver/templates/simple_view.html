@@ -2,19 +2,18 @@
 
 {% block copyright %}
 <!-- 
-	Document:      simple_view.html
-	Date started:  16 May 2011
-	By:            Matt Fozard
-	Purpose:       Quru Image Server simple image viewer example
-	Requires:      
-	Copyright:     Quru Ltd (www.quru.com)
-	
-	Last Changed:  $Date$ $Rev$ by $Author$
-	
-	Notable modifications:
-	Date       By    Details
-	=========  ====  ============================================================
-	29Apr2015  Matt  Revamp, simplify to be called from help page
+    Document:      simple_view.html
+    Date started:  16 May 2011
+    By:            Matt Fozard
+    Purpose:       Quru Image Server simple image viewer example
+    Requires:      
+    Copyright:     Quru Ltd (www.quru.com)
+    
+    Notable modifications:
+    Date       By    Details
+    =========  ====  ============================================================
+    29Apr2015  Matt  Revamp, simplify to be called from help page
+    12Sep2017  Matt  Remove MooTools
 -->
 {% endblock %}
 
@@ -26,12 +25,13 @@
 	<link rel="stylesheet" href="{{ url_for('static', filename='styles/simple_view.css') }}" type="text/css" />
 	{% if settings.DEBUG %}
 	<script src="{{ url_for('static', filename='js/simple_view.js') }}" type="text/javascript"></script>
+    <script src="{{ url_for('static', filename='js/common_view.js') }}" type="text/javascript"></script>
 	{% else %}
 	<script src="{{ url_for('static', filename='js/simple_view.min.js') }}" type="text/javascript"></script>
 	{% endif %}
 
 	<script type="text/javascript">
-		window.addEvent('domready', function() {
+		QU.whenReady(function() {
 			simple_view_init_image('image1');
 		});
 	</script>

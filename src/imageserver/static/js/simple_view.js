@@ -3,8 +3,7 @@
 	Date started:  13 May 2011
 	By:            Matt Fozard
 	Purpose:       Quru Image Server simple viewer client
-	Requires:      MooTools Core 1.3 (no compat)
-	               MooTools More 1.3 - Element.Measure, String.QueryString
+	Requires:      common_view.js (QU)
 	Copyright:     Quru Ltd (www.quru.com)
 	Licence:
 
@@ -30,30 +29,28 @@
 	12Jul2011  Matt  Bug fix to handle + escaped URLs
 	14Jul2011  Matt  Add interface to zoom-enable an existing image element
 	24Jan2012  Matt  Do not zoom images smaller than the viewport
+	12Sep2017  Matt  Remove MooTools
 */
 
 /**** Private imaging class ****/
 
 function ImgSimpleView(container, imageEl, imageURL) {
 	// Get container info
-	this.containerEl   = document.id(container);
-	this.containerSize = this.containerEl.getComputedSize(); // Prefer client area, excl. borders+padding
-	if ((this.containerSize.width == 0) && (this.containerSize.height == 0))
-		this.containerSize = { width: this.containerEl.clientWidth, height: this.containerEl.clientHeight };
+	this.containerEl = QU.id(container);
+	this.containerSize = QU.elInnerSize(this.containerEl, false);
 	// Parse the URL
 	if (imageEl && (imageURL == null))
 		imageURL = imageEl.src;
-	imageURL = imageURL.cleanQueryString().replace(/\+/g, ' ');
 	var urlSep = imageURL.indexOf('?');
 	this.baseURL = imageURL.substring(0, urlSep);
-	this.imageAttrs = imageURL.substring(urlSep + 1).parseQueryString();
+	this.imageAttrs = QU.QueryStringToObject(imageURL.substring(urlSep + 1), false);
 	// Set initial image parameters
 	this.imageAttrs.width = this.containerSize.width;
 	this.imageAttrs.height = this.containerSize.height;
-	this.imageAttrs.top = (this.imageAttrs.top == undefined) ? 0.0 : this.imageAttrs.top.toFloat();
-	this.imageAttrs.left = (this.imageAttrs.left == undefined) ? 0.0 : this.imageAttrs.left.toFloat();
-	this.imageAttrs.bottom = (this.imageAttrs.bottom == undefined) ? 1.0 : this.imageAttrs.bottom.toFloat();
-	this.imageAttrs.right = (this.imageAttrs.right == undefined) ? 1.0 : this.imageAttrs.right.toFloat();
+	this.imageAttrs.top = (this.imageAttrs.top == undefined) ? 0.0 : parseFloat(this.imageAttrs.top);
+	this.imageAttrs.left = (this.imageAttrs.left == undefined) ? 0.0 : parseFloat(this.imageAttrs.left);
+	this.imageAttrs.bottom = (this.imageAttrs.bottom == undefined) ? 1.0 : parseFloat(this.imageAttrs.bottom);
+	this.imageAttrs.right = (this.imageAttrs.right == undefined) ? 1.0 : parseFloat(this.imageAttrs.right);
 	// Set zoom state
 	this.zoomAttrs = {
 		orig_width: this.imageAttrs.width,
@@ -68,28 +65,30 @@ function ImgSimpleView(container, imageEl, imageURL) {
 	this.zoomAttrs.level = 1;
 	this.zoomAttrs.levels = 10;
 	// Create an image element
-	this.imageEl = imageEl ? imageEl : new Element('img', {
-		'oncontextmenu': 'return false',
-		'ondragstart': 'return false',
-		'onselectstart': 'return false'
-	});
+	this.imageEl = imageEl ? imageEl : document.createElement('img');
+	this.imageEl.oncontextmenu = function() {return false};
+	this.imageEl.ondragstart = function() {return false};
+	this.imageEl.onselectstart = function() {return false};
 }
 
 ImgSimpleView.prototype.init = function(refreshImage) {
 	// Check we have the minimum vars to function
 	if ((this.baseURL.length > 0) &&
-			 this.imageAttrs.src && 
+	     this.imageAttrs.src && 
 	   ((this.imageAttrs.width > 0) || (this.imageAttrs.height > 0))) {
 		// Set initial view
 		if (refreshImage) {
 			// Remove any previous image (in case init is being called a 2nd time)
-			this.containerEl.empty();
-			this.containerEl.grab(this.imageEl);
+		    QU.elClear(this.containerEl);
+			this.containerEl.appendChild(this.imageEl);
 			this.refresh();
 		}
 		// Set UI handlers
-		this.imageEl.removeEvents('click');
-		this.imageEl.addEvent('click', function(e) { this.onImageClick(e); }.bind(this));
+		if (!this.clickHandler) {
+	        this.clickHandler = function(e) { this.onImageClick(e); }.bind(this);		    
+		}
+		this.imageEl.removeEventListener('click', this.clickHandler, false);
+		this.imageEl.addEventListener('click', this.clickHandler, false);
 	}
 }
 
@@ -120,20 +119,20 @@ ImgSimpleView.prototype.refresh = function() {
 	// Note jpeg rather than jpg for eRez compatibility.
 	this.imageAttrs.format = 'jpeg';
 	// Update our image's src
-	this.imageEl.src = this.baseURL + '?' + Object.toQueryString(this.imageAttrs);
+	this.imageEl.src = this.baseURL + '?' + QU.ObjectToQueryString(this.imageAttrs);
 }
 
 ImgSimpleView.prototype.onImageClick = function(e) {
 	// Do not zoom if the image is smaller than the viewport
 	if ((this.imageEl.width > 0) && (this.zoomAttrs.level == 1)) {
 		if ((this.containerSize.width - this.imageEl.width > 2) &&
-				(this.containerSize.height - this.imageEl.height > 2)) {
+		    (this.containerSize.height - this.imageEl.height > 2)) {
 			this.zoomAttrs.levels = 1;
 		}
 	}
-	
+
 	// Zoom in (click), or out (shift-click), or just rectangle shift (alt-click)
-	var zoomIn = e.alt ? null : !e.shift;
+	var zoomIn = e.altKey ? null : !e.shiftKey;
 	if (zoomIn != null) {
 		// Prevent zoom too far
 		if ((zoomIn && this.zoomAttrs.level == this.zoomAttrs.levels) ||
@@ -148,9 +147,11 @@ ImgSimpleView.prototype.onImageClick = function(e) {
 	}
 
 	// Get click position inside the image
-	var imagePagePos = this.imageEl.getPosition();
-	var clickPos = { x: (e.page.x - imagePagePos.x), y: (e.page.y - imagePagePos.y)	};
-	
+	var imagePagePos = QU.elPosition(this.imageEl),
+	    eventPagePos = QU.evPosition(e).page;
+	var clickPos = { x: (eventPagePos.x - imagePagePos.x),
+	                 y: (eventPagePos.y - imagePagePos.y) };
+
 	// Work out rectangle shift based on where the user clicked
 	var oldCropWidth  = this.imageAttrs.right - this.imageAttrs.left;
 	var oldCropHeight = this.imageAttrs.bottom - this.imageAttrs.top;
@@ -162,7 +163,7 @@ ImgSimpleView.prototype.onImageClick = function(e) {
 	if (zoomIn != null) {
 		// Set new zoom level
 		this.zoomAttrs.level += (zoomIn ? 1 : -1);
-				
+
 		// Work out the new cropping rectangle
 		var cropXdiff  = zoomIn ? 
 				(this.zoomAttrs.factorIn * oldCropWidth) : 
@@ -203,16 +204,15 @@ ImgSimpleView.prototype.round = function(num, places) {
 	var rstr = ''+rounded;
 	// Assume that a trailing 00x would be better off as 000
 	if ((places > 2) && (rstr.length == (places + 2))) {
-		if ((rstr[rstr.length - 3] == '0') && 
-				(rstr[rstr.length - 2] == '0')) {
-			rounded = rstr.substring(0, rstr.length - 3).toFloat();
+		if ((rstr[rstr.length - 3] == '0') &&
+		    (rstr[rstr.length - 2] == '0')) {
+			rounded = parseFloat(rstr.substring(0, rstr.length - 3));
 		}
 	}
 	return rounded;
 }
 
 function _get_ct_viewer(ct) {
-	ct = document.id(ct);
 	return (ct && ct._viewer) ? ct._viewer : null;
 }
 
@@ -222,7 +222,7 @@ function _get_ct_viewer(ct) {
  * inside the element or element with ID 'container'.
  */
 function simple_view_init(container, imageURL) {
-	container = document.id(container);
+	container = QU.id(container);
 	if (container) {
 		var viewer = new ImgSimpleView(container, null, imageURL);
 		viewer.init(true);
@@ -233,7 +233,7 @@ function simple_view_init(container, imageURL) {
 /* Resets the image viewer back to its original state
  */
 function simple_view_reset(container) {
-	var viewer = _get_ct_viewer(container);
+	var viewer = _get_ct_viewer(QU.id(container));
 	if (viewer) viewer.reset();
 	return false;
 }
@@ -244,9 +244,9 @@ function simple_view_reset(container) {
  * used as the target size for zoomed images.
  */
 function simple_view_init_image(image) {
-	image = document.id(image);
+	image = QU.id(image);
 	if (image) {
-		var viewer = new ImgSimpleView(image.getParent(), image, null);
+		var viewer = new ImgSimpleView(image.parentNode, image, null);
 		viewer.init(false);
 		image._viewer = viewer;
 	}
@@ -255,7 +255,7 @@ function simple_view_init_image(image) {
 /* Resets the image zoom back to its original state
  */
 function simple_view_reset_image(image) {
-	var viewer = _get_ct_viewer(image);
+	var viewer = _get_ct_viewer(QU.id(image));
 	if (viewer) viewer.reset();
 	return false;
 }

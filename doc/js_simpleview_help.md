@@ -8,8 +8,7 @@ _Advantages_
 
 * Easy to implement
 * No cross-domain (same origin policy) issues
-* No web browser plugins required
-* Runs on older web browsers, including Internet Explorer 6, and older mobile devices
+* Very small library size
 * Low bandwidth displaying the initial image
 
 _Disadvantages_
@@ -18,20 +17,6 @@ _Disadvantages_
 * Every zoom creates and downloads a new image from the server, which can be slow
 * No image caching
 
-## Prerequisites
-
-The simple viewer requires the [MooTools](http://mootools.net/) library, a once-popular
-alternative to the now-ubiquitous [jQuery](http://jquery.com/). You can include MooTools
-in your web page with the HTML:
-
-	<script src="http://images.example.com/static/js/lib/mootools.min.js" type="text/javascript"></script>
-
-If you want to supply your own MooTools library, the viewer requires MooTools Core and
-MooTools More with the Element.Measure and String.QueryString components.
-
-If you use jQuery on your web site, be sure to include jQuery before including MooTools
-so that the two libraries do not conflict.
-
 ## Implementation
 
 To use the simple viewer API, first add the viewer's CSS and JavaScript files to your web page:
@@ -39,7 +24,7 @@ To use the simple viewer API, first add the viewer's CSS and JavaScript files to
 	<link href="http://images.example.com/static/styles/simple_view.css" rel="stylesheet" type="text/css">
 	
 	<script src="http://images.example.com/static/js/simple_view.min.js" type="text/javascript"></script>
-	
+
 CSS files should be included before the JavaScript, so that all CSS rules have been applied
 before the JavaScript starts to measure elements on the web page.
 

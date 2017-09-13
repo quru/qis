@@ -1,7 +1,7 @@
 # v2.6.0
-_Changes: Remove MooTools library from the public image viewers, gallery and slideshow,
-standardise JavaScript file naming,
-upgrade MooTools library to 1.6.0 (now for internal use only)_
+_Changes: Upgrade MooTools library to 1.6.0 (for internal use only),
+remove MooTools library from the public image viewers, gallery and slideshow,
+standardise JavaScript file naming, drop support for IE8 and below_
 
 This release contains 2 potentially breaking changes:
 
@@ -16,6 +16,9 @@ After upgrading to this version, run:
 
     $ export QIS_HOME=/opt/qis
     $ sudo -u qis $QIS_HOME/src/imageserver/scripts/v2.6_upgrade.sh
+
+As a result of removing the MooTools compatibility library, this release drops support
+for Internet Explorer 8 and below. IE9 should work, but is not regularly tested.
 
 # v2.5.1
 _Changes: Bug fix to Active Directory authentication_
