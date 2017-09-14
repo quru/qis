@@ -18,7 +18,6 @@ read -p "Do you need to maintain compatibility of Javascript files with earlier 
 if [[ "$RESP" == "y" ]]; then
     echo "Creating compatibility symlinks"
     ln -s canvas_view.min.js canvas_view_yc.js
-    ln -s excanvas.min.js excanvas_yc.js
     ln -s gallery_view.min.js gallery_view_yc.js
     ln -s simple_view.min.js simple_view_yc.js
     ln -s slideshow_view.min.js slideshow_view_yc.js

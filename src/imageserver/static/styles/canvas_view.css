@@ -28,7 +28,7 @@
 	text-align: center; /* centre text */
 }
 
-/* Reset inner element styles (div is for excanvas on IE) */
+/* Reset inner element styles */
 .imageviewer div,
 .imageviewer span,
 .imageviewer img, 

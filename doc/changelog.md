@@ -18,7 +18,8 @@ After upgrading to this version, run:
     $ sudo -u qis $QIS_HOME/src/imageserver/scripts/v2.6_upgrade.sh
 
 As a result of removing the MooTools compatibility library, this release drops support
-for Internet Explorer 8 and below. IE9 should work, but is not regularly tested.
+for Internet Explorer 8 and below. IE9 should work, but is not regularly tested. Also,
+since IE8 is no longer supported, the _excanvas_ library is no longer distributed.
 
 # v2.5.1
 _Changes: Bug fix to Active Directory authentication_

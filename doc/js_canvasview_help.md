@@ -23,13 +23,7 @@ so that the two libraries do not conflict.
 ### Canvas element support
 
 The HTML5 canvas element is supported in all modern web browsers, and in Microsoft Internet
-Explorer since version 9. If you want to use the canvas viewer in Internet Explorer versions
-6 to 8, you will need to include an additional library that emulates canvas support:
-
-	<!-- Provide canvas support for Internet Explorer 6, 7, 8 -->
-	<!--[if lte IE 8]>
-	<script src="http://images.example.com/static/js/excanvas.min.js" type="text/javascript"></script>
-	<![endif]-->
+Explorer since version 9.
 
 ## Implementation
 

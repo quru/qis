@@ -52,6 +52,7 @@
 	11Nov2013  Matt  Add events interface and image download function
 	01Apr2015  Matt  Move full-screen close button top-right to match gallery
 	15Jun2015  Matt  Use standardised zoom levels + grid sizes
+	14Sep2017  Matt  Remove MooTools, remove excanvas support
 */
 
 /**
@@ -76,7 +77,6 @@
  * 
  * The canvas context method scale() should be avoided unless you take the above
  * into account and handle the scale factors similarly.
- * Note though that the excanvas library for IE<9 has bugs with image scaling.
  */
 
 /**
@@ -182,7 +182,6 @@ function ImgGrid(width, height, imageURL, stripAligns,
 	this.useJSONP = useJSONP;
 	this.onInitialisedFn = onInitialisedFn;
 	this.animating = false;
-	this.excanvas = (Browser.ie && window.G_vmlCanvasManager);
 	
 	// Keep the graphics context for self-drawing
 	this.g2d = {
@@ -299,8 +298,7 @@ ImgGrid.prototype.setViewportSize = function(width, height) {
 	this.viewport.aspect = width / height;
 	
 	// Resizing the canvas clears the current translation, so restore it
-	if (!this.excanvas)
-		this.g2d.ctx.translate(this.g2d.origin.x, this.g2d.origin.y);
+	this.g2d.ctx.translate(this.g2d.origin.x, this.g2d.origin.y);
 	
 	// Resizing the canvas clears the content, so restore it
 	if (this.initialised) {
@@ -1137,8 +1135,8 @@ ImgGrid.prototype.paint = function() {
 	    drawTiles = this.getVisibleGridTiles(),
 	    fillsView = this.fillsViewport(this.grid);
 	
-	// Erase bg if it might show (or for excanvas, every frame to maintain performance)
-	if (this.excanvas || !fillsView.x || !fillsView.y)
+	// Erase bg if it might show
+	if (!fillsView.x || !fillsView.y)
 		this.clear();
 	
 	// Render all visible tiles
@@ -1330,12 +1328,8 @@ function ImgCanvasView(container, imageURL, userOpts, events) {
 			'-webkit-touch-callout': 'none'
 		}
 	});
-	// Excanvas requires the canvas in the DOM before initialising
+    // Position and size the canvas
 	this.ctrEl.grab(this.canvas);
-	// Init Excanvas support
-	if (Browser.ie && window.G_vmlCanvasManager)
-		G_vmlCanvasManager.initElement(this.canvas);
-	// Position and size the canvas
 	this.layout();
 	
 	// Get the canvas context and set drawing options
@@ -1712,7 +1706,7 @@ ImgCanvasView.prototype.createControls = function() {
 			'class': 'controltoggle panelbg',
 			'html': '&nbsp;',
 			'styles': {
-				'position': 'relative'  /* IE 7-8 - show on top of excanvas */
+				'position': 'relative'  /* IE 7-8 - show on top */
 			}
 		});
 		toggler.addEvent('mousedown', this.toggleControls.bind(this));
@@ -2266,14 +2260,11 @@ var _hcvs = null;
 
 /**** Public interface ****/
 
-/* Returns whether the browser supports the canvas element,
- * either natively or (on IE) with excanvas
+/* Returns whether the browser supports the canvas element
  */
 function haveCanvasSupport() {
 	if (_hcvs == null) {
 		var cvEl = new Element('canvas');
-		if (Browser.ie && window.G_vmlCanvasManager)
-			G_vmlCanvasManager.initElement(cvEl);
 		_hcvs = (cvEl && cvEl.getContext);
 	}
 	return _hcvs;
