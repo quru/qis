@@ -23,12 +23,7 @@
 {% block extra_head %}
 	<link rel="stylesheet" href="{{ url_for('static', filename='styles/demos.css') }}" type="text/css" />
 
-	<link rel="stylesheet" href="{{ url_for('static', filename='styles/canvas_view.css') }}" type="text/css" />
-	{% if settings.DEBUG %}
-	<script src="{{ url_for('static', filename='js/canvas_view.js') }}" type="text/javascript"></script>
-	{% else %}
-	<script src="{{ url_for('static', filename='js/canvas_view.min.js') }}" type="text/javascript"></script>
-	{% endif %}
+    {% include "canvas_view_js.html" %}
 
 	<script type="text/javascript">
 		window.addEvent('domready', function() {
