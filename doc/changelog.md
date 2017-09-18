@@ -1,25 +1,28 @@
 # v2.6.0
-_Changes: Upgrade MooTools library to 1.6.0 (for internal use only),
-remove MooTools library from the public image viewers, gallery and slideshow,
-standardise JavaScript file naming, drop support for IE8 and below_
+_Changes: Remove MooTools library from the public image viewers, gallery and slideshow.
+Upgrade MooTools library to 1.6.0, for internal use only. Standardise JavaScript file
+naming. Drop support for IE8 and below._
 
-This release contains 2 potentially breaking changes:
+This version is arguably a major release, but is expected to remain compatible in
+the majority of cases once the upgrade script has been run (see below).
+
+TODO removing JSONP
+
+This release contains these potentially breaking changes:
 
 * Minified JavaScript file names have been renamed from `foo_yc.js`
   to the more conventional format `foo.min.js`.
 * The path to the MooTools library has changed, as this library is now only used
   internally, and is no longer required or suggested for use in public-facing code.
+* Removed the _excanvas_ library (Internet Explorer 8 canvas emulation).
+* Dropped support for Internet Explorer 8 and below.
 
 For upgrading existing installations, an upgrade script has been provided to clean up
-legacy files and optionally to provide compatibility with the older JavaScript file names.
-After upgrading to this version, run:
+legacy files and optionally to provide compatibility with the older `foo_yc.js`
+JavaScript file names. After upgrading to this version, run:
 
     $ export QIS_HOME=/opt/qis
     $ sudo -u qis $QIS_HOME/src/imageserver/scripts/v2.6_upgrade.sh
-
-As a result of removing the MooTools compatibility library, this release drops support
-for Internet Explorer 8 and below. IE9 should work, but is not regularly tested. Also,
-since IE8 is no longer supported, the _excanvas_ library is no longer distributed.
 
 # v2.5.1
 _Changes: Bug fix to Active Directory authentication_
