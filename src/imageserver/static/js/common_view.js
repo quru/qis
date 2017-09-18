@@ -30,6 +30,7 @@ if (!window.QU) {
 
     // Define the QIS Utility library (QU)
     QU = {
+        version: 1,
         // Target IE9 and later
         supported: ([].forEach !== undefined) &&
                    (Object.keys !== undefined) &&
