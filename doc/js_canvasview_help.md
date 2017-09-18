@@ -5,20 +5,7 @@ It also includes an integrated control panel that allows the user to download th
 zoom in and out, read its title and description, and launch a full-screen viewing mode
 (all control panel items being optional).
 
-## Prerequisites
-
-The canvas viewer requires the [MooTools](http://mootools.net/) library, a once-popular
-alternative to the now-ubiquitous [jQuery](http://jquery.com/). You can include MooTools
-in your web page with the HTML:
-
-	<script src="http://images.example.com/static/js/lib/mootools.min.js" type="text/javascript"></script>
-
-If you want to supply your own MooTools library, the viewer requires MooTools Core and
-MooTools More with the Assets, Element.Measure, Fx.Slide, Mask, Request.JSONP, and
-String.QueryString components.
-
-If you use jQuery on your web site, be sure to include jQuery before including MooTools
-so that the two libraries do not conflict.
+TODO remove JSONP
 
 ### Canvas element support
 

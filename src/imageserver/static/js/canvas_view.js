@@ -3,8 +3,9 @@
 	Date started:  22 Aug 2011
 	By:            Matt Fozard
 	Purpose:       Quru Image Server HTML 5 viewer client
-	Requires:      MooTools Core 1.3 (no compat)
-	               MooTools More 1.3 - Assets, Element.Measure, Fx.Slide, Mask, Request.JSONP, String.QueryString
+	Requires:      common_view.js
+	               TODO delete MooTools Core 1.3 (no compat)
+	               TODO delete MooTools More 1.3 - Assets, Element.Measure, Fx.Slide, Mask, Request.JSONP, String.QueryString
 	Copyright:     Quru Ltd (www.quru.com)
 	Licence:
 
@@ -52,7 +53,7 @@
 	11Nov2013  Matt  Add events interface and image download function
 	01Apr2015  Matt  Move full-screen close button top-right to match gallery
 	15Jun2015  Matt  Use standardised zoom levels + grid sizes
-	14Sep2017  Matt  Remove MooTools, remove excanvas support
+	14Sep2017  Matt  Remove MooTools, remove excanvas (IE8) compatibility, remove JSONP
 */
 
 /**
@@ -247,9 +248,8 @@ function ImgGrid(width, height, imageURL, stripAligns,
 	};
 	
 	// Parse the opening image URL
-	imageURL = _clean_url(imageURL);
 	var urlSep = imageURL.indexOf('?');
-	this.urlParams = imageURL.substring(urlSep + 1).parseQueryString();
+	this.urlParams = QU.QueryStringToObject(imageURL.substring(urlSep + 1), false);
 	if (stripAligns) {
         delete this.urlParams.halign;
         delete this.urlParams.valign;
@@ -2213,11 +2213,6 @@ function _get_image_src(el) {
 	return null;
 }
 
-// Strips empty query string values from a URL, and converts "+"s to " "s
-function _clean_url(url) {
-	return url ? url.cleanQueryString().replace(/\+/g, ' ') : url;
-}
-
 function _img_fs_zoom_click(imgEl, options, events) {
 	// Sorry, IE6 fans
 	if (Browser.ie6)
@@ -2320,7 +2315,7 @@ function haveCanvasSupport() {
 function canvas_view_init(container, imageURL, options, events) {
 	container = document.id(container);
 	if (container) {
-		if (haveCanvasSupport()) {
+		if (haveCanvasSupport() && QU.supported) {
 			// Destroy previous viewer instance (Firefox 12 at least needs this)
 			if (container._viewer != undefined)
 				container._viewer.destroy();
