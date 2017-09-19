@@ -4,7 +4,43 @@ Most releases only require replacement application files and a restart of the
 web server, as described in the [change log](changelog.md). Occasionally however
 a more involved upgrade is required; these releases will be documented here.
 
-## v1.50 to v2.4.0
+## v2.n to v2.6
+
+This release contains a number of potentially breaking changes, though only
+users of Internet Explorer 8 and below should be affected
+(in 2017, hopefully nobody).
+
+* Minified JavaScript file names have been renamed from the quirky format
+  `foo_yc.js` to the more conventional format `foo.min.js`.
+* The path to the MooTools library has changed, as this library is now only
+  used internally, and is no longer required by client-side code.
+* Removed the _excanvas_ library (Internet Explorer 8 canvas emulation).
+* Removed the JSONP options from the image gallery and viewers.
+  Cross domain API calls now use CORS instead.
+* Dropped support for Internet Explorer 8 and below.
+
+### Upgrading
+
+For upgrading existing installations, an upgrade script has been provided to clean up
+legacy files and optionally to provide compatibility with the old `foo_yc.js`
+JavaScript file paths.
+
+Extract the latest files:
+
+    $ cd /opt/qis/
+    $ sudo -u qis tar --strip-components=1 -xvf /path/to/Quru\ Image\ Server-2.6.0.tar.gz
+
+Then run the upgrade script:
+
+    $ export QIS_HOME=/opt/qis
+    $ sudo -u qis $QIS_HOME/src/imageserver/scripts/v2.6_upgrade.sh
+
+### Apache configuration
+
+TODO Add CORS headers  
+Restart the Apache service
+
+## v1.50 to v2.4
 
 This is a major upgrade that requires database changes and a data migration.
 An upgrade script is supplied to automate this process where possible, but some
