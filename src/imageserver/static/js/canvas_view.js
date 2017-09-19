@@ -58,48 +58,48 @@
 
 /**
  * Notes on image drawing: tiling, panning and zooming.
- * 
+ *
  * The canvas context methods drawImage() and translate() will accept coordinates
  * as either integers or floats (though of course all numbers are floats in JS).
- * 
+ *
  * During a zoom, we need to simultaneously pan and stretch the grid. These operations
  * must provide floats in order to achieve a smooth and straight effect. The canvas
  * correctly handles sub-pixel operations for us, anti-aliasing and drawing sub-pixel
  * boundaries very effectively.
- * 
+ *
  * Outside of zooming, the grid and its tiles and the translate (pan) position
  * must all be integer aligned. If they are not, the canvas' sub-pixel handling
  * renders the image tiles in a blurry way. Also, due to float rounding errors,
  * half-pixel gaps are occasionally drawn in between the tiles.
- * 
+ *
  * Care has been taken to ensure that grid and tile dimensions are always calculated
  * as integers. The code should ensure that, after zooming effects have completed,
  * the grid and translate coordinates are all restored to integer values.
- * 
+ *
  * The canvas context method scale() should be avoided unless you take the above
  * into account and handle the scale factors similarly.
  */
 
 /**
  * Notes on the image request queue.
- * 
+ *
  * The need to cancel image requests arises when the user zooms in twice, quickly.
  * If several tiles were needed for display when zoom 1 completed, if they are
  * not cancelled then they will continue to load the server and stream down to us
  * even though we have since moved on to zoom 2.
- * 
+ *
  * But browsers do not provide a way of cancelling image requests (deleting img.src
  * is unpredictable), so the best way to achieve this is not to request unnecessary
  * images in the first place. Hence the addition of the queue.
- * 
+ *
  * The queue implemented here has 2 settings: the max number of images to download
  * simultaneously, and whether to rigidly enforce this limit. If not enforcing,
  * cancelPendingImages() allows new requests to download (up to the limit again)
  * even if there are outstanding old requests.
- * 
+ *
  * The optimum settings depend on the server's level of concurrency, the image sizes,
  * server cache state, and how far and how quickly the user is likely to be zooming.
- * I ran a test, zooming in quickly 4 times on a very large (and so very slow to 
+ * I ran a test, zooming in quickly 4 times on a very large (and so very slow to
  * tile) image, with an empty server cache, seeing these results to get all the
  * requested (i.e. non-cancelled) tiles downloaded:
  *   Limit 1, enforced - 51s.    Limit 1, not enforced - 2m 3s.
@@ -167,7 +167,7 @@ Math.easeOutBack = function(t, b, c, d, s) {
 	return c*((t=t/d-1)*t*((s+1)*t + s) + 1) + b;
 }
 Math.easeInOutBack = function(t, b, c, d, s) {
-	if (s == undefined) s = 1.70158; 
+	if (s == undefined) s = 1.70158;
 	if ((t/=d/2) < 1) return c/2*(t*t*(((s*=(1.525))+1)*t - s)) + b;
 	return c/2*((t-=2)*t*(((s*=(1.525))+1)*t + s) + 2) + b;
 }
@@ -177,19 +177,19 @@ Math.easeInOutBack = function(t, b, c, d, s) {
 function ImgGrid(width, height, imageURL, stripAligns,
                  context, animationType, maxTiles,
                  useJSONP, onInitialisedFn) {
-	
+
 	this.initialised = false;
 	this.destroyed = false;
 	this.useJSONP = useJSONP;
 	this.onInitialisedFn = onInitialisedFn;
 	this.animating = false;
-	
+
 	// Keep the graphics context for self-drawing
 	this.g2d = {
 		ctx: context,
 		origin: { x: 0, y: 0 }
 	};
-	
+
 	// Set the zoom animation type
 	var animFn = Math.linearTween;
 	switch (animationType.toLowerCase()) {
@@ -200,17 +200,20 @@ function ImgGrid(width, height, imageURL, stripAligns,
 		case 'out-quadratic':    animFn = Math.easeOutQuad; break;
 		case 'out-sine':         animFn = Math.easeOutSine; break;
 	}
-	
+	if (window.requestAnimationFrame)
+	    this.animate = function(fn) { window.requestAnimationFrame(fn); };
+	else
+	    this.animate = function(fn) { return setTimeout(fn, 17); };
+
 	// Track the zoom state
 	this.zoom = {
 		level: 1,
 		nextLevel: 1,
 		maxLevel: 10,
 		drawZoom: { x: 1, y: 1 }, // Only while zooming, to transition between zoom levels
-		fps: 50,
 		animateFn: animFn
 	};
-	
+
 	// Global grid options/properties
 	this.gridOpts = {
 		maxTiles:    maxTiles,
@@ -221,7 +224,7 @@ function ImgGrid(width, height, imageURL, stripAligns,
 		aspect:      1,     // Same as image aspect
 		showGrid:    false  // Testing only
 	};
-	
+
 	// Track viewport (canvas) info
 	this.viewport = {
 		origWidth:  width,
@@ -231,12 +234,12 @@ function ImgGrid(width, height, imageURL, stripAligns,
 		height:     height,
 		aspect:     width / height
 	};
-	
+
 	// Array of [zoom level]
 	this.grids = new Array();
 	// A shortcut to this.grids[this.zoom.level]
 	this.grid = null;
-	
+
 	// The image request queue
 	this.requests = {
 		queue: new Array(),
@@ -246,7 +249,7 @@ function ImgGrid(width, height, imageURL, stripAligns,
 		requested: 0,
 		showProgress: false
 	};
-	
+
 	// Parse the opening image URL
 	var urlSep = imageURL.indexOf('?');
 	this.urlParams = QU.QueryStringToObject(imageURL.substring(urlSep + 1), false);
@@ -258,7 +261,7 @@ function ImgGrid(width, height, imageURL, stripAligns,
 	urlSep = imageURL.lastIndexOf('/');
 	this.urlBase = imageURL.substring(0, urlSep + 1);
 	this.urlCommand = imageURL.substring(urlSep + 1);
-	
+
 	// Set initial view
 	this.loadingText = 'Loading image...';
 	this.drawText(this.loadingText);
@@ -278,7 +281,7 @@ ImgGrid.prototype.destroy = function() {
 ImgGrid.prototype.reset = function() {
 	if (!this.initialised || this.destroyed)
 		return;
-	
+
 	// Stop any animation and cancel outstanding image requests
 	this.animating = false;
 	this.cancelPendingImages();
@@ -296,10 +299,10 @@ ImgGrid.prototype.setViewportSize = function(width, height) {
 	this.viewport.width  = width;
 	this.viewport.height = height;
 	this.viewport.aspect = width / height;
-	
+
 	// Resizing the canvas clears the current translation, so restore it
 	this.g2d.ctx.translate(this.g2d.origin.x, this.g2d.origin.y);
-	
+
 	// Resizing the canvas clears the content, so restore it
 	if (this.initialised) {
 		// Re-draw the current zoom level
@@ -308,7 +311,7 @@ ImgGrid.prototype.setViewportSize = function(width, height) {
 		this.cancelPendingHiddenImages();
 	}
 	else if (!this.destroyed) {
-		// Re-draw the loading message 
+		// Re-draw the loading message
 		this.drawText(this.loadingText);
 		// Re-centre the (invisible) grid if we have created it
 		if (this.grids.length > 0) {
@@ -347,7 +350,7 @@ ImgGrid.prototype.onImageInfoLoaded = function(imgInfo) {
 	else {
 		var fullWidth = imgInfo.data.width,
 		    fullHeight = imgInfo.data.height;
-		
+
 		// FIRST If image is rotated, adjust the full width and height to reflect the angle
 		if (this.urlParams.angle) {
 			var absang = Math.abs(Math.parseFloat(this.urlParams.angle, 0));
@@ -368,7 +371,7 @@ ImgGrid.prototype.onImageInfoLoaded = function(imgInfo) {
 				fullHeight = Math.round(fullHeight * (bottom - top));
 			}
 		}
-		
+
 		this.imageInfo = imgInfo.data;
 		this.initialise(fullWidth, fullHeight);
 	}
@@ -386,7 +389,7 @@ ImgGrid.prototype.initialise = function(imgwidth, imgheight) {
 	this.gridOpts.maxWidth   = imgwidth;
 	this.gridOpts.maxHeight  = imgheight;
 	this.gridOpts.aspect     = imgwidth / imgheight;
-	
+
 	if (this.gridOpts.aspect >= this.viewport.origAspect) {
 		// Fit to width
 		this.gridOpts.minWidth = Math.min(imgwidth, this.viewport.origWidth);
@@ -397,7 +400,7 @@ ImgGrid.prototype.initialise = function(imgwidth, imgheight) {
 		this.gridOpts.minHeight = Math.min(imgheight, this.viewport.origHeight);
 		this.gridOpts.minWidth = Math.round(this.gridOpts.minHeight * this.gridOpts.aspect);
 	}
-	
+
 	// Work out the available zoom levels
 	for (var zl = 1; zl <= this.zoom.maxLevel; zl++) {
 		// Pre-generate the grids and tile specs
@@ -405,7 +408,7 @@ ImgGrid.prototype.initialise = function(imgwidth, imgheight) {
 		var gridSpec = this.calcGridTiles(gridSize.width, gridSize.height, gridSize.length);
 		this.grids[zl] = {
 			images:     [],              // Array of [tileNo] img DOM elements
-			grid:       gridSpec,        // Array of [tileNo] tile definition objects 
+			grid:       gridSpec,        // Array of [tileNo] tile definition objects
 			length:     gridSize.length, // Shortcut to grid.length
 			axis:       gridSize.axis,   // How many tiles per axis
 			origWidth:  gridSize.width,  // Size originally, when not zooming
@@ -414,7 +417,7 @@ ImgGrid.prototype.initialise = function(imgwidth, imgheight) {
 			height:     gridSize.height  // "
 		};
 		/* console.log('Grid z'+zl+' '+gridSize.width+'x'+gridSize.height+' axis '+gridSize.axis+', tiles '+gridSize.length); */
-		
+
 		// Check for max zoom level
 		if (gridSize.max) {
 			this.zoom.maxLevel = zl;
@@ -427,7 +430,7 @@ ImgGrid.prototype.initialise = function(imgwidth, imgheight) {
 	this.requestImage(1, 1);
 }
 
-// Return { a, b } for the closest values of a/b = ratio, where startval is the 
+// Return { a, b } for the closest values of a/b = ratio, where startval is the
 // starting value of a, and a and b are both multiples of mult,
 // and a >= minval and a <= maxval.
 ImgGrid.prototype.closestRatioMultiples = function(startval, minval, maxval, ratio, mult) {
@@ -479,15 +482,15 @@ ImgGrid.prototype.calcGridSize = function(zLevel) {
 	 *   factor = 1.8
 	 *   multiplier = Math.pow(factor, zLevel - 1)
 	 *   target width and height = nearest (tilesize * multiplier) that divides by 4/8/16.
-	 * 
+	 *
 	 * But with a fixed tilesize (v1.30.1) this evaluates to a fixed list of sizes,
 	 * so now we just define that fixed list of target sizes instead.
-	 * 
+	 *
 	 * Grid size increments must be x4, anything over 256 requires increasing the
 	 * default values for MAX_GRID_TILES and options.maxtiles. The dimension value
 	 * must be divisible by axislen and 4 so that the fallback tiles at different
 	 * zoom levels align with each other.
-	 * 
+	 *
 	 * List is [image dimension, preferred number of tiles]
 	 */
 	var gridSizes = [[500, 1], [960, 1], [1728, 16], [3120, 64], [5600, 64], [10240, 256],
@@ -527,7 +530,7 @@ ImgGrid.prototype.calcGridSize = function(zLevel) {
 		var tiles = Math.min(gridSizes[useIdx][1], this.gridOpts.maxTiles),
 		    axislen = Math.round(Math.sqrt(tiles)),
 		    max = (useIdx == (gridSizes.length - 1));
-		
+
 		// If the size is near or over the max, make it the max.
 		// The server won't supply an image larger than the original, so trying to zoom
 		// in further would generate, download and cache pointless identical tiles.
@@ -538,7 +541,7 @@ ImgGrid.prototype.calcGridSize = function(zLevel) {
 			height = this.gridOpts.maxHeight;
 			max = true;
 		}
-		
+
 		if (tiles > 1) {
 			// Re-adjust grid size to be exactly divisible by axis size (or 4)
 			// so that tile boundaries are always aligned when zooming.
@@ -548,10 +551,10 @@ ImgGrid.prototype.calcGridSize = function(zLevel) {
 			    tries    = 10,
 			    minWidth = Math.max(this.gridOpts.minWidth, width - (tries * divisor)),
 			    maxWidth = Math.min(this.gridOpts.maxWidth, width + (tries * divisor));
-			
+
 			var finalSize = this.closestRatioMultiples(
-				width, minWidth, maxWidth, 
-				this.gridOpts.aspect, 
+				width, minWidth, maxWidth,
+				this.gridOpts.aspect,
 				divisor
 			);
 			width  = finalSize.a;
@@ -597,7 +600,7 @@ ImgGrid.prototype.calcGridTiles = function(width, height, gridLen) {
 			// Tile size (adjust for inexact division if a right/bottom tile)
 			var tw = (tileXY.x == (iGridAxisLen - 1)) ? (iTileWidth + iTileWidthExtra) : iTileWidth,
 			    th = (tileXY.y == (iGridAxisLen - 1)) ? (iTileHeight + iTileHeightExtra) : iTileHeight;
-			
+
 			ret[i] = {
 				tile: i, x1: tx, y1: ty, x2: (tx + tw - 1), y2: (ty + th - 1),
 				width: tw, height: th
@@ -613,14 +616,14 @@ ImgGrid.prototype.setGrid = function(zLevel, repaint) {
 	this.grid = this.grids[zLevel];
 	this.grid.width = this.grid.origWidth;
 	this.grid.height = this.grid.origHeight;
-	
+
 	// Auto-centre the grid if we should
 	var fillsView = this.fillsViewport(this.grid);
 	this.centreGrid(!fillsView.x, !fillsView.y, false);
-	
+
 	// Properly align the grid to integer boundaries
 	this.alignGrid(false);
-	
+
 	if (repaint)
 		this.paint();
 }
@@ -640,9 +643,9 @@ ImgGrid.prototype.getVisibleGridTiles = function() {
 		// See which tiles are visible in viewport
 		for (var i = 1; i <= this.grid.length; i++) {
 			var tileSpec = this.grid.grid[i];
-			var tileOutside = ((tileSpec.x1 * this.zoom.drawZoom.x) > vpx2 || 
-			                   (tileSpec.x2 * this.zoom.drawZoom.x) < vpx1 || 
-			                   (tileSpec.y1 * this.zoom.drawZoom.y) > vpy2 || 
+			var tileOutside = ((tileSpec.x1 * this.zoom.drawZoom.x) > vpx2 ||
+			                   (tileSpec.x2 * this.zoom.drawZoom.x) < vpx1 ||
+			                   (tileSpec.y1 * this.zoom.drawZoom.y) > vpy2 ||
 			                   (tileSpec.y2 * this.zoom.drawZoom.y) < vpy1);
 			if (!tileOutside)
 				ret[ret.length] = i;
@@ -672,7 +675,7 @@ ImgGrid.prototype.xyToTile = function(x, y, gridAxis) {
 ImgGrid.prototype.getFallbackTile = function(tileNo, tileSpec) {
 	var startLevel = this.zoom.level,
 	    tryLevel  = startLevel;
-	
+
 	// Get current 0-based X,Y coords for required tile
 	// and its normalised position and size
 	var tileXY = this.tileToXY(tileNo, this.grid.axis),
@@ -680,7 +683,7 @@ ImgGrid.prototype.getFallbackTile = function(tileNo, tileSpec) {
 	    rY = tileSpec.y1 / this.grid.origHeight,
 	    rW = tileSpec.width / this.grid.origWidth,
 	    rH = tileSpec.height / this.grid.origHeight;
-	
+
 	// Search all grids (always completes so long as this.initialised)
 	while (--tryLevel >= 1) {
 		var tryGrid = this.grids[tryLevel],
@@ -701,7 +704,7 @@ ImgGrid.prototype.getFallbackTile = function(tileNo, tileSpec) {
 			    srcy = Math.limit(Math.round((rY - rDY) * tryGrid.origHeight), 0, donor.height - 1),
 			    srcw = Math.limit(Math.round(rW * tryGrid.origWidth), 1, donor.width - srcx),
 			    srch = Math.limit(Math.round(rH * tryGrid.origHeight), 1, donor.height - srcy);
-			
+
 			/* console.log('Fallback for z'+this.zoom.level+' tile '+tileNo+' is z'+tryLevel+' tile '+wantTileNo+' from '+srcx+','+srcy+' w'+srcw+' h'+srch); */
 			return { img: donor, srcx: srcx, srcy: srcy, srcw: srcw, srch: srch };
 		}
@@ -726,8 +729,8 @@ ImgGrid.prototype.getImageURL = function(zLevel, tileNo) {
 		this.urlParams.tile = tileNo+':'+this.grids[zLevel].length;
 	else
 		delete this.urlParams.tile;
-	
-	return this.urlBase + this.urlCommand + '?' + Object.toQueryString(this.urlParams);
+
+	return this.urlBase + this.urlCommand + '?' + QU.ObjectToQueryString(this.urlParams);
 }
 
 // Returns the zoom level for the image to best fit the viewport.
@@ -803,11 +806,12 @@ ImgGrid.prototype.pollImageQueue = function() {
 		// Remove top request from the queue
 		var req = this.requests.queue.splice(0, 1)[0];
 		// Create image element to load it from the server
-		this.grids[req.zLevel].images[req.tileNo] = Asset.image(req.url, {
-			onLoad: req.onLoad,
-			onAbort: req.onAbort,
-			onError: req.onError
-		});
+		var imgEl = document.createElement('img');
+		imgEl.onload = req.onLoad;
+		imgEl.onabort = req.onAbort;
+		imgEl.onerror = req.onError;
+		imgEl.src = req.url;
+        this.grids[req.zLevel].images[req.tileNo] = imgEl;
 	}
 	// Reset progress count when nothing left
 	if ((this.requests.queue.length == 0) && (this.requests.active == 0)) {
@@ -822,14 +826,14 @@ ImgGrid.prototype.onImageLoaded = function(zLevel, tileNo) {
 	// Mark image as loaded
 	var imgEl = this.grids[zLevel].images[tileNo];
 	imgEl._loaded = true;
-	
+
 	// Set us as initialised on receipt of first image
 	if (!this.initialised && (zLevel == 1)) {
 		this.initialised = true;
 		if (this.onInitialisedFn)
 			setTimeout(function() { this.onInitialisedFn(this.imageInfo); }.bind(this), 1);
 	}
-	
+
 	// Draw the image if we were waiting for it
 	if ((zLevel == this.zoom.level) && !this.animating)
 		this.paint();
@@ -849,7 +853,7 @@ ImgGrid.prototype.cancelPendingHiddenImages = function() {
 	}
 }
 
-// Cancels all pending image/tile requests 
+// Cancels all pending image/tile requests
 ImgGrid.prototype.cancelPendingImages = function() {
 	this.requests.queue.empty();
 	// Control whether we allow the next request to load (usually the first tile at
@@ -870,7 +874,7 @@ ImgGrid.prototype.fillsViewport = function(obj) {
 	};
 }
 
-// Shifts the graphics context in 2D space to centre the current 
+// Shifts the graphics context in 2D space to centre the current
 // grid vertically and/or horizontally, in the viewport.
 // Note: changes the translate position to be fractional.
 ImgGrid.prototype.centreGrid = function(horizontal, vertical, repaint) {
@@ -879,12 +883,12 @@ ImgGrid.prototype.centreGrid = function(horizontal, vertical, repaint) {
 	var dx = horizontal ? (x - this.g2d.origin.x) : 0,
 	    dy = vertical ? (y - this.g2d.origin.y) : 0;
 
-	if ((dx != 0) || (dy != 0)) {		
+	if ((dx != 0) || (dy != 0)) {
 		this.g2d.ctx.translate(dx, dy);
 		this.g2d.origin.x += dx;
 		this.g2d.origin.y += dy;
 	}
-	
+
 	if (repaint)
 		this.paint();
 }
@@ -896,7 +900,7 @@ ImgGrid.prototype.centreGrid = function(horizontal, vertical, repaint) {
 ImgGrid.prototype.panGrid = function(dx, dy, constrain_h, constrain_v) {
 	if (!this.initialised)
 		return false;
-	
+
 	if (constrain_h || constrain_v) {
 		if (constrain_h && (this.grid.width >= this.viewport.width)) {
 			if (this.g2d.origin.x + dx > 0)
@@ -908,7 +912,7 @@ ImgGrid.prototype.panGrid = function(dx, dy, constrain_h, constrain_v) {
 		}
 		else
 			dx = 0; // width smaller than canvas, prevent panning
-		
+
 		if (constrain_v && (this.grid.height >= this.viewport.height)) {
 			if (this.g2d.origin.y + dy > 0)
 				// prevent top img edge showing
@@ -920,7 +924,7 @@ ImgGrid.prototype.panGrid = function(dx, dy, constrain_h, constrain_v) {
 		else
 			dy = 0; // height smaller than canvas, prevent panning
 	}
-	
+
 	if ((dx != 0) || (dy != 0)) {
 		// Pan
 		this.g2d.ctx.translate(dx, dy);
@@ -936,22 +940,20 @@ ImgGrid.prototype.panGrid = function(dx, dy, constrain_h, constrain_v) {
 ImgGrid.prototype.autoPanGrid = function(dx, dy) {
 	if (!this.initialised || this.animating)
 		return;
-	
+
 	// Check that we can pan
 	if ((this.grid.width <= this.viewport.width) &&
 	    (this.grid.height <= this.viewport.height))
 		return;
-	
+
 	// If grid should be auto-centered, only allow pan in one direction
 	var fillsView = this.fillsViewport(this.grid);
 	if (!fillsView.x) dx = 0;
 	if (!fillsView.y) dy = 0;
-	
+
 	// Start animated zoom to new size
 	this.animating = true;
-	setTimeout(function() {
-		this.animatePan(1, 20, dx, dy, Math.easeOutQuad, this.zoom.fps);
-	}.bind(this), 1);
+	this.animate(function() { this.animatePan(1, 20, dx, dy, Math.easeOutQuad); }.bind(this));
 }
 
 // Shifts the graphics context in 2D space to remove any fractional alignment
@@ -964,7 +966,7 @@ ImgGrid.prototype.alignGrid = function(repaint) {
 		this.g2d.origin.x = Math.round(this.g2d.origin.x);
 		this.g2d.origin.y = Math.round(this.g2d.origin.y);
 	}
-	
+
 	if (repaint)
 		this.paint();
 }
@@ -973,7 +975,7 @@ ImgGrid.prototype.alignGrid = function(repaint) {
 ImgGrid.prototype.zoomFit = function() {
 	if (!this.initialised || this.animating)
 		return;
-	
+
 	var toLevel = this.getBestFitLevel(),
 	    dLevel  = toLevel - this.zoom.level;
 
@@ -985,7 +987,7 @@ ImgGrid.prototype.zoomFit = function() {
 ImgGrid.prototype.zoomGrid = function(delta, zoomCentre) {
 	if (!this.initialised || this.animating)
 		return;
-	
+
 	var newLevel = Math.limit(this.zoom.level + delta, 1, this.zoom.maxLevel);
 	if (newLevel != this.zoom.level) {
 		// Abandon requests for outstanding tiles
@@ -998,28 +1000,27 @@ ImgGrid.prototype.zoomGrid = function(delta, zoomCentre) {
 		};
 		// Start animated zoom to new size
 		this.animating = true;
-		setTimeout(function() {
+		this.animate(function() {
 			this.animateZoom(1, 20,
-				this.grid.width, 
-				this.grid.height, 
+				this.grid.width,
+				this.grid.height,
 				targetSize.width - this.grid.width,
 				targetSize.height - this.grid.height,
 				(targetSize.width / targetSize.height) - (this.grid.width / this.grid.height),
 				zoomCentre,
-				this.zoom.animateFn,
-				this.zoom.fps
+				this.zoom.animateFn
 			);
-		}.bind(this), 1);
+		}.bind(this));
 	}
 }
 
 // Zoom animation routine, invoked for every frame
 ImgGrid.prototype.animateZoom = function(frame, frames, startWidth, startHeight,
-                  changeWidth, changeHeight, changeAspect, centrePoint, easeFn, fps) {
+                  changeWidth, changeHeight, changeAspect, centrePoint, easeFn) {
 	// Check for reset
 	if (!this.animating)
 		return;
-	
+
 	// Get the numbers
 	var prevWidth  = this.grid.width,
 	    prevHeight = this.grid.height,
@@ -1027,13 +1028,13 @@ ImgGrid.prototype.animateZoom = function(frame, frames, startWidth, startHeight,
 	    newHeight  = easeFn(frame, startHeight, changeHeight, frames),
 	    dw         = newWidth - prevWidth,
 	    dh         = newHeight - prevHeight;
-	
+
 	// Set zoom vars
 	this.grid.width = newWidth;
 	this.grid.height = newHeight;
 	this.zoom.drawZoom.x = newWidth / startWidth;
 	this.zoom.drawZoom.y = newHeight / startHeight;
-	
+
 	// Draw zoom
 	var fillsView = this.fillsViewport(this.grid);
 	if (!fillsView.x && !fillsView.y) {
@@ -1055,13 +1056,13 @@ ImgGrid.prototype.animateZoom = function(frame, frames, startWidth, startHeight,
 		if (!this.panGrid(-(dw * centrePoint.x), -(dh * centrePoint.y), true, true))
 			this.paint();
 	}
-	
+
 	// Continue/finish animation
 	if (++frame <= frames) {
-		setTimeout(function() {
+		this.animate(function() {
 			this.animateZoom(frame, frames, startWidth, startHeight,
-			     changeWidth, changeHeight, changeAspect, centrePoint, easeFn, fps);
-		}.bind(this), (1000 / fps));
+			     changeWidth, changeHeight, changeAspect, centrePoint, easeFn);
+		}.bind(this));
 		return;
 	}
 	this.onAnimateZoomComplete();
@@ -1079,20 +1080,18 @@ ImgGrid.prototype.onAnimateZoomComplete = function() {
 }
 
 // Pan animation routine, invoked for every frame
-ImgGrid.prototype.animatePan = function(frame, frames, dx, dy, easeFn, fps) {
+ImgGrid.prototype.animatePan = function(frame, frames, dx, dy, easeFn) {
 	// Check for reset
 	if (!this.animating)
 		return;
-	
+
 	var panx = easeFn(frame, 0, dx, frames),
 	    pany = easeFn(frame, 0, dy, frames);
 
 	if (this.panGrid(dx - panx, dy - pany, true, true)) {
 		// Continue/finish animation
 		if (++frame <= frames) {
-			setTimeout(function() {
-				this.animatePan(frame, frames, dx, dy, easeFn, fps);
-			}.bind(this), (1000 / fps));
+			this.animate(function() { this.animatePan(frame, frames, dx, dy, easeFn); }.bind(this));
 			return;
 		}
 	}
@@ -1134,23 +1133,23 @@ ImgGrid.prototype.paint = function() {
 	var needTiles = [], i = 0,
 	    drawTiles = this.getVisibleGridTiles(),
 	    fillsView = this.fillsViewport(this.grid);
-	
+
 	// Erase bg if it might show
 	if (!fillsView.x || !fillsView.y)
 		this.clear();
-	
+
 	// Render all visible tiles
 	for (i = 0; i < drawTiles.length; i++) {
 		var tileSpec = this.grid.grid[drawTiles[i]],
 		    tileImg  = this.grid.images[drawTiles[i]],
 		    offs = (this.zoom.drawZoom.x < 1 ? 0.5 : 0);
-		
+
 		if ((tileImg != undefined) && tileImg._loaded) {
 			// We have the tile image
-			this.g2d.ctx.drawImage(tileImg, 
-				tileSpec.x1 * this.zoom.drawZoom.x, 
-				tileSpec.y1 * this.zoom.drawZoom.y, 
-				tileSpec.width * this.zoom.drawZoom.x + offs, 
+			this.g2d.ctx.drawImage(tileImg,
+				tileSpec.x1 * this.zoom.drawZoom.x,
+				tileSpec.y1 * this.zoom.drawZoom.y,
+				tileSpec.width * this.zoom.drawZoom.x + offs,
 				tileSpec.height * this.zoom.drawZoom.y + offs
 			);
 		}
@@ -1160,7 +1159,7 @@ ImgGrid.prototype.paint = function() {
 				needTiles[needTiles.length] = drawTiles[i];
 			// Draw a temporary tile from our best base image
 			tileImg = this.getFallbackTile(drawTiles[i], tileSpec);
-			this.g2d.ctx.drawImage(tileImg.img, 
+			this.g2d.ctx.drawImage(tileImg.img,
 				tileImg.srcx,
 				tileImg.srcy,
 				tileImg.srcw,
@@ -1172,7 +1171,7 @@ ImgGrid.prototype.paint = function() {
 			);
 		}
 	}
-	
+
 	// Now that grid drawing is complete, request any missing tiles.
 	// But don't bother if we're on our way to a new zoom level (the animation
 	// might stutter, and we might need different tiles at the new zoom level).
@@ -1180,11 +1179,11 @@ ImgGrid.prototype.paint = function() {
 		for (i = 0; i < needTiles.length; i++)
 			this.requestImage(this.zoom.level, needTiles[i]);
 	}
-	
+
 	// Grid test mode
 	if (this.gridOpts.showGrid)
 		this.paintgrid();
-	
+
 	// Show loading status
 	if ((this.requests.requested > 0) && this.requests.showProgress)
 		this.paintprogress();
@@ -1233,14 +1232,13 @@ ImgGrid.prototype.paintgrid = function() {
 		ctx.lineTo(tileSpec.x2 * this.zoom.drawZoom.x, tileSpec.y1 * this.zoom.drawZoom.y);
 		ctx.stroke();
 		ctx.fillText(
-			''+i, 
-			(tileSpec.x1 * this.zoom.drawZoom.x) + (tileSpec.width * this.zoom.drawZoom.x / 2), 
+			''+i,
+			(tileSpec.x1 * this.zoom.drawZoom.x) + (tileSpec.width * this.zoom.drawZoom.x / 2),
 			(tileSpec.y1 * this.zoom.drawZoom.y) + (tileSpec.height * this.zoom.drawZoom.y / 2)
 		);
 	}
 	ctx.restore();
 }
-
 
 /**** UI handler class ****/
 
@@ -1273,9 +1271,9 @@ function ImgCanvasView(container, imageURL, userOpts, events) {
 	if (userOpts) {
 		this.options = Object.merge(this.options, userOpts);
 	}
-	
+
 	this.events = events;
-	
+
 	// Track UI state
 	this.uiAttrs = {
 		controlsSlider: null,
@@ -1289,7 +1287,7 @@ function ImgCanvasView(container, imageURL, userOpts, events) {
 		fullResizeFn: null,
 		animating: false
 	};
-	
+
 	// Track mouse movements
 	this.mouseAttrs = {
 		down: false,
@@ -1304,16 +1302,16 @@ function ImgCanvasView(container, imageURL, userOpts, events) {
 		last1: { x: 0, y: 0 },
 		last2: { x: 0, y: 0 }
 	};
-	
+
 	// Image data (see onContentReady)
 	this.imageInfo = null;
-	
+
 	// Get container element
 	this.ctrEl = document.id(container);
 	// Clear container of placeholder or previous content
 	this.ctrEl.empty();
 	this.ctrEl.addClass('imageviewer');
-	
+
 	// Create our canvas element
 	this.canvas = new Element('canvas', {
 		width: 1,
@@ -1331,7 +1329,7 @@ function ImgCanvasView(container, imageURL, userOpts, events) {
     // Position and size the canvas
 	this.ctrEl.grab(this.canvas);
 	this.layout();
-	
+
 	// Get the canvas context and set drawing options
 	this.canvasContext = this.canvas.getContext('2d');
 	if (!this.options.quality) {
@@ -1340,7 +1338,7 @@ function ImgCanvasView(container, imageURL, userOpts, events) {
 		if (context.mozImageSmoothingEnabled != undefined)
 			context.mozImageSmoothingEnabled = false;
 	}
-	
+
 	// Create the image grid which will be the canvas content
 	this.content = new ImgGrid(
 		this.canvas.width, this.canvas.height,
@@ -1350,7 +1348,7 @@ function ImgCanvasView(container, imageURL, userOpts, events) {
 		this.options.jsonp,
 		function(info) { this.onContentReady(info); }.bind(this)
 	);
-	
+
 	// Get the parsed image src for our events
 	this.imageSrc = this.content.urlParams.src;
 	this.imageServer = this.content.urlBase;
@@ -1373,7 +1371,7 @@ ImgCanvasView.prototype.destroy = function() {
 ImgCanvasView.prototype.init = function() {
 	// Set UI handlers
 	this.canvas.removeEvents();
-	
+
 	// Note some browsers report touch events even on non-touch devices. No known workaround.
 	if ('ontouchstart' in window && window.Touch) {
 		// Map touch events to mouse events
@@ -1389,7 +1387,7 @@ ImgCanvasView.prototype.init = function() {
 		this.canvas.addEvent('mouseup',    function(e) { this.onMouseUp(e); }.bind(this));
 		this.canvas.addEvent('mouseleave', function(e) { this.onMouseUp(e); }.bind(this));
 	}
-	
+
 	// Prevent shift-click selecting and highlighting things in IE
 	// (the canvas' user-select styles cover WebKit and Gecko)
 	this.canvas.addEvent('selectstart', function(e) { return false; });
@@ -1400,13 +1398,13 @@ ImgCanvasView.prototype.init = function() {
 ImgCanvasView.prototype.layout = function() {
 	if (!this.canvas)
 		return;
-	
+
 	// Get container x,y and outer dimensions (incl. borders)
 	this.ctrOuterPos = this.ctrEl.getCoordinates();
-	
+
 	// Get container usable inner dimensions (i.e. after padding)
 	this.ctrInnerPos = this.ctrEl.getComputedSize();
-	
+
 	// Best guess fallbacks if getComputedSize failed
 	if ((this.ctrInnerPos.width == 0) && (this.ctrInnerPos.height == 0))
 		this.ctrInnerPos = { width: this.ctrEl.clientWidth, height: this.ctrEl.clientHeight };
@@ -1414,7 +1412,7 @@ ImgCanvasView.prototype.layout = function() {
 		this.ctrInnerPos.computedTop = Math.round((this.ctrOuterPos.height - this.ctrInnerPos.height) / 2);
 	if (this.ctrInnerPos.computedLeft == undefined) // left border + left padding
 		this.ctrInnerPos.computedLeft = Math.round((this.ctrOuterPos.width - this.ctrInnerPos.width) / 2);
-	
+
 	// Apply canvas size
 	this.canvas.width = this.ctrInnerPos.width;
 	this.canvas.height = this.ctrInnerPos.height;
@@ -1473,7 +1471,7 @@ ImgCanvasView.prototype.onMouseUp = function(e) {
 	if (this.mouseAttrs.down) {
 		this.mouseAttrs.down = false;
 		this.canvas.removeClass('panning');
-		
+
 		// When full screen, whether to pass clicks made within the canvas but
 		// outside the image through to the mask. Only really makes sense when
 		// the full screen mode canvas background colour is transparent.
@@ -1484,7 +1482,7 @@ ImgCanvasView.prototype.onMouseUp = function(e) {
 				return;
 			}
 		}
-		
+
 		// Do not zoom until we have an image and are not busy
 		if (this.content && this.content.initialised && !this.content.animating) {
 			// Animate a zoom if this was just a click (the animation is async)
@@ -1544,7 +1542,7 @@ ImgCanvasView.prototype.onTouchMove = function(e) {
 			if (trigger) {
 				var zEvent = {
 					page: {
-						x: Math.round(this.touchAttrs.last1.x + ((this.touchAttrs.last2.x - this.touchAttrs.last1.x) / 2)), 
+						x: Math.round(this.touchAttrs.last1.x + ((this.touchAttrs.last2.x - this.touchAttrs.last1.x) / 2)),
 						y: Math.round(this.touchAttrs.last1.y + ((this.touchAttrs.last2.y - this.touchAttrs.last1.y) / 2))
 					},
 					rightClick: false,
@@ -1568,7 +1566,7 @@ ImgCanvasView.prototype.onTouchMove = function(e) {
 
 ImgCanvasView.prototype.onTouchEnd = function(e) {
 	e.preventDefault();
-	this.onMouseUp({ 
+	this.onMouseUp({
 		page: { x: e.changedTouches[0].pageX, y: e.changedTouches[0].pageY },
 		shift: false
 	});
@@ -1576,7 +1574,7 @@ ImgCanvasView.prototype.onTouchEnd = function(e) {
 }
 
 ImgCanvasView.prototype.onTouchCancel = function(e) {
-	this.onMouseUp({ 
+	this.onMouseUp({
 		page: { x: e.changedTouches[0].pageX, y: e.changedTouches[0].pageY },
 		shift: false
 	});
@@ -1623,7 +1621,7 @@ ImgCanvasView.prototype.autoZoomFit = function() {
 ImgCanvasView.prototype.autoZoom = function(zoomIn) {
 	var zEvent = {
 		page: {
-			x: Math.round(this.ctrOuterPos.left + this.ctrInnerPos.computedLeft + (this.canvas.width / 2)), 
+			x: Math.round(this.ctrOuterPos.left + this.ctrInnerPos.computedLeft + (this.canvas.width / 2)),
 			y: Math.round(this.ctrOuterPos.top + this.ctrInnerPos.computedTop + (this.canvas.height / 2))
 		},
 		rightClick: false,
@@ -1712,7 +1710,7 @@ ImgCanvasView.prototype.createControls = function() {
 		toggler.addEvent('mousedown', this.toggleControls.bind(this));
 		this.ctrEl.grab(toggler);
 	}
-	
+
 	// Create container elements for the control panel.
 	// Outer panel is full-width transparent container that implements the show/hide toggle.
 	var panel_outer = new Element('div', {
@@ -1741,7 +1739,7 @@ ImgCanvasView.prototype.createControls = function() {
 		}
 	});
 	panel_outer.grab(panel_inner);
-	
+
 	// Create and configure the control panel buttons.
 	// The nbsps are required to persuade IE to draw something.
 
@@ -1760,15 +1758,15 @@ ImgCanvasView.prototype.createControls = function() {
 		});
 		btnDownload.addEvent('mousedown', this.downloadImage.bind(this));
 		panel_inner.grab(btnDownload);
-		
-		var separator = new Element('span', { 
+
+		var separator = new Element('span', {
 			'class': 'separator',
 			'html': '&nbsp;'
 		});
 		panel_inner.grab(separator);
 	}
 	if (this.options.controls.help) {
-		var btnHelp = new Element('span', { 
+		var btnHelp = new Element('span', {
 			'class': 'icon help',
 			'title': 'Help',
 			'html': '&nbsp;'
@@ -1777,7 +1775,7 @@ ImgCanvasView.prototype.createControls = function() {
 		panel_inner.grab(btnHelp);
 	}
 	if (this.options.controls.reset) {
-		var btnReset = new Element('span', { 
+		var btnReset = new Element('span', {
 			'class': 'icon reset',
 			'title': 'Reset zoom',
 			'html': '&nbsp;'
@@ -1795,16 +1793,16 @@ ImgCanvasView.prototype.createControls = function() {
 		panel_inner.grab(btnZin);
 	}
 	if (this.options.controls.zoomout) {
-		var btnZout  = new Element('span', { 
+		var btnZout  = new Element('span', {
 			'class': 'icon zoomout',
 			'title': 'Zoom out',
 			'html': '&nbsp;'
 		});
-		btnZout.addEvent('mousedown',  function() { this.autoZoom(false); }.bind(this));	
+		btnZout.addEvent('mousedown',  function() { this.autoZoom(false); }.bind(this));
 		panel_inner.grab(btnZout);
 	}
 	if (this.options.controls.fullscreen) {
-		var btnFull  = new Element('span', { 
+		var btnFull  = new Element('span', {
 			'class': 'icon fulltoggle',
 			'title': 'Toggle full screen mode',
 			'html': '&nbsp;'
@@ -1812,17 +1810,17 @@ ImgCanvasView.prototype.createControls = function() {
 		btnFull.addEvent('mousedown',  this.toggleFullscreen.bind(this));
 		panel_inner.grab(btnFull);
 	}
-	
+
 	// Add panel to the DOM
 	this.controlpanel = panel_outer;
 	this.ctrEl.grab(this.controlpanel);
-	
+
 	// Set rollovers ($$ only works once elements are in the DOM)
 	this.controlpanel.getElements('.icon').each(function(el) {
 		el.addEvent('mouseover', function() { el.addClass('rollover'); });
 		el.addEvent('mouseout',  function() { el.removeClass('rollover'); });
 	});
-	
+
 	// Create control panel animator
 	if (this.options.showcontrols == 'auto') {
 		this.uiAttrs.controlsSlider = new Fx.Slide(panel_outer, {
@@ -1858,7 +1856,7 @@ ImgCanvasView.prototype.refreshZoomControls = function() {
 		    canZoomIn = (this.content.zoom.nextLevel < this.content.zoom.maxLevel),
 		    canZoomOut = (this.content.zoom.nextLevel > 1),
 		    canReset = canZoomOut;
-		
+
 		if (zin) canZoomIn ? zin.removeClass('disabled') : zin.addClass('disabled');
 		if (zout) canZoomOut ? zout.removeClass('disabled') : zout.addClass('disabled');
 		if (zreset) canReset ? zreset.removeClass('disabled') : zreset.addClass('disabled');
@@ -1934,7 +1932,7 @@ ImgCanvasView.prototype.toggleAlert = function(text) {
 		// Support \r\n or \n in the text (use &#10; or &#xA; in HTML attributes)
 		text = text.replace(/\r\n?/g, '\n');
 		text = text.replace(/\n/g, '<br/>');
-		
+
 		this.uiAttrs.alertEl = new Element('div', {
 			styles: {
 				position: 'absolute',
@@ -2034,7 +2032,7 @@ ImgCanvasView.prototype.toggleFullscreen = function() {
 		this.uiAttrs.fullKeydownFn = function(e) { this.fullscreenKeydown(e); }.bind(this);
 		this.uiAttrs.fullResizeFn = function(e) { this.fullscreenResize(); }.bind(this);
 	}
-	
+
 	if (this.uiAttrs.fullScreen) {
 		// Fade out container
 		this.uiAttrs.animating = true;
@@ -2064,10 +2062,10 @@ ImgCanvasView.prototype.toggleFullscreen = function() {
 				this.clearRollovers();
 				// Auto zoom out
 				this.reset();
-				
+
 				this.uiAttrs.animating = false;
 				this.uiAttrs.fullScreen = false;
-				
+
 				// Fire fullscreen event
 				if (this.events)
 					_fire_event(this.events.onfullscreen, this, [this.imageSrc, false]);
@@ -2129,9 +2127,9 @@ ImgCanvasView.prototype.toggleFullscreen = function() {
 			duration: 500,
 			onComplete: this.autoZoomFit.bind(this) // Auto-fit after fade in (see also onContentReady)
 		}).start('opacity', 0, 1);
-		
+
 		this.uiAttrs.fullScreen = true;
-		
+
 		// Fire fullscreen event
 		if (this.events)
 			_fire_event(this.events.onfullscreen, this, [this.imageSrc, true]);
@@ -2217,12 +2215,12 @@ function _img_fs_zoom_click(imgEl, options, events) {
 	// Sorry, IE6 fans
 	if (Browser.ie6)
 		return;
-	
+
 	// Get image src or element background image
 	var imageURL = _get_image_src(imgEl);
 	if (!imageURL)
 		return;
-	
+
 	// Create a hidden div to house the ImgCanvasView
 	var hiddenEl = document.id('_img_fs_zoom_click_el');
 	if (!hiddenEl) {
@@ -2269,15 +2267,15 @@ function haveCanvasSupport() {
  * URL 'imageURL' inside the element or element with ID 'container'.
  * The 'options' parameter is optional, and all options within it are also optional.
  * The 'events' parameter is optional, and all event callbacks are also optional.
- * 
+ *
  * Available options:
- * 
+ *
  * title - Overrides the image title in the control panel. Defaults to the image's assigned title.
  * description - Overrides the image description. Defaults to the image's assigned description.
  * showcontrols - Whether the control panel is displayed. One value from: 'yes', 'no', 'auto'.
  *                Default 'auto'.
  * quality - A boolean determining whether images are smoothed or not during zooming. Default true.
- * animation - The type of zoom animation. One value from: 'linear', 'in-out-back', 'in-out-quadratic', 
+ * animation - The type of zoom animation. One value from: 'linear', 'in-out-back', 'in-out-quadratic',
  *             'in-out-sine', 'out-back', 'out-quadratic', 'out-sine'. Default 'out-quadratic'.
  * maxtiles - The maximum number of tiles to create when zooming in, or 1 to disable tiling (at maximum
  *            zoom the full image will be downloaded). Must be: 1, 4, 16, 64, or 256. Default 256.
@@ -2290,18 +2288,18 @@ function haveCanvasSupport() {
  * jsonp - A boolean determining whether the JSONP method is used to load image information
  *         (instead of standard AJAX/XHR). This option is less secure, but is required if
  *         your image server has a different host name to your web server. Default true.
- * 
+ *
  * E.g. { showcontrols: 'yes', quality: true, animation: 'in-out-back' }
  * E.g. { showcontrols: 'auto', controls: { help: false, reset: false } }
- * 
+ *
  * Available events:
- * 
+ *
  * onload       - function(src) - fires when the initial image is displayed
  * oninfo       - function(src) - fires when the user views the image description
  * ondownload   - function(src) - fires when the full image download is invoked
  * onfullscreen - function(src, boolean) - fires when the view enters (boolean true)
  *                                            or leaves (boolean false) full-screen mode
- * 
+ *
  * E.g. {
  *        onload: function(src) {
  *          alert('Image ' + src + ' is now loaded');
