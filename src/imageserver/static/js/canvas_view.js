@@ -1259,7 +1259,7 @@ function ImgCanvasView(container, imageURL, userOpts, events) {
 			title: true,
 			help: true,
 			reset: true,
-			fullscreen: !Browser.ie6, // Sorry, IE6 fans
+			fullscreen: true,
 			zoomin: true,
 			zoomout: true
 		},
@@ -2014,9 +2014,6 @@ ImgCanvasView.prototype.toggleImageInfo = function() {
 
 // Toggles full screen mode
 ImgCanvasView.prototype.toggleFullscreen = function() {
-	// Sorry, IE6 fans
-	if (Browser.ie6)
-		return;
 	// Ignore double-clicks (only affects fade-out)
 	if (this.uiAttrs.animating)
 		return;
@@ -2165,6 +2162,7 @@ ImgCanvasView.prototype.fullscreenGetCoords = function() {
 
 // Full-screen mode keydown event handler
 ImgCanvasView.prototype.fullscreenKeydown = function(e) {
+    var code = (e.which || e.keyCode);
 	if (e.code == 27) {
 		// Close async because we don't want to be in here when this handler gets removed
 		setTimeout(this.toggleFullscreen.bind(this), 1);
@@ -2176,17 +2174,15 @@ ImgCanvasView.prototype.fullscreenResize = function() {
 	// The mask resizes itself.
 	// We must resize the viewer container.
 	var fsCoords = this.fullscreenGetCoords();
-	this.ctrEl.setStyles({
-		left: fsCoords.left + 'px',
-		top: fsCoords.top + 'px',
-		width: fsCoords.width + 'px',
-		height: fsCoords.height + 'px'
-	});
+	this.ctrEl.style.left = fsCoords.left + 'px';
+	this.ctrEl.style.top = fsCoords.top + 'px';
+	this.ctrEl.style.width = fsCoords.width + 'px';
+	this.ctrEl.style.height = fsCoords.height + 'px';
 	this.layout();
 }
 
 function _fire_event(fn, thisArg, argList) {
-	if (fn && typeof(fn) === 'function') {
+	if (fn && typeof fn === 'function') {
 		setTimeout(function() {
 			fn.apply(this, argList);
 		}.bind(thisArg), 1);
@@ -2199,8 +2195,8 @@ function _get_image_src(el) {
 	if (el.src)
 		return el.src;
 	// Try for a CSS background image
-	var bgimg = el.getStyle('background-image');
-	// Expecting url(...), url('...'), or url("...")
+	var bgimg = el.style.backgroundImage;
+	// Handle url(...), url('...'), or url("...")
 	if (bgimg && (bgimg.length > 5) && (bgimg.indexOf('url(') === 0)) {
 		bgimg = bgimg.substring(4);
 		if ((bgimg.charAt(0) == '\'') || (bgimg.charAt(0) == '"'))
@@ -2212,32 +2208,25 @@ function _get_image_src(el) {
 }
 
 function _img_fs_zoom_click(imgEl, options, events) {
-	// Sorry, IE6 fans
-	if (Browser.ie6)
-		return;
-
 	// Get image src or element background image
 	var imageURL = _get_image_src(imgEl);
 	if (!imageURL)
 		return;
 
 	// Create a hidden div to house the ImgCanvasView
-	var hiddenEl = document.id('_img_fs_zoom_click_el');
+	var hiddenEl = QU.id('_cv_fs_zoom_click_el');
 	if (!hiddenEl) {
 		// We require a fixed width/height div here, so that the images and tiles are
 		// requested at a standard size (independent of browser size), in turn so that
 		// the server can cache everything properly.
-		hiddenEl = new Element('div', {
-			id: '_img_fs_zoom_click_el',
-			styles: {
-				'position': 'absolute',
-				'display': 'block',
-				'width': '500px',
-				'height': '500px',
-				'left': '-1000px'
-			}
-		});
-		document.id(document.body).grab(hiddenEl, 'top');
+		hiddenEl = document.createElement('div');
+		hiddenEl.id = '_cv_fs_zoom_click_el';
+		hiddenEl.style.position = 'absolute';
+		hiddenEl.style.display = 'block';
+		hiddenEl.style.width = '500px';
+		hiddenEl.style.height = '500px';
+		hiddenEl.style.left = '-1000px';
+		document.body.insertBefore(hiddenEl, document.body.firstChild);
 	}
 	// Init the hidden div
 	canvas_view_init(hiddenEl, imageURL, options, events);
@@ -2246,8 +2235,8 @@ function _img_fs_zoom_click(imgEl, options, events) {
 }
 
 function _get_ct_viewer(ct) {
-	ct = document.id(ct);
-	return (ct && ct._viewer) ? ct._viewer : null;
+	ct = QU.id(ct);
+	return (ct && ct._cv_viewer) ? ct._cv_viewer : null;
 }
 var _hcvs = null;
 
@@ -2257,7 +2246,7 @@ var _hcvs = null;
  */
 function haveCanvasSupport() {
 	if (_hcvs == null) {
-		var cvEl = new Element('canvas');
+		var cvEl = document.createElement('canvas');
 		_hcvs = (cvEl && cvEl.getContext);
 	}
 	return _hcvs;
@@ -2311,16 +2300,16 @@ function haveCanvasSupport() {
  *      }
  */
 function canvas_view_init(container, imageURL, options, events) {
-	container = document.id(container);
+	container = QU.id(container);
 	if (container) {
 		if (haveCanvasSupport() && QU.supported) {
 			// Destroy previous viewer instance (Firefox 12 at least needs this)
-			if (container._viewer != undefined)
-				container._viewer.destroy();
+			if (container._cv_viewer != undefined)
+				container._cv_viewer.destroy();
 			// Assign new viewer instance
 			var viewer = new ImgCanvasView(container, imageURL, options, events);
 			viewer.init();
-			container._viewer = viewer;
+			container._cv_viewer = viewer;
 		}
 		else {
 			container.innerHTML = 'Sorry, this control is unsupported. Try upgrading your web browser.';
@@ -2383,10 +2372,10 @@ function canvas_view_resize(container) {
  * The 'options' and 'events' parameters are optional, see canvas_view_init for info.
  */
 function canvas_view_init_image(image, options, events) {
-	image = document.id(image);
+	image = QU.id(image);
 	if (image) {
 		// Modify a copy of the supplied options!
-		var opts = options ? Object.clone(options) : {};
+		var opts = options ? QU.clone(options) : {};
 		// Use img title/alt if no title specified
 		var imageText = image.title || image.alt;
 		if (imageText) {
@@ -2398,8 +2387,9 @@ function canvas_view_init_image(image, options, events) {
 			opts.stripaligns = true;
 		}
 		// Set onclick
-		image.removeEvents('click');
-		image.addEvent('click', function() { _img_fs_zoom_click(image, opts, events); });
+		image._cv_click = function() { _img_fs_zoom_click(image, opts, events); };
+		image.removeEventListener('click', image._cv_click, false);
+		image.addEventListener('click', image._cv_click, false);
 	}
 	return false;
 }
@@ -2409,8 +2399,9 @@ function canvas_view_init_image(image, options, events) {
  * The 'options' and 'events' parameters are optional, see canvas_view_init for info.
  */
 function canvas_view_init_all_images(className, options, events) {
-	$$('.' + className).each(function(img) {
-		canvas_view_init_image(img, options, events);
-	});
+    var images = document.querySelectorAll('.' + className);
+    for (var i = 0; i < images.length; i++) {
+        canvas_view_init_image(images[i], options, events);
+    }
 	return false;
 }

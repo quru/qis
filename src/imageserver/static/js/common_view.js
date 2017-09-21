@@ -36,10 +36,14 @@ if (!window.QU) {
                    (Object.keys !== undefined) &&
                    (window.addEventListener !== undefined) &&
                    ((function(){}).bind !== undefined) &&
-                   (window.getComputedStyle !== undefined)
+                   (window.getComputedStyle !== undefined) &&
+                   (window.JSON !== undefined)
     };
 
-    // Returns the element with ID id, or null
+    // Returns an element by its ID, or null if there is no matching element.
+    // Returns id unchanged if it appears to already be an element, so that you
+    // can use this function in situations where you might have either an element
+    // or its string ID.
     QU.id = function(id) {
         if (typeof id === 'number') {
             id = ''+id;
@@ -197,6 +201,14 @@ if (!window.QU) {
         else {
             document.addEventListener('DOMContentLoaded', fn);
         }
+    };
+
+    // Deep clones a simple object, returning a copy of it.
+    // Date and Function values and circular references are not handled by this method.
+    // Dates will be converted to string representations in the returned clone
+    // while Function values will simply be omitted.
+    QU.clone = function(obj) {
+        return JSON.parse(JSON.stringify(obj));
     };
 
 } // if (!window.QU)
