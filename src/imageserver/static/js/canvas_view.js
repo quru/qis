@@ -845,7 +845,7 @@ ImgGrid.prototype.cancelPendingHiddenImages = function() {
 
 // Cancels all pending image/tile requests
 ImgGrid.prototype.cancelPendingImages = function() {
-	this.requests.queue.empty();
+	this.requests.queue.length = 0;
 	// Control whether we allow the next request to load (usually the first tile at
 	// a new zoom level), even if that means exceeding the request limit. If we
 	// enforce the limit, the next image request must wait for anything that is
@@ -1258,7 +1258,7 @@ function ImgCanvasView(container, imageURL, userOpts, events) {
 	};
 	// Apply options
 	if (userOpts) {
-		this.options = Object.merge(this.options, userOpts);
+		this.options = QU.merge(this.options, userOpts);
 	}
 
 	this.events = events;
@@ -1296,36 +1296,33 @@ function ImgCanvasView(container, imageURL, userOpts, events) {
 	this.imageInfo = null;
 
 	// Get container element
-	this.ctrEl = document.id(container);
+	this.ctrEl = QU.id(container);
 	// Clear container of placeholder or previous content
-	this.ctrEl.empty();
-	this.ctrEl.addClass('imageviewer');
+	QU.elClear(this.ctrEl);
+	QU.elSetClasses(this.ctrEl, 'imageviewer', true);
 
 	// Create our canvas element
-	this.canvas = new Element('canvas', {
-		width: 1,
-		height: 1,
-		styles: {
-			'-webkit-user-select': 'none',
-			'-khtml-user-select': 'none',
-			'-moz-user-select': 'none',
-			'-o-user-select': 'none',
-			'user-select': 'none',
-			'-webkit-tap-highlight-color': 'rgba(0,0,0,0)',
-			'-webkit-touch-callout': 'none'
-		}
-	});
+	this.canvas = document.createElement('canvas');
+	this.canvas.width = 1;
+	this.canvas.	height = 1;
+	this.canvas.style.WebkitUserSelect = 'none';
+	this.canvas.style.MozUserSelect = 'none';
+	this.canvas.style.OUserSelect = 'none';
+	this.canvas.style.userSelect = 'none';
+	this.canvas.style.WebkitTapHighlightColor = 'rgba(0,0,0,0)';
+	this.canvas.style.WebkitTouchCallout = 'none';
+
     // Position and size the canvas
-	this.ctrEl.grab(this.canvas);
+	this.ctrEl.appendChild(this.canvas);
 	this.layout();
 
 	// Get the canvas context and set drawing options
 	this.canvasContext = this.canvas.getContext('2d');
 	if (!this.options.quality) {
-		this.canvas.setStyle('-ms-interpolation-mode', 'nearest-neighbor');
-		this.canvas.setStyle('image-rendering', '-webkit-optimize-contrast'); // 'optimizeSpeed'
-		if (context.mozImageSmoothingEnabled != undefined)
-			context.mozImageSmoothingEnabled = false;
+		this.canvas.style.msInterpolationMode = 'nearest-neighbor';
+		this.canvas.style.imageRendering = '-webkit-optimize-contrast'; // 'optimizeSpeed'
+		if (this.canvasContext.mozImageSmoothingEnabled !== undefined)
+			this.canvasContext.mozImageSmoothingEnabled = false;
 	}
 
 	// Create the image grid which will be the canvas content
@@ -1351,7 +1348,7 @@ ImgCanvasView.prototype.destroy = function() {
 	this.events = null;
 	this.content.destroy();
 	this.content = null;
-	this.canvas.destroy();
+	QU.elRemove(this.canvas);
 	this.canvas = null;
 	this.canvasContext = null;
 }

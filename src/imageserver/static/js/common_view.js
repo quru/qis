@@ -34,6 +34,7 @@ if (!window.QU) {
         version: 1,
         // TL;DR - this supports IE9 and later
         supported: ([].forEach !== undefined) &&
+                   ([].indexOf !== undefined) &&
                    (Object.keys !== undefined) &&
                    (window.addEventListener !== undefined) &&
                    ((function(){}).bind !== undefined) &&
@@ -66,6 +67,15 @@ if (!window.QU) {
         }
     };
 
+    // Removes an element from the DOM and returns it.
+    // The element will not be garbage collected while any references to it
+    // or its children (including any event handlers) remain.
+    QU.elRemove = function(el) {
+        if (el.parentNode)
+            el.parentNode.removeChild(el);
+        return el;
+    }
+
     // Returns the {x:n, y:n} position of an element on the page
     QU.elPosition = function(el) {
         el = QU.id(el);
@@ -85,6 +95,7 @@ if (!window.QU) {
     // This value does not include the size of borders, margins, scroll bars,
     // or changes in size due to CSS transformations (e.g. rotation).
     QU.elInnerSize = function(el, includePadding) {
+        el = QU.id(el);
         // https://developer.mozilla.org/en-US/docs/Web/API/CSS_Object_Model/Determining_the_dimensions_of_elements
         var isize = {width: el.clientWidth, height: el.clientHeight};
         if (!includePadding) {
@@ -96,6 +107,26 @@ if (!window.QU) {
         }
         return isize;
     };
+
+    // Adds (when add is true) or removes (when add is false) a CSS class on an element.
+    QU.elSetClasses = function(el, className, add) {
+        el = QU.id(el);
+        if (el.classList) {
+            if (add) el.classList.add(className);
+            else el.classList.remove(className);
+        } else {
+            // IE9
+            var classes = el.className.split(' '),
+                idx = classes.indexOf(className);
+            if (classes.length === 1 && classes[0] === '')
+                classes.length = 0;
+            if (add && (idx === -1))
+                classes.push(className);
+            else if (!add && (idx !== -1))
+                classes.splice(idx, 1);
+            el.className = classes.join(' ');
+        }
+    }
 
     // Creates and returns a new XMLHttpRequest (or equivalent) suitable for making
     // a cross-domain request for JSON data. Returns null if there is no XHR support
@@ -256,4 +287,32 @@ if (!window.QU) {
         return JSON.parse(JSON.stringify(obj));
     };
 
+    // Merges one or more (just pass more parameters) objects into the first object,
+    // returning the first object with the content of the rest merged in.
+    // This implementation is taken directly from MooTools Object.merge()
+    // but has the same limitations as QU.clone() above.
+    QU.merge = function(obj, obj2) {
+        var mergeOne = function(dest, key, source) {
+            switch (typeof source) {
+                case 'object':
+                    if (typeof dest[key] == 'object') QU.merge(dest[key], source);
+                    else dest[key] = QU.clone(source);
+                    break;
+                case 'array':
+                    dest[key] = QU.clone(source);
+                    break;
+                default:
+                    dest[key] = source;
+            }
+            return dest;
+        };
+        // Merge obj2[, obj3, [...]] into obj
+        for (var i = 1, l = arguments.length; i < l; i++) {
+            var src = arguments[i];
+            for (var key in src) {
+                mergeOne(obj, key, src[key]);
+            }
+        }
+        return obj;
+    };
 } // if (!window.QU)
