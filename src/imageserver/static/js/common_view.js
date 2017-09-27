@@ -24,6 +24,7 @@
     Notable modifications:
     Date       By    Details
     =========  ====  ============================================================
+    Sept 2017  Matt  Created for #2174 Removal of MooTools
 */
 
 if (!window.QU) {
@@ -31,7 +32,7 @@ if (!window.QU) {
     // Define the QIS Utility library (QU)
     QU = {
         version: 1,
-        // Target IE9 and later
+        // TL;DR - this supports IE9 and later
         supported: ([].forEach !== undefined) &&
                    (Object.keys !== undefined) &&
                    (window.addEventListener !== undefined) &&
@@ -96,6 +97,52 @@ if (!window.QU) {
         return isize;
     };
 
+    // Creates and returns a new XMLHttpRequest (or equivalent) suitable for making
+    // a cross-domain request for JSON data. Returns null if there is no XHR support
+    // (though this is not expected when QU.supported is true).
+    // Optional callback successFn should be function(xhr, jsonObj) where xhr is the
+    // object returned by this function and jsonObj is the decoded and parsed JSON
+    // payload. Optional callback errorFn should be function(xhr, msg) where msg is
+    // the returned error text or message.
+    // To invoke the request, call xhr.send() or xhr.send(body) on the returned object.
+    QU.jsonRequest = function(url, method, successFn, errorFn) {
+        var xhr = new XMLHttpRequest();
+        if (!('withCredentials' in xhr)) {
+            if (typeof XDomainRequest !== 'undefined') {
+                xhr = new XDomainRequest();    // IE 9
+                xhr.onprogress = function(){}; // Prevent IE aborting requests
+                xhr.ontimeout = function(){};  // see http://perrymitchell.net/article/xdomainrequest-cors-ie9/
+            } else {
+                return null;                   // Unsupported browser
+            }
+        }
+        xhr.onload = function() {
+            if (xhr.status >= 200 && xhr.status < 400) {
+                if (successFn) {
+                    var jsonObj;
+                    try { jsonObj = JSON.parse(xhr.responseText); }
+                    catch (e) {
+                        if (errorFn) { errorFn(xhr, 'Invalid JSON: ' + e); }
+                        return;
+                    }
+                    successFn(xhr, jsonObj);
+                }
+            } else {
+                if (errorFn) {
+                    errorFn(xhr, xhr.responseText);
+                }
+            }
+        };
+        xhr.onerror = function() {
+            if (errorFn) {
+                errorFn(xhr, xhr.responseText);
+            }
+        };
+        xhr.open(method, url, true);
+        xhr.setRequestHeader('Accept', 'application/json');
+        return xhr;
+    };
+    
     // Returns the position of a mouse or touch event on the page and in the viewport
     // (ignoring scroll position) as {'page': {x:n, y:n}, 'viewport': {x:n, y:n}}
     QU.evPosition = function (event) {
@@ -108,8 +155,7 @@ if (!window.QU) {
                 viewport.x = touch.clientX;
                 viewport.y = touch.clientY;
             }
-        }
-        else {
+        } else {
             var doc = document.documentElement || document.body;
             page.x = (event.pageX != null) ? event.pageX : event.clientX + doc.scrollLeft;
             page.y = (event.pageY != null) ? event.pageY : event.clientY + doc.scrollTop;
@@ -197,8 +243,7 @@ if (!window.QU) {
     QU.whenReady = function(fn) {
         if (document.attachEvent ? document.readyState === "complete" : document.readyState !== "loading") {
             fn();
-        }
-        else {
+        } else {
             document.addEventListener('DOMContentLoaded', fn);
         }
     };

@@ -8,15 +8,15 @@ a more involved upgrade is required; these releases will be documented here.
 
 This release contains a number of potentially breaking changes, though only
 users of Internet Explorer 8 and below should be affected
-(in 2017, hopefully nobody).
+(which in 2017 is hopefully nobody).
 
 * Minified JavaScript file names have been renamed from the quirky format
   `foo_yc.js` to the more conventional format `foo.min.js`.
 * The path to the MooTools library has changed, as this library is now only
   used internally, and is no longer required by client-side code.
 * Removed the _excanvas_ library (Internet Explorer 8 canvas emulation).
-* Removed the JSONP options from the image gallery and viewers.
-  Cross domain API calls now use CORS instead.
+* Removed the JSONP options from the image gallery and viewers;
+  cross-domain API calls now use CORS instead.
 * Dropped support for Internet Explorer 8 and below.
 
 ### Upgrading
@@ -37,8 +37,20 @@ Then run the upgrade script:
 
 ### Apache configuration
 
-TODO Add CORS headers  
-Restart the Apache service
+The removal of JSONP requires a new HTTP header to be set in Apache.
+In each of the Apache configuration files:
+
+* `/etc/httpd/conf.d/qis.conf`
+* `/etc/httpd/conf.d/qis-ssl.conf`
+
+Add the following new lines inside the main `VirtualHost` section:
+
+    # Allow other domains to query the data API (required for canvas/zoom image viewer)
+    Header set Access-Control-Allow-Origin "*"
+
+Then reload the Apache configuration:
+
+    $ sudo apachectl -t && sudo apachectl -k graceful
 
 ## v1.50 to v2.4
 

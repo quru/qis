@@ -3,7 +3,8 @@
 	Date started:  26 July 2013
 	By:            Matt Fozard
 	Purpose:       Quru Image Server gallery viewer
-	Requires:      canvas_view.js
+	Requires:      common_view.js
+	               canvas_view.js
 	               MooTools Core 1.3 (no compat)
 	               MooTools More 1.3 - Element.Measure, Fx.Scroll, Mask,
 	               Request.JSONP, String.QueryString, URI
@@ -30,6 +31,7 @@
 	11Oct2013  Matt  Strip halign and valign from all images by default
 	11Nov2013  Matt  Add title/description image options, set title on thumbnails
 	11Nov2013  Matt  Add events interface
+    28Sep2017  Matt  Remove MooTools, remove JSONP
 */
 
 /**** Private interface ****/
@@ -44,15 +46,12 @@ function GalleryView(container, userOpts, events) {
 		startImage: '',
 		thumbsize: { width: 120, height: 120 },
 		viewer: {},
-		jsonp: true,
 		stripaligns: true
 	};
 	// Apply options
 	if (userOpts !== undefined) {
 		this.options = Object.merge(this.options, userOpts);
 	}
-	// Sync jsonp options
-	this.options.viewer.jsonp = this.options.jsonp;
 	
 	this.events = events;
 	
@@ -253,20 +252,12 @@ GalleryView.prototype.setMessage = function(msg) {
 
 GalleryView.prototype.addFolderImages = function() {
 	var dataURL = this.options.server + 'api/v1/list?path=' + encodeURIComponent(this.options.folder);
-	if (this.options.jsonp) {
-		new Request.JSONP({
-			url: dataURL,
-			callbackKey: 'jsonp',
-			onComplete: function(jobj) { this.onDataReady(jobj); }.bind(this)
-		}).send();
-	}
-	else {
-		new Request.JSON({
-			url: dataURL,
-			onSuccess: function(jobj) { this.onDataReady(jobj); }.bind(this),
-			onFailure: function(xhr) { this.setMessage(''); }.bind(this)
-		}).get();
-	}
+    QU.jsonRequest(
+        dataURL,
+        'GET',
+        function(xhr, jobj) { this.onDataReady(jobj); }.bind(this),
+        function(xhr, msg)  { this.setMessage('');    }.bind(this)
+    ).send();
 };
 
 GalleryView.prototype.onDataReady = function(jsonObj) {
@@ -752,10 +743,6 @@ GalleryViewMask.prototype.fullscreenGetCoords = function() {
  * params  - An object containing image parameters to apply to every image.
  * viewer  - An object containing options to apply to the main image viewer.
  *           See the canvas_view file for the available viewer options.
- * jsonp   - A boolean determining whether the JSONP method is used to load folder
- *           information (instead of standard AJAX/XHR). This option is less secure,
- *           but is required if your image server has a different host name to your
- *           web server. Default true.
  * 
  * E.g. { server: 'http://images.mycompany.com/',
  *        folder: 'myimages/featured/',

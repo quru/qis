@@ -5,8 +5,6 @@ It also includes an integrated control panel that allows the user to download th
 zoom in and out, read its title and description, and launch a full-screen viewing mode
 (all control panel items being optional).
 
-TODO remove JSONP
-
 ### Canvas element support
 
 The HTML5 canvas element is supported in all modern web browsers, and in Microsoft Internet
@@ -87,9 +85,6 @@ behaviour of the viewer. The available options are:
 	* `zoomout` defaults to `true`
 * `doubleclickreset` - A boolean specifying whether to reset the zoom on double tap/click,
    defaults to `true`
-* `jsonp` - A boolean determining whether the JSONP method is used to load image information
-  (instead of standard AJAX/XHR). This option is less secure, but is required if your image
-  server has a different host name to your web server. Defaults to `true`.
 
 Example options:
 

@@ -175,12 +175,10 @@ Math.easeInOutBack = function(t, b, c, d, s) {
 /**** Grid container class ****/
 
 function ImgGrid(width, height, imageURL, stripAligns,
-                 context, animationType, maxTiles,
-                 useJSONP, onInitialisedFn) {
+                 context, animationType, maxTiles, onInitialisedFn) {
 
 	this.initialised = false;
 	this.destroyed = false;
-	this.useJSONP = useJSONP;
 	this.onInitialisedFn = onInitialisedFn;
 	this.animating = false;
 
@@ -324,20 +322,12 @@ ImgGrid.prototype.setViewportSize = function(width, height) {
 // Loads image information
 ImgGrid.prototype.loadImageInfo = function() {
 	var dataURL = this.urlBase + 'api/v1/details?src=' + encodeURIComponent(this.urlParams.src);
-	if (this.useJSONP) {
-		new Request.JSONP({
-			url: dataURL,
-			callbackKey: 'jsonp',
-			onComplete: function(jobj) { this.onImageInfoLoaded(jobj); }.bind(this)
-		}).send();
-	}
-	else {
-		new Request.JSON({
-			url: dataURL,
-			onSuccess: function(jobj) { this.onImageInfoLoaded(jobj); }.bind(this),
-			onFailure: function(xhr) { this.onImageInfoFailure(xhr); }.bind(this)
-		}).get();
-	}
+	QU.jsonRequest(
+	    dataURL,
+	    'GET',
+	    function(xhr, jobj) { this.onImageInfoLoaded(jobj); }.bind(this),
+	    function(xhr, msg)  { this.onImageInfoFailure(xhr); }.bind(this)
+	).send();
 }
 
 // Callback for image information having loaded
@@ -1251,7 +1241,6 @@ function ImgCanvasView(container, imageURL, userOpts, events) {
 		quality: true,
 		animation: 'out-quadratic',
 		maxtiles: 256,
-		jsonp: true,
 		stripaligns: false,
 		doubleclickreset: true,
 		controls: {
@@ -1345,7 +1334,6 @@ function ImgCanvasView(container, imageURL, userOpts, events) {
 		imageURL, this.options.stripaligns,
 		this.canvasContext, this.options.animation,
 		this.options.maxtiles,
-		this.options.jsonp,
 		function(info) { this.onContentReady(info); }.bind(this)
 	);
 
@@ -2274,9 +2262,6 @@ function haveCanvasSupport() {
  *            All default to true except for download. See the examples below.
  * doubleclickreset - A boolean specifying whether to reset the zoom on double tap/click.
  *                    Default true.
- * jsonp - A boolean determining whether the JSONP method is used to load image information
- *         (instead of standard AJAX/XHR). This option is less secure, but is required if
- *         your image server has a different host name to your web server. Default true.
  *
  * E.g. { showcontrols: 'yes', quality: true, animation: 'in-out-back' }
  * E.g. { showcontrols: 'auto', controls: { help: false, reset: false } }

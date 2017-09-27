@@ -14,6 +14,9 @@
     # Log requests, or append "env=DISABLED" to disable logging
     CustomLog /var/log/httpd/qis_access_log imaging
 
+    # Allow other domains to query the data API (required for canvas/zoom image viewer)
+    Header set Access-Control-Allow-Origin "*"
+
     # Enable keep-alive, but don't hold connections open for long
     KeepAlive On
     KeepAliveTimeout 3

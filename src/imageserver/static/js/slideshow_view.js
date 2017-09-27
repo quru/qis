@@ -3,7 +3,8 @@
 	Date started:  05 Feb 2013
 	By:            Matt Fozard
 	Purpose:       Quru Image Server image slideshow library
-	Requires:      MooTools Core 1.3 (no compat)
+	Requires:      common_view.js
+	               MooTools Core 1.3 (no compat)
 	               MooTools More 1.3 - Assets, Element.Measure, Fx.Elements, Request.JSONP
 	Copyright:     Quru Ltd (www.quru.com)
 	Licence:
@@ -32,6 +33,7 @@
 	19Feb2015  Matt  Use 1 timer for animation instead of 2
 	20Feb2015  Matt  Pause on mouse hover, pause when page invisible
 	23Feb2015  Matt  Add prev, next functions, arrows and dots UI controls
+    28Sep2017  Matt  Remove MooTools, remove JSONP
 */
 
 /**** Slideshow class ****/
@@ -50,7 +52,6 @@ function ImgSlideshow(container, userOpts) {
 		folder: '',
 		images: [],
 		params: {},
-		jsonp: true,
 		fps: 50,
 		duration: 1000,
 		bgColor: 'white',
@@ -165,20 +166,12 @@ ImgSlideshow.prototype.setMessage = function(msg) {
 
 ImgSlideshow.prototype.addFolderImages = function() {
 	var dataURL = this.options.server + 'api/v1/list?path=' + encodeURIComponent(this.options.folder);
-	if (this.options.jsonp) {
-		new Request.JSONP({
-			url: dataURL,
-			callbackKey: 'jsonp',
-			onComplete: function(jobj) { this.onDataReady(jobj); }.bind(this)
-		}).send();
-	}
-	else {
-		new Request.JSON({
-			url: dataURL,
-			onSuccess: function(jobj) { this.onDataReady(jobj); }.bind(this),
-			onFailure: function(xhr) { this.setMessage(''); }.bind(this)
-		}).get();
-	}
+    QU.jsonRequest(
+        dataURL,
+        'GET',
+        function(xhr, jobj) { this.onDataReady(jobj); }.bind(this),
+        function(xhr, msg)  { this.setMessage('');    }.bind(this)
+    ).send();
 };
 
 ImgSlideshow.prototype.onDataReady = function(jsonObj) {
@@ -548,10 +541,6 @@ ImgSlideshow.prototype._visibility_change = function() {
  * pauseOnHover - Whether to pause when the mouse cursor is over the image.
  *                Default true.
  * bgColor - In 'stack' mode, an optional image background colour.
- * jsonp   - A boolean determining whether the JSONP method is used to load folder
- *           information (instead of standard AJAX/XHR). This option is less secure,
- *           but is required if your image server has a different host name to your
- *           web server. Default true.
  * 
  * E.g. { mode:   'slide',
  *        server: 'http://images.mycompany.com/',

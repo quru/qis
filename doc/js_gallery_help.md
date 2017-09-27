@@ -80,9 +80,6 @@ default gallery behaviour:
 * `params` - An object containing image parameters to apply to every image
 * `viewer` - An object containing options for the main image viewer. See the documentation
   for the HTML5 canvas viewer for the available viewer options.
-* `jsonp` - A boolean determining whether the JSONP method is used to load folder information
-  (instead of standard AJAX/XHR). This option is less secure, but is required if your image
-  server has a different host name to your web server. Defaults to `true`.
 
 When providing an array of image objects to display, the following properties are supported for
 each entry:

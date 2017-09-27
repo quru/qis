@@ -70,9 +70,6 @@ default slideshow appearance:
 * `pauseOnHover` - Whether to pause the slideshow when the mouse cursor is hovered over it,
   defaults to `true`
 * `bgColor` - In `'stack'` mode, an optional image background colour
-* `jsonp` - A boolean determining whether the JSONP method is used to load folder information
-  (instead of standard AJAX/XHR). This option is less secure, but is required if your image
-  server has a different host name to your web server. Defaults to `true`.
 
 When providing an array of image objects to display, the following properties are supported for
 each entry:
