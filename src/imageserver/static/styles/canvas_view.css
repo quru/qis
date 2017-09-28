@@ -19,8 +19,6 @@
 
 	You should have received a copy of the GNU Affero General Public License
 	along with this program.  If not, see http://www.gnu.org/licenses/
-	
-	Last Changed:  $Date$ $Rev$ by $Author$
 */
 
 .imageviewer {
@@ -37,13 +35,15 @@
 	padding: 0;
 	/* Prevent drag and select */
 	-webkit-user-select: none;
-	-moz-user-select: none;
-	-o-user-select: none;
-	user-select: none;
+	   -moz-user-select: none;
+        -ms-user-select: none;
+	     -o-user-select: none;
+	        user-select: none;
 	-webkit-user-drag: none;
-	-moz-user-drag: none;
-	-o-user-drag: none;
-	user-drag: none;	
+	   -moz-user-drag: none;
+        -ms-user-drag: none;
+	     -o-user-drag: none;
+	        user-drag: none;	
 }
 .imageviewer canvas { display: block; /* IE 8-9 */ }
 .imageviewer div { display: block; }
@@ -86,6 +86,22 @@
 	font-size: 10pt;
 	border-bottom-left-radius: 5px;
 	border-bottom-right-radius: 5px;
+
+    position: relative;
+    top: -1px;          /* Fix off-by-1 issues in Chrome and IE */
+
+    -webkit-transition: -webkit-transform .5s ease-out;
+       -moz-transition:    -moz-transform .5s ease-out;
+        -ms-transition:     -ms-transform .5s ease-out;
+         -o-transition:      -o-transform .5s ease-out;
+            transition:         transform .5s ease-out;
+}
+.imageviewer .controlpanel.up {
+    -webkit-transform: translate(0, -100%);
+       -moz-transform: translate(0, -100%);
+        -ms-transform: translate(0, -100%);
+         -o-transform: translate(0, -100%);
+            transform: translate(0, -100%);
 }
 .imageviewer .controlpanel .controltitle {
 	display: inline-block;

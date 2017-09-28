@@ -148,6 +148,16 @@ if (!window.QU) {
         }
     };
 
+    // Returns whether an element currently has a CSS class applied.
+    QU.elHasClass = function(el, className) {
+        if (el.classList) {
+            return el.classList.contains(className);
+        } else {
+            var classes = el.className.split(' ');
+            return classes.indexOf(className) !== -1;
+        }
+    };
+
     // Returns the position of a mouse or touch event on the page and in the viewport
     // (ignoring scroll position) as {'page': {x:n, y:n}, 'viewport': {x:n, y:n}}
     QU.evPosition = function (event) {

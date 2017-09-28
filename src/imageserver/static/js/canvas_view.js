@@ -1266,7 +1266,6 @@ function ImgCanvasView(container, imageURL, userOpts, events) {
 
 	// Track UI state
 	this.uiAttrs = {
-		controlsSlider: null,
 		alertVisible: false,
 		alertEl: null,
 		fullScreen: false,
@@ -1713,8 +1712,9 @@ ImgCanvasView.prototype.getClickPosition = function(event, forGrid) {
 // Creates and returns the control panel for the image zoomer
 ImgCanvasView.prototype.createControls = function() {
 	// Create toggle button
+    var toggler;
 	if (this.options.showcontrols == 'auto') {
-		var toggler = document.createElement('div');
+		toggler = document.createElement('div');
 		toggler.className = 'controltoggle panelbg';
 		toggler.innerHTML = '&nbsp;';
 		toggler.style.position = 'relative';  /* IE 7-8 - show on top */
@@ -1725,12 +1725,12 @@ ImgCanvasView.prototype.createControls = function() {
 	// Create container elements for the control panel.
 	// Outer panel is full-width transparent container that implements the show/hide toggle.
 	var panel_outer = document.createElement('div');
-	panel_outer.style.position = 'relative';  /* On drop down, show on top */
+	panel_outer.style.position = 'relative';
 	panel_outer.style.width = '100%';
 	panel_outer.style.lineHeight = 'normal';
+    panel_outer.style.overflow = 'hidden';    /* hides the control panel when slid up */
 	panel_outer.style.textAlign = 'center';
 	panel_outer.style.cursor = 'default';
-	panel_outer.style.visibility = (this.options.showcontrols == 'auto') ? 'hidden' : 'visible';
 	panel_outer.addEventListener('click', function(e) {
 	    // In full screen mode, pass through the click to the underlying mask
 	    if (this.uiAttrs.fullScreen && this.options.fullScreenCloseOnClick)
@@ -1739,7 +1739,7 @@ ImgCanvasView.prototype.createControls = function() {
 
 	// Inner panel is the centered control panel box containing the buttons etc
 	var panel_inner = document.createElement('span');
-	panel_inner.className = 'controlpanel panelbg';
+	panel_inner.className = 'controlpanel panelbg' + ((this.options.showcontrols == 'auto') ? ' up' : '');
 	panel_inner.addEventListener('click', function(e) {
 	    // Prevent the panel_outer click firing
 	    e.stopPropagation();
@@ -1810,8 +1810,9 @@ ImgCanvasView.prototype.createControls = function() {
 	}
 
 	// Add panel to the DOM
-	this.controlpanel = panel_outer;
-	this.ctrEl.appendChild(this.controlpanel);
+	this.ctrEl.appendChild(panel_outer);
+    this.controlpanel = panel_inner;
+    this.controlpanel.toggler = toggler;
 
 	// Set rollovers
 	var icons = this.controlpanel.querySelectorAll('.icon');
@@ -1819,21 +1820,6 @@ ImgCanvasView.prototype.createControls = function() {
 	    var el = icons[i];
 	    el.addEventListener('mouseover', function() { QU.elSetClass(this, 'rollover', true); }.bind(el));
 	    el.addEventListener('mouseout',  function() { QU.elSetClass(this, 'rollover', false); }.bind(el));
-	}
-
-	// Create control panel animator
-	if (this.options.showcontrols == 'auto') {
-		this.uiAttrs.controlsSlider = new Fx.Slide(panel_outer, {
-			onComplete: function() {
-				// Update toggle button on slide complete
-				var wasOpen = this.uiAttrs.controlsSlider.open;
-				if (toggler) {
-					wasOpen ? toggler.removeClass('up') : toggler.addClass('up');
-				}
-			}.bind(this)
-		});
-		this.uiAttrs.controlsSlider.hide();
-		panel_outer.style.visibility = 'visible';
 	}
 }
 
@@ -1901,11 +1887,15 @@ ImgCanvasView.prototype.setImageTitle = function(imageTitle) {
 
 // Shows or hides the control panel
 ImgCanvasView.prototype.toggleControls = function() {
-	if (this.controlpanel && this.uiAttrs.controlsSlider) {
-		// Animate control panel
+	if (this.controlpanel) {
 		this.clearRollovers();
 		this.refreshZoomControls();
-		this.uiAttrs.controlsSlider.toggle();
+        // Animate control panel
+		var isUp = QU.elHasClass(this.controlpanel, 'up');
+	    QU.elSetClass(this.controlpanel, 'up', !isUp);
+	    if (this.controlpanel.toggler) {
+	        QU.elSetClass(this.controlpanel.toggler, 'up', isUp);
+	    }
 	}
 }
 
