@@ -35,10 +35,11 @@ if (!window.QU) {
         // TL;DR - this supports IE9 and later
         supported: ([].forEach !== undefined) &&
                    ([].indexOf !== undefined) &&
+                   ((function(){}).bind !== undefined) &&
                    (Object.keys !== undefined) &&
                    (window.addEventListener !== undefined) &&
-                   ((function(){}).bind !== undefined) &&
                    (window.getComputedStyle !== undefined) &&
+                   (window.pageXOffset !== undefined) &&
                    (window.JSON !== undefined)
     };
 

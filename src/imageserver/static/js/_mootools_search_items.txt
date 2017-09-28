@@ -13,6 +13,9 @@ document\.id(
 \.grab(
 \.getPosition(
 \.getCoordinates(
+\.getElement(
+\.getElements(
+\.getScroll(
 \.getStyle(
 \.setStyle(
 \.page.x

@@ -1515,6 +1515,7 @@ ImgCanvasView.prototype.onTouchStart = function(e) {
 	e.preventDefault();
 	if (e.touches.length == 1) {
 		this.onMouseDown({
+		    type: 'mousedown',
 			pageX: e.touches[0].pageX,
 			pageY: e.touches[0].pageY,
 			button: 0
@@ -1528,6 +1529,7 @@ ImgCanvasView.prototype.onTouchMove = function(e) {
 	if (e.touches.length == 1) {
 		// Pan
 		this.onMouseMove({
+		    type: 'mousemove',
 			pageX: e.touches[0].pageX,
 			pageY: e.touches[0].pageY
 		});
@@ -1552,6 +1554,7 @@ ImgCanvasView.prototype.onTouchMove = function(e) {
 			// Do a pinch zoom
 			if (trigger) {
 				var zEvent = {
+			        type: 'mousedown',
 					pageX: Math.round(this.touchAttrs.last1.x + ((this.touchAttrs.last2.x - this.touchAttrs.last1.x) / 2)),
 					pageY: Math.round(this.touchAttrs.last1.y + ((this.touchAttrs.last2.y - this.touchAttrs.last1.y) / 2)),
 					button: 0,
@@ -1576,6 +1579,7 @@ ImgCanvasView.prototype.onTouchMove = function(e) {
 ImgCanvasView.prototype.onTouchEnd = function(e) {
 	e.preventDefault();
 	this.onMouseUp({
+	    type: 'mouseup',
 		pageX: e.changedTouches[0].pageX,
 		pageY: e.changedTouches[0].pageY,
 		shiftKey: false
@@ -1585,6 +1589,7 @@ ImgCanvasView.prototype.onTouchEnd = function(e) {
 
 ImgCanvasView.prototype.onTouchCancel = function(e) {
 	this.onMouseUp({
+	    type: 'mouseup',
 		pageX: e.changedTouches[0].pageX,
 		pageY: e.changedTouches[0].pageY,
 		shiftKey: false
@@ -1631,6 +1636,7 @@ ImgCanvasView.prototype.autoZoomFit = function() {
 // Invokes a zoom in or out on the current centre of the visible canvas
 ImgCanvasView.prototype.autoZoom = function(zoomIn) {
 	var zEvent = {
+	    type: 'mousedown',
 		pageX: Math.round(this.ctrOuterPos.x + this.ctrInnerPos.offsetLeft + (this.canvas.width / 2)),
 		pageY: Math.round(this.ctrOuterPos.y + this.ctrInnerPos.offsetTop + (this.canvas.height / 2)),
 		button: 0,
@@ -1639,9 +1645,8 @@ ImgCanvasView.prototype.autoZoom = function(zoomIn) {
 	};
 	// Correct page coords for when this.ctrOuterPos is position:fixed
 	if (this.uiAttrs.fullScreen && this.options.fullScreenFixed) {
-	    var winScroll = window.getScroll();
-		zEvent.pageX += winScroll.x;
-		zEvent.pageY += winScroll.y;
+		zEvent.pageX += window.pageXOffset;
+		zEvent.pageY += window.pageYOffset;
 	}
 	this.onMouseDown(zEvent);
 	this.onMouseUp(zEvent);
@@ -1681,9 +1686,8 @@ ImgCanvasView.prototype.getClickPosition = function(event, forGrid) {
 	var rely = eventPos.page.y - this.ctrOuterPos.y;
 	// Account for when this.ctrOuterPos is position:fixed
 	if (this.uiAttrs.fullScreen && this.options.fullScreenFixed) {
-	    var winScroll = window.getScroll();
-		relx -= winScroll.x;
-		rely -= winScroll.y;
+		relx -= window.pageXOffset;
+		rely -= window.pageYOffset;
 	}
 	// Convert to click coords within viewport (exclude container borders, padding)
 	relx -= this.ctrInnerPos.offsetLeft;
@@ -1710,126 +1714,112 @@ ImgCanvasView.prototype.getClickPosition = function(event, forGrid) {
 ImgCanvasView.prototype.createControls = function() {
 	// Create toggle button
 	if (this.options.showcontrols == 'auto') {
-		var toggler = new Element('div', {
-			'class': 'controltoggle panelbg',
-			'html': '&nbsp;',
-			'styles': {
-				'position': 'relative'  /* IE 7-8 - show on top */
-			}
-		});
-		toggler.addEvent('mousedown', this.toggleControls.bind(this));
-		this.ctrEl.grab(toggler);
+		var toggler = document.createElement('div');
+		toggler.className = 'controltoggle panelbg';
+		toggler.innerHTML = '&nbsp;';
+		toggler.style.position = 'relative';  /* IE 7-8 - show on top */
+		toggler.addEventListener('mousedown', this.toggleControls.bind(this), false);
+		this.ctrEl.appendChild(toggler);
 	}
 
 	// Create container elements for the control panel.
 	// Outer panel is full-width transparent container that implements the show/hide toggle.
-	var panel_outer = new Element('div', {
-		styles: {
-			'position': 'relative',    /* On drop down, show on top */
-			'width': '100%',
-			'line-height': 'normal',
-			'text-align': 'center',
-			'cursor': 'default',
-			'visibility': (this.options.showcontrols == 'auto') ? 'hidden' : 'visible'
-		},
-		events: {
-			// In full screen mode, pass through the click to the underlying mask
-			click: function(e) {
-			    if (this.uiAttrs.fullScreen && this.options.fullScreenCloseOnClick)
-					this.toggleFullscreen();
-			}.bind(this)
-		}
-	});
+	var panel_outer = document.createElement('div');
+	panel_outer.style.position = 'relative';  /* On drop down, show on top */
+	panel_outer.style.width = '100%';
+	panel_outer.style.lineHeight = 'normal';
+	panel_outer.style.textAlign = 'center';
+	panel_outer.style.cursor = 'default';
+	panel_outer.style.visibility = (this.options.showcontrols == 'auto') ? 'hidden' : 'visible';
+	panel_outer.addEventListener('click', function(e) {
+	    // In full screen mode, pass through the click to the underlying mask
+	    if (this.uiAttrs.fullScreen && this.options.fullScreenCloseOnClick)
+	        this.toggleFullscreen();
+	}.bind(this), false);
+
 	// Inner panel is the centered control panel box containing the buttons etc
-	var panel_inner = new Element('span', {
-		'class': 'controlpanel panelbg',
-		events: {
-			// Prevent the panel_outer click firing
-			click: function(e) { e.stopPropagation(); }
-		}
-	});
-	panel_outer.grab(panel_inner);
+	var panel_inner = document.createElement('span');
+	panel_inner.className = 'controlpanel panelbg';
+	panel_inner.addEventListener('click', function(e) {
+	    // Prevent the panel_outer click firing
+	    e.stopPropagation();
+	}, false);
+	panel_outer.appendChild(panel_inner);
 
 	// Create and configure the control panel buttons.
 	// The nbsps are required to persuade IE to draw something.
 
 	if (this.options.controls.title) {
-		var titleArea = new Element('span', {
-			'class': 'controltitle',
-			'html': 'Loading...'
-		});
-		panel_inner.grab(titleArea);
+		var titleArea = document.createElement('span');
+		titleArea.className = 'controltitle';
+		titleArea.innerHTML = 'Loading...';
+		panel_inner.appendChild(titleArea);
 	}
 	if (this.options.controls.download) {
-		var btnDownload = new Element('span', {
-			'class': 'icon download disabled',
-			'title': 'Download',
-			'html': '&nbsp;'
-		});
-		btnDownload.addEvent('mousedown', this.downloadImage.bind(this));
-		panel_inner.grab(btnDownload);
+		var btnDownload = document.createElement('span');
+		btnDownload.className = 'icon download disabled';
+		btnDownload.title = 'Download';
+		btnDownload.innerHTML = '&nbsp;';
+		btnDownload.addEventListener('mousedown', this.downloadImage.bind(this), false);
+		panel_inner.appendChild(btnDownload);
 
-		var separator = new Element('span', {
-			'class': 'separator',
-			'html': '&nbsp;'
-		});
-		panel_inner.grab(separator);
+		var separator = document.createElement('span');
+		separator.className = 'separator';
+		separator.innerHTML = '&nbsp;';
+		panel_inner.appendChild(separator);
 	}
 	if (this.options.controls.help) {
-		var btnHelp = new Element('span', {
-			'class': 'icon help',
-			'title': 'Help',
-			'html': '&nbsp;'
-		});
-		btnHelp.addEvent('mousedown',  this.toggleHelp.bind(this));
-		panel_inner.grab(btnHelp);
+		var btnHelp = document.createElement('span');
+		btnHelp.className = 'icon help';
+		btnHelp.title = 'Help';
+		btnHelp.innerHTML = '&nbsp;';
+		btnHelp.addEventListener('mousedown', this.toggleHelp.bind(this), false);
+		panel_inner.appendChild(btnHelp);
 	}
 	if (this.options.controls.reset) {
-		var btnReset = new Element('span', {
-			'class': 'icon reset',
-			'title': 'Reset zoom',
-			'html': '&nbsp;'
-		});
-		btnReset.addEvent('mousedown', this.reset.bind(this));
-		panel_inner.grab(btnReset);
+		var btnReset = document.createElement('span');
+		btnReset	.className = 'icon reset';
+		btnReset	.title = 'Reset zoom';
+		btnReset	.innerHTML = '&nbsp;';
+		btnReset.addEventListener('mousedown', this.reset.bind(this), false);
+		panel_inner.appendChild(btnReset);
 	}
 	if (this.options.controls.zoomin) {
-		var btnZin   = new Element('span', {
-			'class': 'icon zoomin',
-			'title': 'Zoom in',
-			'html': '&nbsp;'
-		});
-		btnZin.addEvent('mousedown',   function() { this.autoZoom(true); }.bind(this));
-		panel_inner.grab(btnZin);
+		var btnZin = document.createElement('span');
+		btnZin.className = 'icon zoomin';
+		btnZin.title = 'Zoom in';
+		btnZin.innerHTML = '&nbsp;';
+		btnZin.addEventListener('mousedown', function() { this.autoZoom(true); }.bind(this), false);
+		panel_inner.appendChild(btnZin);
 	}
 	if (this.options.controls.zoomout) {
-		var btnZout  = new Element('span', {
-			'class': 'icon zoomout',
-			'title': 'Zoom out',
-			'html': '&nbsp;'
-		});
-		btnZout.addEvent('mousedown',  function() { this.autoZoom(false); }.bind(this));
-		panel_inner.grab(btnZout);
+		var btnZout = document.createElement('span');
+		btnZout.className = 'icon zoomout';
+		btnZout.title = 'Zoom out';
+		btnZout.innerHTML = '&nbsp;';
+		btnZout.addEventListener('mousedown', function() { this.autoZoom(false); }.bind(this), false);
+		panel_inner.appendChild(btnZout);
 	}
 	if (this.options.controls.fullscreen) {
-		var btnFull  = new Element('span', {
-			'class': 'icon fulltoggle',
-			'title': 'Toggle full screen mode',
-			'html': '&nbsp;'
-		});
-		btnFull.addEvent('mousedown',  this.toggleFullscreen.bind(this));
-		panel_inner.grab(btnFull);
+		var btnFull = document.createElement('span');
+		btnFull.className = 'icon fulltoggle';
+		btnFull.title = 'Toggle full screen mode';
+		btnFull.innerHTML = '&nbsp;';
+		btnFull.addEventListener('mousedown', this.toggleFullscreen.bind(this), false);
+		panel_inner.appendChild(btnFull);
 	}
 
 	// Add panel to the DOM
 	this.controlpanel = panel_outer;
-	this.ctrEl.grab(this.controlpanel);
+	this.ctrEl.appendChild(this.controlpanel);
 
-	// Set rollovers ($$ only works once elements are in the DOM)
-	this.controlpanel.getElements('.icon').each(function(el) {
-		el.addEvent('mouseover', function() { el.addClass('rollover'); });
-		el.addEvent('mouseout',  function() { el.removeClass('rollover'); });
-	});
+	// Set rollovers
+	var icons = this.controlpanel.querySelectorAll('.icon');
+	for (var i = 0; i < icons.length; i++) {
+	    var el = icons[i];
+	    el.addEventListener('mouseover', function() { QU.elSetClass(this, 'rollover', true); }.bind(el));
+	    el.addEventListener('mouseout',  function() { QU.elSetClass(this, 'rollover', false); }.bind(el));
+	}
 
 	// Create control panel animator
 	if (this.options.showcontrols == 'auto') {
@@ -1843,16 +1833,17 @@ ImgCanvasView.prototype.createControls = function() {
 			}.bind(this)
 		});
 		this.uiAttrs.controlsSlider.hide();
-		panel_outer.setStyle('visibility', 'visible');
+		panel_outer.style.visibility = 'visible';
 	}
 }
 
 // Clears all rollovers in the control panel
 ImgCanvasView.prototype.clearRollovers = function() {
 	if (this.controlpanel) {
-		this.controlpanel.getElements('.icon').each(function(el) {
-			el.removeClass('rollover');
-		});
+	    var icons = this.controlpanel.querySelectorAll('.icon');
+	    for (var i = 0; i < icons.length; i++) {
+	        QU.elSetClass(icons[i], 'rollover', false);
+	    }
 	}
 }
 
@@ -2149,7 +2140,7 @@ ImgCanvasView.prototype.fullscreenGetCoords = function() {
 	// #517 Prefer window.inner* to get the visual viewport in mobile browsers
 	//      http://www.quirksmode.org/mobile/viewports2.html "Measuring the visual viewport"
 	var winSize   = window.innerWidth ? { x: window.innerWidth, y: window.innerHeight } : window.getSize(),
-	    winScroll = this.options.fullScreenFixed ? { x: 0, y: 0 } : window.getScroll(),
+	    winScroll = this.options.fullScreenFixed ? { x: 0, y: 0 } : { x: window.pageXOffset, y: window.pageYOffset },
 	    winMargin = Math.min(Math.round(winSize.x / 40), Math.round(winSize.y / 40));
 	// Get target placement of viewer container element
 	var tgtLeft   = (winScroll.x + winMargin),
