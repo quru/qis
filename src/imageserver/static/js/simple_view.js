@@ -147,7 +147,7 @@ ImgSimpleView.prototype.onImageClick = function(e) {
 	}
 
 	// Get click position inside the image
-	var imagePagePos = QU.elPosition(this.imageEl),
+	var imagePagePos = QU.elOuterPosition(this.imageEl),
 	    eventPagePos = QU.evPosition(e).page;
 	var clickPos = { x: (eventPagePos.x - imagePagePos.x),
 	                 y: (eventPagePos.y - imagePagePos.y) };

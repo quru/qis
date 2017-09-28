@@ -38,9 +38,13 @@ document\.id(
 \.typeOf(
 new Element
 new Request
+new Mask
 parseQueryString(
 cleanQueryString(
 getComputedSize(
+\.computed
+\.totalWidth
+\.totalHeight
 Asset\.
 Browser\.
 Fx\.

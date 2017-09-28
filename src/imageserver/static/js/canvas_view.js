@@ -1306,9 +1306,12 @@ function ImgCanvasView(container, imageURL, userOpts, events) {
 	this.canvas = document.createElement('canvas');
 	this.canvas.width = 1;
 	this.canvas.	height = 1;
+	// Prevent canvas getting highlighted (particularly on shift-click)
+	this.canvas.unselectable = 'on';
 	this.canvas.style.WebkitUserSelect = 'none';
 	this.canvas.style.MozUserSelect = 'none';
 	this.canvas.style.OUserSelect = 'none';
+    this.canvas.style.msUserSelect = 'none';
 	this.canvas.style.userSelect = 'none';
 	this.canvas.style.WebkitTapHighlightColor = 'rgba(0,0,0,0)';
 	this.canvas.style.WebkitTouchCallout = 'none';
@@ -1408,18 +1411,14 @@ ImgCanvasView.prototype.layout = function() {
 		return;
 
 	// Get container x,y and outer dimensions (incl. borders)
-	this.ctrOuterPos = this.ctrEl.getCoordinates();
+	this.ctrOuterPos = QU.elOuterPosition(this.ctrEl);
 
 	// Get container usable inner dimensions (i.e. after padding)
-	this.ctrInnerPos = this.ctrEl.getComputedSize();
-
-	// Best guess fallbacks if getComputedSize failed
-	if ((this.ctrInnerPos.width == 0) && (this.ctrInnerPos.height == 0))
-		this.ctrInnerPos = { width: this.ctrEl.clientWidth, height: this.ctrEl.clientHeight };
-	if (this.ctrInnerPos.computedTop == undefined)  // top border + top padding
-		this.ctrInnerPos.computedTop = Math.round((this.ctrOuterPos.height - this.ctrInnerPos.height) / 2);
-	if (this.ctrInnerPos.computedLeft == undefined) // left border + left padding
-		this.ctrInnerPos.computedLeft = Math.round((this.ctrOuterPos.width - this.ctrInnerPos.width) / 2);
+	this.ctrInnerPos = QU.elInnerSize(this.ctrEl, false);
+	// And where the inner area begins
+    var ctrInnerOffsets = QU.elInnerOffsets(this.ctrEl);
+    this.ctrInnerPos.offsetLeft = ctrInnerOffsets.left;
+    this.ctrInnerPos.offsetTop = ctrInnerOffsets.top;
 
 	// Apply canvas size
 	this.canvas.width = this.ctrInnerPos.width;
@@ -1632,8 +1631,8 @@ ImgCanvasView.prototype.autoZoomFit = function() {
 // Invokes a zoom in or out on the current centre of the visible canvas
 ImgCanvasView.prototype.autoZoom = function(zoomIn) {
 	var zEvent = {
-		pageX: Math.round(this.ctrOuterPos.left + this.ctrInnerPos.computedLeft + (this.canvas.width / 2)),
-		pageY: Math.round(this.ctrOuterPos.top + this.ctrInnerPos.computedTop + (this.canvas.height / 2)),
+		pageX: Math.round(this.ctrOuterPos.x + this.ctrInnerPos.offsetLeft + (this.canvas.width / 2)),
+		pageY: Math.round(this.ctrOuterPos.y + this.ctrInnerPos.offsetTop + (this.canvas.height / 2)),
 		button: 0,
 		shiftKey: !zoomIn,
 		api_event: true
@@ -1678,8 +1677,8 @@ ImgCanvasView.prototype.getViewportPosition = function() {
 ImgCanvasView.prototype.getClickPosition = function(event, forGrid) {
 	// Get click coords for container
     var eventPos = QU.evPosition(event);
-	var relx = eventPos.page.x - this.ctrOuterPos.left;
-	var rely = eventPos.page.y - this.ctrOuterPos.top;
+	var relx = eventPos.page.x - this.ctrOuterPos.x;
+	var rely = eventPos.page.y - this.ctrOuterPos.y;
 	// Account for when this.ctrOuterPos is position:fixed
 	if (this.uiAttrs.fullScreen && this.options.fullScreenFixed) {
 	    var winScroll = window.getScroll();
@@ -1687,8 +1686,8 @@ ImgCanvasView.prototype.getClickPosition = function(event, forGrid) {
 		rely -= winScroll.y;
 	}
 	// Convert to click coords within viewport (exclude container borders, padding)
-	relx -= this.ctrInnerPos.computedLeft;
-	rely -= this.ctrInnerPos.computedTop;
+	relx -= this.ctrInnerPos.offsetLeft;
+	rely -= this.ctrInnerPos.offsetTop;
 	// Set viewport click position
 	var clickpos = {
 		x: Math.round8(relx / this.canvas.width),

@@ -71,26 +71,30 @@ if (!window.QU) {
     // The element will not be garbage collected while any references to it
     // or its children (including any event handlers) remain.
     QU.elRemove = function(el) {
+        el = QU.id(el);
         if (el.parentNode)
             el.parentNode.removeChild(el);
         return el;
     }
 
-    // Returns the {x:n, y:n} position of an element on the page
-    QU.elPosition = function(el) {
+    // Returns the {x:n, y:n, width:n, height:n} outermost position and size of
+    // an element on the page. If the element has a border this is the left and
+    // top border position and the width and height to the far ends of the opposite
+    // borders. These values exclude any surrounding margins.
+    QU.elOuterPosition = function(el) {
         el = QU.id(el);
         // From https://www.quirksmode.org/js/findpos.html
-        var l = 0, t = 0;
-        if (el.offsetParent) {
+        var e = el, l = 0, t = 0;
+        if (e.offsetParent) {
             do {
-                l += el.offsetLeft;
-                t += el.offsetTop;
-            } while (el = el.offsetParent);
+                l += e.offsetLeft;
+                t += e.offsetTop;
+            } while (e = e.offsetParent);
         }
-        return {x: l, y: t};
+        return {x: l, y: t, width: el.offsetWidth, height: el.offsetHeight};
     };
 
-    // Returns the {width:n, height:n} rendered inner size of an element,
+    // Returns the {width:n, height:n} inner dimensions (client area) of an element,
     // either including or excluding the inner padding, where n may be a float.
     // This value does not include the size of borders, margins, scroll bars,
     // or changes in size due to CSS transformations (e.g. rotation).
@@ -106,6 +110,21 @@ if (!window.QU) {
             isize.height = Math.max(isize.height, 0);
         }
         return isize;
+    };
+
+    // Returns the {left: n, right: n, top: n, bottom: n} dimensions of the
+    // combined border and padding sizes within an element. When added to the
+    // values from QU.elInnerSize() this should equal the outer size of the
+    // element as returned by QU.elOuterPosition().
+    QU.elInnerOffsets = function(el) {
+        el = QU.id(el);
+        var cs = window.getComputedStyle(el);
+        return {
+            left: (parseFloat(cs.paddingLeft) + parseFloat(cs.borderLeftWidth)),
+            right: (parseFloat(cs.paddingRight) + parseFloat(cs.borderRightWidth)),
+            top: (parseFloat(cs.paddingTop) + parseFloat(cs.borderTopWidth)),
+            bottom: (parseFloat(cs.paddingBottom) + parseFloat(cs.borderBottomWidth))
+        };
     };
 
     // Adds (when add is true) or removes (when add is false) a CSS class on an element.
@@ -126,7 +145,29 @@ if (!window.QU) {
                 classes.splice(idx, 1);
             el.className = classes.join(' ');
         }
-    }
+    };
+
+    // Returns the position of a mouse or touch event on the page and in the viewport
+    // (ignoring scroll position) as {'page': {x:n, y:n}, 'viewport': {x:n, y:n}}
+    QU.evPosition = function (event) {
+        var page = {x:0, y:0}, viewport = {x:0, y:0};
+        if (event.type.indexOf('touch') == 0 || event.type.indexOf('gesture') == 0) {
+            if (event.touches && event.touches[0]) {
+                var touch = event.touches[0];
+                page.x = touch.pageX;
+                page.y = touch.pageY;
+                viewport.x = touch.clientX;
+                viewport.y = touch.clientY;
+            }
+        } else {
+            var doc = document.documentElement || document.body;
+            page.x = (event.pageX != null) ? event.pageX : event.clientX + doc.scrollLeft;
+            page.y = (event.pageY != null) ? event.pageY : event.clientY + doc.scrollTop;
+            viewport.x = (event.pageX != null) ? event.pageX - window.pageXOffset : event.clientX;
+            viewport.y = (event.pageY != null) ? event.pageY - window.pageYOffset : event.clientY;
+        }
+        return {'page': page, 'viewport': viewport};
+    };
 
     // Creates and returns a new XMLHttpRequest (or equivalent) suitable for making
     // a cross-domain request for JSON data. Returns null if there is no XHR support
@@ -174,28 +215,6 @@ if (!window.QU) {
             }
         };
         return xhr;
-    };
-    
-    // Returns the position of a mouse or touch event on the page and in the viewport
-    // (ignoring scroll position) as {'page': {x:n, y:n}, 'viewport': {x:n, y:n}}
-    QU.evPosition = function (event) {
-        var page = {x:0, y:0}, viewport = {x:0, y:0};
-        if (event.type.indexOf('touch') == 0 || event.type.indexOf('gesture') == 0) {
-            if (event.touches && event.touches[0]) {
-                var touch = event.touches[0];
-                page.x = touch.pageX;
-                page.y = touch.pageY;
-                viewport.x = touch.clientX;
-                viewport.y = touch.clientY;
-            }
-        } else {
-            var doc = document.documentElement || document.body;
-            page.x = (event.pageX != null) ? event.pageX : event.clientX + doc.scrollLeft;
-            page.y = (event.pageY != null) ? event.pageY : event.clientY + doc.scrollTop;
-            viewport.x = (event.pageX != null) ? event.pageX - window.pageXOffset : event.clientX;
-            viewport.y = (event.pageY != null) ? event.pageY - window.pageYOffset : event.clientY;
-        }
-        return {'page': page, 'viewport': viewport};
     };
 
     // Converts a JavaScript object into a URI-encoded string
