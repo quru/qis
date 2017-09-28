@@ -140,17 +140,6 @@
 	background: url('../images/viewer/icon-fullscreen.png') center center no-repeat;
 }
 
-/* IE6 compatible icons.
-   Cannot use AlphaImageLoader as its src is always relative to the web page. */
-* html .imageviewer .controltoggle { background-image: url('../images/viewer/icon-down.gif'); }
-* html .imageviewer .controltoggle.up { background-image: url('../images/viewer/icon-up.gif'); }
-* html .imageviewer .controlpanel .download { background-image: url('../images/viewer/icon-download.gif'); }
-* html .imageviewer .controlpanel .help { background-image: url('../images/viewer/icon-help.gif'); }
-* html .imageviewer .controlpanel .reset { background-image: url('../images/viewer/icon-reset.gif'); }
-* html .imageviewer .controlpanel .zoomin { background-image: url('../images/viewer/icon-zoom-in.gif'); }
-* html .imageviewer .controlpanel .zoomout { background-image: url('../images/viewer/icon-zoom-out.gif'); }
-/* End IE6 icons */
-
 /* Help/description window */
 .imageviewer .alertpanel {
 	width: 25em;
