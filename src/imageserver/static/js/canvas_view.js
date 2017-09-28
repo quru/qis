@@ -1482,13 +1482,12 @@ ImgCanvasView.prototype.onMouseUp = function(e) {
 		this.mouseAttrs.down = false;
 		QU.elSetClass(this.canvas, 'panning', false);
 
-		// When full screen, whether to pass clicks made within the canvas but
-		// outside the image through to the mask. Only really makes sense when
-		// the full screen mode canvas background colour is transparent.
-		if (!this.mouseAttrs.dragged && (this.uiAttrs.fullMaskEl != null) && this.options.fullScreenCloseOnClick) {
+		// Whether to close full screen mode for clicks made within the canvas but outside the image.
+		// Only really makes sense when the full screen mode canvas background colour is transparent.
+		if (!this.mouseAttrs.dragged && this.uiAttrs.fullScreen && this.options.fullScreenCloseOnClick) {
 			var clickPos = this.getClickPosition(e, true);
 			if (clickPos.x < 0 || clickPos.x > 1 || clickPos.y < 0 || clickPos.y > 1) {
-				this.uiAttrs.fullMaskEl.fireEvent('click');
+			    this.toggleFullscreen();
 				return;
 			}
 		}
@@ -1737,8 +1736,8 @@ ImgCanvasView.prototype.createControls = function() {
 		events: {
 			// In full screen mode, pass through the click to the underlying mask
 			click: function(e) {
-				if (this.uiAttrs.fullMaskEl != null)
-					this.uiAttrs.fullMaskEl.fireEvent('click');
+			    if (this.uiAttrs.fullScreen && this.options.fullScreenCloseOnClick)
+					this.toggleFullscreen();
 			}.bind(this)
 		}
 	});
