@@ -91,6 +91,17 @@ def time_requests(app, add_http_header=False):
             return response
 
 
+def add_cors_headers(app, allowed_origin):
+    """
+    Adds basic CORS HTTP headers to all responses.
+    In production this can also be done by the web server (Apache, nginx).
+    """
+    @app.after_request
+    def add_headers(response):
+        response.headers['Access-Control-Allow-Origin'] = allowed_origin
+        return response
+
+
 def enhance_json_encoder(app):
     """
     Installs the ISODateJSONEncoder class for use with Flask's jsonify function.
