@@ -109,7 +109,7 @@ if (!window.QU) {
     };
 
     // Adds (when add is true) or removes (when add is false) a CSS class on an element.
-    QU.elSetClasses = function(el, className, add) {
+    QU.elSetClass = function(el, className, add) {
         el = QU.id(el);
         if (el.classList) {
             if (add) el.classList.add(className);

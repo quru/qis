@@ -1261,7 +1261,8 @@ function ImgCanvasView(container, imageURL, userOpts, events) {
 		this.options = QU.merge(this.options, userOpts);
 	}
 
-	this.events = events;
+	this.events = events; // Public events
+	this._events = {};    // Private events
 
 	// Track UI state
 	this.uiAttrs = {
@@ -1299,7 +1300,7 @@ function ImgCanvasView(container, imageURL, userOpts, events) {
 	this.ctrEl = QU.id(container);
 	// Clear container of placeholder or previous content
 	QU.elClear(this.ctrEl);
-	QU.elSetClasses(this.ctrEl, 'imageviewer', true);
+	QU.elSetClass(this.ctrEl, 'imageviewer', true);
 
 	// Create our canvas element
 	this.canvas = document.createElement('canvas');
@@ -1328,8 +1329,10 @@ function ImgCanvasView(container, imageURL, userOpts, events) {
 	// Create the image grid which will be the canvas content
 	this.content = new ImgGrid(
 		this.canvas.width, this.canvas.height,
-		imageURL, this.options.stripaligns,
-		this.canvasContext, this.options.animation,
+		imageURL,
+		this.options.stripaligns,
+		this.canvasContext,
+		this.options.animation,
 		this.options.maxtiles,
 		function(info) { this.onContentReady(info); }.bind(this)
 	);
@@ -1348,6 +1351,7 @@ ImgCanvasView.prototype.destroy = function() {
 	this.events = null;
 	this.content.destroy();
 	this.content = null;
+	this.removeEvents();
 	QU.elRemove(this.canvas);
 	this.canvas = null;
 	this.canvasContext = null;
@@ -1355,28 +1359,47 @@ ImgCanvasView.prototype.destroy = function() {
 
 ImgCanvasView.prototype.init = function() {
 	// Set UI handlers
-	this.canvas.removeEvents();
+	this.removeEvents();
+	this.addEvents();
+}
 
-	// Note some browsers report touch events even on non-touch devices. No known workaround.
-	if ('ontouchstart' in window && window.Touch) {
-		// Map touch events to mouse events
-		this.canvas.addEvent('touchstart',  function(e) { this.onTouchStart(e); }.bind(this));
-		this.canvas.addEvent('touchmove',   function(e) { this.onTouchMove(e); }.bind(this));
-		this.canvas.addEvent('touchend',    function(e) { this.onTouchEnd(e); }.bind(this));
-		this.canvas.addEvent('touchcancel', function(e) { this.onTouchCancel(e); }.bind(this));
-	}
-	else {
-		// For non-touch use plain mouse events
-		this.canvas.addEvent('mousedown',  function(e) { this.onMouseDown(e); }.bind(this));
-		this.canvas.addEvent('mousemove',  function(e) { this.onMouseMove(e); }.bind(this));
-		this.canvas.addEvent('mouseup',    function(e) { this.onMouseUp(e); }.bind(this));
-		this.canvas.addEvent('mouseleave', function(e) { this.onMouseUp(e); }.bind(this));
-	}
+// Installs canvas event handlers
+ImgCanvasView.prototype.addEvents = function() {
+    if ('ontouchstart' in window && window.Touch) {
+        this._events.touchstart  = function(e) { this.onTouchStart(e);  }.bind(this);
+        this._events.touchmove   = function(e) { this.onTouchMove(e);   }.bind(this);
+        this._events.touchend    = function(e) { this.onTouchEnd(e);    }.bind(this);
+        this._events.touchcancel = function(e) { this.onTouchCancel(e); }.bind(this);
+        this.canvas.addEventListener('touchstart',  this._events.touchstart, false);
+        this.canvas.addEventListener('touchmove',   this._events.touchmove, false);
+        this.canvas.addEventListener('touchend',    this._events.touchend, false);
+        this.canvas.addEventListener('touchcancel', this._events.touchcancel, false);
+    }
+    else {
+        this._events.mousedown  = function(e) { this.onMouseDown(e); }.bind(this);
+        this._events.mousemove  = function(e) { this.onMouseMove(e); }.bind(this);
+        this._events.mouseup    = function(e) { this.onMouseUp(e);   }.bind(this);
+        this._events.mouseleave = function(e) { this.onMouseUp(e);   }.bind(this);
+        this.canvas.addEventListener('mousedown',  this._events.mousedown, false);
+        this.canvas.addEventListener('mousemove',  this._events.mousemove, false);
+        this.canvas.addEventListener('mouseup',    this._events.mouseup, false);
+        this.canvas.addEventListener('mouseleave', this._events.mouseleave, false);
+    }
 
-	// Prevent shift-click selecting and highlighting things in IE
-	// (the canvas' user-select styles cover WebKit and Gecko)
-	this.canvas.addEvent('selectstart', function(e) { return false; });
-	this.canvas.addEvent('dragstart', function(e) { return false; });
+    // Prevent shift-click selecting and highlighting things in IE
+    // (the canvas' user-select styles cover WebKit and Gecko)
+    this._events.selectstart = function(e) { return false; };
+    this._events.dragstart   = function(e) { return false; };
+    this.canvas.addEventListener('selectstart', this._events.selectstart, false);
+    this.canvas.addEventListener('dragstart',   this._events.dragstart, false);
+}
+
+// Removes the installed canvas event handlers
+ImgCanvasView.prototype.removeEvents = function() {
+    for (var k in this._events) {
+        this.canvas.removeEventListener(k, this._events[k], false);
+    }
+    this._events = {};
 }
 
 // Reads the current size/position of the container element and (re)sets the canvas size
@@ -1414,7 +1437,7 @@ ImgCanvasView.prototype.reset = function() {
 }
 
 ImgCanvasView.prototype.onMouseDown = function(e) {
-	if (!e.rightClick) {
+	if (e.button == 0) {
 		if ((e.api_event == undefined) &&
 			this.options.doubleclickreset &&
 		    (Date.now() - this.mouseAttrs.downTime < 300)) {
@@ -1422,12 +1445,13 @@ ImgCanvasView.prototype.onMouseDown = function(e) {
 			this.reset();
 		}
 		else {
+		    var eventPos = QU.evPosition(e);
 			this.mouseAttrs.down = true;
 			this.mouseAttrs.downTime = Date.now();
-			this.mouseAttrs.down_x = this.mouseAttrs.last_x = e.page.x;
-			this.mouseAttrs.down_y = this.mouseAttrs.last_y = e.page.y;
+			this.mouseAttrs.down_x = this.mouseAttrs.last_x = eventPos.page.x;
+			this.mouseAttrs.down_y = this.mouseAttrs.last_y = eventPos.page.y;
 			this.mouseAttrs.dragged = false;
-			this.canvas.addClass('panning');
+			QU.elSetClass(this.canvas, 'panning', true);
 		}
 	}
 }
@@ -1440,13 +1464,14 @@ ImgCanvasView.prototype.onMouseMove = function(e) {
 			// Perform the pan redraw async so that events can
 			// continue and so we don't lock up slow browsers
 			setTimeout(function() {
-				var dx = (e.page.x - this.mouseAttrs.down_x);
-				var dy = (e.page.y - this.mouseAttrs.down_y);
+			    var eventPos = QU.evPosition(e);
+				var dx = (eventPos.page.x - this.mouseAttrs.down_x);
+				var dy = (eventPos.page.y - this.mouseAttrs.down_y);
 				this.content.panGrid(dx, dy, true, true);
 				this.mouseAttrs.last_x = this.mouseAttrs.down_x;
 				this.mouseAttrs.last_y = this.mouseAttrs.down_y;
-				this.mouseAttrs.down_x = e.page.x;
-				this.mouseAttrs.down_y = e.page.y;
+				this.mouseAttrs.down_x = eventPos.page.x;
+				this.mouseAttrs.down_y = eventPos.page.y;
 			}.bind(this), 1);
 		}
 	}
@@ -1455,7 +1480,7 @@ ImgCanvasView.prototype.onMouseMove = function(e) {
 ImgCanvasView.prototype.onMouseUp = function(e) {
 	if (this.mouseAttrs.down) {
 		this.mouseAttrs.down = false;
-		this.canvas.removeClass('panning');
+		QU.elSetClass(this.canvas, 'panning', false);
 
 		// When full screen, whether to pass clicks made within the canvas but
 		// outside the image through to the mask. Only really makes sense when
@@ -1473,13 +1498,14 @@ ImgCanvasView.prototype.onMouseUp = function(e) {
 			// Animate a zoom if this was just a click (the animation is async)
 			if (!this.mouseAttrs.dragged) {
 				var clickPos = this.getClickPosition(e, true);
-				this.content.zoomGrid((e.shift ? -1 : 1), clickPos);
+				this.content.zoomGrid((e.shiftKey ? -1 : 1), clickPos);
 				this.refreshZoomControls();
 			}
 			else {
 				// Animate the current pan to a stop (the animation is async)
-				var dx = (e.page.x - this.mouseAttrs.last_x);
-				var dy = (e.page.y - this.mouseAttrs.last_y);
+			    var eventPos = QU.evPosition(e);
+			    var dx = (eventPos.page.x - this.mouseAttrs.last_x);
+				var dy = (eventPos.page.y - this.mouseAttrs.last_y);
 				if (Math.abs(dx) > 3 || Math.abs(dy) > 3)
 					this.content.autoPanGrid(dx, dy);
 			}
@@ -1491,8 +1517,9 @@ ImgCanvasView.prototype.onTouchStart = function(e) {
 	e.preventDefault();
 	if (e.touches.length == 1) {
 		this.onMouseDown({
-			page: { x: e.touches[0].pageX, y: e.touches[0].pageY },
-			rightClick: false
+			pageX: e.touches[0].pageX,
+			pageY: e.touches[0].pageY,
+			button: 0
 		});
 	}
 	this.touchPosReset();
@@ -1503,7 +1530,8 @@ ImgCanvasView.prototype.onTouchMove = function(e) {
 	if (e.touches.length == 1) {
 		// Pan
 		this.onMouseMove({
-			page: { x: e.touches[0].pageX, y: e.touches[0].pageY }
+			pageX: e.touches[0].pageX,
+			pageY: e.touches[0].pageY
 		});
 	}
 	else if (e.touches.length == 2) {
@@ -1526,12 +1554,10 @@ ImgCanvasView.prototype.onTouchMove = function(e) {
 			// Do a pinch zoom
 			if (trigger) {
 				var zEvent = {
-					page: {
-						x: Math.round(this.touchAttrs.last1.x + ((this.touchAttrs.last2.x - this.touchAttrs.last1.x) / 2)),
-						y: Math.round(this.touchAttrs.last1.y + ((this.touchAttrs.last2.y - this.touchAttrs.last1.y) / 2))
-					},
-					rightClick: false,
-					shift: !zoomIn,
+					pageX: Math.round(this.touchAttrs.last1.x + ((this.touchAttrs.last2.x - this.touchAttrs.last1.x) / 2)),
+					pageY: Math.round(this.touchAttrs.last1.y + ((this.touchAttrs.last2.y - this.touchAttrs.last1.y) / 2)),
+					button: 0,
+					shiftKey: !zoomIn,
 					api_event: true
 				};
 				this.onMouseDown(zEvent);
@@ -1552,16 +1578,18 @@ ImgCanvasView.prototype.onTouchMove = function(e) {
 ImgCanvasView.prototype.onTouchEnd = function(e) {
 	e.preventDefault();
 	this.onMouseUp({
-		page: { x: e.changedTouches[0].pageX, y: e.changedTouches[0].pageY },
-		shift: false
+		pageX: e.changedTouches[0].pageX,
+		pageY: e.changedTouches[0].pageY,
+		shiftKey: false
 	});
 	this.touchPosReset();
 }
 
 ImgCanvasView.prototype.onTouchCancel = function(e) {
 	this.onMouseUp({
-		page: { x: e.changedTouches[0].pageX, y: e.changedTouches[0].pageY },
-		shift: false
+		pageX: e.changedTouches[0].pageX,
+		pageY: e.changedTouches[0].pageY,
+		shiftKey: false
 	});
 	this.touchPosReset();
 }
@@ -1605,19 +1633,17 @@ ImgCanvasView.prototype.autoZoomFit = function() {
 // Invokes a zoom in or out on the current centre of the visible canvas
 ImgCanvasView.prototype.autoZoom = function(zoomIn) {
 	var zEvent = {
-		page: {
-			x: Math.round(this.ctrOuterPos.left + this.ctrInnerPos.computedLeft + (this.canvas.width / 2)),
-			y: Math.round(this.ctrOuterPos.top + this.ctrInnerPos.computedTop + (this.canvas.height / 2))
-		},
-		rightClick: false,
-		shift: !zoomIn,
+		pageX: Math.round(this.ctrOuterPos.left + this.ctrInnerPos.computedLeft + (this.canvas.width / 2)),
+		pageY: Math.round(this.ctrOuterPos.top + this.ctrInnerPos.computedTop + (this.canvas.height / 2)),
+		button: 0,
+		shiftKey: !zoomIn,
 		api_event: true
 	};
 	// Correct page coords for when this.ctrOuterPos is position:fixed
 	if (this.uiAttrs.fullScreen && this.options.fullScreenFixed) {
 	    var winScroll = window.getScroll();
-		zEvent.page.x += winScroll.x;
-		zEvent.page.y += winScroll.y;
+		zEvent.pageX += winScroll.x;
+		zEvent.pageY += winScroll.y;
 	}
 	this.onMouseDown(zEvent);
 	this.onMouseUp(zEvent);
@@ -1652,8 +1678,9 @@ ImgCanvasView.prototype.getViewportPosition = function() {
 // (because the grid may not fill the canvas at low zoom levels).
 ImgCanvasView.prototype.getClickPosition = function(event, forGrid) {
 	// Get click coords for container
-	var relx = event.page.x - this.ctrOuterPos.left;
-	var rely = event.page.y - this.ctrOuterPos.top;
+    var eventPos = QU.evPosition(event);
+	var relx = eventPos.page.x - this.ctrOuterPos.left;
+	var rely = eventPos.page.y - this.ctrOuterPos.top;
 	// Account for when this.ctrOuterPos is position:fixed
 	if (this.uiAttrs.fullScreen && this.options.fullScreenFixed) {
 	    var winScroll = window.getScroll();
