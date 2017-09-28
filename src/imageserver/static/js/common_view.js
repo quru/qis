@@ -138,30 +138,34 @@ if (!window.QU) {
     // To invoke the request, call xhr.send() or xhr.send(body) on the returned object.
     QU.jsonRequest = function(url, method, successFn, errorFn) {
         var xhr = new XMLHttpRequest();
-        if (!('withCredentials' in xhr)) {
-            if (typeof XDomainRequest !== 'undefined') {
-                xhr = new XDomainRequest();    // IE 9
-                xhr.onprogress = function(){}; // Prevent IE aborting requests
-                xhr.ontimeout = function(){};  // see http://perrymitchell.net/article/xdomainrequest-cors-ie9/
-            } else {
-                return null;                   // Unsupported browser
-            }
+        if ('withCredentials' in xhr) {
+            // Modern browsers
+            xhr.open(method, url, true);
+            xhr.setRequestHeader('Accept', 'application/json');
+        } else if (typeof XDomainRequest !== 'undefined') {
+            // IE 9
+            xhr = new XDomainRequest();
+            xhr._XDR = true;
+            xhr.onprogress = function(){}; // Prevent IE aborting requests
+            xhr.ontimeout = function(){};  // see http://perrymitchell.net/article/xdomainrequest-cors-ie9/
+            xhr.open(method, url);
+        } else {
+            // Unsupported browser
+            return null;
         }
         xhr.onload = function() {
-            if (xhr.status >= 200 && xhr.status < 400) {
-                if (successFn) {
-                    var jsonObj;
-                    try { jsonObj = JSON.parse(xhr.responseText); }
-                    catch (e) {
-                        if (errorFn) { errorFn(xhr, 'Invalid JSON: ' + e); }
-                        return;
-                    }
-                    successFn(xhr, jsonObj);
+            if (!xhr._XDR && (xhr.status < 200 || xhr.status >= 400)) {
+                if (errorFn) { errorFn(xhr, xhr.responseText); }
+                return;
+            }
+            if (successFn) {
+                var jsonObj;
+                try { jsonObj = JSON.parse(xhr.responseText); }
+                catch (e) {
+                    if (errorFn) { errorFn(xhr, 'Invalid JSON: ' + e); }
+                    return;
                 }
-            } else {
-                if (errorFn) {
-                    errorFn(xhr, xhr.responseText);
-                }
+                successFn(xhr, jsonObj);
             }
         };
         xhr.onerror = function() {
@@ -169,8 +173,6 @@ if (!window.QU) {
                 errorFn(xhr, xhr.responseText);
             }
         };
-        xhr.open(method, url, true);
-        xhr.setRequestHeader('Accept', 'application/json');
         return xhr;
     };
     
