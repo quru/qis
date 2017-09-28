@@ -1,0 +1,47 @@
+# Run this with grep -f _mootools_search_items.txt *.js then TODO delete me
+# Also no longer need to have .replace(/\+/g, ' ') before parseQueryString
+$(
+$$(
+document\.id(
+\.toFloat()
+\.append(
+\.clone(
+\.merge(
+\.getParent(
+\.empty()
+\.destroy()
+\.grab(
+\.getPosition(
+\.getCoordinates(
+\.getStyle(
+\.setStyle(
+\.page.x
+\.page.y
+\.client.x
+\.client.y
+\.target
+\.code
+\.key
+\.alt
+\.shift
+\.control
+\.rightClick
+\.leftClick
+\.toQueryString(
+\.addClass(
+\.removeClass(
+\.addEvent(
+\.removeEvent(
+\.removeEvents(
+\.fireEvent(
+\.stop(
+\.typeOf(
+new Element
+new Request
+parseQueryString(
+cleanQueryString(
+getComputedSize(
+Asset\.
+Browser\.
+Fx\.
+Date\.now()
