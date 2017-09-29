@@ -34,6 +34,12 @@
     28Sep2017  Matt  Remove MooTools, remove JSONP
 */
 
+// TODO remove me
+// Strips empty query string values from a URL, and converts "+"s to " "s
+function _clean_url(url) {
+    return url ? url.cleanQueryString().replace(/\+/g, ' ') : url;
+}
+
 /**** Private interface ****/
 
 function GalleryView(container, userOpts, events) {
@@ -452,7 +458,7 @@ GalleryView.prototype.onMoveComplete = function() {
 	
 	// Fire change event
 	if (this.events)
-		_fire_event(this.events.onchange, this, [this.options.images[this.thumbIdx].src]);
+		ImgUtils.fireEvent(this.events.onchange, this, [this.options.images[this.thumbIdx].src]);
 	
 	canvas_view_init(
 		this.elements.main_view,
@@ -588,12 +594,11 @@ function GalleryViewMask(options, events) {
 GalleryViewMask.prototype.open = function() {
 	var fsCoords = this.fullscreenGetCoords();
 	// Mask the page
-	this.mask = new Mask(document.body, {
-		hideOnClick: false,         // Don't just hide, use onClick below
-		'class': 'fullscreen_mask', // In canvas_view.css
-		style: { 'z-index': '1000' },
-		onClick: this.close.bind(this)
-	});
+	this.mask = new PageMask(
+	    'fullscreen_mask', // In canvas_view.css
+	    { 'zIndex': '1000' },
+	    function(mask) { this.close(); }.bind(this)
+	);
 	this.mask.show();
 	// Add a gallery container
 	this.ctrEl = new Element('div', {
@@ -633,7 +638,7 @@ GalleryViewMask.prototype.open = function() {
 	new Fx.Tween(this.ctrEl, { duration: 500 }).start('opacity', 0, 1);
 	// Fire fullscreen event
 	if (this.events)
-		_fire_event(this.events.onfullscreen, this.ctrEl._gallery, ['', true]);
+		ImgUtils.fireEvent(this.events.onfullscreen, this.ctrEl._gallery, ['', true]);
 };
 
 GalleryViewMask.prototype.close = function() {
@@ -647,7 +652,7 @@ GalleryViewMask.prototype.close = function() {
 		onComplete: function() {
 			// Fire fullscreen event before destroying the gallery
 			if (this.events)
-				_fire_event(this.events.onfullscreen, this.ctrEl._gallery, ['', false]);
+				ImgUtils.fireEvent(this.events.onfullscreen, this.ctrEl._gallery, ['', false]);
 			// Remove event handlers
 			window.removeEvent('resize', this.fullResizeFn);
 			window.removeEvent('keydown', this.fullKeydownFn);
@@ -809,7 +814,7 @@ function gallery_view_init_fullscreen(element, options, events) {
 		element.addEvent('click', function() {
 			// Try to default the start image if it's not set
 			if (!opts.startImage) {
-				var imageURL = _get_image_src(element);
+				var imageURL = ImgUtils.getImageSrc(element);
 				if (imageURL) {
 					var parsedURL = new URI(_clean_url(imageURL)),
 					    srcParam = parsedURL.getData('src');
@@ -841,7 +846,7 @@ function gallery_view_init_all_fullscreen(className, options, events) {
 		options.images = options.images || [];
 		// Generate options and image list from elements
 		elements.each(function(element) {
-			var imageURL = _get_image_src(element);
+			var imageURL = ImgUtils.getImageSrc(element);
 			if (imageURL) {
 				var parsedURL = new URI(_clean_url(imageURL)),
 				    srcParam = parsedURL.getData('src');

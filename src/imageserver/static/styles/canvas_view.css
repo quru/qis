@@ -90,11 +90,11 @@
     position: relative;
     top: -1px;          /* Fix off-by-1 issues in Chrome and IE */
 
-    -webkit-transition: -webkit-transform .5s ease-out;
-       -moz-transition:    -moz-transform .5s ease-out;
-        -ms-transition:     -ms-transform .5s ease-out;
-         -o-transition:      -o-transform .5s ease-out;
-            transition:         transform .5s ease-out;
+    -webkit-transition: -webkit-transform .3s ease-out;
+       -moz-transition:    -moz-transform .3s ease-out;
+        -ms-transition:     -ms-transform .3s ease-out;
+         -o-transition:      -o-transform .3s ease-out;
+            transition:         transform .3s ease-out;
 }
 .imageviewer .controlpanel.up {
     -webkit-transform: translate(0, -100%);

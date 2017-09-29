@@ -1621,7 +1621,7 @@ ImgCanvasView.prototype.onContentReady = function(imageInfo) {
 		this.autoZoomFit();
 	// Fire loaded event
 	if (this.events)
-		_fire_event(this.events.onload, this, [this.imageSrc]);
+		ImgUtils.fireEvent(this.events.onload, this, [this.imageSrc]);
 }
 
 // Invokes a zoom in or out so that the image best fits the visible canvas
@@ -1810,9 +1810,8 @@ ImgCanvasView.prototype.createControls = function() {
 	}
 
 	// Add panel to the DOM
-	this.ctrEl.appendChild(panel_outer);
     this.controlpanel = panel_inner;
-    this.controlpanel.toggler = toggler;
+	this.ctrEl.appendChild(panel_outer);
 
 	// Set rollovers
 	var icons = this.controlpanel.querySelectorAll('.icon');
@@ -1837,26 +1836,26 @@ ImgCanvasView.prototype.clearRollovers = function() {
 // Assumed to be called at the start of zoom animations (hence the use of nextLevel).
 ImgCanvasView.prototype.refreshZoomControls = function() {
 	if (this.content && this.content.initialised && this.controlpanel) {
-		var zin = this.controlpanel.getElement('.zoomin'),
-		    zout = this.controlpanel.getElement('.zoomout'),
-		    zreset = this.controlpanel.getElement('.reset'),
+		var zin = this.controlpanel.querySelector('.zoomin'),
+		    zout = this.controlpanel.querySelector('.zoomout'),
+		    zreset = this.controlpanel.querySelector('.reset'),
 		    canZoomIn = (this.content.zoom.nextLevel < this.content.zoom.maxLevel),
 		    canZoomOut = (this.content.zoom.nextLevel > 1),
 		    canReset = canZoomOut;
 
-		if (zin) canZoomIn ? zin.removeClass('disabled') : zin.addClass('disabled');
-		if (zout) canZoomOut ? zout.removeClass('disabled') : zout.addClass('disabled');
-		if (zreset) canReset ? zreset.removeClass('disabled') : zreset.addClass('disabled');
+		if (zin) QU.elSetClass(zin, 'disabled', !canZoomIn);
+		if (zout) QU.elSetClass(zout, 'disabled', !canZoomOut);
+		if (zreset) QU.elSetClass(zreset, 'disabled', !canReset);
 	}
 }
 
 // Sets whether the image download control is available
 ImgCanvasView.prototype.enableDownload = function(enable) {
 	if (this.controlpanel) {
-		var dld = this.controlpanel.getElement('.download');
+		var dld = this.controlpanel.querySelector('.download');
 		if (dld) {
-			enable ? dld.removeClass('disabled') : dld.addClass('disabled');
-			dld.set('title', enable ? 'Download full image' : 'Image download not permitted');
+		    QU.elSetClass(dld, 'disabled', !enable);
+			dld.title = (enable ? 'Download full image' : 'Image download not permitted');
 		}
 	}
 }
@@ -1864,7 +1863,7 @@ ImgCanvasView.prototype.enableDownload = function(enable) {
 // Sets the clickable title text for the control panel, which may be truncated
 ImgCanvasView.prototype.setImageTitle = function(imageTitle) {
 	if (this.controlpanel) {
-		var titleEl = this.controlpanel.getElement('.controltitle');
+		var titleEl = this.controlpanel.querySelector('.controltitle');
 		if (titleEl) {
 			var MAX = 24,
 			    useTitle = this.stripTags(imageTitle);
@@ -1879,8 +1878,10 @@ ImgCanvasView.prototype.setImageTitle = function(imageTitle) {
 				useTitle = useTitle.substring(0, truncIdx) + '...';
 			}
 			titleEl.innerHTML = useTitle;
-			titleEl.removeEvents('click');
-			titleEl.addEvent('click',  this.toggleImageInfo.bind(this));
+			if (!titleEl._cv_click) {
+			    titleEl._cv_click = this.toggleImageInfo.bind(this);
+			    titleEl.addEventListener('click', titleEl._cv_click, false);
+			}
 		}
 	}
 }
@@ -1893,8 +1894,9 @@ ImgCanvasView.prototype.toggleControls = function() {
         // Animate control panel
 		var isUp = QU.elHasClass(this.controlpanel, 'up');
 	    QU.elSetClass(this.controlpanel, 'up', !isUp);
-	    if (this.controlpanel.toggler) {
-	        QU.elSetClass(this.controlpanel.toggler, 'up', isUp);
+	    var toggler = this.ctrEl.querySelector('.controltoggle');
+	    if (toggler) {
+	        QU.elSetClass(toggler, 'up', isUp);
 	    }
 	}
 }
@@ -1904,7 +1906,7 @@ ImgCanvasView.prototype.downloadImage = function() {
 	if (this.imageInfo && this.imageInfo.download) {
 		// Fire download event
 		if (this.events)
-			_fire_event(this.events.ondownload, this, [this.imageSrc]);
+			ImgUtils.fireEvent(this.events.ondownload, this, [this.imageSrc]);
 		// Trigger download
 		window.location.href = this.imageServer + 'original?src=' + encodeURIComponent(this.imageSrc) + '&attach=1';
 	}
@@ -1915,7 +1917,7 @@ ImgCanvasView.prototype.downloadImage = function() {
 // security reasons (text is untrusted) all other HTML tags are stripped.
 ImgCanvasView.prototype.toggleAlert = function(text) {
 	if (this.uiAttrs.alertVisible) {
-		this.uiAttrs.alertEl.destroy();
+	    QU.elRemove(this.uiAttrs.alertEl);
 		this.uiAttrs.alertEl = null;
 		this.uiAttrs.alertVisible = false;
 	}
@@ -1924,51 +1926,44 @@ ImgCanvasView.prototype.toggleAlert = function(text) {
 		text = text.replace(/\r\n?/g, '\n');
 		text = text.replace(/\n/g, '<br/>');
 
-		this.uiAttrs.alertEl = new Element('div', {
-			styles: {
-				position: 'absolute',
-				width: '0px',
-				height: '0px',
-				'z-index': '1102'    // IE7 z-index fix
-			}
-		});
+		var alertOuter = document.createElement('div');
+		alertOuter.style.position = 'absolute';
+		alertOuter.style.width = '0px';
+		alertOuter.style.height = '0px';
+		alertOuter.style.zIndex = '1102'; // IE7 z-index fix
+        this.uiAttrs.alertEl = alertOuter;
+
 		// Putting the alert inside a positioned parent div makes the "absolute"
-		// coords relative to the parent, gives us a handy anchor point.
-		var alertInner = new Element('div', {
-			'class': 'alertpanel panelbg',
-			html: this.stripTags(text, '(?!br)'),
-			styles: {
-				position: 'absolute',
-				'z-index': '1102',
-				'line-height': 'normal',
-				'overflow': 'auto',
-				visibility: 'hidden'
-			},
-			events: {
-				// Close alert on click
-				mousedown: function() { this.toggleAlert(); }.bind(this),
-				// Prevent pinch zoom
-				touchmove: function() { return false; }
-			}
-		});
+		// coords relative to the parent, which gives us a handy anchor point.
+		var alertInner = document.createElement('div');
+		alertInner.className = 'alertpanel panelbg';
+		alertInner.innerHTML = this.stripTags(text, '(?!br)');
+		alertInner.style.position = 'absolute';
+		alertInner.style.zIndex = '1102';
+		alertInner.style.lineHeight = 'normal';
+		alertInner.style.overflow = 'auto';
+		alertInner.style.visibility = 'hidden';
+		alertInner.addEventListener('mousedown', function() {
+		    this.toggleAlert();  // Close alert on click
+		}.bind(this), false);
+		alertInner.addEventListener('touchmove', function() {
+		    return false;        // Prevent pinch zoom
+		}, false);
+
 		// Add to HTML DOM
-		this.ctrEl.grab(this.uiAttrs.alertEl, 'top');
-		this.uiAttrs.alertEl.grab(alertInner);
+		this.uiAttrs.alertEl.appendChild(alertInner);
+		this.ctrEl.insertBefore(this.uiAttrs.alertEl, this.ctrEl.firstChild);
 		// Position the window now that we can get its size, and show it
-		alertInner.setStyle('left',
-			Math.round((this.canvas.width - alertInner.offsetWidth) / 2) + 'px'
-		);
-		alertInner.setStyle('top',
-			Math.max(0, Math.round((this.canvas.height - alertInner.offsetHeight) / 2)) + 'px'
-		);
+		alertInner.style.left = 	Math.round((this.canvas.width - alertInner.offsetWidth) / 2) + 'px';
+		alertInner.style.top = Math.max(0, Math.round((this.canvas.height - alertInner.offsetHeight) / 2)) + 'px';
 		if (alertInner.offsetHeight > this.ctrInnerPos.height) {
 			// Restrict vertical height to stay within our container
-			var alertDims = alertInner.getComputedSize(),
-			    vPadding  = alertDims.totalHeight - alertDims.height,
+			var innerOffsets = QU.elInnerOffsets(alertInner),
+			    vPadding  = (innerOffsets.top + innerOffsets.bottom),
 			    maxHeight = Math.max(20, (this.ctrInnerPos.height - vPadding));
-			alertInner.setStyle('height', maxHeight + 'px');
+			alertInner.style.height = maxHeight + 'px';
 		}
-		alertInner.setStyle('visibility', 'visible');
+		alertInner.style.visibility = 'visible';
 		this.uiAttrs.alertVisible = true;
 	}
 }
@@ -2000,7 +1995,7 @@ ImgCanvasView.prototype.toggleImageInfo = function() {
 	this.toggleAlert(info);
 	// Fire info shown event
 	if (this.events && this.uiAttrs.alertVisible)
-		_fire_event(this.events.oninfo, this, [this.imageSrc]);
+		ImgUtils.fireEvent(this.events.oninfo, this, [this.imageSrc]);
 }
 
 // Toggles full screen mode
@@ -2028,8 +2023,8 @@ ImgCanvasView.prototype.toggleFullscreen = function() {
 			duration: 300,
 			onComplete: function() {
 				// Remove event handlers
-				window.removeEvent('resize', this.uiAttrs.fullResizeFn);
-				window.removeEvent('keydown', this.uiAttrs.fullKeydownFn);
+				window.removeEventListener('resize', this.uiAttrs.fullResizeFn, false);
+				window.removeEventListener('keydown', this.uiAttrs.fullKeydownFn, false);
 				// Remove the close button
 				this.uiAttrs.fullCloseEl.destroy();
 				this.uiAttrs.fullCloseEl = null;
@@ -2056,7 +2051,7 @@ ImgCanvasView.prototype.toggleFullscreen = function() {
 
 				// Fire fullscreen event
 				if (this.events)
-					_fire_event(this.events.onfullscreen, this, [this.imageSrc, false]);
+					ImgUtils.fireEvent(this.events.onfullscreen, this, [this.imageSrc, false]);
 			}.bind(this)
 		}).start('opacity', 1, 0);
 	}
@@ -2068,12 +2063,11 @@ ImgCanvasView.prototype.toggleFullscreen = function() {
 			'position', 'z-index', 'opacity', 'left', 'top', 'width', 'height', 'margin'
 		);
 		// Mask the page
-		this.uiAttrs.fullMaskEl = new Mask(document.body, {
-			hideOnClick: false,         // Don't just hide, use onClick below
-			'class': 'fullscreen_mask',
-			style: { 'z-index': '1100' },
-			onClick: this.toggleFullscreen.bind(this)
-		});
+		this.uiAttrs.fullMaskEl = new PageMask(
+		    'fullscreen_mask',
+		    { 'zIndex': '1100' },
+		    function(mask) { this.toggleFullscreen(); }.bind(this)
+		);
 		this.uiAttrs.fullMaskEl.show();
 		// Swap the container for a temporary placeholder of the same size
 		this.uiAttrs.fullSwapEl = this.ctrEl.clone(false, true);
@@ -2108,8 +2102,8 @@ ImgCanvasView.prototype.toggleFullscreen = function() {
 		});
 		this.ctrEl.grab(this.uiAttrs.fullCloseEl, 'top');
 		// Add event handlers
-		window.addEvent('keydown', this.uiAttrs.fullKeydownFn);
-		window.addEvent('resize', this.uiAttrs.fullResizeFn);
+		window.addEventListener('keydown', this.uiAttrs.fullKeydownFn, false);
+		window.addEventListener('resize', this.uiAttrs.fullResizeFn, false);
 		// Fade in container
 		new Fx.Tween(this.ctrEl, {
 			duration: 500,
@@ -2120,7 +2114,7 @@ ImgCanvasView.prototype.toggleFullscreen = function() {
 
 		// Fire fullscreen event
 		if (this.events)
-			_fire_event(this.events.onfullscreen, this, [this.imageSrc, true]);
+			ImgUtils.fireEvent(this.events.onfullscreen, this, [this.imageSrc, true]);
 	}
 }
 
@@ -2129,7 +2123,7 @@ ImgCanvasView.prototype.fullscreenGetCoords = function() {
 	// Get browser total viewport size
 	// #517 Prefer window.inner* to get the visual viewport in mobile browsers
 	//      http://www.quirksmode.org/mobile/viewports2.html "Measuring the visual viewport"
-	var winSize   = window.innerWidth ? { x: window.innerWidth, y: window.innerHeight } : window.getSize(),
+	var winSize   = window.innerWidth ? { x: window.innerWidth, y: window.innerHeight } : { x: document.body.clientWidth, y: document.body.clientHeight },
 	    winScroll = this.options.fullScreenFixed ? { x: 0, y: 0 } : { x: window.pageXOffset, y: window.pageYOffset },
 	    winMargin = Math.min(Math.round(winSize.x / 40), Math.round(winSize.y / 40));
 	// Get target placement of viewer container element
@@ -2154,7 +2148,7 @@ ImgCanvasView.prototype.fullscreenGetCoords = function() {
 // Full-screen mode keydown event handler
 ImgCanvasView.prototype.fullscreenKeydown = function(e) {
     var code = (e.which || e.keyCode);
-	if (e.code == 27) {
+	if (code === 27) {
 		// Close async because we don't want to be in here when this handler gets removed
 		setTimeout(this.toggleFullscreen.bind(this), 1);
 	}
@@ -2172,7 +2166,69 @@ ImgCanvasView.prototype.fullscreenResize = function() {
 	this.layout();
 }
 
-function _fire_event(fn, thisArg, argList) {
+/**** Page mask utility ****/
+
+// Creates an initially hidden full-page mask over the current page.
+// e.g. var pm = new PageMask('mask', {'zIndex': '1', 'marginLeft': '2em'}, function(mask) { mask.hide(); });
+// All parameters are optional.
+function PageMask(className, styles, onClickFn) {
+    this.element = document.createElement('div');
+    // Add default styles before user styles
+    this.element.style.position = 'fixed';
+    this.element.style.left = '0px';
+    this.element.style.top = '0px';
+    this.element.style.width = '100vw';
+    this.element.style.height = '100vh';
+
+    if (className) {
+        this.element.className = className;        
+    }
+    if (styles) {
+        for (var key in styles) {
+            this.element.style[key] = styles[key];
+        }
+    }
+    if (onClickFn) {
+        this._onclick = function(e) { onClickFn(this); }.bind(this);
+        this.element.addEventListener('click', this._onclick, false);
+    }
+    if (!className && !styles) {
+        this.element.style.backgroundColor = '#000000';
+        this.element.style.opacity = '0.8';        
+    }
+
+    this.element.style.display = 'none';
+    if (document.body.firstChild)
+        document.body.insertBefore(this.element, document.body.firstChild);
+    else
+        document.body.appendChild(this.element);
+}
+
+// Shows the mask
+PageMask.prototype.show = function() {
+    this.element.style.display = 'block';
+}
+
+// Hides the mask but keeps it in the page
+PageMask.prototype.hide = function() {
+    this.element.style.display = 'none';
+}
+
+// Removes the mask from the page
+PageMask.prototype.destroy = function() {
+    this.hide();
+    if (this._onclick) {
+        this.element.removeEventListener('click', this._onclick, false);
+    }
+    this.element.parentNode.removeChild(this.element);
+}
+
+/**** Local utility functions ****/
+
+ImgUtils = {};
+
+// Asynchronously invokes a user-supplied callback function
+ImgUtils.fireEvent = function (fn, thisArg, argList) {
 	if (fn && typeof fn === 'function') {
 		setTimeout(function() {
 			fn.apply(this, argList);
@@ -2180,8 +2236,8 @@ function _fire_event(fn, thisArg, argList) {
 	}
 }
 
-// Returns the image URL of an element, or null
-function _get_image_src(el) {
+// Returns the image URL of an element (img.src or css background image), or null
+ImgUtils.getImageSrc = function(el) {
 	// Prefer img src
 	if (el.src)
 		return el.src;
@@ -2198,9 +2254,11 @@ function _get_image_src(el) {
 	return null;
 }
 
+/**** Private heleper functions ****/
+
 function _img_fs_zoom_click(imgEl, options, events) {
 	// Get image src or element background image
-	var imageURL = _get_image_src(imgEl);
+	var imageURL = ImgUtils.getImageSrc(imgEl);
 	if (!imageURL)
 		return;
 
@@ -2229,18 +2287,17 @@ function _get_ct_viewer(ct) {
 	ct = QU.id(ct);
 	return (ct && ct._cv_viewer) ? ct._cv_viewer : null;
 }
-var _hcvs = null;
 
 /**** Public interface ****/
 
 /* Returns whether the browser supports the canvas element
  */
 function haveCanvasSupport() {
-	if (_hcvs == null) {
+	if (window._hcvs === undefined) {
 		var cvEl = document.createElement('canvas');
-		_hcvs = (cvEl && cvEl.getContext);
+		window._hcvs = !!(cvEl && cvEl.getContext);
 	}
-	return _hcvs;
+	return window._hcvs;
 }
 
 /* Creates and initialises a zoomable viewer for the image with
