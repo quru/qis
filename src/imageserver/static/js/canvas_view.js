@@ -2016,44 +2016,46 @@ ImgCanvasView.prototype.toggleFullscreen = function() {
 		this.uiAttrs.fullResizeFn = function(e) { this.fullscreenResize(); }.bind(this);
 	}
 
+	// Define a fader
+	if (!this.uiAttrs.fader) {
+	    this.uiAttrs.fader = new Fader(this.ctrEl, 300);
+	}
+	
 	if (this.uiAttrs.fullScreen) {
 		// Fade out container
 		this.uiAttrs.animating = true;
-		new Fx.Tween(this.ctrEl, {
-			duration: 300,
-			onComplete: function() {
-				// Remove event handlers
-				window.removeEventListener('resize', this.uiAttrs.fullResizeFn, false);
-				window.removeEventListener('keydown', this.uiAttrs.fullKeydownFn, false);
-				// Remove the close button
-				this.uiAttrs.fullCloseEl.destroy();
-				this.uiAttrs.fullCloseEl = null;
-				// Take container back out of the page
-				this.ctrEl.dispose();
-				// Restore previous container styles
-				this.ctrEl.setStyles(this.uiAttrs.containerStyles);
-				this.ctrEl.removeClass('fullscreen');
-				// Swap back the temporary container for the real one
-				this.ctrEl.replaces(this.uiAttrs.fullSwapEl);
-				this.uiAttrs.fullSwapEl.destroy();
-				this.uiAttrs.fullSwapEl = null;
-				// Unmask the page
-				this.uiAttrs.fullMaskEl.destroy();
-				this.uiAttrs.fullMaskEl = null;
-				// Reset container size/location
-				this.layout();
-				this.clearRollovers();
-				// Auto zoom out
-				this.reset();
+		this.uiAttrs.fader.fadeOut(function() {
+			// Remove event handlers
+			window.removeEventListener('resize', this.uiAttrs.fullResizeFn, false);
+			window.removeEventListener('keydown', this.uiAttrs.fullKeydownFn, false);
+			// Remove the close button
+			this.uiAttrs.fullCloseEl.destroy();
+			this.uiAttrs.fullCloseEl = null;
+			// Take container back out of the page
+			this.ctrEl.dispose();
+			// Restore previous container styles
+			this.ctrEl.setStyles(this.uiAttrs.containerStyles);
+			this.ctrEl.removeClass('fullscreen');
+			// Swap back the temporary container for the real one
+			this.ctrEl.replaces(this.uiAttrs.fullSwapEl);
+			this.uiAttrs.fullSwapEl.destroy();
+			this.uiAttrs.fullSwapEl = null;
+			// Unmask the page
+			this.uiAttrs.fullMaskEl.destroy();
+			this.uiAttrs.fullMaskEl = null;
+			// Reset container size/location
+			this.layout();
+			this.clearRollovers();
+			// Auto zoom out
+			this.reset();
 
-				this.uiAttrs.animating = false;
-				this.uiAttrs.fullScreen = false;
+			this.uiAttrs.animating = false;
+			this.uiAttrs.fullScreen = false;
 
-				// Fire fullscreen event
-				if (this.events)
-					ImgUtils.fireEvent(this.events.onfullscreen, this, [this.imageSrc, false]);
-			}.bind(this)
-		}).start('opacity', 1, 0);
+			// Fire fullscreen event
+			if (this.events)
+				ImgUtils.fireEvent(this.events.onfullscreen, this, [this.imageSrc, false]);
+		}.bind(this));
 	}
 	else {
 		// Get container destination coords
@@ -2105,11 +2107,7 @@ ImgCanvasView.prototype.toggleFullscreen = function() {
 		window.addEventListener('keydown', this.uiAttrs.fullKeydownFn, false);
 		window.addEventListener('resize', this.uiAttrs.fullResizeFn, false);
 		// Fade in container
-		new Fx.Tween(this.ctrEl, {
-			duration: 500,
-			onComplete: this.autoZoomFit.bind(this) // Auto-fit after fade in (see also onContentReady)
-		}).start('opacity', 0, 1);
-
+		this.uiAttrs.fader.fadeIn(this.autoZoomFit.bind(this)); // Auto-fit after fade in (see also onContentReady)
 		this.uiAttrs.fullScreen = true;
 
 		// Fire fullscreen event
@@ -2164,6 +2162,54 @@ ImgCanvasView.prototype.fullscreenResize = function() {
 	this.ctrEl.style.width = fsCoords.width + 'px';
 	this.ctrEl.style.height = fsCoords.height + 'px';
 	this.layout();
+}
+
+/**** Element fader utility ****/
+
+// Creates a fader for an element, with a fade duration in milliseconds.
+// This is the IE9 version. In IE10+ you can toggle a CSS class containing a
+// CSS transition, and hook into the 'transitionend' event.
+function Fader(el, duration) {
+    this.element = el;
+    this.steps = Math.round(Math.max(1, duration / 16.66));  // 16.66 == 60fps
+    this.increment = 1 / this.steps;                         // Since opacity goes from 0 to 1
+    this.stepFn = this._step.bind(this);
+    if (window.requestAnimationFrame)
+        this.animate = function(fn) { window.requestAnimationFrame(fn); };
+    else
+        this.animate = function(fn) { return setTimeout(fn, 17); };
+}
+
+Fader.prototype.fadeIn = function(onCompleteFn) {
+    this.onCompleteFn = onCompleteFn;
+    this.step = 0;
+    this.opacity = 0;
+    this.direction = 1;
+    this.animate(this.stepFn);
+}
+
+Fader.prototype.fadeOut = function(onCompleteFn) {
+    this.onCompleteFn = onCompleteFn;
+    this.step = 0;    
+    this.opacity = 1;
+    this.direction = -1;
+    this.animate(this.stepFn);
+}
+
+Fader.prototype.destroy = function() {
+    this.element = null;
+    this.stepFn = function(){};
+}
+
+Fader.prototype._step = function() {
+    this.opacity += (this.increment * this.direction);
+    this.element.style.opacity = this.opacity;
+    this.step++;
+    if (this.step < this.steps) {
+        this.animate(this.stepFn);
+    } else if (this.onCompleteFn) {
+        this.onCompleteFn();
+    }
 }
 
 /**** Page mask utility ****/
