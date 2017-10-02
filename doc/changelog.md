@@ -3,7 +3,8 @@ _Changes: Remove MooTools library from the public image viewers, gallery and sli
 Upgrade MooTools library to 1.6.0, now for internal use only.
 Use CORS instead of JSONP in the image viewers and gallery.
 Standardise JavaScript file naming.
-Drop support for IE8 and below._
+Drop support for IE8 and below.
+Allow indexing of images in robots.txt_
 
 This version should arguably be a major release, but is intended to remain
 compatible with v2.5 in the majority of cases once the upgrade script has

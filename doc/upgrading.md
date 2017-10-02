@@ -25,14 +25,18 @@ For upgrading existing installations, an upgrade script has been provided to cle
 legacy files and optionally to provide compatibility with the old `foo_yc.js`
 JavaScript file paths.
 
+Backup the previous version (excluding images):
+
+    $ export QIS_HOME=/opt/qis
+    $ sudo rsync -a $QIS_HOME/* /tmp/qis-backup --exclude images
+
 Extract the latest files:
 
-    $ cd /opt/qis/
+    $ cd $QIS_HOME
     $ sudo -u qis tar --strip-components=1 -xvf /path/to/Quru\ Image\ Server-2.6.0.tar.gz
 
 Then run the upgrade script:
 
-    $ export QIS_HOME=/opt/qis
     $ sudo -u qis $QIS_HOME/src/imageserver/scripts/v2.6_upgrade.sh
 
 ### Apache configuration
@@ -51,6 +55,18 @@ Add the following new lines inside the main `VirtualHost` section:
 Then reload the Apache configuration:
 
     $ sudo apachectl -t && sudo apachectl -k graceful
+
+#### robots.txt
+
+This release allows image URLs to be indexed in the web server's `robots.txt` file.
+If you do not want to allow this, copy the older version back:
+
+    $ sudo -u qis cp /tmp/qis-backup/src/imageserver/static/robots.txt $QIS_HOME/conf/local_robots.txt
+
+And change the 2 Apache configuration files to direct requests for `robots.txt`
+across to the older file:
+
+    Alias /robots.txt      /opt/qis/conf/local_robots.txt
 
 ## v1.50 to v2.4
 
