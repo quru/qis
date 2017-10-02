@@ -261,12 +261,12 @@ if (!window.QU) {
         return xhr;
     };
 
-    // Splits a URL in the form "https://www.example.com:80/some/path?k1=v1&k2=v2"
+    // Splits a URL in the form "https://www.example.com:80/some/path?k1=v1&k2=v2#frag"
     // and returns an object in the form
-    // {'protocol': 'https://', 'server': 'www.example.com:80', 'path': '/some/path', 'query': 'k1=v1&k2=v2'}
+    // {'protocol': 'https://', 'server': 'www.example.com:80', 'path': '/some/path', 'query': 'k1=v1&k2=v2', 'fragment': 'frag'}
     // The query part can be sent to QU.QueryStringToObject for further parsing if required.
     QU.splitURL = function(url) {
-        var idx, qidx, obj = {protocol: '', server: '', path: '', query: ''};
+        var idx, qidx, fidx, obj = {protocol: '', server: '', path: '', query: '', fragment: ''};
         idx = url.indexOf('//');
         if (idx !== -1) {
             obj.protocol = url.substring(0, idx + 2);
@@ -282,8 +282,18 @@ if (!window.QU) {
         if (qidx !== -1) {
             obj.path = url.substring(0, qidx);
             obj.query = url.substring(qidx + 1);
+            fidx = obj.query.indexOf('#');
+            if (fidx !== -1) {
+                obj.fragment = obj.query.substring(fidx + 1);
+                obj.query = obj.query.substring(0, fidx);
+            }
         } else {
             obj.path = url;
+            fidx = obj.path.indexOf('#');
+            if (fidx !== -1) {
+                obj.fragment = obj.path.substring(fidx + 1);
+                obj.path = obj.path.substring(0, fidx);
+            }
         }
         return obj;
     };
