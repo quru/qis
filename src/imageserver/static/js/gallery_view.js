@@ -5,8 +5,8 @@
 	Purpose:       Quru Image Server gallery viewer
 	Requires:      common_view.js
 	               canvas_view.js
-	               MooTools Core 1.3 (no compat)
-	               MooTools More 1.3 - Element.Measure, Fx.Scroll, Mask,
+	               TODO MooTools Core 1.3 (no compat)
+	               TODO MooTools More 1.3 - Element.Measure, Fx.Scroll, Mask,
 	               Request.JSONP, String.QueryString, URI
 	Copyright:     Quru Ltd (www.quru.com)
 	Licence:
@@ -33,12 +33,6 @@
 	11Nov2013  Matt  Add events interface
     28Sep2017  Matt  Remove MooTools, remove JSONP
 */
-
-// TODO remove me
-// Strips empty query string values from a URL, and converts "+"s to " "s
-function _clean_url(url) {
-    return url ? url.cleanQueryString().replace(/\+/g, ' ') : url;
-}
 
 /**** Private interface ****/
 
@@ -782,7 +776,7 @@ GalleryViewMask.prototype.fullscreenGetCoords = function() {
  *   onload, oninfo, ondownload, onfullscreen.
  */
 function gallery_view_init(container, options, events) {
-	container = document.id(container);
+	container = QU.id(container);
 	if (container) {
 		var gallery = new GalleryView(container, options, events);
 		gallery.init();
@@ -794,7 +788,7 @@ function gallery_view_init(container, options, events) {
 /* Notifies the gallery that its container has been resized
  */
 function gallery_view_resize(container) {
-	container = document.id(container);
+	container = QU.id(container);
 	if (container && container._gallery)
 		container._gallery.layout();
 	return false;
@@ -805,25 +799,28 @@ function gallery_view_resize(container) {
  * and events.
  */
 function gallery_view_init_fullscreen(element, options, events) {
-	element = document.id(element);
+	element = QU.id(element);
 	if (element) {
 		// Modify a copy of the supplied options!
-		var opts = options ? Object.clone(options) : {};
+		var opts = options ? QU.clone(options) : {};
 		
-		element.removeEvents('click');
-		element.addEvent('click', function() {
+		if (element._onlick) {
+		    element.removeEventListener('click', element._onlick, false);
+		}
+		element._onlick = function() {
 			// Try to default the start image if it's not set
 			if (!opts.startImage) {
 				var imageURL = ImgUtils.getImageSrc(element);
 				if (imageURL) {
-					var parsedURL = new URI(_clean_url(imageURL)),
-					    srcParam = parsedURL.getData('src');
-					if (srcParam)
-						opts.startImage = srcParam;
+					var urlParts = QU.splitURL(imageURL),
+					    urlQuery = QU.QueryStringToObject(urlParts.query, false);
+					if (urlQuery.src)
+						opts.startImage = urlQuery.src;
 				}
 			}
 			(new GalleryViewMask(opts, events)).open();
-		});
+		};
+		element.addEventListener('click', element._onlick, false);
 	}
 	return false;
 }
@@ -840,41 +837,27 @@ function gallery_view_init_fullscreen(element, options, events) {
  * The events parameter is optional, see gallery_view_init for info.
  */
 function gallery_view_init_all_fullscreen(className, options, events) {
-	var elements = $$('.' + className);
+	var elements = document.querySelectorAll('.' + className);
 	if (elements.length > 0) {
 		var options = options || {};
 		options.images = options.images || [];
 		// Generate options and image list from elements
-		elements.each(function(element) {
-			var imageURL = ImgUtils.getImageSrc(element);
+		for (var i = 0; i < elements.length; i++) {
+		    var element = elements[i],
+		        imageURL = ImgUtils.getImageSrc(element);
 			if (imageURL) {
-				var parsedURL = new URI(_clean_url(imageURL)),
-				    srcParam = parsedURL.getData('src');
-				if (srcParam) {
+				var urlParts = QU.splitURL(imageURL),
+				    urlQuery = QU.QueryStringToObject(urlParts.query, false);
+				if (urlQuery.src) {
 					// This looks like an image server image
-					var host = parsedURL.get('host') || '/',
-					    scheme = parsedURL.get('scheme') || '//',
-					    port = parsedURL.get('port');
-
-					// Get the server base URL for this image
-					if (host != '/') {
-						var server_url = scheme;
-						if (scheme != '//') server_url += '://';
-						server_url += host;
-						if ((port != '80') && (port != '443')) server_url += ':'+port;
-						server_url += '/';
-					}
-					else {
-						var server_url = host;
-					}
-					
+				    var server_url = urlParts.protocol + urlParts.server + '/';
 					// Use any img title/alt as the image title
 					var imageTitle = element.title || element.alt;
 					
 					// Add this image to the image list
 					var imageSpec = { server: server_url };
 					if (imageTitle) imageSpec.title = imageTitle;
-					Object.append(imageSpec, parsedURL.getData());
+					imageSpec = QU.merge(imageSpec, urlQuery);
 					options.images.push(imageSpec);
 
 					if (!options.server) {
@@ -882,10 +865,10 @@ function gallery_view_init_all_fullscreen(className, options, events) {
 					}
 				}
 			}
-		});
+		}
 		// Set the click handlers for elements
 		if (options.images.length > 0) {
-			elements.each(function(el) {
+			elements.forEach(function(el) {
 				gallery_view_init_fullscreen(el, options, events);
 			});
 		}

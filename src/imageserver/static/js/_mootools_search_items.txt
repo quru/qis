@@ -5,6 +5,7 @@ $$(
 document\.id(
 \.toFloat()
 \.append(
+\.each(
 \.clone(
 \.contains(
 \.merge(
@@ -46,6 +47,7 @@ document\.id(
 new Element
 new Request
 new Mask
+new URI
 parseQueryString(
 cleanQueryString(
 getComputedSize(
