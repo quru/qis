@@ -1,9 +1,4 @@
 User-agent: *
-Disallow: /image
-Disallow: /original
-Disallow: /erez/erez
-Disallow: /erez1/erez
-Disallow: /erez2/erez
-Disallow: /erez3/erez
-Disallow: /erez4/erez
-Disallow: /erez5/erez
+Disallow: /admin
+Disallow: /list
+Disallow: /reports
