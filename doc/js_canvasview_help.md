@@ -8,7 +8,7 @@ zoom in and out, read its title and description, and launch a full-screen viewin
 ### Canvas element support
 
 The HTML5 canvas element is supported in all modern web browsers, and in Microsoft Internet
-Explorer since version 9.
+Explorer from version 9 onwards.
 
 ## Implementation
 

@@ -26,7 +26,7 @@
 	{% include "canvas_view_js.html" %}
 
 	<script type="text/javascript">
-		window.addEvent('domready', function() {
+		QU.whenReady(function() {
 			canvas_view_init('image1', '{{ url_for('image', src=image_src) }}');
 			canvas_view_init_all_images('clickable', {
 				showcontrols: 'yes',

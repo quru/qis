@@ -4,8 +4,6 @@
 	By:            Matt Fozard
 	Purpose:       Quru Image Server HTML 5 viewer client
 	Requires:      common_view.js
-	               TODO delete MooTools Core 1.3 (no compat)
-	               TODO delete MooTools More 1.3 - Assets, Element.Measure, Fx.Slide, Mask, Request.JSONP, String.QueryString
 	Copyright:     Quru Ltd (www.quru.com)
 	Licence:
 
@@ -834,7 +832,7 @@ ImgGrid.prototype.cancelPendingHiddenImages = function() {
 	var visibleTiles = this.getVisibleGridTiles();
 	for (var i = 0; i < this.requests.queue.length; i++) {
 		var req = this.requests.queue[i];
-		if ((req.zLevel != this.zoom.level) || !visibleTiles.contains(req.tileNo)) {
+		if ((req.zLevel != this.zoom.level) || (visibleTiles.indexOf(req.tileNo) === -1)) {
 			// Remove tile from requests
 			this.requests.queue.splice(i, 1);
 			this.requests.requested--;

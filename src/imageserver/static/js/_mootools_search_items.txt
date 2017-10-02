@@ -6,6 +6,7 @@ document\.id(
 \.toFloat()
 \.append(
 \.clone(
+\.contains(
 \.merge(
 \.getParent(
 \.empty()

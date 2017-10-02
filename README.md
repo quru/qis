@@ -66,10 +66,10 @@ Image presentation features include:
 
 * Bookmarkable image URLs
 * Image thumbnail generation
-* HTML/Javascript libraries
-  * Simple image zooming for legacy web browsers
-  * Advanced HTML5 image zooming for modern web browsers and tablets
-  * Full-screen image view
+* HTML/JavaScript libraries
+  * Dependency-free with support for Internet Explorer 9 and newer
+  * Animated image zooming for HTML5-compliant web browsers and tablets
+  * Full-screen image viewing
   * Image carousel / slideshow
   * Image gallery / folder viewer
   * Lazily-loaded images
