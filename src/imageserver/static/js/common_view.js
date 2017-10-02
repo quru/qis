@@ -261,6 +261,33 @@ if (!window.QU) {
         return xhr;
     };
 
+    // Splits a URL in the form "https://www.example.com:80/some/path?k1=v1&k2=v2"
+    // and returns an object in the form
+    // {'protocol': 'https://', 'server': 'www.example.com:80', 'path': '/some/path', 'query': 'k1=v1&k2=v2'}
+    // The query part can be sent to QU.QueryStringToObject for further parsing if required.
+    QU.splitURL = function(url) {
+        var idx, qidx, obj = {protocol: '', server: '', path: '', query: ''};
+        idx = url.indexOf('//');
+        if (idx !== -1) {
+            obj.protocol = url.substring(0, idx + 2);
+            url = url.substring(idx + 2);
+        }
+        idx = url.indexOf('/');
+        if (idx >= 1) {
+            // Server name found
+            obj.server = url.substring(0, idx);
+            url = url.substring(idx);
+        }
+        qidx = url.indexOf('?');
+        if (qidx !== -1) {
+            obj.path = url.substring(0, qidx);
+            obj.query = url.substring(qidx + 1);
+        } else {
+            obj.path = url;
+        }
+        return obj;
+    };
+
     // Converts a JavaScript object into a URI-encoded string
     // e.g. {key: 'v1', key2: 'v2$'} --> "key=v1&key2=v2%24"
     // base is an optional parent key to nest the object keys into

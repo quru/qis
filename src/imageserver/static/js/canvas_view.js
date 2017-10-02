@@ -247,16 +247,14 @@ function ImgGrid(width, height, imageURL, stripAligns,
 	};
 
 	// Parse the opening image URL
-	var urlSep = imageURL.indexOf('?');
-	this.urlParams = QU.QueryStringToObject(imageURL.substring(urlSep + 1), false);
+	var urlParts = QU.splitURL(imageURL);
+	this.urlParams = QU.QueryStringToObject(urlParts.query, false);
 	if (stripAligns) {
         delete this.urlParams.halign;
         delete this.urlParams.valign;
 	}
-	imageURL = imageURL.substring(0, urlSep);
-	urlSep = imageURL.lastIndexOf('/');
-	this.urlBase = imageURL.substring(0, urlSep + 1);
-	this.urlCommand = imageURL.substring(urlSep + 1);
+	this.urlBase = urlParts.protocol + urlParts.server;
+	this.urlCommand = urlParts.path;
 
 	// Set initial view
 	this.loadingText = 'Loading image...';
@@ -319,7 +317,7 @@ ImgGrid.prototype.setViewportSize = function(width, height) {
 
 // Loads image information
 ImgGrid.prototype.loadImageInfo = function() {
-	var dataURL = this.urlBase + 'api/v1/details?src=' + encodeURIComponent(this.urlParams.src);
+	var dataURL = this.urlBase + '/api/v1/details?src=' + encodeURIComponent(this.urlParams.src);
 	QU.jsonRequest(
 	    dataURL,
 	    'GET',
@@ -1880,9 +1878,9 @@ ImgCanvasView.prototype.setImageTitle = function(imageTitle) {
 				useTitle = useTitle.substring(0, truncIdx) + '...';
 			}
 			titleEl.innerHTML = useTitle;
-			if (!titleEl._cv_click) {
-			    titleEl._cv_click = this.toggleImageInfo.bind(this);
-			    titleEl.addEventListener('click', titleEl._cv_click, false);
+			if (!titleEl._onclick) {
+			    titleEl._onclick = this.toggleImageInfo.bind(this);
+			    titleEl.addEventListener('click', titleEl._onclick, false);
 			}
 		}
 	}
@@ -1910,7 +1908,7 @@ ImgCanvasView.prototype.downloadImage = function() {
 		if (this.events)
 			ImgUtils.fireEvent(this.events.ondownload, this, [this.imageSrc]);
 		// Trigger download
-		window.location.href = this.imageServer + 'original?src=' + encodeURIComponent(this.imageSrc) + '&attach=1';
+		window.location.href = this.imageServer + '/original?src=' + encodeURIComponent(this.imageSrc) + '&attach=1';
 	}
 }
 
@@ -2488,9 +2486,11 @@ function canvas_view_init_image(image, options, events) {
 			opts.stripaligns = true;
 		}
 		// Set onclick
-		image._cv_click = function() { _img_fs_zoom_click(image, opts, events); };
-		image.removeEventListener('click', image._cv_click, false);
-		image.addEventListener('click', image._cv_click, false);
+		if (image._onclick) {
+		    image.removeEventListener('click', image._onclick, false);
+		}
+		image._onclick = function() { _img_fs_zoom_click(image, opts, events); };
+		image.addEventListener('click', image._onclick, false);
 	}
 	return false;
 }
