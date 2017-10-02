@@ -66,6 +66,7 @@ if (!window.QU) {
         while (el.firstChild) {  // much faster than just setting innerHTML=''
             el.removeChild(el.firstChild);
         }
+        return el;
     };
 
     // Removes an element from the DOM and returns it.
@@ -146,16 +147,48 @@ if (!window.QU) {
                 classes.splice(idx, 1);
             el.className = classes.join(' ');
         }
+        return el;
     };
 
     // Returns whether an element currently has a CSS class applied.
     QU.elHasClass = function(el, className) {
+        el = QU.id(el);
         if (el.classList) {
             return el.classList.contains(className);
         } else {
             var classes = el.className.split(' ');
             return classes.indexOf(className) !== -1;
         }
+    };
+
+    // Returns an object containing selected computed styles of an element.
+    // The style list can contain any key returned by window.getComputedStyle().
+    // E.g. ['zIndex', 'margin', 'backgroundColor']
+    // -->  {'zIndex': 'auto', 'margin': '', 'backgroundColor': 'rgb(255, 255, 255)'}
+    QU.elGetStyles = function(el, styleList) {
+        el = QU.id(el);
+        var cs, obj = {};
+        if (styleList) {
+            try { cs = window.getComputedStyle(el); } catch (e) {}
+            if (cs) {
+                for (var i = 0; i < styleList.length; i++) {
+                    obj[styleList[i]] = cs[styleList[i]];
+                }
+            }
+        }
+        return obj;
+    };
+
+    // The opposite of elGetStyles,
+    // applies the style keys and values in the provided object to an element.
+    QU.elSetStyles = function(el, styles) {
+        el = QU.id(el);
+        if (styles) {
+            for (var key in styles) {
+                el.style[key] = styles[key];
+            }
+        }
+        return el;
     };
 
     // Returns the position of a mouse or touch event on the page and in the viewport

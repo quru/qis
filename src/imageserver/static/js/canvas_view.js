@@ -1307,13 +1307,15 @@ function ImgCanvasView(container, imageURL, userOpts, events) {
 	this.canvas.	height = 1;
 	// Prevent canvas getting highlighted (particularly on shift-click)
 	this.canvas.unselectable = 'on';
-	this.canvas.style.WebkitUserSelect = 'none';
-	this.canvas.style.MozUserSelect = 'none';
-	this.canvas.style.OUserSelect = 'none';
-    this.canvas.style.msUserSelect = 'none';
-	this.canvas.style.userSelect = 'none';
-	this.canvas.style.WebkitTapHighlightColor = 'rgba(0,0,0,0)';
-	this.canvas.style.WebkitTouchCallout = 'none';
+	QU.elSetStyles(this.canvas, {
+	    WebkitUserSelect: 'none',
+	    MozUserSelect: 'none',
+	    OUserSelect: 'none',
+	    msUserSelect: 'none',
+	    userSelect: 'none',
+	    WebkitTapHighlightColor: 'rgba(0,0,0,0)',
+	    WebkitTouchCallout: 'none'
+    });
 
     // Position and size the canvas
 	this.ctrEl.appendChild(this.canvas);
@@ -1725,12 +1727,14 @@ ImgCanvasView.prototype.createControls = function() {
 	// Create container elements for the control panel.
 	// Outer panel is full-width transparent container that implements the show/hide toggle.
 	var panel_outer = document.createElement('div');
-	panel_outer.style.position = 'relative';
-	panel_outer.style.width = '100%';
-	panel_outer.style.lineHeight = 'normal';
-    panel_outer.style.overflow = 'hidden';    /* hides the control panel when slid up */
-	panel_outer.style.textAlign = 'center';
-	panel_outer.style.cursor = 'default';
+	QU.elSetStyles(panel_outer, {
+	    position: 'relative',
+	    width: '100%',
+	    lineHeight: 'normal',
+	    overflow: 'hidden',    /* hides the control panel when slid up */
+	    textAlign: 'center',
+	    cursor: 'default'
+	});
 	panel_outer.addEventListener('click', function(e) {
 	    // In full screen mode, pass through the click to the underlying mask
 	    if (this.uiAttrs.fullScreen && this.options.fullScreenCloseOnClick)
@@ -1927,10 +1931,12 @@ ImgCanvasView.prototype.toggleAlert = function(text) {
 		text = text.replace(/\n/g, '<br/>');
 
 		var alertOuter = document.createElement('div');
-		alertOuter.style.position = 'absolute';
-		alertOuter.style.width = '0px';
-		alertOuter.style.height = '0px';
-		alertOuter.style.zIndex = '1102'; // IE7 z-index fix
+		QU.elSetStyles(alertOuter, {
+		    position: 'absolute',
+		    width: '0px',
+		    height: '0px',
+		    zIndex: '1102' // IE7 z-index fix
+		});
         this.uiAttrs.alertEl = alertOuter;
 
 		// Putting the alert inside a positioned parent div makes the "absolute"
@@ -1938,11 +1944,13 @@ ImgCanvasView.prototype.toggleAlert = function(text) {
 		var alertInner = document.createElement('div');
 		alertInner.className = 'alertpanel panelbg';
 		alertInner.innerHTML = this.stripTags(text, '(?!br)');
-		alertInner.style.position = 'absolute';
-		alertInner.style.zIndex = '1102';
-		alertInner.style.lineHeight = 'normal';
-		alertInner.style.overflow = 'auto';
-		alertInner.style.visibility = 'hidden';
+		QU.elSetStyles(alertInner, {
+		    position: 'absolute',
+		    zIndex: '1102',
+		    lineHeight: 'normal',
+		    overflow: 'auto',
+		    visibility: 'hidden'
+		});
 		alertInner.addEventListener('mousedown', function() {
 		    this.toggleAlert();  // Close alert on click
 		}.bind(this), false);
@@ -2029,16 +2037,16 @@ ImgCanvasView.prototype.toggleFullscreen = function() {
 			window.removeEventListener('resize', this.uiAttrs.fullResizeFn, false);
 			window.removeEventListener('keydown', this.uiAttrs.fullKeydownFn, false);
 			// Remove the close button
-			this.uiAttrs.fullCloseEl.destroy();
+			this.uiAttrs.fullCloseEl.removeEventListener('click', this.uiAttrs.fullCloseEl._onclick, false);
+			QU.elRemove(this.uiAttrs.fullCloseEl);
 			this.uiAttrs.fullCloseEl = null;
 			// Take container back out of the page
-			this.ctrEl.dispose();
+			QU.elRemove(this.ctrEl);
 			// Restore previous container styles
-			this.ctrEl.setStyles(this.uiAttrs.containerStyles);
-			this.ctrEl.removeClass('fullscreen');
+			QU.elSetStyles(this.ctrEl, this.uiAttrs.containerStyles);
+			QU.elSetClass(this.ctrEl, 'fullscreen', false);
 			// Swap back the temporary container for the real one
-			this.ctrEl.replaces(this.uiAttrs.fullSwapEl);
-			this.uiAttrs.fullSwapEl.destroy();
+			this.uiAttrs.fullSwapEl.parentNode.replaceChild(this.ctrEl, this.uiAttrs.fullSwapEl);
 			this.uiAttrs.fullSwapEl = null;
 			// Unmask the page
 			this.uiAttrs.fullMaskEl.destroy();
@@ -2061,8 +2069,8 @@ ImgCanvasView.prototype.toggleFullscreen = function() {
 		// Get container destination coords
 		var fsCoords = this.fullscreenGetCoords();
 		// Back up the container's styles
-		this.uiAttrs.containerStyles = this.ctrEl.getStyles(
-			'position', 'z-index', 'opacity', 'left', 'top', 'width', 'height', 'margin'
+		this.uiAttrs.containerStyles = QU.elGetStyles(this.ctrEl,
+		    ['position', 'zIndex', 'opacity', 'left', 'top', 'width', 'height', 'margin']
 		);
 		// Mask the page
 		this.uiAttrs.fullMaskEl = new PageMask(
@@ -2072,12 +2080,12 @@ ImgCanvasView.prototype.toggleFullscreen = function() {
 		);
 		this.uiAttrs.fullMaskEl.show();
 		// Swap the container for a temporary placeholder of the same size
-		this.uiAttrs.fullSwapEl = this.ctrEl.clone(false, true);
-		this.uiAttrs.fullSwapEl.replaces(this.ctrEl);
+		this.uiAttrs.fullSwapEl = this.ctrEl.cloneNode(false);
+		this.ctrEl.parentNode.replaceChild(this.uiAttrs.fullSwapEl, this.ctrEl);
 		// Override container styles and put it back in the page, now on top of the mask
-		this.ctrEl.setStyles({
+		QU.elSetStyles(this.ctrEl, {
 			position: this.options.fullScreenFixed ? 'fixed' : 'absolute',
-			'z-index': '1101',
+			zIndex: '1101',
 			opacity: '0',
 			left: fsCoords.left + 'px',
 			top: fsCoords.top + 'px',
@@ -2085,24 +2093,26 @@ ImgCanvasView.prototype.toggleFullscreen = function() {
 			height: fsCoords.height + 'px',
 			margin: '0'
 		});
-		this.ctrEl.addClass('fullscreen');
-		document.id(document.body).grab(this.ctrEl, 'top');
+		QU.elSetClass(this.ctrEl, 'fullscreen', true);
+		document.body.insertBefore(this.ctrEl, document.body.firstChild);
 		// Reset container size/location
 		this.layout();
 		this.clearRollovers();
 		// Add a close button
-		this.uiAttrs.fullCloseEl = new Element('a', {
-			'class': 'close_button',
-			styles: {
-				display: 'block', position: 'absolute',
-				'z-index': '1102',    /* same as alert panel */
-				top: '0px', right: '0px', width: '33px', height: '33px'
-			},
-			events: {
-				click: this.toggleFullscreen.bind(this)
-			}
-		});
-		this.ctrEl.grab(this.uiAttrs.fullCloseEl, 'top');
+		this.uiAttrs.fullCloseEl = document.createElement('a');
+		this.uiAttrs.fullCloseEl.className = 'close_button';
+		QU.elSetStyles(this.uiAttrs.fullCloseEl, {
+		    display: 'block',
+		    position: 'absolute',
+		    zIndex: '1102',       // same as alert panel
+		    top: '0px',
+		    right: '0px',
+		    width: '33px',
+		    height: '32px'
+        });
+		this.uiAttrs.fullCloseEl._onclick = this.toggleFullscreen.bind(this);
+		this.uiAttrs.fullCloseEl.addEventListener('click', this.uiAttrs.fullCloseEl._onclick, false);
+		this.ctrEl.insertBefore(this.uiAttrs.fullCloseEl, this.ctrEl.firstChild);
 		// Add event handlers
 		window.addEventListener('keydown', this.uiAttrs.fullKeydownFn, false);
 		window.addEventListener('resize', this.uiAttrs.fullResizeFn, false);
@@ -2316,11 +2326,13 @@ function _img_fs_zoom_click(imgEl, options, events) {
 		// the server can cache everything properly.
 		hiddenEl = document.createElement('div');
 		hiddenEl.id = '_cv_fs_zoom_click_el';
-		hiddenEl.style.position = 'absolute';
-		hiddenEl.style.display = 'block';
-		hiddenEl.style.width = '500px';
-		hiddenEl.style.height = '500px';
-		hiddenEl.style.left = '-1000px';
+		QU.elSetStyles(hiddenEl, {
+		    position: 'absolute',
+		    display: 'block',
+		    width: '500px',
+		    height: '500px',
+		    left: '-1000px'
+		});
 		document.body.insertBefore(hiddenEl, document.body.firstChild);
 	}
 	// Init the hidden div

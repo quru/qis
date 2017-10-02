@@ -11,13 +11,16 @@ document\.id(
 \.empty()
 \.destroy()
 \.grab(
+\.replaces(
 \.getPosition(
 \.getCoordinates(
 \.getElement(
 \.getElements(
 \.getScroll(
 \.getStyle(
+\.getStyles(
 \.setStyle(
+\.setStyles(
 \.page.x
 \.page.y
 \.client.x
