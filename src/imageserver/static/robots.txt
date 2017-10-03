@@ -1,4 +1,4 @@
 User-agent: *
-Disallow: /admin
-Disallow: /list
-Disallow: /reports
+Disallow: /admin/
+Disallow: /list/
+Disallow: /reports/
