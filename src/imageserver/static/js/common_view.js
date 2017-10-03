@@ -386,6 +386,7 @@ if (!window.QU) {
     // Dates will be converted to string representations in the returned clone
     // while Function values will simply be omitted.
     QU.clone = function(obj) {
+        if ((obj === null) || (obj === undefined)) return obj;
         return JSON.parse(JSON.stringify(obj));
     };
 
@@ -411,8 +412,10 @@ if (!window.QU) {
         // Merge obj2[, obj3, [...]] into obj
         for (var i = 1, l = arguments.length; i < l; i++) {
             var src = arguments[i];
-            for (var key in src) {
-                mergeOne(obj, key, src[key]);
+            if ((src !== null) && (src !== undefined)) {
+                for (var key in src) {
+                    mergeOne(obj, key, src[key]);
+                }
             }
         }
         return obj;
