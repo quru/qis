@@ -1817,8 +1817,8 @@ ImgCanvasView.prototype.createControls = function() {
 	var icons = this.controlpanel.querySelectorAll('.icon');
 	for (var i = 0; i < icons.length; i++) {
 	    var el = icons[i];
-	    el.addEventListener('mouseover', function() { QU.elSetClass(this, 'rollover', true); }.bind(el));
-	    el.addEventListener('mouseout',  function() { QU.elSetClass(this, 'rollover', false); }.bind(el));
+	    el.addEventListener('mouseover', function() { QU.elSetClass(this, 'rollover', true); }.bind(el), false);
+	    el.addEventListener('mouseout',  function() { QU.elSetClass(this, 'rollover', false); }.bind(el), false);
 	}
 }
 
