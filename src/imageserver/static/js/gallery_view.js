@@ -5,8 +5,6 @@
 	Purpose:       Quru Image Server gallery viewer
 	Requires:      common_view.js
 	               canvas_view.js
-	               TODO MooTools Core 1.3 (no compat)
-	               TODO MooTools More 1.3 - Element.Measure, Fx.Scroll, Mask,
 	               Request.JSONP, String.QueryString, URI
 	Copyright:     Quru Ltd (www.quru.com)
 	Licence:
@@ -159,9 +157,9 @@ GalleryView.prototype.create_ui = function() {
 
 	// Add event handlers
 	// Rely on compatibility mode on tablets (tested OK)
-	tn_scrollable.addEventListener('scroll', function() { this.onThumbsScroll(); }.bind(this));
-	tn_left.addEventListener('click', function() { this.scrollRelative(-1); return false; }.bind(this));
-	tn_right.addEventListener('click', function() { this.scrollRelative(1); return false; }.bind(this));
+	tn_scrollable.addEventListener('scroll', function() { this.onThumbsScroll(); }.bind(this), false);
+	tn_left.addEventListener('click', function() { this.scrollRelative(-1); return false; }.bind(this), false);
+	tn_right.addEventListener('click', function() { this.scrollRelative(1); return false; }.bind(this), false);
 
 	// Save refs to things we need later
 	this.elements = {
@@ -292,30 +290,29 @@ GalleryView.prototype.onDataReady = function(jsonObj) {
 };
 
 GalleryView.prototype.addThumbnail = function(src, idx, title, description) {
-	var thumbEl = new Element('img', {
-		'src': src,
-		'data-index': idx,
-		'title': title ? title : '',
-		'draggable': 'false'
+	var thumbEl = document.createElement('img');
+	thumbEl.src = src;
+	thumbEl.setAttribute('data-index', idx);
+	thumbEl.title = title ? title : '';
+	thumbEl.draggable = false;
 //      Disabled to prevent stretching of images smaller than the thumbnail size
-//		width: this.options.thumbsize.width + 'px'
-//		height: this.options.thumbsize.height + 'px'
-	});
-	if (title) thumbEl.set('data-title', title);
-	if (description) thumbEl.set('data-description', description);
+//		thumbEl.width = this.options.thumbsize.width;
+//		thumbEl.height = this.options.thumbsize.height;
+	if (title) thumbEl.setAttribute('data-title', title);
+	if (description) thumbEl.setAttribute('data-description', description);
 	
 	this.thumbnails.push(thumbEl);
-	this.elements.tn_panel.grab(thumbEl);
+	this.elements.tn_panel.appendChild(thumbEl);
 	
 	// Add event handlers
 	// Use proper touch events to avoid phantom thumbnail clicks on tablets
-	thumbEl.addEvent('load', function() { this.onThumbLoaded(thumbEl, idx); }.bind(this));
+	thumbEl.addEventListener('load', function() { this.onThumbLoaded(thumbEl, idx); }.bind(this), false);
 	if ('ontouchstart' in window && window.Touch) {
-		thumbEl.addEvent('touchstart', function(e) { this.onThumbTouchStart(e, idx); }.bind(this));
-		thumbEl.addEvent('touchend',   function(e) { this.onThumbTouchEnd(e, idx); }.bind(this));
+		thumbEl.addEventListener('touchstart', function(e) { this.onThumbTouchStart(e, idx); }.bind(this), false);
+		thumbEl.addEventListener('touchend',   function(e) { this.onThumbTouchEnd(e, idx); }.bind(this), false);
 	}
 	else {
-		thumbEl.addEvent('click', function() { this.onThumbClick(thumbEl, idx); }.bind(this));
+		thumbEl.addEventListener('click', function() { this.onThumbClick(thumbEl, idx); }.bind(this), false);
 	}
 };
 
@@ -401,8 +398,8 @@ GalleryView.prototype.moveDirect = function(idx) {
 		if (idx !== this.thumbIdx) {
 			// Change the selected thumbnail
 			this.thumbIdx = idx;
-			this.thumbnails.each(function(t) { t.removeClass('selected'); });
-			this.thumbnails[idx].addClass('selected');
+			this.thumbnails.forEach(function(t) { QU.elSetClass(t, 'selected', false); });
+			QU.elSetClass(this.thumbnails[idx], 'selected', true);
 			// Launch the associated viewer if we don't move anywhere else soon
 			if (this.moveTimer !== undefined)
 				clearTimeout(this.moveTimer);
@@ -416,12 +413,12 @@ GalleryView.prototype.onMoveComplete = function() {
 	this.autoThumbScroll();
 	
 	var thumbImg = this.thumbnails[this.thumbIdx],
-	    viewerOpts = Object.clone(this.options.viewer);
+	    viewerOpts = QU.clone(this.options.viewer);
 	
-	if (thumbImg.get('data-title') != null)
-		viewerOpts.title = thumbImg.get('data-title');
-	if (thumbImg.get('data-description') != null)
-		viewerOpts.description = thumbImg.get('data-description');
+	if (thumbImg.getAttribute('data-title') != null)
+		viewerOpts.title = thumbImg.getAttribute('data-title');
+	if (thumbImg.getAttribute('data-description') != null)
+		viewerOpts.description = thumbImg.getAttribute('data-description');
 	
 	// Fire change event
 	if (this.events)
@@ -487,10 +484,10 @@ GalleryView.prototype.getScrollInfo = function() {
 	// Get scroll positions (thumblistEl bit is for IE7)
 	var scrollingEl = this.elements.tn_scrollable,
 	    thumblistEl = this.elements.tn_panel,
-	    viewportEl = scrollingEl.getParent(),
-	    scrollPosFrom = scrollingEl.getScroll().x,
-	    scrollTotal = Math.max(scrollingEl.getScrollSize().x, thumblistEl.getScrollSize().x),
-	    viewportWidth = viewportEl.getSize().x,
+	    viewportEl = scrollingEl.parentNode,
+	    scrollPosFrom = scrollingEl.scrollLeft,
+	    scrollTotal = Math.max(scrollingEl.scrollWidth, thumblistEl.scrollWidth),
+	    viewportWidth = viewportEl.clientWidth,
 	    scrollPosTo = scrollPosFrom + viewportWidth;
 	
 	// Work out visible thumbnails
@@ -522,13 +519,13 @@ GalleryView.prototype.setScrollButtons = function() {
 	// Auto enable/disable the scroll buttons
 	var scrollInfo = this.getScrollInfo();
 	if (scrollInfo.scrollFrom <= 0)
-		this.elements.tn_left.addClass('disabled');
+		QU.elSetClass(this.elements.tn_left, 'disabled', true);
 	else
-		this.elements.tn_left.removeClass('disabled');
+		QU.elSetClass(this.elements.tn_left, 'disabled', false);
 	if (scrollInfo.scrollTo >= scrollInfo.scrollTotal)
-		this.elements.tn_right.addClass('disabled');
+		QU.elSetClass(this.elements.tn_right, 'disabled', true);
 	else
-		this.elements.tn_right.removeClass('disabled');
+		QU.elSetClass(this.elements.tn_right, 'disabled', false);
 };
 
 GalleryView.prototype._add_slash = function(str) {
