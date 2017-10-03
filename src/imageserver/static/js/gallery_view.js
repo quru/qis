@@ -845,9 +845,9 @@ function gallery_view_init_all_fullscreen(className, options, events) {
 		}
 		// Set the click handlers for elements
 		if (options.images.length > 0) {
-			elements.forEach(function(el) {
-				gallery_view_init_fullscreen(el, options, events);
-			});
+			for (var i = 0; i < elements.length; i++) {
+				gallery_view_init_fullscreen(elements[i], options, events);
+			}
 		}
 	}
 	return false;
