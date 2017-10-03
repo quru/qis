@@ -50,7 +50,7 @@ function GalleryView(container, userOpts, events) {
 	};
 	// Apply options
 	if (userOpts !== undefined) {
-		this.options = Object.merge(this.options, userOpts);
+		this.options = QU.merge(this.options, userOpts);
 	}
 	
 	this.events = events;
@@ -58,7 +58,7 @@ function GalleryView(container, userOpts, events) {
 	// Normalise servers and folders
 	this.options.server = this._add_slash(this.options.server);
 	this.options.folder = this._add_slash(this.options.folder);
-	this.options.images.each(function (im) {
+	this.options.images.forEach(function (im) {
 		if (im.server) im.server = this._add_slash(im.server);
 	}.bind(this));
 	
@@ -72,8 +72,8 @@ function GalleryView(container, userOpts, events) {
 	};
 	
 	// Get and clear container element
-	this.ctrEl = document.id(container);
-	this.ctrEl.empty();
+	this.ctrEl = QU.id(container);
+	QU.elClear(this.ctrEl);
 	
 	this.elements = {};
 	this.create_ui();
@@ -94,90 +94,74 @@ GalleryView.prototype.destroy = function() {
 	this.events = null;
 	if (this.elements.main_view && this.elements.main_view._viewer)
 		this.elements.main_view._viewer.destroy();
-	this.ctrEl.empty();
+	QU.elClear(this.ctrEl);
 };
 
 GalleryView.prototype.create_ui = function() {
 	// Wrapper to apply gallery class
-	var wrapper = new Element('div', {
-		'class': 'gallery'
-	});
-	this.ctrEl.grab(wrapper);
+	var wrapper = document.createElement('div');
+	wrapper.className = 'gallery';
+	this.ctrEl.appendChild(wrapper);
 	// Canvas view container
-	var main_view = new Element('div', {
-		'class': 'main_view',
-		'styles': {
-			'text-align': 'center'
-		}
-	});
+	var main_view = document.createElement('div');
+	main_view.className = 'main_view';
+	main_view.style.textAlign = 'center';
 	// Thumbnails container
-	var thumbnails = new Element('div', {
-		'class': 'thumbnails',
-		'styles': {
-			overflow: 'hidden',
-			position: 'relative'
-		}
-	});
-	wrapper.grab(main_view);
-	wrapper.grab(thumbnails);
+	var thumbnails = document.createElement('div');
+	thumbnails.className = 'thumbnails';
+	thumbnails.style.overflow = 'hidden';
+	thumbnails.style.position = 'relative';
+	wrapper.appendChild(main_view);
+	wrapper.appendChild(thumbnails);
 	
 	// Scroll left/right buttons
-	var tn_left = new Element('a', {
-		'class': 'scroll_button disabled',
-		'html': '&lt;',
-		'styles': {
-			display: 'block',
-			position: 'absolute',
-			'z-index': '1',
-			top: 0,
-			left: 0,
-			margin: 0
-		}
+	var tn_left = document.createElement('a');
+	tn_left.className = 'scroll_button disabled';
+	tn_left.innerHTML = '&lt;';
+	QU.elSetStyles(tn_left, {
+		display: 'block',
+		position: 'absolute',
+		zIndex: '1',
+		top: '0',
+		left: '0',
+		margin: '0'
 	});
-	var tn_right = new Element('a', {
-		'class': 'scroll_button disabled',
-		'html': '&gt;',
-		'styles': {
-			display: 'block',
-			position: 'absolute',
-			'z-index': '1',
-			top: 0,
-			right: 0,
-			margin: 0
-		}
+	var tn_right = document.createElement('a');
+	tn_right.className = 'scroll_button disabled';
+	tn_right.innerHTML = '&gt;';
+	QU.elSetStyles(tn_right, {
+		display: 'block',
+		position: 'absolute',
+		zIndex: '1',
+		top: '0',
+		right: '0',
+		margin: '0'
 	});
-	thumbnails.grab(tn_left);
-	thumbnails.grab(tn_right);
+	thumbnails.appendChild(tn_left);
+	thumbnails.appendChild(tn_right);
 	
 	// Hides the thumbnail list overflow and scroll bars
-	var tn_scroller_viewport = new Element('div', {
-		'class': 'scroller_viewport',
-		'styles': {
-			overflow: 'hidden',
-			'margin-left': tn_left.getSize().x + 'px'
-		}
-	});
+	var tn_scroller_viewport = document.createElement('div');
+	tn_scroller_viewport.className = 'scroller_viewport';
+	tn_scroller_viewport.style.overflow = 'hidden';
+	tn_scroller_viewport.style.marginLeft = tn_left.offsetWidth + 'px';
 	// Provides the scroll function via standard scroll bars
-	var tn_scrollable = new Element('div', {
-		'styles': { overflow: 'auto' }
-	});
+	var tn_scrollable = document.createElement('div');
+	tn_scrollable.style.overflow = 'auto';
 	// Hosts the thumbnail images in a single long line
-	var tn_scroller = new Element('div', {
-		'class': 'scroller',
-		'styles': {
-			position: 'relative',    /* for getting img.offsetLeft */
-			'white-space': 'nowrap'
-		}
-	});
-	tn_scrollable.grab(tn_scroller);
-	tn_scroller_viewport.grab(tn_scrollable);
-	thumbnails.grab(tn_scroller_viewport);
+	var tn_scroller = document.createElement('div');
+	tn_scroller.className = 'scroller';
+	tn_scroller.style.position = 'relative';    /* for getting img.offsetLeft */
+	tn_scroller.style.whiteSpace = 'nowrap';
+	tn_scrollable.appendChild(tn_scroller);
+	tn_scroller_viewport.appendChild(tn_scrollable);
+	thumbnails.appendChild(tn_scroller_viewport);
 
 	// Add event handlers
 	// Rely on compatibility mode on tablets (tested OK)
-	tn_scrollable.addEvent('scroll', function() { this.onThumbsScroll(); }.bind(this));
-	tn_left.addEvent('click', function() { this.scrollRelative(-1); return false; }.bind(this));
-	tn_right.addEvent('click', function() { this.scrollRelative(1); return false; }.bind(this));
+	tn_scrollable.addEventListener('scroll', function() { this.onThumbsScroll(); }.bind(this));
+	tn_left.addEventListener('click', function() { this.scrollRelative(-1); return false; }.bind(this));
+	tn_right.addEventListener('click', function() { this.scrollRelative(1); return false; }.bind(this));
 
 	// Save refs to things we need later
 	this.elements = {
@@ -190,6 +174,7 @@ GalleryView.prototype.create_ui = function() {
 		tn_left: tn_left,
 		tn_right: tn_right
 	};
+	// TODO replace me
 	this.scroller = new Fx.Scroll(tn_scrollable, {
 		transition: 'sine:in:out',
 		duration: 500
@@ -197,50 +182,38 @@ GalleryView.prototype.create_ui = function() {
 };
 
 GalleryView.prototype.layout = function() {
-	var ctrSize  = this.ctrEl.getComputedSize(),
-	    wrapSize = this.elements.wrapper.getComputedSize({ styles: ['margin','padding','border'] }),
-	    tnSize   = this.elements.tn_wrapper.getComputedSize({ styles: ['margin','padding','border'] }),
+	var ctrInnerSize = QU.elInnerSize(this.ctrEl, false),
+	    wrapStyles = QU.elGetStyles(this.elements.wrapper, ['marginTop', 'paddingTop', 'borderTopWidth', 'marginBottom', 'paddingBottom', 'borderBottomWidth']),
+	    wrapCSSHeight = Math.round(this._sum_object_floats(wrapStyles)),
+	    tnStyles = QU.elGetStyles(this.elements.tn_wrapper, ['marginTop', 'paddingTop', 'borderTopWidth', 'marginBottom', 'paddingBottom', 'borderBottomWidth']),
+	    tnCSSHeight = Math.round(this._sum_object_floats(tnStyles)),
 	    thumbHeight = this.options.thumbsize.height + 12,        // extra for image borders
-	    mvHeight = ctrSize.height - (wrapSize.computedTop + wrapSize.computedBottom +
-	                   tnSize.computedTop + tnSize.computedBottom + thumbHeight);
+	    mvHeight = ctrInnerSize.height - (wrapCSSHeight + tnCSSHeight + thumbHeight);
 	
 	// Don't use odd dimensions for the main view
 	if (mvHeight % 2 == 1) mvHeight--;
 	
 	// Set heights
-	this.elements.main_view.setStyles({
-		height: mvHeight + 'px',
-		'line-height': mvHeight + 'px'
-	});
-	this.elements.tn_wrapper.setStyles({
-		height: thumbHeight + 'px',
-		'line-height': thumbHeight + 'px'
-	});
-	this.elements.tn_left.setStyles({
-		height: thumbHeight + 'px',
-		'line-height': thumbHeight + 'px'
-	});
-	this.elements.tn_right.setStyles({
-		height: thumbHeight + 'px',
-		'line-height': thumbHeight + 'px'
-	});
+	this.elements.main_view.style.height = mvHeight + 'px';
+	this.elements.main_view.style.lineHeight = mvHeight + 'px';
+
+	this.elements.tn_wrapper.style.height = thumbHeight + 'px';
+	this.elements.tn_wrapper.style.lineHeight = thumbHeight + 'px';
+	this.elements.tn_left.style.height = thumbHeight + 'px';
+	this.elements.tn_left.style.lineHeight = thumbHeight + 'px';
+	this.elements.tn_right.style.height = thumbHeight + 'px';
+	this.elements.tn_right.style.lineHeight = thumbHeight + 'px';
 	
-	var panelWidth = this.elements.tn_wrapper.getSize().x,
-	    btnWidth = this.elements.tn_left.getSize().x,
+	var panelWidth = this.elements.tn_wrapper.offsetWidth,
+	    btnWidth = this.elements.tn_left.offsetWidth,
 	    tnvpWidth = panelWidth - (2 * btnWidth);
 	
 	// Set thumbnail area sizing
-	this.elements.tn_viewport.setStyles({
-		width: tnvpWidth + 'px',
-		height: thumbHeight + 'px'
-	});	
-	this.elements.tn_scrollable.setStyles({
-		width: tnvpWidth + 'px'
-	});
-	this.elements.tn_panel.setStyles({
-		height: thumbHeight + 'px',
-		'line-height': thumbHeight-4 + 'px'
-	});
+	this.elements.tn_viewport.style.width = tnvpWidth + 'px';
+	this.elements.tn_viewport.style.height = thumbHeight + 'px';
+	this.elements.tn_scrollable.style.width = tnvpWidth + 'px';
+	this.elements.tn_panel.style.height = thumbHeight + 'px';
+	this.elements.tn_panel.style.lineHeight = thumbHeight-4 + 'px';
 	
 	// Resize canvas viewer
 	canvas_view_resize(this.elements.main_view);
@@ -280,9 +253,9 @@ GalleryView.prototype.onDataReady = function(jsonObj) {
 			var imageOpts = this.options.images[i],
 			    imageSpec = {};
 			// Set folder-level parameters (if any)
-			Object.append(imageSpec, this.options.params);
+			imageSpec = QU.merge(imageSpec, this.options.params);
 			// Set 'src' and image-level parameters (if any), minus server, title, description
-			Object.append(imageSpec, imageOpts);
+			imageSpec = QU.merge(imageSpec, imageOpts);
 			delete imageSpec.server;
 			delete imageSpec.title;
 			delete imageSpec.description;
@@ -299,7 +272,7 @@ GalleryView.prototype.onDataReady = function(jsonObj) {
             }
 			
 			var server = imageOpts.server ? imageOpts.server : this.options.server,
-			    finalSrc = server + 'image?' + Object.toQueryString(imageSpec);
+			    finalSrc = server + 'image?' + QU.ObjectToQueryString(imageSpec);
 			
 			// De-dup and add the <img>
 			if (!requests.contains(finalSrc)) {
@@ -562,6 +535,15 @@ GalleryView.prototype._add_slash = function(str) {
 		return str + '/';
 	else
 		return str;
+};
+
+GalleryView.prototype._sum_object_floats = function(obj) {
+    var key, f, ret = 0;
+    for (key in obj) {
+        f = parseFloat(obj[key]);
+        if (!isNaN(f)) ret += f;
+    }
+    return ret;
 };
 
 /**** Full screen mode ****/
