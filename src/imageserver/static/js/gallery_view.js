@@ -172,11 +172,8 @@ GalleryView.prototype.create_ui = function() {
 		tn_left: tn_left,
 		tn_right: tn_right
 	};
-	// TODO replace me
-	this.scroller = new Fx.Scroll(tn_scrollable, {
-		transition: 'sine:in:out',
-		duration: 500
-	});
+	// Implement smooth scrolling
+	this.scroller = new ElementScroller(tn_scrollable, 500, Math.easeInOutSine);
 };
 
 GalleryView.prototype.layout = function() {
@@ -351,19 +348,19 @@ GalleryView.prototype.scrollDirect = function(idx, edge) {
 		if (edge === 'left') {
 			if (idx > 0) {
 			    var thumb = this.thumbnails[idx];
-				this.scroller.start(thumb.offsetLeft - scrollInfo.thumbMargin, 0);
+				this.scroller.scrollTo(thumb.offsetLeft - scrollInfo.thumbMargin, 0);
 			}
 			else {
-				this.scroller.start(0, 0);
+				this.scroller.scrollTo(0, 0);
 			}
 		}
 		else { // === 'right'
 			if (idx < (this.thumbnails.length - 1)) {
 				var nextThumb = this.thumbnails[idx + 1];
-				this.scroller.start(nextThumb.offsetLeft - scrollInfo.viewportWidth, 0);
+				this.scroller.scrollTo(nextThumb.offsetLeft - scrollInfo.viewportWidth, 0);
 			}
 			else {
-				this.scroller.start(scrollInfo.scrollTotal - scrollInfo.viewportWidth, 0);
+				this.scroller.scrollTo(scrollInfo.scrollTotal - scrollInfo.viewportWidth, 0);
 			}
 		}
 	}

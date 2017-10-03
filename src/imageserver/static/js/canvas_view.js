@@ -2022,7 +2022,7 @@ ImgCanvasView.prototype.toggleFullscreen = function() {
 
 	// Define a fader
 	if (!this.uiAttrs.fader) {
-	    this.uiAttrs.fader = new Fader(this.ctrEl, 300);
+	    this.uiAttrs.fader = new ElementFader(this.ctrEl, 300);
 	}
 	
 	if (this.uiAttrs.fullScreen) {
@@ -2172,49 +2172,92 @@ ImgCanvasView.prototype.fullscreenResize = function() {
 
 /**** Element fader utility ****/
 
-// Creates a fader for an element, with a fade duration in milliseconds.
-// This is the IE9 version. In IE10+ you can toggle a CSS class containing a
-// CSS transition, and hook into the 'transitionend' event.
-function Fader(el, duration) {
+// Creates a linear fading animation for an element, with duration in milliseconds.
+// This is the IE9 version. In IE10+ you can toggle a CSS class containing a CSS
+// opacity transition, and hook into the 'transitionend' event.
+function ElementFader(el, duration) {
     this.element = el;
     this.steps = Math.round(Math.max(1, duration / 16.66));  // 16.66 == 60fps
     this.increment = 1 / this.steps;                         // Since opacity goes from 0 to 1
     this.stepFn = this._step.bind(this);
     if (window.requestAnimationFrame)
-        this.animate = function(fn) { window.requestAnimationFrame(fn); };
+        this.animate = function() { window.requestAnimationFrame(this.stepFn); };
     else
-        this.animate = function(fn) { return setTimeout(fn, 17); };
+        this.animate = function() { return setTimeout(this.stepFn, 17); };
 }
 
-Fader.prototype.fadeIn = function(onCompleteFn) {
+ElementFader.prototype.fadeIn = function(onCompleteFn) {
     this.onCompleteFn = onCompleteFn;
     this.step = 0;
     this.opacity = 0;
     this.direction = 1;
-    this.animate(this.stepFn);
+    this.animate();
 }
 
-Fader.prototype.fadeOut = function(onCompleteFn) {
+ElementFader.prototype.fadeOut = function(onCompleteFn) {
     this.onCompleteFn = onCompleteFn;
     this.step = 0;    
     this.opacity = 1;
     this.direction = -1;
-    this.animate(this.stepFn);
+    this.animate();
 }
 
-Fader.prototype.destroy = function() {
+ElementFader.prototype.destroy = function() {
     this.element = null;
     this.stepFn = function(){};
+    this.animate = function(){};
 }
 
-Fader.prototype._step = function() {
+ElementFader.prototype._step = function() {
     this.opacity += (this.increment * this.direction);
     this.element.style.opacity = this.opacity;
     this.step++;
     if (this.step < this.steps) {
-        this.animate(this.stepFn);
+        this.animate();
     } else if (this.onCompleteFn) {
         this.onCompleteFn();
+    }
+}
+
+/**** Element smooth scrolling utility ****/
+
+// Creates a scrolling animation for a scrolling element, with duration in milliseconds.
+// The easing function can be any of the Math.ease() functions defined above.
+// This is the IE version. In more modern browsers you can look at using
+// element.scrollIntoView({behavior: "smooth"}) although it's not a straight replacement
+// because "into view" is sometimes a margin's width away from where you really want it.
+function ElementScroller(el, duration, easeFn) {
+    this.element = el;
+    this.steps = Math.round(Math.max(1, duration / 16.66));  // 16.66 == 60fps
+    this.easeFn = easeFn;
+    this.stepFn = this._step.bind(this);
+    if (window.requestAnimationFrame)
+        this.animate = function() { window.requestAnimationFrame(this.stepFn); };
+    else
+        this.animate = function() { return setTimeout(this.stepFn, 17); };
+}
+
+ElementScroller.prototype.scrollTo = function(x, y) {
+    this.startX = this.element.scrollLeft;
+    this.startY = this.element.scrollTop;
+    this.dx = (x - this.startX);
+    this.dy = (y - this.startY);
+    this.step = 0;
+    this.animate();
+}
+
+ElementScroller.prototype.destroy = function() {
+    this.element = null;
+    this.stepFn = function(){};
+    this.animate = function(){};
+}
+
+ElementScroller.prototype._step = function() {
+    this.step++;
+    this.element.scrollLeft = this.easeFn(this.step, this.startX, this.dx, this.steps);
+    this.element.scrollTop = this.easeFn(this.step, this.startY, this.dy, this.steps);
+    if (this.step < this.steps) {
+        this.animate();
     }
 }
 
