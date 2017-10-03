@@ -82,7 +82,8 @@ if (!window.QU) {
     // Returns the {x:n, y:n, width:n, height:n} outermost position and size of
     // an element on the page. If the element has a border this is the left and
     // top border position and the width and height to the far ends of the opposite
-    // borders. These values exclude any surrounding margins.
+    // borders. These values exclude any surrounding margins. The returned values
+    // are rounded to integers.
     QU.elOuterPosition = function(el) {
         el = QU.id(el);
         // From https://www.quirksmode.org/js/findpos.html
@@ -97,17 +98,17 @@ if (!window.QU) {
     };
 
     // Returns the {width:n, height:n} inner dimensions (client area) of an element,
-    // either including or excluding the inner padding, where n may be a float.
-    // This value does not include the size of borders, margins, scroll bars,
-    // or changes in size due to CSS transformations (e.g. rotation).
+    // either including or excluding the inner padding. This value does not include
+    // the size of borders, margins, scroll bars, or changes in size due to CSS
+    // transformations (e.g. rotation). The returned values are rounded to integers.
     QU.elInnerSize = function(el, includePadding) {
         el = QU.id(el);
         // https://developer.mozilla.org/en-US/docs/Web/API/CSS_Object_Model/Determining_the_dimensions_of_elements
         var isize = {width: el.clientWidth, height: el.clientHeight};
         if (!includePadding) {
             var cs = window.getComputedStyle(el);
-            isize.width -= (parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight));
-            isize.height -= (parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom));
+            isize.width -= Math.round(parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight));
+            isize.height -= Math.round(parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom));
             isize.width = Math.max(isize.width, 0);
             isize.height = Math.max(isize.height, 0);
         }
@@ -117,15 +118,16 @@ if (!window.QU) {
     // Returns the {left: n, right: n, top: n, bottom: n} dimensions of the
     // combined border and padding sizes within an element. When added to the
     // values from QU.elInnerSize() this should equal the outer size of the
-    // element as returned by QU.elOuterPosition().
+    // element as returned by QU.elOuterPosition(). The returned values are
+    // rounded to integers.
     QU.elInnerOffsets = function(el) {
         el = QU.id(el);
         var cs = window.getComputedStyle(el);
         return {
-            left: (parseFloat(cs.paddingLeft) + parseFloat(cs.borderLeftWidth)),
-            right: (parseFloat(cs.paddingRight) + parseFloat(cs.borderRightWidth)),
-            top: (parseFloat(cs.paddingTop) + parseFloat(cs.borderTopWidth)),
-            bottom: (parseFloat(cs.paddingBottom) + parseFloat(cs.borderBottomWidth))
+            left: Math.round(parseFloat(cs.paddingLeft) + parseFloat(cs.borderLeftWidth)),
+            right: Math.round(parseFloat(cs.paddingRight) + parseFloat(cs.borderRightWidth)),
+            top: Math.round(parseFloat(cs.paddingTop) + parseFloat(cs.borderTopWidth)),
+            bottom: Math.round(parseFloat(cs.paddingBottom) + parseFloat(cs.borderBottomWidth))
         };
     };
 
