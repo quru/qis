@@ -28,5 +28,11 @@ if [[ "$RESP" == "y" ]]; then
 fi
 
 echo ""
+echo "The Apache configuration has changed in this release. Please add the following lines to your Apache configuration files (into the VirtualHost sections for port 80 and port 443):"
+echo ""
+echo "    # Allow other domains to query the data API (required for canvas/zoom image viewer)"
+echo "    Header set Access-Control-Allow-Origin \"*\""
+
+echo ""
 echo "Done"
 echo ""
