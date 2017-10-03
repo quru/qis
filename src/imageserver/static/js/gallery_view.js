@@ -29,7 +29,7 @@
 	11Oct2013  Matt  Strip halign and valign from all images by default
 	11Nov2013  Matt  Add title/description image options, set title on thumbnails
 	11Nov2013  Matt  Add events interface
-    28Sep2017  Matt  Remove MooTools, remove JSONP
+    02Oct2017  Matt  Remove MooTools, remove JSONP
 */
 
 /**** Private interface ****/
@@ -270,7 +270,7 @@ GalleryView.prototype.onDataReady = function(jsonObj) {
 			    finalSrc = server + 'image?' + QU.ObjectToQueryString(imageSpec);
 			
 			// De-dup and add the <img>
-			if (!requests.contains(finalSrc)) {
+			if (requests.indexOf(finalSrc) === -1) {
 				if ((this.options.startImage === imageSpec.src) && !setFirst) {
 					this.firstIdx = i;
 					setFirst = true; // when >1 match, use the left-most

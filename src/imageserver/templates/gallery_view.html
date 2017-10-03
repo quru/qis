@@ -34,7 +34,7 @@
 	{% endif %}
 	
 	<script type="text/javascript">
-		window.addEvent('domready', function() {
+		QU.whenReady(function() {
 			gallery_view_init('gallery1', {
 				server: '{{ url_for('index') }}',
 				images: [
@@ -59,9 +59,9 @@
 			});
 		});
 		
-		window.addEvent('resize', function() {
+		window.addEventListener('resize', function() {
 			gallery_view_resize('gallery1');
-		});
+		}, false);
 	</script>
 {% endblock %}
 
