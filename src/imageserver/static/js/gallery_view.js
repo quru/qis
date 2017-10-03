@@ -572,41 +572,44 @@ GalleryViewMask.prototype.open = function() {
 	);
 	this.mask.show();
 	// Add a gallery container
-	this.ctrEl = new Element('div', {
-		'class': 'fullscreen',
-		styles: {
-			position: this.fullScreenFixed ? 'fixed' : 'absolute',
-			'z-index': '1001',
-			opacity: '0',
-			left: fsCoords.left + 'px',
-			top: fsCoords.top + 'px',
-			width: fsCoords.width + 'px',
-			height: fsCoords.height + 'px',
-			margin: '0',
-			padding: '0'
-	}});
-	document.id(document.body).grab(this.ctrEl, 'top');
-	// Create a close button to put on top of the canvas_view
-	var closeEl = new Element('a', {
-		'class': 'close_button',
-		styles: {
-			display: 'block', position: 'absolute',
-			'z-index': '1102',    /* same as canvas_view alert panel */
-			top: '0px', right: '0px', width: '33px', height: '33px'
-		},
-		events: {
-			click: this.close.bind(this)
-		}
+	this.ctrEl = document.createElement('div');
+	this.ctrEl.className = 'fullscreen';
+	QU.elSetStyles(this.ctrEl, {
+		position: this.fullScreenFixed ? 'fixed' : 'absolute',
+		zIndex: '1001',
+		opacity: '0',
+		left: fsCoords.left + 'px',
+		top: fsCoords.top + 'px',
+		width: fsCoords.width + 'px',
+		height: fsCoords.height + 'px',
+		margin: '0',
+		padding: '0'
 	});
+	document.body.insertBefore(this.ctrEl, document.body.firstChild);
+	// Create a close button to put on top of the canvas_view
+	var closeEl = document.createElement('a');
+	closeEl.className = 'close_button';
+	QU.elSetStyles(closeEl, {
+		display: 'block',
+		position: 'absolute',
+		zIndex: '1102',    /* same as canvas_view alert panel */
+		top: '0px',
+		right: '0px',
+		width: '33px',
+		height: '33px'
+	});
+	closeEl.addEventListener('click', this.close.bind(this), false);
 	
 	// Add event handlers
-	window.addEvent('keydown', this.fullKeydownFn);
-	window.addEvent('resize', this.fullResizeFn);
+	window.addEventListener('keydown', this.fullKeydownFn, false);
+	window.addEventListener('resize', this.fullResizeFn, false);
 	// Create the gallery
 	gallery_view_init(this.ctrEl, this.options, this.events);
-	this.ctrEl.getElement('.gallery').grab(closeEl, 'top');
+	var galleryWrapper = this.ctrEl.querySelector('.gallery');
+	galleryWrapper.insertBefore(closeEl, galleryWrapper.firstChild);
 	// Fade in container
-	new Fx.Tween(this.ctrEl, { duration: 500 }).start('opacity', 0, 1);
+	this.fader = new ElementFader(this.ctrEl, 300);
+	this.fader.fadeIn();
 	// Fire fullscreen event
 	if (this.events)
 		ImgUtils.fireEvent(this.events.onfullscreen, this.ctrEl._gallery, ['', true]);
@@ -618,45 +621,46 @@ GalleryViewMask.prototype.close = function() {
 		return;
 	// Fade out gallery then close down
 	this.animating = true;
-	new Fx.Tween(this.ctrEl, {
-		duration: 300,
-		onComplete: function() {
-			// Fire fullscreen event before destroying the gallery
-			if (this.events)
-				ImgUtils.fireEvent(this.events.onfullscreen, this.ctrEl._gallery, ['', false]);
-			// Remove event handlers
-			window.removeEvent('resize', this.fullResizeFn);
-			window.removeEvent('keydown', this.fullKeydownFn);
-			// Destroy gallery
-			if (this.ctrEl._gallery)
-				this.ctrEl._gallery.destroy();
-			// Take container back out of the page
-			this.ctrEl.dispose();
-			this.ctrEl = null;
-			// Hide mask
-			this.mask.destroy();
-			this.mask = null;
-			
-			this.animating = false;			
-		}.bind(this)
-	}).start('opacity', 1, 0);
+	this.fader.fadeOut(function() {
+		// Fire fullscreen event before destroying the gallery
+		if (this.events)
+			ImgUtils.fireEvent(this.events.onfullscreen, this.ctrEl._gallery, ['', false]);
+		// Remove event handlers
+		window.removeEventListener('resize', this.fullResizeFn, false);
+		window.removeEventListener('keydown', this.fullKeydownFn, false);
+		// Destroy gallery
+		if (this.ctrEl._gallery)
+			this.ctrEl._gallery.destroy();
+		// Take container back out of the page
+		QU.elRemove(this.ctrEl);
+		this.ctrEl = null;
+		// Hide mask
+		this.mask.destroy();
+		this.mask = null;
+		
+		this.animating = false;
+	}.bind(this));
 };
 
 GalleryViewMask.prototype.fullscreenKeydown = function(e) {
-	switch (e.code) {
+    var code = (e.which || e.keyCode);
+	switch (code) {
 		case 27:
 			// Close async because we don't want to be in here when this handler gets removed
-			e.stop();
+			e.preventDefault();
+			e.stopPropagation();
 			setTimeout(this.close.bind(this), 1);
 			break;
 		case 37:
 		case 40:
-			e.stop();
+            e.preventDefault();
+            e.stopPropagation();
 			if (this.ctrEl._gallery) this.ctrEl._gallery.moveRelative(-1);
 			break;
 		case 39:
 		case 38:
-			e.stop();
+            e.preventDefault();
+            e.stopPropagation();
 			if (this.ctrEl._gallery) this.ctrEl._gallery.moveRelative(1);
 			break;
 	}
@@ -666,7 +670,7 @@ GalleryViewMask.prototype.fullscreenResize = function(e) {
 	// The mask resizes itself.
 	// We must resize the viewer container.
 	var fsCoords = this.fullscreenGetCoords();
-	this.ctrEl.setStyles({
+	QU.elSetStyles(this.ctrEl, {
 		left: fsCoords.left + 'px',
 		top: fsCoords.top + 'px',
 		width: fsCoords.width + 'px',
@@ -680,8 +684,8 @@ GalleryViewMask.prototype.fullscreenGetCoords = function() {
 	// Get browser total viewport size
 	// #517 Prefer window.inner* to get the visual viewport in mobile browsers
 	//      http://www.quirksmode.org/mobile/viewports2.html "Measuring the visual viewport"
-	var winSize   = window.innerWidth ? { x: window.innerWidth, y: window.innerHeight } : window.getSize(),
-	    winScroll = this.fullScreenFixed ? { x: 0, y: 0 } : window.getScroll(),
+	var winSize   = window.innerWidth ? { x: window.innerWidth, y: window.innerHeight } : { x: document.body.clientWidth, y: document.body.clientHeight },
+	    winScroll = this.fullScreenFixed ? { x: 0, y: 0 } : { x: window.pageXOffset, y: window.pageYOffset },
 	    winMargin = Math.min(Math.round(winSize.x / 40), Math.round(winSize.y / 40));
 	// Get target placement of container element
 	var tgtLeft   = (winScroll.x + winMargin),

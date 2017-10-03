@@ -7,16 +7,13 @@ be embedded in a web page and also supports a pop-up full-screen mode.
 
 ## Prerequisites
 
-The gallery has the same prerequisites as the HTML5 canvas viewer, so refer to that
-documentation for more details.
-
-If you are supplying your own MooTools library, the gallery requires additional MooTools More
-components: Fx.Scroll and URI.
+The gallery has the same prerequisites as the HTML5 canvas viewer,
+refer to that documentation for more details.
 
 ## Implementation
 
-To use the gallery API, you need the gallery and the HTML5 viewer's CSS and JavaScript files
-in your web page:
+To use the gallery API, you need the gallery and the HTML5 canvas viewer's CSS
+and JavaScript files in your web page:
 
 	<link href="http://images.example.com/static/styles/canvas_view.css" rel="stylesheet" type="text/css">
 	<link href="http://images.example.com/static/styles/gallery_view.css" rel="stylesheet" type="text/css">
