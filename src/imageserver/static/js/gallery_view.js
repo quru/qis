@@ -495,8 +495,7 @@ GalleryView.prototype.getScrollInfo = function() {
 	
 	// Work out visible thumbnails
 	var visFrom = -1, visTo = -1,
-	    tWidth = this.thumbnails[0].getSize().x,
-	    tMargin = tWidth - this.thumbnails[0].width;
+	    tWidth = this.thumbnails[0].offsetWidth;
 	for (var i = 0; i < this.thumbnails.length; i++) {
 		var t = this.thumbnails[i],
 		    notVisible = ((t.offsetLeft + tWidth) <= scrollPosFrom) || (t.offsetLeft >= scrollPosTo);
@@ -506,6 +505,8 @@ GalleryView.prototype.getScrollInfo = function() {
 		}
 		if (notVisible && (visTo != -1)) break;
 	}
+	var tMargins = QU.elGetStyles(this.thumbnails[0], ['marginLeft', 'marginRight']),
+	    tMargin = Math.round((parseFloat(tMargins.marginLeft) + parseFloat(tMargins.marginRight)) / 2);
 	return {
 		scrollFrom: scrollPosFrom,
 		scrollTo: scrollPosTo,

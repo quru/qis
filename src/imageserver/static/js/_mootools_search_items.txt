@@ -19,10 +19,12 @@ document\.id(
 \.getElement(
 \.getElements(
 \.getScroll(
+\.getScrollSize(
 \.getStyle(
 \.getStyles(
 \.setStyle(
 \.setStyles(
+\.set(
 \.page.x
 \.page.y
 \.client.x
