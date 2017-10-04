@@ -1,4 +1,4 @@
-# Run this with grep -f _mootools_search_items.txt *.js then TODO delete me
+# Run this with grep -n -f _mootools_search_items.txt *.js then TODO delete me
 # Also no longer need to have .replace(/\+/g, ' ') before parseQueryString
 $(
 $$(
@@ -59,4 +59,3 @@ getComputedSize(
 Asset\.
 Browser\.
 Fx\.
-Date\.now()
