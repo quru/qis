@@ -31,7 +31,7 @@
 	{% endif %}
 	
 	<script type="text/javascript">
-		window.addEvent('domready', function() {
+		QU.whenReady(function() {
 			slideshow_view_init('slideshow1', {
 				mode: 'slide',
 				server: '{{ url_for('index') }}',
@@ -44,12 +44,13 @@
 		});
 
 		function slideshow_reinit(id, mode) {
-	        if ($(id) && $(id)._show) {
-	        	var opts = $(id)._show.options;
-	        	opts.mode = mode;
-	        	slideshow_view_init($(id), opts);
-	        }
-	        return false;
+		    var el = QU.id(id);
+		    if (el && el._show) {
+		        	var opts = el._show.options;
+		        	opts.mode = mode;
+		        	slideshow_view_init(el, opts);
+		    }
+		    return false;
 		}
 	</script>
 {% endblock %}
