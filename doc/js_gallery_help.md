@@ -7,8 +7,8 @@ be embedded in a web page and also supports a pop-up full-screen mode.
 
 ## Prerequisites
 
-The gallery has the same prerequisites as the HTML5 canvas viewer,
-refer to that documentation for more details.
+The gallery has the same prerequisites as the HTML5 canvas viewer, requiring Internet Explorer 9
+or above.
 
 ## Implementation
 

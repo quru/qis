@@ -5,10 +5,10 @@ It also includes an integrated control panel that allows the user to download th
 zoom in and out, read its title and description, and launch a full-screen viewing mode
 (all control panel items being optional).
 
-### Canvas element support
+## Prerequisites
 
-The HTML5 canvas element is supported in all modern web browsers, and in Microsoft Internet
-Explorer from version 9 onwards.
+This component requires browser support for the HTML5 canvas element. Canvas is supported
+in all modern web browsers, and in Internet Explorer 9 or above.
 
 ## Implementation
 
