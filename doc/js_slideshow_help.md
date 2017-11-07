@@ -7,20 +7,13 @@ of images.
 
 ## Prerequisites
 
-The slideshow requires the [MooTools](http://mootools.net/) library, a once-popular
-alternative to the now-ubiquitous [jQuery](http://jquery.com/). You can include MooTools
-in your web page with the HTML:
-
-	<script src="http://images.example.com/static/js/mootools_yc.js" type="text/javascript"></script>
-
-If you want to supply your own MooTools library, the viewer requires MooTools Core and
-MooTools More with the Assets, Element.Measure, Fx.Elements, and Request.JSONP components.
+The slideshow component supports Internet Explorer 9 or above.
 
 ## Implementation
 
 To use the slideshow API, you only need the slideshow JavaScript file in your web page:
 
-	<script src="http://images.example.com/static/js/slideshow_view_yc.js" type="text/javascript"></script>
+	<script src="http://images.example.com/static/js/slideshow_view.min.js" type="text/javascript"></script>
 
 ### Adding a slideshow to a web page
 
@@ -58,21 +51,22 @@ The mandatory options are:
 * `mode` - One value from: `'slide'`, `'stack'`, or `'fade'`
 * `server` - The base URL of your image server
 * Either `images` - An array of image objects to display in the slideshow
-* And/or `folder` - The path of a folder whose images should be displayed in the slideshow
+* and/or `folder` - The path of a folder whose images should be displayed in the slideshow
 
 There are also a number of optional values that you can specify if you wish to override the
 default slideshow appearance:
 
 * `controls` - Whether to show left/right arrow navigation controls, defaults to `true`
 * `dots` - Whether to show clickable dot navigation controls, defaults to `true`
+* `dotColor`: The colour of an unselected dot, default `#666666` (mid grey)
+* `dotSelectedColor`: The colour of a selected dot, default `#dddddd` (light grey)
 * `params` - An object containing image parameters to apply to every image
 * `delay` - The number of seconds to show each slide for, default to `5`
+* `duration` - The duration of the slide or fade animation in milliseconds, default `1000`
+   (1 second), longer values make the slide transition slower
 * `pauseOnHover` - Whether to pause the slideshow when the mouse cursor is hovered over it,
   defaults to `true`
 * `bgColor` - In `'stack'` mode, an optional image background colour
-* `jsonp` - A boolean determining whether the JSONP method is used to load folder information
-  (instead of standard AJAX/XHR). This option is less secure, but is required if your image
-  server has a different host name to your web server. Defaults to `true`.
 
 When providing an array of image objects to display, the following properties are supported for
 each entry:

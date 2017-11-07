@@ -247,6 +247,20 @@ Installation instructions are provided by the certificate suppliers, but should 
 involve copying the files onto your server and setting the locations to them in the
 file `/etc/httpd/conf.d/qis-ssl.conf`.
 
+### Optional - Set the cross-domain policy
+
+Web browsers allow images, JavaScript and CSS files to be loaded from any domain.
+Background data requests however are only allowed to be made to the same domain as
+the originating web page by default. The zooming image viewer, slideshow/carousel
+and gallery viewers all make background data requests. Therefore to enable the use
+of these viewers (and the required public data APIs) on any web site, QIS sets the
+following HTTP header in `qis.conf` and `qis-ssl.conf`:
+
+    Header set Access-Control-Allow-Origin "*"
+
+If you want to lock down this data access to a single domain, change the `*` value as
+[described here](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Allow-Origin).
+
 ### Optional - Logrotate configuration
 
 The default Apache configuration (in `/etc/httpd/conf.d/qis.conf` and

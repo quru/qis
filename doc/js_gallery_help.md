@@ -7,22 +7,19 @@ be embedded in a web page and also supports a pop-up full-screen mode.
 
 ## Prerequisites
 
-The gallery has the same prerequisites as the HTML5 canvas viewer, so refer to that
-documentation for more details.
-
-If you are supplying your own MooTools library, the gallery requires additional MooTools More
-components: Fx.Scroll and URI.
+The gallery has the same prerequisites as the HTML5 canvas viewer, requiring Internet Explorer 9
+or above.
 
 ## Implementation
 
-To use the gallery API, you need the gallery and the HTML5 viewer's CSS and JavaScript files
-in your web page:
+To use the gallery API, you need the gallery and the HTML5 canvas viewer's CSS
+and JavaScript files in your web page:
 
 	<link href="http://images.example.com/static/styles/canvas_view.css" rel="stylesheet" type="text/css">
 	<link href="http://images.example.com/static/styles/gallery_view.css" rel="stylesheet" type="text/css">
 	
-	<script src="http://images.example.com/static/js/canvas_view_yc.js" type="text/javascript"></script>
-	<script src="http://images.example.com/static/js/gallery_view_yc.js" type="text/javascript"></script>
+	<script src="http://images.example.com/static/js/canvas_view.min.js" type="text/javascript"></script>
+	<script src="http://images.example.com/static/js/gallery_view.min.js" type="text/javascript"></script>
 
 CSS files should be included before the JavaScript, so that all CSS rules have been applied
 before the JavaScript starts to measure elements on the web page.
@@ -80,9 +77,6 @@ default gallery behaviour:
 * `params` - An object containing image parameters to apply to every image
 * `viewer` - An object containing options for the main image viewer. See the documentation
   for the HTML5 canvas viewer for the available viewer options.
-* `jsonp` - A boolean determining whether the JSONP method is used to load folder information
-  (instead of standard AJAX/XHR). This option is less secure, but is required if your image
-  server has a different host name to your web server. Defaults to `true`.
 
 When providing an array of image objects to display, the following properties are supported for
 each entry:

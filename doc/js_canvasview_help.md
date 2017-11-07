@@ -7,29 +7,8 @@ zoom in and out, read its title and description, and launch a full-screen viewin
 
 ## Prerequisites
 
-The canvas viewer requires the [MooTools](http://mootools.net/) library, a once-popular
-alternative to the now-ubiquitous [jQuery](http://jquery.com/). You can include MooTools
-in your web page with the HTML:
-
-	<script src="http://images.example.com/static/js/mootools_yc.js" type="text/javascript"></script>
-
-If you want to supply your own MooTools library, the viewer requires MooTools Core and
-MooTools More with the Assets, Element.Measure, Fx.Slide, Mask, Request.JSONP, and
-String.QueryString components.
-
-If you use jQuery on your web site, be sure to include jQuery before including MooTools
-so that the two libraries do not conflict.
-
-### Canvas element support
-
-The HTML5 canvas element is supported in all modern web browsers, and in Microsoft Internet
-Explorer since version 9. If you want to use the canvas viewer in Internet Explorer versions
-6 to 8, you will need to include an additional library that emulates canvas support:
-
-	<!-- Provide canvas support for Internet Explorer 6, 7, 8 -->
-	<!--[if lte IE 8]>
-	<script src="http://images.example.com/static/js/excanvas_yc.js" type="text/javascript"></script>
-	<![endif]-->
+This component requires browser support for the HTML5 canvas element. Canvas is supported
+in all modern web browsers, and in Internet Explorer 9 or above.
 
 ## Implementation
 
@@ -37,7 +16,7 @@ To use the canvas viewer API, first add the viewer's CSS and JavaScript files to
 
 	<link href="http://images.example.com/static/styles/canvas_view.css" rel="stylesheet" type="text/css">
 	
-	<script src="http://images.example.com/static/js/canvas_view_yc.js" type="text/javascript"></script>
+	<script src="http://images.example.com/static/js/canvas_view.min.js" type="text/javascript"></script>
 
 CSS files should be included before the JavaScript, so that all CSS rules have been applied
 before the JavaScript starts to measure elements on the web page.
@@ -106,9 +85,6 @@ behaviour of the viewer. The available options are:
 	* `zoomout` defaults to `true`
 * `doubleclickreset` - A boolean specifying whether to reset the zoom on double tap/click,
    defaults to `true`
-* `jsonp` - A boolean determining whether the JSONP method is used to load image information
-  (instead of standard AJAX/XHR). This option is less secure, but is required if your image
-  server has a different host name to your web server. Defaults to `true`.
 
 Example options:
 

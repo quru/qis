@@ -66,10 +66,10 @@ Image presentation features include:
 
 * Bookmarkable image URLs
 * Image thumbnail generation
-* HTML/Javascript libraries
-  * Simple image zooming for legacy web browsers
-  * Advanced HTML5 image zooming for modern web browsers and tablets
-  * Full-screen image view
+* HTML/JavaScript libraries
+  * Dependency-free with support for Internet Explorer 9 and newer
+  * Animated image zooming for HTML5-compliant web browsers and tablets
+  * Full-screen image viewing
   * Image carousel / slideshow
   * Image gallery / folder viewer
   * Lazily-loaded images
@@ -260,6 +260,7 @@ QIS version 2 brings these new features:
 * Bug fixes to the image publisher
 * A new JavaScript library for lazily loading images
   * See Quru's [image-defer library](https://github.com/quru/image-defer)
+* Removed the requirement to use the MooTools library on the client side
 * Web interface improvements
   * New grid / thumbnail browse view
   * New icons and a more consistent page layout
@@ -287,7 +288,6 @@ Under consideration for future versions:
 * Image search and results
 * Modernise the public JavaScript APIs / viewers
   * Use HTML5 `data-` attributes for automatic initialisation
-  * Remove dependencies on the MooTools library (moving to vanilla JS, not jQuery!)
   * Reduce the number of included files
 * Image tags
   * System-defined e.g. assignment of an image category

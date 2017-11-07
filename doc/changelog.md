@@ -1,16 +1,30 @@
+# v2.6.0
+_Changes: Remove MooTools library from the public image viewers, gallery and slideshow.
+Upgrade MooTools library to 1.6.0, now for internal use only.
+Use CORS instead of JSONP in the image viewers and gallery.
+Standardise JavaScript file naming.
+Drop support for IE8 and below.
+Allow indexing of images in robots.txt_
+
+This version should arguably be a major release, but is intended to remain
+compatible with v2.5 in the majority of cases once the upgrade script has
+been run.
+
+For upgrade instructions, see the [upgrading guide](upgrading.md).
+
 # v2.5.1
 _Changes: Bug fix to Active Directory authentication_
 
-Update the Python and web code  
-Restart the Apache service
+* Update the Python and web code
+* Restart the Apache service
 
 # v2.5.0
 _Changes: Bundle Quru's image-defer.js library, add lazy loading images to the
 image publisher outputs, make the grid/thumbnail view in the folder browse use
 lazily loaded thumbnail images_
 
-Update the Python and web code  
-Restart the Apache service
+* Update the Python and web code
+* Restart the Apache service
 
 # v2.4.0
 _Changes: Adds new grid/thumbnail view for browsing folders in the admin UI,
@@ -20,11 +34,12 @@ more consistent page layout_
 This version is the first release of v2.x and also becomes the new master
 branch in GitHub.
 
-If upgrading from v1.x, see the [upgrading guide](upgrading.md).  
+If upgrading from v1.x, see the [upgrading guide](upgrading.md).
+  
 If upgrading from v2.3:
 
-Update the Python and web code  
-Restart the Apache service
+* Update the Python and web code
+* Restart the Apache service
 
 # v2.3.0-dev
 _Breaking change: folder list API behaviour change_
@@ -41,9 +56,9 @@ The `list` API no longer allows unlimited results with `limit=0`, and instead
 has a new `start` parameter to allow the retrieval of results as multiple pages.
 The `limit` parameter has a new maximum value of `1000`.
 
-Update the Python and web code  
-Update the Python dependencies  
-Restart the Apache service
+* Update the Python and web code
+* Update the Python dependencies
+* Restart the Apache service
 
 # v2.2.0-dev
 _Breaking change: remove default image settings, add a default image template_
@@ -59,9 +74,9 @@ into your templates for you. If upgrading v2 you will need to manually ensure th
 where appropriate, your templates have values set for parameters that the old system
 settings used to provide.
 
-Update the Python and web code  
-Update the Python dependencies  
-Run (or re-run) the `v2_upgrade` script:
+* Update the Python and web code
+* Update the Python dependencies
+* Run (or re-run) the `v2_upgrade` script:
 
 	cd src/imageserver/scripts
 	sudo -u qis python v2_upgrade.py
@@ -110,9 +125,9 @@ _Breaking change: move image templates into the database_
 
 This release requires Postgres 9.2 or above.
 
-Update the Python and web code  
-Update the Python dependencies  
-Import the existing image templates into the database:
+* Update the Python and web code
+* Update the Python dependencies
+* Import the existing image templates into the database:
 
 	cd src/imageserver/scripts
 	sudo -u qis python v2_upgrade.py
@@ -128,12 +143,12 @@ for listing, creating, updating and deleting templates.
 # v2.0.0-dev
 _Changes: upgrade SQLAlchemy to v1, upgrade internal database models_
 
-Stop the Apache service  
-Update the Python and web code  
-Update the Python dependencies  
-Restart the Memcached service  
-Optional: drop the `cachectl` table (note v2_upgrade.py will do this for you)
-Start the Apache service
+* Stop the Apache service
+* Update the Python and web code
+* Update the Python dependencies
+* Restart the Memcached service
+* Optional: drop the `cachectl` table (note v2_upgrade.py will do this for you)
+* Start the Apache service
 
 
 # v1.51

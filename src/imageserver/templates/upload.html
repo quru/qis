@@ -24,7 +24,7 @@
 	{% if settings.DEBUG %}
 	<script src="{{ url_for('static', filename='js/upload.js') }}" type="text/javascript"></script>
 	{% else %}
-	<script src="{{ url_for('static', filename='js/upload_yc.js') }}" type="text/javascript"></script>
+	<script src="{{ url_for('static', filename='js/upload.min.js') }}" type="text/javascript"></script>
 	{% endif %}	
 {% endblock %}
 

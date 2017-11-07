@@ -3,8 +3,7 @@
 	Date started:  05 Feb 2013
 	By:            Matt Fozard
 	Purpose:       Quru Image Server image slideshow library
-	Requires:      MooTools Core 1.3 (no compat)
-	               MooTools More 1.3 - Assets, Element.Measure, Fx.Elements, Request.JSONP
+	Requires:      common_view.js
 	Copyright:     Quru Ltd (www.quru.com)
 	Licence:
 
@@ -20,9 +19,8 @@
 
 	You should have received a copy of the GNU Affero General Public License
 	along with this program.  If not, see http://www.gnu.org/licenses/
-
-	Last Changed:  $Date$ $Rev$ by $Author$
-	
+*/
+/*	
 	Notable modifications:
 	Date       By    Details
 	=========  ====  ============================================================
@@ -33,7 +31,16 @@
 	19Feb2015  Matt  Use 1 timer for animation instead of 2
 	20Feb2015  Matt  Pause on mouse hover, pause when page invisible
 	23Feb2015  Matt  Add prev, next functions, arrows and dots UI controls
+    03Oct2017  Matt  Remove MooTools, remove JSONP, removed fps option
 */
+
+// Easing Equations v1.5 (c) Robert Penner 2001, BSD licensed
+// t: current time, b: beginning value, c: change in position, d: duration
+// t and d can be in frames or seconds/milliseconds
+Math.easeInOutQuad = function(t, b, c, d) {
+    if ((t/=d/2) < 1) return c/2*t*t + b;
+    return -c/2 * ((--t)*(t-2) - 1) + b;
+}
 
 /**** Slideshow class ****/
 
@@ -51,21 +58,19 @@ function ImgSlideshow(container, userOpts) {
 		folder: '',
 		images: [],
 		params: {},
-		jsonp: true,
-		fps: 50,
 		duration: 1000,
 		bgColor: 'white',
-		transition: Fx.Transitions.Quad.easeInOut
+		easeFn: Math.easeInOutQuad
 	};
 	// Apply options
 	if (userOpts != undefined) {
-		this.options = Object.merge(this.options, userOpts);
+		this.options = QU.merge(this.options, userOpts);
 	}
 	
 	// Normalise servers and folders
 	this.options.server = this._add_slash(this.options.server);
 	this.options.folder = this._add_slash(this.options.folder);
-	this.options.images.each(function (im) {
+	this.options.images.forEach(function (im) {
 		if (im.server) im.server = this._add_slash(im.server);
 	}.bind(this));
 	
@@ -74,11 +79,12 @@ function ImgSlideshow(container, userOpts) {
 		height: 0
 	};
 	
-	this.ctrEl = document.id(container);
+	this.ctrEl = QU.id(container);
 	this._hover_in_fn = this._hover_in.bind(this);
 	this._hover_out_fn = this._hover_out.bind(this);
 	this._visibility_change_fn = this._visibility_change.bind(this);
 	this.pvAPI = (document.hidden !== undefined);
+    this.dotEls = [];
 	this.arrowEls = [];
 	this.imageEls = [];
 	this.wrapEls = [];
@@ -86,6 +92,7 @@ function ImgSlideshow(container, userOpts) {
 	this.ready = false;
 	this.running = false;
 	this.animating = false;
+	this.animator = new ElementAnimation(this.options.duration, this.options.easeFn);
 	this.direction = 1;
 	this.imageIdx = 0;
 	this.layout();
@@ -99,25 +106,24 @@ ImgSlideshow.prototype.init = function() {
 		this.addFolderImages();
 	else
 		this.onDataReady(null);
-	
-	// Load arrow controls
+
+	// Preload arrow controls before loading the images
 	if (this.options.controls) {
 		var arrImgs = ['arrow-left.png', 'arrow-right.png'],
-		    arrEvents = [this.prev, this.next];
+		    arrEvents = [this.prev.bind(this), this.next.bind(this)];
 		for (var i = 0; i < arrImgs.length; i++) {
-			this.arrowEls[i] = new Element('a', {
-				href: '#',
-				html: '<img src="' + this.options.server + 'static/images/slideshow/' + arrImgs[i] + '"> ', // Trailing space for IE7 hasLayout
-				styles: {
-					'position': 'absolute',
-					'z-index': '10',
-					'text-decoration': 'none',
-					'border': 'none'
-				},
-				events: {
-					'click': arrEvents[i].bind(this)
-				}
+			var arrow = document.createElement('a');
+			arrow.href = '#';
+			arrow.innerHTML = '<img src="' + this.options.server + 'static/images/slideshow/' + arrImgs[i] + '"> ';  // Trailing space for IE7 hasLayout
+			QU.elSetStyles(arrow, {
+				position: 'absolute',
+				zIndex: '10',
+				textDecoration: 'none',
+				border: 'none'
 			});
+			arrow._onclick = arrEvents[i];
+			arrow.addEventListener('click', arrow._onclick, false);
+			this.arrowEls[i] = arrow;
 		}
 	}
 };
@@ -125,38 +131,40 @@ ImgSlideshow.prototype.init = function() {
 // Free up object handles
 ImgSlideshow.prototype.destroy = function() {
 	if (this.pvAPI) {
-		document.removeEvent('visibilitychange', this._visibility_change_fn);
+		document.removeEventListener('visibilitychange', this._visibility_change_fn, false);
 	}
 	if (this.options.pauseOnHover) {
-		this.ctrEl.removeEvent('mouseenter', this._hover_in_fn);
-		this.ctrEl.removeEvent('mouseleave', this._hover_out_fn);
+		this.ctrEl.removeEventListener('mouseenter', this._hover_in_fn, false);
+		this.ctrEl.removeEventListener('mouseleave', this._hover_out_fn, false);
 	}
 	this.stop();
 	this.ready = false;
-	this.ctrEl.empty();
-	this.imageEls.each(function (el) { el.destroy(); });
-	this.wrapEls.each(function (el) { el.destroy(); });
-	this.imageEls.empty();
-	this.wrapEls.empty();
+	var uiLists = [this.dotEls, this.arrowEls, this.imageEls, this.wrapEls];
+	uiLists.forEach(function(list) {
+	    list.forEach(function(el) {
+	        if (el._onclick) el.removeEventListener('click', el._onclick, false);
+	        if (el._onload) el.removeEventListener('load', el._onload, false);
+	        QU.elRemove(el);
+	    });
+	    list.length = 0;
+	});
+	QU.elClear(this.ctrEl);
 };
 
 // Reads the current size/position of the container element,
 // and sets some necessary styles to it
 ImgSlideshow.prototype.layout = function() {
 	// Get container size
-	var ctrSize = this.ctrEl.getComputedSize();
-	// Fallback
-	if ((ctrSize.width == 0) && (ctrSize.height == 0))
-		ctrSize = { width: this.ctrEl.clientWidth, height: this.ctrEl.clientHeight };
+	var ctrSize = QU.elInnerSize(this.ctrEl, false);
 	// Set image sizes
 	this.imageSize.width = ctrSize.width;
 	this.imageSize.height = ctrSize.height;
 	// Set required container styles
-	this.ctrEl.setStyles({
-		'position': 'relative',  // So that child elements can be positioned absolutely
-		'overflow': 'hidden',
-		'text-align': 'center',
-		'line-height': ctrSize.height + 'px'
+	QU.elSetStyles(this.ctrEl, {
+		position: 'relative',  // So that child elements can be positioned absolutely
+		overflow: 'hidden',
+		textAlign: 'center',
+		lineHeight: ctrSize.height + 'px'
 	});
 };
 
@@ -166,20 +174,12 @@ ImgSlideshow.prototype.setMessage = function(msg) {
 
 ImgSlideshow.prototype.addFolderImages = function() {
 	var dataURL = this.options.server + 'api/v1/list?path=' + encodeURIComponent(this.options.folder);
-	if (this.options.jsonp) {
-		new Request.JSONP({
-			url: dataURL,
-			callbackKey: 'jsonp',
-			onComplete: function(jobj) { this.onDataReady(jobj); }.bind(this)
-		}).send();
-	}
-	else {
-		new Request.JSON({
-			url: dataURL,
-			onSuccess: function(jobj) { this.onDataReady(jobj); }.bind(this),
-			onFailure: function(xhr) { this.setMessage(''); }.bind(this)
-		}).get();
-	}
+    QU.jsonRequest(
+        dataURL,
+        'GET',
+        function(xhr, jobj) { this.onDataReady(jobj); }.bind(this),
+        function(xhr, msg)  { this.setMessage('');    }.bind(this)
+    ).send();
 };
 
 ImgSlideshow.prototype.onDataReady = function(jsonObj) {
@@ -201,9 +201,9 @@ ImgSlideshow.prototype.onDataReady = function(jsonObj) {
 			var imageOpts = this.options.images[i],
 			    imageSpec = {};
 			// Set folder-level parameters (if any)
-			Object.append(imageSpec, this.options.params);
+			imageSpec = QU.merge(imageSpec, this.options.params);
 			// Set 'src' and image-level parameters (if any), minus 'url' and 'server'
-			Object.append(imageSpec, imageOpts);
+			imageSpec = QU.merge(imageSpec, imageOpts);
 			delete imageSpec.url;
 			delete imageSpec.server;
 			// Set slideshow-level parameters
@@ -214,13 +214,16 @@ ImgSlideshow.prototype.onDataReady = function(jsonObj) {
             if (!imageSpec.format) imageSpec.format = 'jpg';
 			
 			var server = imageOpts.server ? imageOpts.server : this.options.server;
-			var finalSrc = server + 'image?' + Object.toQueryString(imageSpec);
-			this.imageEls.push(
-				Asset.image(finalSrc, {
-				'data-index': i,
-				styles: { 'margin': '0', 'padding': '0', 'vertical-align': 'top' },
-				onLoad: this.onImageReady.bind(this)
-			}));
+			var finalSrc = server + 'image?' + QU.ObjectToQueryString(imageSpec);
+			var imageEl = document.createElement('img');
+			imageEl._onload = this.onImageReady.bind(this);
+			imageEl.addEventListener('load', imageEl._onload, false);
+			imageEl.setAttribute('data-index', i);
+			imageEl.src = finalSrc;
+			imageEl.style.margin = '0';
+			imageEl.style.padding = '0';
+			imageEl.style.verticalAlign = 'top';
+			this.imageEls.push(imageEl);
 		}
 	}
 	else {
@@ -228,15 +231,16 @@ ImgSlideshow.prototype.onDataReady = function(jsonObj) {
 	}
 };
 
-ImgSlideshow.prototype.onImageReady = function(img) {
+ImgSlideshow.prototype.onImageReady = function(e) {
+    var img = e.target;
 	// Set the image top margin to vertically centre it.
 	// This is more reliable than using vertical-align, especially in IE.
 	var topMargin = Math.floor((this.imageSize.height - img.height) / 2);
-	img.setStyle('margin-top', topMargin + 'px');
+	img.style.marginTop = topMargin + 'px';
 
 	// Create UI as soon as we have the first image. Async because, if the image
 	// is cached locally, this event fires before it has been pushed to this.imageEls[]
-	if (img.get('data-index') == 0)
+	if (img.getAttribute('data-index') === '0')
 		setTimeout(this.create_ui.bind(this), 1);
 };
 
@@ -247,91 +251,86 @@ ImgSlideshow.prototype.create_ui = function() {
 		'display': 'block',
 		'width': this.imageSize.width + 'px',
 		'height': this.imageSize.height + 'px',
-		'margin': '0', 'padding': '0',
-		'font-size': '0', 'line-height': '0',
+		'margin': '0',
+		'padding': '0',
+		'fontSize': '0',
+		'lineHeight': '0',
 		'position': 'absolute',
-		'top': '0px', 'left': '0px',
+		'top': '0px',
+		'left': '0px',
 		'visibility': 'hidden'
 	};
-	if (this.options.mode == 'stack')
-		wrapperStyles['background-color'] = this.options.bgColor;
+	if (this.options.mode === 'stack')
+		wrapperStyles['backgroundColor'] = this.options.bgColor;
 	
 	// Create wrappers for images
 	for (var i = 0; i < this.imageEls.length; i++) {
 		if (this.options.images[i].url) {
 			// Wrap with an <a>
-			var wrap = new Element('a', {
-				href: this.options.images[i].url,
-				styles: wrapperStyles
-			});
+			var wrap = document.createElement('a');
+			wrap.href = this.options.images[i].url;
 		}
 		else {
 			// Wrap with a <div>
-			var wrap = new Element('div', {
-				styles: wrapperStyles
-			});
+		    var wrap = document.createElement('div');
 		}
-		wrap.grab(this.imageEls[i]);
+        QU.elSetStyles(wrap, wrapperStyles);
+		wrap.appendChild(this.imageEls[i]);
 		this.wrapEls.push(wrap);
 	}
 	
 	// Add all wrappers to the UI
-	this.ctrEl.empty();
+	QU.elClear(this.ctrEl);
 	for (var i = 0; i < this.wrapEls.length; i++) {
-		this.ctrEl.grab(this.wrapEls[i]);
+		this.ctrEl.appendChild(this.wrapEls[i]);
 	}
 	// Add arrow controls
 	if (this.arrowEls.length === 2) {
-		this.arrowEls[0].setStyles({ left: '10px' });
-		this.arrowEls[1].setStyles({ right: '10px' });
-		this.ctrEl.grab(this.arrowEls[0]);
-		this.ctrEl.grab(this.arrowEls[1]);
+		this.arrowEls[0].style.left = '10px';
+		this.arrowEls[1].style.right = '10px';
+		this.ctrEl.appendChild(this.arrowEls[0]);
+		this.ctrEl.appendChild(this.arrowEls[1]);
 	}
-	// Add dots
+	// Add dot controls
 	if (this.options.dots) {
-		var dotsEl = new Element('div', {
-			styles: {
-				'position': 'absolute',
-				'width': '100%',
-				'height': '20px',
-				'line-height': '20px',
-				'text-align': 'center',
-				'z-index': '10',
-				'font-family': 'sans-serif',  /* \/ Hope default font supports unicode */
-				'font-size': '20px',
-				'left': '0px',
-				'bottom': '5px'
-			}
+		var dotsCtr = document.createElement('div');
+		QU.elSetStyles(dotsCtr, {
+			position: 'absolute',
+			width: '100%',
+			height: '20px',
+			lineHeight: '20px',
+			textAlign: 'center',
+			zIndex: '10',
+			fontFamily: 'sans-serif',   /* \/ Hope default font supports unicode */
+			fontSize: '20px',
+			left: '0px',
+			bottom: '5px'
 		});
 		for (var i = 0; i < this.wrapEls.length; i++) {
-			dotsEl.grab(new Element('a', {
-				href: '#',
-				html: '&#9679;',  /* Solid circle /\ */
-				'data-index': i,
-				'class': '_sls_dot',
-				styles: {
-					'margin': '0 8px 0 8px',
-					'text-decoration': 'none',
-					'border': 'none'
-				},
-				events: {
-					'click': function(ci, self) {
-						return function() { return this.index(ci); }.bind(self);
-					}(i, this)
-				}
-			}));
+			var dot = document.createElement('a');
+			dot.href = '#';
+			dot.innerHTML = '&#9679;';  /* Solid circle /\ */
+			dot.className = '_sls_dot';
+			dot.setAttribute('data-index', i);
+			dot.style.margin = '0 8px 0 8px';
+			dot.style.textDecoration = 'none';
+			dot.style.border = 'none';
+			dot._onclick = function(ci, self) { return function(e) { e.preventDefault(); return this.index(ci); }.bind(self); }(i, this);
+			dot.addEventListener('click', dot._onclick, false);
+			this.dotEls.push(dot);
+			dotsCtr.appendChild(dot);
 		}
-		this.ctrEl.grab(dotsEl);
+		this.ctrEl.appendChild(dotsCtr);
 	}
 	
 	// Show first image
-	this.wrapEls[0].setStyle('visibility', 'visible');
+	this.wrapEls[0].style.visibility = 'visible';
 	this._select_dot(0);
 	
 	// Install mouse hover pausing
 	if (this.options.pauseOnHover) {
-		this.ctrEl.addEvent('mouseenter', this._hover_in_fn);
-		this.ctrEl.addEvent('mouseleave', this._hover_out_fn);
+		this.ctrEl.addEventListener('mouseenter', this._hover_in_fn, false);
+		this.ctrEl.addEventListener('mouseleave', this._hover_out_fn, false);
 	}
 	// Install page visibility API pausing
 	if (this.pvAPI) {
@@ -364,7 +363,8 @@ ImgSlideshow.prototype.stop = function() {
 };
 
 // Manually animate to the previous image
-ImgSlideshow.prototype.prev = function() {
+ImgSlideshow.prototype.prev = function(e) {
+    if (e) e.preventDefault();
 	if (this.ready && (this.wrapEls.length > 1) && !this.animating) {
 		this.stop();
 		this.direction = -1;
@@ -374,7 +374,8 @@ ImgSlideshow.prototype.prev = function() {
 };
 
 // Manually animate to the next image
-ImgSlideshow.prototype.next = function() {
+ImgSlideshow.prototype.next = function(e) {
+    if (e) e.preventDefault();
 	if (this.ready && (this.wrapEls.length > 1) && !this.animating) {
 		this.stop();
 		this.direction = 1;
@@ -426,37 +427,31 @@ ImgSlideshow.prototype._do_slide = function(stack, toIdx) {
 	var curIdx = this.imageIdx,
 	    maxIdx = this.wrapEls.length - 1,
 	    nextIdx = (toIdx !== undefined) ? toIdx : curIdx + this.direction;
-	
+
 	if (nextIdx < 0) nextIdx = maxIdx;
 	else if (nextIdx > maxIdx) nextIdx = 0;
 	if (nextIdx === curIdx) return;
-	
+
 	// Move current image to back of z order (for stack mode)
-	this.wrapEls[curIdx].setStyle('z-index', '0');
+	this.wrapEls[curIdx].style.zIndex = '0';
 	// Move next image over to the right (dir 1) / left (dir -1), show it (out of view)
-	this.wrapEls[nextIdx].setStyles({
-		'left': (this.imageSize.width * this.direction) + 'px',
-		'visibility': 'visible',
-		'z-index': '1'
-	});
+	this.wrapEls[nextIdx].style.left = (this.imageSize.width * this.direction) + 'px';
+	this.wrapEls[nextIdx].style.visibility = 'visible';
+	this.wrapEls[nextIdx].style.zIndex = '1';
+
 	// Now animate current image out, next image in
 	this.animating = true;
-	new Fx.Elements(
-		[this.wrapEls[curIdx], this.wrapEls[nextIdx]], {
-			fps: this.options.fps,
-			duration: this.options.duration,
-		    transition: this.options.transition,
-			onComplete: function() {
-				this.animating = false;
-		    	this.wrapEls[curIdx].setStyle('visibility', 'hidden');
-		    	if (this.running)
-			    	this._animate_async();
-		    }.bind(this)
-		}
-	).start({
-		0: stack ? {} : { 'left': [0, -this.imageSize.width * this.direction] },
-		1: { 'left': [this.imageSize.width * this.direction, 0] }
-	});
+	this.animator.start([
+	    { element: this.wrapEls[curIdx], changes: stack ? [] : [{property: 'left', start: 0, end: (-this.imageSize.width * this.direction), unit: 'px'}]},
+        { element: this.wrapEls[nextIdx], changes: [{property: 'left', start: (this.imageSize.width * this.direction), end: 0, unit: 'px'}]},
+	], function() {
+	    // On complete
+        this.animating = false;
+        this.wrapEls[curIdx].style.visibility = 'hidden';
+        if (this.running)
+            this._animate_async();
+    }.bind(this));
+
 	this.imageIdx = nextIdx;
 	this._select_dot(this.imageIdx);
 };
@@ -471,37 +466,32 @@ ImgSlideshow.prototype._xfade = function(toIdx) {
 	if (nextIdx === curIdx) return;
 	
 	// Prep the next image
-	this.wrapEls[nextIdx].setStyles({
-		'opacity': 0,
-		'visibility': 'visible'
-	});
+	this.wrapEls[nextIdx].style.opacity = '0';
+	this.wrapEls[nextIdx].style.visibility = 'visible';
+
 	// Now animate current image out, next image in
 	this.animating = true;
-	new Fx.Elements(
-		[this.wrapEls[curIdx], this.wrapEls[nextIdx]], {
-			fps: this.options.fps,
-			duration: this.options.duration,
-		    transition: this.options.transition,
-			onComplete: function() {
-				this.animating = false;
-		    	this.wrapEls[curIdx].setStyle('visibility', 'hidden');
-		    	if (this.running)
-			    	this._animate_async();
-		    }.bind(this)
-		}
-	).start({
-		0: { 'opacity': [1, 0] },
-		1: { 'opacity': [0, 1] }
-	});
+    this.animator.start([
+        { element: this.wrapEls[curIdx], changes: [{property: 'opacity', start: 1, end: 0, unit: ''}]},
+        { element: this.wrapEls[nextIdx], changes: [{property: 'opacity', start: 0, end: 1, unit: ''}]},
+    ], function() {
+        // On complete
+        this.animating = false;
+        this.wrapEls[curIdx].style.visibility = 'hidden';
+        if (this.running)
+            this._animate_async();
+    }.bind(this));
+
 	this.imageIdx = nextIdx;
 	this._select_dot(this.imageIdx);
 };
 
 ImgSlideshow.prototype._select_dot = function(idx) {
 	if (this.options.dots) {
-		this.ctrEl.getElements('._sls_dot').each(function(el) {
-			el.setStyle('color', (el.get('data-index') == idx) ? this.options.dotSelectedColor : this.options.dotColor);
-		}.bind(this));
+		for (var i = 0; i < this.dotEls.length; i++) {
+		    var el = this.dotEls[i];
+			el.style.color = (el.getAttribute('data-index') === ''+idx) ? this.options.dotSelectedColor : this.options.dotColor;
+		}
 	}
 };
 
@@ -524,8 +514,70 @@ ImgSlideshow.prototype._hover_out = function() {
 };
 
 ImgSlideshow.prototype._visibility_change = function() {
-	(document.hidden ? this._hover_in : this._hover_out).bind(this)();
+    // Stop the animation when the web page is hidden
+    (document.hidden ? this._hover_in : this._hover_out).bind(this)();
 };
+
+/**** Element animation utility ****/
+
+// Creates a utility for animating one or more elements, with duration in milliseconds.
+// The easing function can be any of the Math.ease() functions defined above.
+// This is the IE9 version. In IE10+ you can use CSS classes with CSS transitions
+// and hook into the 'transitionend' event.
+function ElementAnimation(duration, easeFn) {
+    this.steps = Math.round(Math.max(1, duration / 16.66));  // 16.66 == 60fps
+    this.easeFn = easeFn;
+    this.stepFn = this._step.bind(this);
+    if (window.requestAnimationFrame)
+        this.animate = function() { window.requestAnimationFrame(this.stepFn); };
+    else
+        this.animate = function() { return setTimeout(this.stepFn, 17); };
+}
+
+// Starts an animation, and optionally sets a callback function for when the
+// animation has completed. The spec should be an array of elements and what
+// to change about them in the format:
+// [
+//   { element: el, changes: [
+//       {property: 'opacity', start: 0, end: 1, unit: ''},
+//       {property: 'marginLeft', start: 100, end: 500, unit: 'px'}
+//     ]
+//   },
+//   { ...next element... }
+// ]
+// Only numeric properties can be animated.
+ElementAnimation.prototype.start = function(spec, onCompleteFn) {
+    spec.forEach(function(elSpec) {
+        elSpec.changes.forEach(function(ch) {
+            ch.diff = ch.end - ch.start;
+        });
+    });
+    this.spec = spec;
+    this.onCompleteFn = onCompleteFn;
+    this.step = 0;
+    this.animate();
+}
+
+ElementAnimation.prototype._step = function() {
+    var elSpec, propSpec;
+    this.step++;
+    // Using numeric loops here as it should be a bit faster than repeated forEach function calls
+    for (var i = 0; i < this.spec.length; i++) {
+        elSpec = this.spec[i];
+        for (var j = 0; j < elSpec.changes.length; j++) {
+            propSpec = elSpec.changes[j];
+            elSpec.element.style[propSpec.property] = this.easeFn(
+                this.step, propSpec.start, propSpec.diff, this.steps
+            ) + propSpec.unit;
+        }
+    }
+    // Request next frame or complete
+    if (this.step < this.steps) {
+        this.animate();
+    } else if (this.onCompleteFn) {
+        this.onCompleteFn();
+    }
+}
 
 /**** Public interface ****/
 
@@ -544,15 +596,13 @@ ImgSlideshow.prototype._visibility_change = function() {
  * 
  * controls - Whether to show left/right arrow controls. Default true.
  * dots     - Whether to show clickable dot controls. Default true.
- * params  - An object containing image parameters to apply to every image.
- * delay   - The number of seconds to show each slide for.
- * pauseOnHover - Whether to pause when the mouse cursor is over the image.
- *                Default true.
- * bgColor - In 'stack' mode, an optional image background colour.
- * jsonp   - A boolean determining whether the JSONP method is used to load folder
- *           information (instead of standard AJAX/XHR). This option is less secure,
- *           but is required if your image server has a different host name to your
- *           web server. Default true.
+ * dotColor - The colour of an unselected dot. Default #666666 (mid grey).
+ * dotSelectedColor - The colour of a selected dot. Default #dddddd (light grey).
+ * params   - An object containing image parameters to apply to every image.
+ * delay    - The number of seconds to show each slide for.
+ * duration - The duration of the slide or fade animation in milliseconds. Default 1000.
+ * pauseOnHover - Whether to pause when the mouse cursor is over the image. Default true.
+ * bgColor  - In 'stack' mode, an optional image background colour.
  * 
  * E.g. { mode:   'slide',
  *        server: 'http://images.mycompany.com/',
@@ -578,15 +628,20 @@ ImgSlideshow.prototype._visibility_change = function() {
  *                     parameters. E.g. tmp, angle, flip, top, left, ...
  */
 function slideshow_view_init(container, options) {
-	container = document.id(container);
+	container = QU.id(container);
 	if (container) {
-		// Destroy previous slideshow
-		if (container._show != undefined)
-			container._show.destroy();
-		// Assign new slideshow
-		var show = new ImgSlideshow(container, options);
-		show.init();
-		container._show = show;
+	    if (QU.supported) {
+            // Destroy previous slideshow
+            if (container._show !== undefined)
+                container._show.destroy();
+            // Assign new slideshow
+            var show = new ImgSlideshow(container, options);
+            show.init();
+            container._show = show;
+	    }
+        else {
+            container.innerHTML = 'Sorry, this control is unsupported. Try upgrading your web browser.';
+        }
 	}
 	return false;
 }
@@ -594,7 +649,7 @@ function slideshow_view_init(container, options) {
 /* Stops a slideshow, or switches it to manual navigation.
  */
 function slideshow_view_stop(container) {
-	container = document.id(container);
+	container = QU.id(container);
 	if (container && container._show)
 		return container._show.stop();
 }
@@ -603,7 +658,7 @@ function slideshow_view_stop(container) {
  * Slideshows start automatically when created.
  */
 function slideshow_view_start(container) {
-	container = document.id(container);
+	container = QU.id(container);
 	if (container && container._show)
 		return container._show.start();
 }
@@ -611,7 +666,7 @@ function slideshow_view_start(container) {
 /* Manually moves a slideshow one image to the left.
  */
 function slideshow_view_prev(container) {
-	container = document.id(container);
+	container = QU.id(container);
 	if (container && container._show)
 		return container._show.prev();
 }
@@ -619,7 +674,7 @@ function slideshow_view_prev(container) {
 /* Manually moves a slideshow one image to the right.
  */
 function slideshow_view_next(container) {
-	container = document.id(container);
+	container = QU.id(container);
 	if (container && container._show)
 		return container._show.next();
 }
@@ -627,7 +682,7 @@ function slideshow_view_next(container) {
 /* Manually moves a slideshow to an exact image index.
  */
 function slideshow_view_index(container, index) {
-	container = document.id(container);
+	container = QU.id(container);
 	if (container && container._show)
 		return container._show.index(index);
 }

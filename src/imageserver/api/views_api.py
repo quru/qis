@@ -37,7 +37,6 @@ from flask import request
 
 from imageserver.api import blueprint, url_version_prefix
 from imageserver.api_util import add_api_error_handler
-from imageserver.api_util import add_jsonp_support
 from imageserver.api_util import create_api_error_dict
 from imageserver.api_util import make_api_success_response
 from imageserver.csrf import csrf_exempt
@@ -112,7 +111,6 @@ def token():
 # Any additional parameters are passed on for inclusion in the returned image URLs.
 @blueprint.route('/list', methods=['GET'])
 @blueprint.route(url_version_prefix + '/list', methods=['GET'])
-@add_jsonp_support
 @add_api_error_handler
 def imagelist():
     # Check parameters
@@ -204,7 +202,6 @@ def imagelist():
 # Returns JSON encoded basic image attributes.
 @blueprint.route('/details', methods=['GET'])
 @blueprint.route(url_version_prefix + '/details', methods=['GET'])
-@add_jsonp_support
 @add_api_error_handler
 def imagedetails():
     # Get/check parameters

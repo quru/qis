@@ -19,8 +19,6 @@
 
 	You should have received a copy of the GNU Affero General Public License
 	along with this program.  If not, see http://www.gnu.org/licenses/
-	
-	Last Changed:  $Date$ $Rev$ by $Author$
 */
 
 .imageviewer {
@@ -34,12 +32,14 @@
 	cursor: pointer;
 	vertical-align: middle;
 	/* Prevent drag and select */
-	-webkit-user-select: none;
-	-moz-user-select: none;
-	-o-user-select: none;
-	user-select: none;
-	-webkit-user-drag: none;
-	-moz-user-drag: none;
-	-o-user-drag: none;
-	user-drag: none;	
+    -webkit-user-select: none;
+       -moz-user-select: none;
+        -ms-user-select: none;
+         -o-user-select: none;
+            user-select: none;
+    -webkit-user-drag: none;
+       -moz-user-drag: none;
+        -ms-user-drag: none;
+         -o-user-drag: none;
+            user-drag: none;    
 }

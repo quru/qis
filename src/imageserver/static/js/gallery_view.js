@@ -3,9 +3,8 @@
 	Date started:  26 July 2013
 	By:            Matt Fozard
 	Purpose:       Quru Image Server gallery viewer
-	Requires:      canvas_view.js
-	               MooTools Core 1.3 (no compat)
-	               MooTools More 1.3 - Element.Measure, Fx.Scroll, Mask,
+	Requires:      common_view.js
+	               canvas_view.js
 	               Request.JSONP, String.QueryString, URI
 	Copyright:     Quru Ltd (www.quru.com)
 	Licence:
@@ -22,15 +21,15 @@
 
 	You should have received a copy of the GNU Affero General Public License
 	along with this program.  If not, see http://www.gnu.org/licenses/
-
-	Last Changed:  $Date$ $Rev$ by $Author$
-	
+*/
+/*
 	Notable modifications:
 	Date       By    Details
 	=========  ====  ============================================================
 	11Oct2013  Matt  Strip halign and valign from all images by default
 	11Nov2013  Matt  Add title/description image options, set title on thumbnails
 	11Nov2013  Matt  Add events interface
+    02Oct2017  Matt  Remove MooTools, remove JSONP
 */
 
 /**** Private interface ****/
@@ -45,22 +44,19 @@ function GalleryView(container, userOpts, events) {
 		startImage: '',
 		thumbsize: { width: 120, height: 120 },
 		viewer: {},
-		jsonp: true,
 		stripaligns: true
 	};
 	// Apply options
 	if (userOpts !== undefined) {
-		this.options = Object.merge(this.options, userOpts);
+		this.options = QU.merge(this.options, userOpts);
 	}
-	// Sync jsonp options
-	this.options.viewer.jsonp = this.options.jsonp;
 	
 	this.events = events;
 	
 	// Normalise servers and folders
 	this.options.server = this._add_slash(this.options.server);
 	this.options.folder = this._add_slash(this.options.folder);
-	this.options.images.each(function (im) {
+	this.options.images.forEach(function (im) {
 		if (im.server) im.server = this._add_slash(im.server);
 	}.bind(this));
 	
@@ -74,8 +70,8 @@ function GalleryView(container, userOpts, events) {
 	};
 	
 	// Get and clear container element
-	this.ctrEl = document.id(container);
-	this.ctrEl.empty();
+	this.ctrEl = QU.id(container);
+	QU.elClear(this.ctrEl);
 	
 	this.elements = {};
 	this.create_ui();
@@ -96,90 +92,74 @@ GalleryView.prototype.destroy = function() {
 	this.events = null;
 	if (this.elements.main_view && this.elements.main_view._viewer)
 		this.elements.main_view._viewer.destroy();
-	this.ctrEl.empty();
+	QU.elClear(this.ctrEl);
 };
 
 GalleryView.prototype.create_ui = function() {
 	// Wrapper to apply gallery class
-	var wrapper = new Element('div', {
-		'class': 'gallery'
-	});
-	this.ctrEl.grab(wrapper);
+	var wrapper = document.createElement('div');
+	wrapper.className = 'gallery';
+	this.ctrEl.appendChild(wrapper);
 	// Canvas view container
-	var main_view = new Element('div', {
-		'class': 'main_view',
-		'styles': {
-			'text-align': 'center'
-		}
-	});
+	var main_view = document.createElement('div');
+	main_view.className = 'main_view';
+	main_view.style.textAlign = 'center';
 	// Thumbnails container
-	var thumbnails = new Element('div', {
-		'class': 'thumbnails',
-		'styles': {
-			overflow: 'hidden',
-			position: 'relative'
-		}
-	});
-	wrapper.grab(main_view);
-	wrapper.grab(thumbnails);
+	var thumbnails = document.createElement('div');
+	thumbnails.className = 'thumbnails';
+	thumbnails.style.overflow = 'hidden';
+	thumbnails.style.position = 'relative';
+	wrapper.appendChild(main_view);
+	wrapper.appendChild(thumbnails);
 	
 	// Scroll left/right buttons
-	var tn_left = new Element('a', {
-		'class': 'scroll_button disabled',
-		'html': '&lt;',
-		'styles': {
-			display: 'block',
-			position: 'absolute',
-			'z-index': '1',
-			top: 0,
-			left: 0,
-			margin: 0
-		}
+	var tn_left = document.createElement('a');
+	tn_left.className = 'scroll_button disabled';
+	tn_left.innerHTML = '&lt;';
+	QU.elSetStyles(tn_left, {
+		display: 'block',
+		position: 'absolute',
+		zIndex: '1',
+		top: '0',
+		left: '0',
+		margin: '0'
 	});
-	var tn_right = new Element('a', {
-		'class': 'scroll_button disabled',
-		'html': '&gt;',
-		'styles': {
-			display: 'block',
-			position: 'absolute',
-			'z-index': '1',
-			top: 0,
-			right: 0,
-			margin: 0
-		}
+	var tn_right = document.createElement('a');
+	tn_right.className = 'scroll_button disabled';
+	tn_right.innerHTML = '&gt;';
+	QU.elSetStyles(tn_right, {
+		display: 'block',
+		position: 'absolute',
+		zIndex: '1',
+		top: '0',
+		right: '0',
+		margin: '0'
 	});
-	thumbnails.grab(tn_left);
-	thumbnails.grab(tn_right);
+	thumbnails.appendChild(tn_left);
+	thumbnails.appendChild(tn_right);
 	
 	// Hides the thumbnail list overflow and scroll bars
-	var tn_scroller_viewport = new Element('div', {
-		'class': 'scroller_viewport',
-		'styles': {
-			overflow: 'hidden',
-			'margin-left': tn_left.getSize().x + 'px'
-		}
-	});
+	var tn_scroller_viewport = document.createElement('div');
+	tn_scroller_viewport.className = 'scroller_viewport';
+	tn_scroller_viewport.style.overflow = 'hidden';
+	tn_scroller_viewport.style.marginLeft = tn_left.offsetWidth + 'px';
 	// Provides the scroll function via standard scroll bars
-	var tn_scrollable = new Element('div', {
-		'styles': { overflow: 'auto' }
-	});
+	var tn_scrollable = document.createElement('div');
+	tn_scrollable.style.overflow = 'auto';
 	// Hosts the thumbnail images in a single long line
-	var tn_scroller = new Element('div', {
-		'class': 'scroller',
-		'styles': {
-			position: 'relative',    /* for getting img.offsetLeft */
-			'white-space': 'nowrap'
-		}
-	});
-	tn_scrollable.grab(tn_scroller);
-	tn_scroller_viewport.grab(tn_scrollable);
-	thumbnails.grab(tn_scroller_viewport);
+	var tn_scroller = document.createElement('div');
+	tn_scroller.className = 'scroller';
+	tn_scroller.style.position = 'relative';    /* for getting img.offsetLeft */
+	tn_scroller.style.whiteSpace = 'nowrap';
+	tn_scrollable.appendChild(tn_scroller);
+	tn_scroller_viewport.appendChild(tn_scrollable);
+	thumbnails.appendChild(tn_scroller_viewport);
 
 	// Add event handlers
 	// Rely on compatibility mode on tablets (tested OK)
-	tn_scrollable.addEvent('scroll', function() { this.onThumbsScroll(); }.bind(this));
-	tn_left.addEvent('click', function() { this.scrollRelative(-1); return false; }.bind(this));
-	tn_right.addEvent('click', function() { this.scrollRelative(1); return false; }.bind(this));
+	tn_scrollable.addEventListener('scroll', function() { this.onThumbsScroll(); }.bind(this), false);
+	tn_left.addEventListener('click', function() { this.scrollRelative(-1); return false; }.bind(this), false);
+	tn_right.addEventListener('click', function() { this.scrollRelative(1); return false; }.bind(this), false);
 
 	// Save refs to things we need later
 	this.elements = {
@@ -192,57 +172,43 @@ GalleryView.prototype.create_ui = function() {
 		tn_left: tn_left,
 		tn_right: tn_right
 	};
-	this.scroller = new Fx.Scroll(tn_scrollable, {
-		transition: 'sine:in:out',
-		duration: 500
-	});
+	// Implement smooth scrolling
+	this.scroller = new ElementScroller(tn_scrollable, 500, Math.easeInOutSine);
 };
 
 GalleryView.prototype.layout = function() {
-	var ctrSize  = this.ctrEl.getComputedSize(),
-	    wrapSize = this.elements.wrapper.getComputedSize({ styles: ['margin','padding','border'] }),
-	    tnSize   = this.elements.tn_wrapper.getComputedSize({ styles: ['margin','padding','border'] }),
+	var ctrInnerSize = QU.elInnerSize(this.ctrEl, false),
+	    wrapStyles = QU.elGetStyles(this.elements.wrapper, ['marginTop', 'paddingTop', 'borderTopWidth', 'marginBottom', 'paddingBottom', 'borderBottomWidth']),
+	    wrapCSSHeight = Math.round(this._sum_object_floats(wrapStyles)),
+	    tnStyles = QU.elGetStyles(this.elements.tn_wrapper, ['marginTop', 'paddingTop', 'borderTopWidth', 'marginBottom', 'paddingBottom', 'borderBottomWidth']),
+	    tnCSSHeight = Math.round(this._sum_object_floats(tnStyles)),
 	    thumbHeight = this.options.thumbsize.height + 12,        // extra for image borders
-	    mvHeight = ctrSize.height - (wrapSize.computedTop + wrapSize.computedBottom +
-	                   tnSize.computedTop + tnSize.computedBottom + thumbHeight);
+	    mvHeight = ctrInnerSize.height - (wrapCSSHeight + tnCSSHeight + thumbHeight);
 	
 	// Don't use odd dimensions for the main view
 	if (mvHeight % 2 == 1) mvHeight--;
 	
 	// Set heights
-	this.elements.main_view.setStyles({
-		height: mvHeight + 'px',
-		'line-height': mvHeight + 'px'
-	});
-	this.elements.tn_wrapper.setStyles({
-		height: thumbHeight + 'px',
-		'line-height': thumbHeight + 'px'
-	});
-	this.elements.tn_left.setStyles({
-		height: thumbHeight + 'px',
-		'line-height': thumbHeight + 'px'
-	});
-	this.elements.tn_right.setStyles({
-		height: thumbHeight + 'px',
-		'line-height': thumbHeight + 'px'
-	});
+	this.elements.main_view.style.height = mvHeight + 'px';
+	this.elements.main_view.style.lineHeight = mvHeight + 'px';
+
+	this.elements.tn_wrapper.style.height = thumbHeight + 'px';
+	this.elements.tn_wrapper.style.lineHeight = thumbHeight + 'px';
+	this.elements.tn_left.style.height = thumbHeight + 'px';
+	this.elements.tn_left.style.lineHeight = thumbHeight + 'px';
+	this.elements.tn_right.style.height = thumbHeight + 'px';
+	this.elements.tn_right.style.lineHeight = thumbHeight + 'px';
 	
-	var panelWidth = this.elements.tn_wrapper.getSize().x,
-	    btnWidth = this.elements.tn_left.getSize().x,
+	var panelWidth = this.elements.tn_wrapper.offsetWidth,
+	    btnWidth = this.elements.tn_left.offsetWidth,
 	    tnvpWidth = panelWidth - (2 * btnWidth);
 	
 	// Set thumbnail area sizing
-	this.elements.tn_viewport.setStyles({
-		width: tnvpWidth + 'px',
-		height: thumbHeight + 'px'
-	});	
-	this.elements.tn_scrollable.setStyles({
-		width: tnvpWidth + 'px'
-	});
-	this.elements.tn_panel.setStyles({
-		height: thumbHeight + 'px',
-		'line-height': thumbHeight-4 + 'px'
-	});
+	this.elements.tn_viewport.style.width = tnvpWidth + 'px';
+	this.elements.tn_viewport.style.height = thumbHeight + 'px';
+	this.elements.tn_scrollable.style.width = tnvpWidth + 'px';
+	this.elements.tn_panel.style.height = thumbHeight + 'px';
+	this.elements.tn_panel.style.lineHeight = thumbHeight-4 + 'px';
 	
 	// Resize canvas viewer
 	canvas_view_resize(this.elements.main_view);
@@ -254,20 +220,12 @@ GalleryView.prototype.setMessage = function(msg) {
 
 GalleryView.prototype.addFolderImages = function() {
 	var dataURL = this.options.server + 'api/v1/list?path=' + encodeURIComponent(this.options.folder);
-	if (this.options.jsonp) {
-		new Request.JSONP({
-			url: dataURL,
-			callbackKey: 'jsonp',
-			onComplete: function(jobj) { this.onDataReady(jobj); }.bind(this)
-		}).send();
-	}
-	else {
-		new Request.JSON({
-			url: dataURL,
-			onSuccess: function(jobj) { this.onDataReady(jobj); }.bind(this),
-			onFailure: function(xhr) { this.setMessage(''); }.bind(this)
-		}).get();
-	}
+    QU.jsonRequest(
+        dataURL,
+        'GET',
+        function(xhr, jobj) { this.onDataReady(jobj); }.bind(this),
+        function(xhr, msg)  { this.setMessage('');    }.bind(this)
+    ).send();
 };
 
 GalleryView.prototype.onDataReady = function(jsonObj) {
@@ -290,9 +248,9 @@ GalleryView.prototype.onDataReady = function(jsonObj) {
 			var imageOpts = this.options.images[i],
 			    imageSpec = {};
 			// Set folder-level parameters (if any)
-			Object.append(imageSpec, this.options.params);
+			imageSpec = QU.merge(imageSpec, this.options.params);
 			// Set 'src' and image-level parameters (if any), minus server, title, description
-			Object.append(imageSpec, imageOpts);
+			imageSpec = QU.merge(imageSpec, imageOpts);
 			delete imageSpec.server;
 			delete imageSpec.title;
 			delete imageSpec.description;
@@ -309,10 +267,10 @@ GalleryView.prototype.onDataReady = function(jsonObj) {
             }
 			
 			var server = imageOpts.server ? imageOpts.server : this.options.server,
-			    finalSrc = server + 'image?' + Object.toQueryString(imageSpec);
+			    finalSrc = server + 'image?' + QU.ObjectToQueryString(imageSpec);
 			
 			// De-dup and add the <img>
-			if (!requests.contains(finalSrc)) {
+			if (requests.indexOf(finalSrc) === -1) {
 				if ((this.options.startImage === imageSpec.src) && !setFirst) {
 					this.firstIdx = i;
 					setFirst = true; // when >1 match, use the left-most
@@ -329,30 +287,29 @@ GalleryView.prototype.onDataReady = function(jsonObj) {
 };
 
 GalleryView.prototype.addThumbnail = function(src, idx, title, description) {
-	var thumbEl = new Element('img', {
-		'src': src,
-		'data-index': idx,
-		'title': title ? title : '',
-		'draggable': 'false'
+	var thumbEl = document.createElement('img');
+	thumbEl.src = src;
+	thumbEl.setAttribute('data-index', idx);
+	thumbEl.title = title ? title : '';
+	thumbEl.draggable = false;
 //      Disabled to prevent stretching of images smaller than the thumbnail size
-//		width: this.options.thumbsize.width + 'px'
-//		height: this.options.thumbsize.height + 'px'
-	});
-	if (title) thumbEl.set('data-title', title);
-	if (description) thumbEl.set('data-description', description);
+//		thumbEl.width = this.options.thumbsize.width;
+//		thumbEl.height = this.options.thumbsize.height;
+	if (title) thumbEl.setAttribute('data-title', title);
+	if (description) thumbEl.setAttribute('data-description', description);
 	
 	this.thumbnails.push(thumbEl);
-	this.elements.tn_panel.grab(thumbEl);
+	this.elements.tn_panel.appendChild(thumbEl);
 	
 	// Add event handlers
 	// Use proper touch events to avoid phantom thumbnail clicks on tablets
-	thumbEl.addEvent('load', function() { this.onThumbLoaded(thumbEl, idx); }.bind(this));
+	thumbEl.addEventListener('load', function() { this.onThumbLoaded(thumbEl, idx); }.bind(this), false);
 	if ('ontouchstart' in window && window.Touch) {
-		thumbEl.addEvent('touchstart', function(e) { this.onThumbTouchStart(e, idx); }.bind(this));
-		thumbEl.addEvent('touchend',   function(e) { this.onThumbTouchEnd(e, idx); }.bind(this));
+		thumbEl.addEventListener('touchstart', function(e) { this.onThumbTouchStart(e, idx); }.bind(this), false);
+		thumbEl.addEventListener('touchend',   function(e) { this.onThumbTouchEnd(e, idx); }.bind(this), false);
 	}
 	else {
-		thumbEl.addEvent('click', function() { this.onThumbClick(thumbEl, idx); }.bind(this));
+		thumbEl.addEventListener('click', function() { this.onThumbClick(thumbEl, idx); }.bind(this), false);
 	}
 };
 
@@ -391,19 +348,19 @@ GalleryView.prototype.scrollDirect = function(idx, edge) {
 		if (edge === 'left') {
 			if (idx > 0) {
 			    var thumb = this.thumbnails[idx];
-				this.scroller.start(thumb.offsetLeft - scrollInfo.thumbMargin, 0);
+				this.scroller.scrollTo(thumb.offsetLeft - scrollInfo.thumbMargin, 0);
 			}
 			else {
-				this.scroller.start(0, 0);
+				this.scroller.scrollTo(0, 0);
 			}
 		}
 		else { // === 'right'
 			if (idx < (this.thumbnails.length - 1)) {
 				var nextThumb = this.thumbnails[idx + 1];
-				this.scroller.start(nextThumb.offsetLeft - scrollInfo.viewportWidth, 0);
+				this.scroller.scrollTo(nextThumb.offsetLeft - scrollInfo.viewportWidth, 0);
 			}
 			else {
-				this.scroller.start(scrollInfo.scrollTotal - scrollInfo.viewportWidth, 0);
+				this.scroller.scrollTo(scrollInfo.scrollTotal - scrollInfo.viewportWidth, 0);
 			}
 		}
 	}
@@ -438,8 +395,8 @@ GalleryView.prototype.moveDirect = function(idx) {
 		if (idx !== this.thumbIdx) {
 			// Change the selected thumbnail
 			this.thumbIdx = idx;
-			this.thumbnails.each(function(t) { t.removeClass('selected'); });
-			this.thumbnails[idx].addClass('selected');
+			this.thumbnails.forEach(function(t) { QU.elSetClass(t, 'selected', false); });
+			QU.elSetClass(this.thumbnails[idx], 'selected', true);
 			// Launch the associated viewer if we don't move anywhere else soon
 			if (this.moveTimer !== undefined)
 				clearTimeout(this.moveTimer);
@@ -453,16 +410,16 @@ GalleryView.prototype.onMoveComplete = function() {
 	this.autoThumbScroll();
 	
 	var thumbImg = this.thumbnails[this.thumbIdx],
-	    viewerOpts = Object.clone(this.options.viewer);
+	    viewerOpts = QU.clone(this.options.viewer);
 	
-	if (thumbImg.get('data-title') != null)
-		viewerOpts.title = thumbImg.get('data-title');
-	if (thumbImg.get('data-description') != null)
-		viewerOpts.description = thumbImg.get('data-description');
+	if (thumbImg.getAttribute('data-title') != null)
+		viewerOpts.title = thumbImg.getAttribute('data-title');
+	if (thumbImg.getAttribute('data-description') != null)
+		viewerOpts.description = thumbImg.getAttribute('data-description');
 	
 	// Fire change event
 	if (this.events)
-		_fire_event(this.events.onchange, this, [this.options.images[this.thumbIdx].src]);
+		ImgUtils.fireEvent(this.events.onchange, this, [this.options.images[this.thumbIdx].src]);
 	
 	canvas_view_init(
 		this.elements.main_view,
@@ -524,16 +481,15 @@ GalleryView.prototype.getScrollInfo = function() {
 	// Get scroll positions (thumblistEl bit is for IE7)
 	var scrollingEl = this.elements.tn_scrollable,
 	    thumblistEl = this.elements.tn_panel,
-	    viewportEl = scrollingEl.getParent(),
-	    scrollPosFrom = scrollingEl.getScroll().x,
-	    scrollTotal = Math.max(scrollingEl.getScrollSize().x, thumblistEl.getScrollSize().x),
-	    viewportWidth = viewportEl.getSize().x,
+	    viewportEl = scrollingEl.parentNode,
+	    scrollPosFrom = scrollingEl.scrollLeft,
+	    scrollTotal = Math.max(scrollingEl.scrollWidth, thumblistEl.scrollWidth),
+	    viewportWidth = viewportEl.clientWidth,
 	    scrollPosTo = scrollPosFrom + viewportWidth;
 	
 	// Work out visible thumbnails
 	var visFrom = -1, visTo = -1,
-	    tWidth = this.thumbnails[0].getSize().x,
-	    tMargin = tWidth - this.thumbnails[0].width;
+	    tWidth = this.thumbnails[0].offsetWidth;
 	for (var i = 0; i < this.thumbnails.length; i++) {
 		var t = this.thumbnails[i],
 		    notVisible = ((t.offsetLeft + tWidth) <= scrollPosFrom) || (t.offsetLeft >= scrollPosTo);
@@ -543,6 +499,8 @@ GalleryView.prototype.getScrollInfo = function() {
 		}
 		if (notVisible && (visTo != -1)) break;
 	}
+	var tMargins = QU.elGetStyles(this.thumbnails[0], ['marginLeft', 'marginRight']),
+	    tMargin = Math.round((parseFloat(tMargins.marginLeft) + parseFloat(tMargins.marginRight)) / 2);
 	return {
 		scrollFrom: scrollPosFrom,
 		scrollTo: scrollPosTo,
@@ -558,13 +516,13 @@ GalleryView.prototype.setScrollButtons = function() {
 	// Auto enable/disable the scroll buttons
 	var scrollInfo = this.getScrollInfo();
 	if (scrollInfo.scrollFrom <= 0)
-		this.elements.tn_left.addClass('disabled');
+		QU.elSetClass(this.elements.tn_left, 'disabled', true);
 	else
-		this.elements.tn_left.removeClass('disabled');
+		QU.elSetClass(this.elements.tn_left, 'disabled', false);
 	if (scrollInfo.scrollTo >= scrollInfo.scrollTotal)
-		this.elements.tn_right.addClass('disabled');
+		QU.elSetClass(this.elements.tn_right, 'disabled', true);
 	else
-		this.elements.tn_right.removeClass('disabled');
+		QU.elSetClass(this.elements.tn_right, 'disabled', false);
 };
 
 GalleryView.prototype._add_slash = function(str) {
@@ -572,6 +530,15 @@ GalleryView.prototype._add_slash = function(str) {
 		return str + '/';
 	else
 		return str;
+};
+
+GalleryView.prototype._sum_object_floats = function(obj) {
+    var key, f, ret = 0;
+    for (key in obj) {
+        f = parseFloat(obj[key]);
+        if (!isNaN(f)) ret += f;
+    }
+    return ret;
 };
 
 /**** Full screen mode ****/
@@ -598,52 +565,54 @@ function GalleryViewMask(options, events) {
 GalleryViewMask.prototype.open = function() {
 	var fsCoords = this.fullscreenGetCoords();
 	// Mask the page
-	this.mask = new Mask(document.body, {
-		hideOnClick: false,         // Don't just hide, use onClick below
-		'class': 'fullscreen_mask', // In canvas_view.css
-		style: { 'z-index': '1000' },
-		onClick: this.close.bind(this)
-	});
+	this.mask = new PageMask(
+	    'fullscreen_mask', // In canvas_view.css
+	    { 'zIndex': '1000' },
+	    function(mask) { this.close(); }.bind(this)
+	);
 	this.mask.show();
 	// Add a gallery container
-	this.ctrEl = new Element('div', {
-		'class': 'fullscreen',
-		styles: {
-			position: this.fullScreenFixed ? 'fixed' : 'absolute',
-			'z-index': '1001',
-			opacity: '0',
-			left: fsCoords.left + 'px',
-			top: fsCoords.top + 'px',
-			width: fsCoords.width + 'px',
-			height: fsCoords.height + 'px',
-			margin: '0',
-			padding: '0'
-	}});
-	document.id(document.body).grab(this.ctrEl, 'top');
-	// Create a close button to put on top of the canvas_view
-	var closeEl = new Element('a', {
-		'class': 'close_button',
-		styles: {
-			display: 'block', position: 'absolute',
-			'z-index': '1102',    /* same as canvas_view alert panel */
-			top: '0px', right: '0px', width: '33px', height: '33px'
-		},
-		events: {
-			click: this.close.bind(this)
-		}
+	this.ctrEl = document.createElement('div');
+	this.ctrEl.className = 'fullscreen';
+	QU.elSetStyles(this.ctrEl, {
+		position: this.fullScreenFixed ? 'fixed' : 'absolute',
+		zIndex: '1001',
+		opacity: '0',
+		left: fsCoords.left + 'px',
+		top: fsCoords.top + 'px',
+		width: fsCoords.width + 'px',
+		height: fsCoords.height + 'px',
+		margin: '0',
+		padding: '0'
 	});
+	document.body.insertBefore(this.ctrEl, document.body.firstChild);
+	// Create a close button to put on top of the canvas_view
+	var closeEl = document.createElement('a');
+	closeEl.className = 'close_button';
+	QU.elSetStyles(closeEl, {
+		display: 'block',
+		position: 'absolute',
+		zIndex: '1102',    /* same as canvas_view alert panel */
+		top: '0px',
+		right: '0px',
+		width: '33px',
+		height: '33px'
+	});
+	closeEl.addEventListener('click', this.close.bind(this), false);
 	
 	// Add event handlers
-	window.addEvent('keydown', this.fullKeydownFn);
-	window.addEvent('resize', this.fullResizeFn);
+	window.addEventListener('keydown', this.fullKeydownFn, false);
+	window.addEventListener('resize', this.fullResizeFn, false);
 	// Create the gallery
 	gallery_view_init(this.ctrEl, this.options, this.events);
-	this.ctrEl.getElement('.gallery').grab(closeEl, 'top');
+	var galleryWrapper = this.ctrEl.querySelector('.gallery');
+	galleryWrapper.insertBefore(closeEl, galleryWrapper.firstChild);
 	// Fade in container
-	new Fx.Tween(this.ctrEl, { duration: 500 }).start('opacity', 0, 1);
+	this.fader = new ElementFader(this.ctrEl, 300);
+	this.fader.fadeIn();
 	// Fire fullscreen event
 	if (this.events)
-		_fire_event(this.events.onfullscreen, this.ctrEl._gallery, ['', true]);
+		ImgUtils.fireEvent(this.events.onfullscreen, this.ctrEl._gallery, ['', true]);
 };
 
 GalleryViewMask.prototype.close = function() {
@@ -652,45 +621,46 @@ GalleryViewMask.prototype.close = function() {
 		return;
 	// Fade out gallery then close down
 	this.animating = true;
-	new Fx.Tween(this.ctrEl, {
-		duration: 300,
-		onComplete: function() {
-			// Fire fullscreen event before destroying the gallery
-			if (this.events)
-				_fire_event(this.events.onfullscreen, this.ctrEl._gallery, ['', false]);
-			// Remove event handlers
-			window.removeEvent('resize', this.fullResizeFn);
-			window.removeEvent('keydown', this.fullKeydownFn);
-			// Destroy gallery
-			if (this.ctrEl._gallery)
-				this.ctrEl._gallery.destroy();
-			// Take container back out of the page
-			this.ctrEl.dispose();
-			this.ctrEl = null;
-			// Hide mask
-			this.mask.destroy();
-			this.mask = null;
-			
-			this.animating = false;			
-		}.bind(this)
-	}).start('opacity', 1, 0);
+	this.fader.fadeOut(function() {
+		// Fire fullscreen event before destroying the gallery
+		if (this.events)
+			ImgUtils.fireEvent(this.events.onfullscreen, this.ctrEl._gallery, ['', false]);
+		// Remove event handlers
+		window.removeEventListener('resize', this.fullResizeFn, false);
+		window.removeEventListener('keydown', this.fullKeydownFn, false);
+		// Destroy gallery
+		if (this.ctrEl._gallery)
+			this.ctrEl._gallery.destroy();
+		// Take container back out of the page
+		QU.elRemove(this.ctrEl);
+		this.ctrEl = null;
+		// Hide mask
+		this.mask.destroy();
+		this.mask = null;
+		
+		this.animating = false;
+	}.bind(this));
 };
 
 GalleryViewMask.prototype.fullscreenKeydown = function(e) {
-	switch (e.code) {
+    var code = (e.which || e.keyCode);
+	switch (code) {
 		case 27:
 			// Close async because we don't want to be in here when this handler gets removed
-			e.stop();
+			e.preventDefault();
+			e.stopPropagation();
 			setTimeout(this.close.bind(this), 1);
 			break;
 		case 37:
 		case 40:
-			e.stop();
+            e.preventDefault();
+            e.stopPropagation();
 			if (this.ctrEl._gallery) this.ctrEl._gallery.moveRelative(-1);
 			break;
 		case 39:
 		case 38:
-			e.stop();
+            e.preventDefault();
+            e.stopPropagation();
 			if (this.ctrEl._gallery) this.ctrEl._gallery.moveRelative(1);
 			break;
 	}
@@ -700,7 +670,7 @@ GalleryViewMask.prototype.fullscreenResize = function(e) {
 	// The mask resizes itself.
 	// We must resize the viewer container.
 	var fsCoords = this.fullscreenGetCoords();
-	this.ctrEl.setStyles({
+	QU.elSetStyles(this.ctrEl, {
 		left: fsCoords.left + 'px',
 		top: fsCoords.top + 'px',
 		width: fsCoords.width + 'px',
@@ -714,8 +684,8 @@ GalleryViewMask.prototype.fullscreenGetCoords = function() {
 	// Get browser total viewport size
 	// #517 Prefer window.inner* to get the visual viewport in mobile browsers
 	//      http://www.quirksmode.org/mobile/viewports2.html "Measuring the visual viewport"
-	var winSize   = window.innerWidth ? { x: window.innerWidth, y: window.innerHeight } : window.getSize(),
-	    winScroll = this.fullScreenFixed ? { x: 0, y: 0 } : window.getScroll(),
+	var winSize   = window.innerWidth ? { x: window.innerWidth, y: window.innerHeight } : { x: document.body.clientWidth, y: document.body.clientHeight },
+	    winScroll = this.fullScreenFixed ? { x: 0, y: 0 } : { x: window.pageXOffset, y: window.pageYOffset },
 	    winMargin = Math.min(Math.round(winSize.x / 40), Math.round(winSize.y / 40));
 	// Get target placement of container element
 	var tgtLeft   = (winScroll.x + winMargin),
@@ -753,10 +723,6 @@ GalleryViewMask.prototype.fullscreenGetCoords = function() {
  * params  - An object containing image parameters to apply to every image.
  * viewer  - An object containing options to apply to the main image viewer.
  *           See the canvas_view file for the available viewer options.
- * jsonp   - A boolean determining whether the JSONP method is used to load folder
- *           information (instead of standard AJAX/XHR). This option is less secure,
- *           but is required if your image server has a different host name to your
- *           web server. Default true.
  * 
  * E.g. { server: 'http://images.mycompany.com/',
  *        folder: 'myimages/featured/',
@@ -791,7 +757,7 @@ GalleryViewMask.prototype.fullscreenGetCoords = function() {
  *   onload, oninfo, ondownload, onfullscreen.
  */
 function gallery_view_init(container, options, events) {
-	container = document.id(container);
+	container = QU.id(container);
 	if (container) {
 		var gallery = new GalleryView(container, options, events);
 		gallery.init();
@@ -803,7 +769,7 @@ function gallery_view_init(container, options, events) {
 /* Notifies the gallery that its container has been resized
  */
 function gallery_view_resize(container) {
-	container = document.id(container);
+	container = QU.id(container);
 	if (container && container._gallery)
 		container._gallery.layout();
 	return false;
@@ -814,25 +780,28 @@ function gallery_view_resize(container) {
  * and events.
  */
 function gallery_view_init_fullscreen(element, options, events) {
-	element = document.id(element);
+	element = QU.id(element);
 	if (element) {
 		// Modify a copy of the supplied options!
-		var opts = options ? Object.clone(options) : {};
+		var opts = options ? QU.clone(options) : {};
 		
-		element.removeEvents('click');
-		element.addEvent('click', function() {
+		if (element._onlick) {
+		    element.removeEventListener('click', element._onlick, false);
+		}
+		element._onlick = function() {
 			// Try to default the start image if it's not set
 			if (!opts.startImage) {
-				var imageURL = _get_image_src(element);
+				var imageURL = ImgUtils.getImageSrc(element);
 				if (imageURL) {
-					var parsedURL = new URI(_clean_url(imageURL)),
-					    srcParam = parsedURL.getData('src');
-					if (srcParam)
-						opts.startImage = srcParam;
+					var urlParts = QU.splitURL(imageURL),
+					    urlQuery = QU.QueryStringToObject(urlParts.query, false);
+					if (urlQuery.src)
+						opts.startImage = urlQuery.src;
 				}
 			}
 			(new GalleryViewMask(opts, events)).open();
-		});
+		};
+		element.addEventListener('click', element._onlick, false);
 	}
 	return false;
 }
@@ -849,41 +818,27 @@ function gallery_view_init_fullscreen(element, options, events) {
  * The events parameter is optional, see gallery_view_init for info.
  */
 function gallery_view_init_all_fullscreen(className, options, events) {
-	var elements = $$('.' + className);
+	var elements = document.querySelectorAll('.' + className);
 	if (elements.length > 0) {
 		var options = options || {};
 		options.images = options.images || [];
 		// Generate options and image list from elements
-		elements.each(function(element) {
-			var imageURL = _get_image_src(element);
+		for (var i = 0; i < elements.length; i++) {
+		    var element = elements[i],
+		        imageURL = ImgUtils.getImageSrc(element);
 			if (imageURL) {
-				var parsedURL = new URI(_clean_url(imageURL)),
-				    srcParam = parsedURL.getData('src');
-				if (srcParam) {
+				var urlParts = QU.splitURL(imageURL),
+				    urlQuery = QU.QueryStringToObject(urlParts.query, false);
+				if (urlQuery.src) {
 					// This looks like an image server image
-					var host = parsedURL.get('host') || '/',
-					    scheme = parsedURL.get('scheme') || '//',
-					    port = parsedURL.get('port');
-
-					// Get the server base URL for this image
-					if (host != '/') {
-						var server_url = scheme;
-						if (scheme != '//') server_url += '://';
-						server_url += host;
-						if ((port != '80') && (port != '443')) server_url += ':'+port;
-						server_url += '/';
-					}
-					else {
-						var server_url = host;
-					}
-					
+				    var server_url = urlParts.protocol + urlParts.server + '/';
 					// Use any img title/alt as the image title
 					var imageTitle = element.title || element.alt;
 					
 					// Add this image to the image list
 					var imageSpec = { server: server_url };
 					if (imageTitle) imageSpec.title = imageTitle;
-					Object.append(imageSpec, parsedURL.getData());
+					imageSpec = QU.merge(imageSpec, urlQuery);
 					options.images.push(imageSpec);
 
 					if (!options.server) {
@@ -891,12 +846,12 @@ function gallery_view_init_all_fullscreen(className, options, events) {
 					}
 				}
 			}
-		});
+		}
 		// Set the click handlers for elements
 		if (options.images.length > 0) {
-			elements.each(function(el) {
-				gallery_view_init_fullscreen(el, options, events);
-			});
+			for (var i = 0; i < elements.length; i++) {
+				gallery_view_init_fullscreen(elements[i], options, events);
+			}
 		}
 	}
 	return false;

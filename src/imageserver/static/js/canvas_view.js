@@ -3,8 +3,7 @@
 	Date started:  22 Aug 2011
 	By:            Matt Fozard
 	Purpose:       Quru Image Server HTML 5 viewer client
-	Requires:      MooTools Core 1.3 (no compat)
-	               MooTools More 1.3 - Assets, Element.Measure, Fx.Slide, Mask, Request.JSONP, String.QueryString
+	Requires:      common_view.js
 	Copyright:     Quru Ltd (www.quru.com)
 	Licence:
 
@@ -20,9 +19,8 @@
 
 	You should have received a copy of the GNU Affero General Public License
 	along with this program.  If not, see http://www.gnu.org/licenses/
-
-	Last Changed:  $Date$ $Rev$ by $Author$
-	
+*/
+/*
 	Notable modifications:
 	Date       By    Details
 	=========  ====  ============================================================
@@ -53,53 +51,53 @@
 	11Nov2013  Matt  Add events interface and image download function
 	01Apr2015  Matt  Move full-screen close button top-right to match gallery
 	15Jun2015  Matt  Use standardised zoom levels + grid sizes
+	14Sep2017  Matt  Remove MooTools, remove excanvas (IE8) compatibility, remove JSONP
 */
 
 /**
  * Notes on image drawing: tiling, panning and zooming.
- * 
+ *
  * The canvas context methods drawImage() and translate() will accept coordinates
  * as either integers or floats (though of course all numbers are floats in JS).
- * 
+ *
  * During a zoom, we need to simultaneously pan and stretch the grid. These operations
  * must provide floats in order to achieve a smooth and straight effect. The canvas
  * correctly handles sub-pixel operations for us, anti-aliasing and drawing sub-pixel
  * boundaries very effectively.
- * 
+ *
  * Outside of zooming, the grid and its tiles and the translate (pan) position
  * must all be integer aligned. If they are not, the canvas' sub-pixel handling
  * renders the image tiles in a blurry way. Also, due to float rounding errors,
  * half-pixel gaps are occasionally drawn in between the tiles.
- * 
+ *
  * Care has been taken to ensure that grid and tile dimensions are always calculated
  * as integers. The code should ensure that, after zooming effects have completed,
  * the grid and translate coordinates are all restored to integer values.
- * 
+ *
  * The canvas context method scale() should be avoided unless you take the above
  * into account and handle the scale factors similarly.
- * Note though that the excanvas library for IE<9 has bugs with image scaling.
  */
 
 /**
  * Notes on the image request queue.
- * 
+ *
  * The need to cancel image requests arises when the user zooms in twice, quickly.
  * If several tiles were needed for display when zoom 1 completed, if they are
  * not cancelled then they will continue to load the server and stream down to us
  * even though we have since moved on to zoom 2.
- * 
+ *
  * But browsers do not provide a way of cancelling image requests (deleting img.src
  * is unpredictable), so the best way to achieve this is not to request unnecessary
  * images in the first place. Hence the addition of the queue.
- * 
+ *
  * The queue implemented here has 2 settings: the max number of images to download
  * simultaneously, and whether to rigidly enforce this limit. If not enforcing,
  * cancelPendingImages() allows new requests to download (up to the limit again)
  * even if there are outstanding old requests.
- * 
+ *
  * The optimum settings depend on the server's level of concurrency, the image sizes,
  * server cache state, and how far and how quickly the user is likely to be zooming.
- * I ran a test, zooming in quickly 4 times on a very large (and so very slow to 
+ * I ran a test, zooming in quickly 4 times on a very large (and so very slow to
  * tile) image, with an empty server cache, seeing these results to get all the
  * requested (i.e. non-cancelled) tiles downloaded:
  *   Limit 1, enforced - 51s.    Limit 1, not enforced - 2m 3s.
@@ -167,7 +165,7 @@ Math.easeOutBack = function(t, b, c, d, s) {
 	return c*((t=t/d-1)*t*((s+1)*t + s) + 1) + b;
 }
 Math.easeInOutBack = function(t, b, c, d, s) {
-	if (s == undefined) s = 1.70158; 
+	if (s == undefined) s = 1.70158;
 	if ((t/=d/2) < 1) return c/2*(t*t*(((s*=(1.525))+1)*t - s)) + b;
 	return c/2*((t-=2)*t*(((s*=(1.525))+1)*t + s) + 2) + b;
 }
@@ -175,22 +173,19 @@ Math.easeInOutBack = function(t, b, c, d, s) {
 /**** Grid container class ****/
 
 function ImgGrid(width, height, imageURL, stripAligns,
-                 context, animationType, maxTiles,
-                 useJSONP, onInitialisedFn) {
-	
+                 context, animationType, maxTiles, onInitialisedFn) {
+
 	this.initialised = false;
 	this.destroyed = false;
-	this.useJSONP = useJSONP;
 	this.onInitialisedFn = onInitialisedFn;
 	this.animating = false;
-	this.excanvas = (Browser.ie && window.G_vmlCanvasManager);
-	
+
 	// Keep the graphics context for self-drawing
 	this.g2d = {
 		ctx: context,
 		origin: { x: 0, y: 0 }
 	};
-	
+
 	// Set the zoom animation type
 	var animFn = Math.linearTween;
 	switch (animationType.toLowerCase()) {
@@ -201,17 +196,20 @@ function ImgGrid(width, height, imageURL, stripAligns,
 		case 'out-quadratic':    animFn = Math.easeOutQuad; break;
 		case 'out-sine':         animFn = Math.easeOutSine; break;
 	}
-	
+	if (window.requestAnimationFrame)
+	    this.animate = function(fn) { window.requestAnimationFrame(fn); };
+	else
+	    this.animate = function(fn) { return setTimeout(fn, 17); };
+
 	// Track the zoom state
 	this.zoom = {
 		level: 1,
 		nextLevel: 1,
 		maxLevel: 10,
 		drawZoom: { x: 1, y: 1 }, // Only while zooming, to transition between zoom levels
-		fps: 50,
 		animateFn: animFn
 	};
-	
+
 	// Global grid options/properties
 	this.gridOpts = {
 		maxTiles:    maxTiles,
@@ -222,7 +220,7 @@ function ImgGrid(width, height, imageURL, stripAligns,
 		aspect:      1,     // Same as image aspect
 		showGrid:    false  // Testing only
 	};
-	
+
 	// Track viewport (canvas) info
 	this.viewport = {
 		origWidth:  width,
@@ -232,12 +230,12 @@ function ImgGrid(width, height, imageURL, stripAligns,
 		height:     height,
 		aspect:     width / height
 	};
-	
+
 	// Array of [zoom level]
 	this.grids = new Array();
 	// A shortcut to this.grids[this.zoom.level]
 	this.grid = null;
-	
+
 	// The image request queue
 	this.requests = {
 		queue: new Array(),
@@ -247,20 +245,17 @@ function ImgGrid(width, height, imageURL, stripAligns,
 		requested: 0,
 		showProgress: false
 	};
-	
+
 	// Parse the opening image URL
-	imageURL = _clean_url(imageURL);
-	var urlSep = imageURL.indexOf('?');
-	this.urlParams = imageURL.substring(urlSep + 1).parseQueryString();
+	var urlParts = QU.splitURL(imageURL);
+	this.urlParams = QU.QueryStringToObject(urlParts.query, false);
 	if (stripAligns) {
         delete this.urlParams.halign;
         delete this.urlParams.valign;
 	}
-	imageURL = imageURL.substring(0, urlSep);
-	urlSep = imageURL.lastIndexOf('/');
-	this.urlBase = imageURL.substring(0, urlSep + 1);
-	this.urlCommand = imageURL.substring(urlSep + 1);
-	
+	this.urlBase = urlParts.protocol + urlParts.server;
+	this.urlCommand = urlParts.path;
+
 	// Set initial view
 	this.loadingText = 'Loading image...';
 	this.drawText(this.loadingText);
@@ -280,7 +275,7 @@ ImgGrid.prototype.destroy = function() {
 ImgGrid.prototype.reset = function() {
 	if (!this.initialised || this.destroyed)
 		return;
-	
+
 	// Stop any animation and cancel outstanding image requests
 	this.animating = false;
 	this.cancelPendingImages();
@@ -298,11 +293,10 @@ ImgGrid.prototype.setViewportSize = function(width, height) {
 	this.viewport.width  = width;
 	this.viewport.height = height;
 	this.viewport.aspect = width / height;
-	
+
 	// Resizing the canvas clears the current translation, so restore it
-	if (!this.excanvas)
-		this.g2d.ctx.translate(this.g2d.origin.x, this.g2d.origin.y);
-	
+	this.g2d.ctx.translate(this.g2d.origin.x, this.g2d.origin.y);
+
 	// Resizing the canvas clears the content, so restore it
 	if (this.initialised) {
 		// Re-draw the current zoom level
@@ -311,7 +305,7 @@ ImgGrid.prototype.setViewportSize = function(width, height) {
 		this.cancelPendingHiddenImages();
 	}
 	else if (!this.destroyed) {
-		// Re-draw the loading message 
+		// Re-draw the loading message
 		this.drawText(this.loadingText);
 		// Re-centre the (invisible) grid if we have created it
 		if (this.grids.length > 0) {
@@ -323,21 +317,13 @@ ImgGrid.prototype.setViewportSize = function(width, height) {
 
 // Loads image information
 ImgGrid.prototype.loadImageInfo = function() {
-	var dataURL = this.urlBase + 'api/v1/details?src=' + encodeURIComponent(this.urlParams.src);
-	if (this.useJSONP) {
-		new Request.JSONP({
-			url: dataURL,
-			callbackKey: 'jsonp',
-			onComplete: function(jobj) { this.onImageInfoLoaded(jobj); }.bind(this)
-		}).send();
-	}
-	else {
-		new Request.JSON({
-			url: dataURL,
-			onSuccess: function(jobj) { this.onImageInfoLoaded(jobj); }.bind(this),
-			onFailure: function(xhr) { this.onImageInfoFailure(xhr); }.bind(this)
-		}).get();
-	}
+	var dataURL = this.urlBase + '/api/v1/details?src=' + encodeURIComponent(this.urlParams.src);
+	QU.jsonRequest(
+	    dataURL,
+	    'GET',
+	    function(xhr, jobj) { this.onImageInfoLoaded(jobj); }.bind(this),
+	    function(xhr, msg)  { this.onImageInfoFailure(xhr); }.bind(this)
+	).send();
 }
 
 // Callback for image information having loaded
@@ -350,7 +336,7 @@ ImgGrid.prototype.onImageInfoLoaded = function(imgInfo) {
 	else {
 		var fullWidth = imgInfo.data.width,
 		    fullHeight = imgInfo.data.height;
-		
+
 		// FIRST If image is rotated, adjust the full width and height to reflect the angle
 		if (this.urlParams.angle) {
 			var absang = Math.abs(Math.parseFloat(this.urlParams.angle, 0));
@@ -371,7 +357,7 @@ ImgGrid.prototype.onImageInfoLoaded = function(imgInfo) {
 				fullHeight = Math.round(fullHeight * (bottom - top));
 			}
 		}
-		
+
 		this.imageInfo = imgInfo.data;
 		this.initialise(fullWidth, fullHeight);
 	}
@@ -389,7 +375,7 @@ ImgGrid.prototype.initialise = function(imgwidth, imgheight) {
 	this.gridOpts.maxWidth   = imgwidth;
 	this.gridOpts.maxHeight  = imgheight;
 	this.gridOpts.aspect     = imgwidth / imgheight;
-	
+
 	if (this.gridOpts.aspect >= this.viewport.origAspect) {
 		// Fit to width
 		this.gridOpts.minWidth = Math.min(imgwidth, this.viewport.origWidth);
@@ -400,7 +386,7 @@ ImgGrid.prototype.initialise = function(imgwidth, imgheight) {
 		this.gridOpts.minHeight = Math.min(imgheight, this.viewport.origHeight);
 		this.gridOpts.minWidth = Math.round(this.gridOpts.minHeight * this.gridOpts.aspect);
 	}
-	
+
 	// Work out the available zoom levels
 	for (var zl = 1; zl <= this.zoom.maxLevel; zl++) {
 		// Pre-generate the grids and tile specs
@@ -408,7 +394,7 @@ ImgGrid.prototype.initialise = function(imgwidth, imgheight) {
 		var gridSpec = this.calcGridTiles(gridSize.width, gridSize.height, gridSize.length);
 		this.grids[zl] = {
 			images:     [],              // Array of [tileNo] img DOM elements
-			grid:       gridSpec,        // Array of [tileNo] tile definition objects 
+			grid:       gridSpec,        // Array of [tileNo] tile definition objects
 			length:     gridSize.length, // Shortcut to grid.length
 			axis:       gridSize.axis,   // How many tiles per axis
 			origWidth:  gridSize.width,  // Size originally, when not zooming
@@ -417,7 +403,7 @@ ImgGrid.prototype.initialise = function(imgwidth, imgheight) {
 			height:     gridSize.height  // "
 		};
 		/* console.log('Grid z'+zl+' '+gridSize.width+'x'+gridSize.height+' axis '+gridSize.axis+', tiles '+gridSize.length); */
-		
+
 		// Check for max zoom level
 		if (gridSize.max) {
 			this.zoom.maxLevel = zl;
@@ -430,7 +416,7 @@ ImgGrid.prototype.initialise = function(imgwidth, imgheight) {
 	this.requestImage(1, 1);
 }
 
-// Return { a, b } for the closest values of a/b = ratio, where startval is the 
+// Return { a, b } for the closest values of a/b = ratio, where startval is the
 // starting value of a, and a and b are both multiples of mult,
 // and a >= minval and a <= maxval.
 ImgGrid.prototype.closestRatioMultiples = function(startval, minval, maxval, ratio, mult) {
@@ -482,15 +468,15 @@ ImgGrid.prototype.calcGridSize = function(zLevel) {
 	 *   factor = 1.8
 	 *   multiplier = Math.pow(factor, zLevel - 1)
 	 *   target width and height = nearest (tilesize * multiplier) that divides by 4/8/16.
-	 * 
+	 *
 	 * But with a fixed tilesize (v1.30.1) this evaluates to a fixed list of sizes,
 	 * so now we just define that fixed list of target sizes instead.
-	 * 
+	 *
 	 * Grid size increments must be x4, anything over 256 requires increasing the
 	 * default values for MAX_GRID_TILES and options.maxtiles. The dimension value
 	 * must be divisible by axislen and 4 so that the fallback tiles at different
 	 * zoom levels align with each other.
-	 * 
+	 *
 	 * List is [image dimension, preferred number of tiles]
 	 */
 	var gridSizes = [[500, 1], [960, 1], [1728, 16], [3120, 64], [5600, 64], [10240, 256],
@@ -530,7 +516,7 @@ ImgGrid.prototype.calcGridSize = function(zLevel) {
 		var tiles = Math.min(gridSizes[useIdx][1], this.gridOpts.maxTiles),
 		    axislen = Math.round(Math.sqrt(tiles)),
 		    max = (useIdx == (gridSizes.length - 1));
-		
+
 		// If the size is near or over the max, make it the max.
 		// The server won't supply an image larger than the original, so trying to zoom
 		// in further would generate, download and cache pointless identical tiles.
@@ -541,7 +527,7 @@ ImgGrid.prototype.calcGridSize = function(zLevel) {
 			height = this.gridOpts.maxHeight;
 			max = true;
 		}
-		
+
 		if (tiles > 1) {
 			// Re-adjust grid size to be exactly divisible by axis size (or 4)
 			// so that tile boundaries are always aligned when zooming.
@@ -551,10 +537,10 @@ ImgGrid.prototype.calcGridSize = function(zLevel) {
 			    tries    = 10,
 			    minWidth = Math.max(this.gridOpts.minWidth, width - (tries * divisor)),
 			    maxWidth = Math.min(this.gridOpts.maxWidth, width + (tries * divisor));
-			
+
 			var finalSize = this.closestRatioMultiples(
-				width, minWidth, maxWidth, 
-				this.gridOpts.aspect, 
+				width, minWidth, maxWidth,
+				this.gridOpts.aspect,
 				divisor
 			);
 			width  = finalSize.a;
@@ -600,7 +586,7 @@ ImgGrid.prototype.calcGridTiles = function(width, height, gridLen) {
 			// Tile size (adjust for inexact division if a right/bottom tile)
 			var tw = (tileXY.x == (iGridAxisLen - 1)) ? (iTileWidth + iTileWidthExtra) : iTileWidth,
 			    th = (tileXY.y == (iGridAxisLen - 1)) ? (iTileHeight + iTileHeightExtra) : iTileHeight;
-			
+
 			ret[i] = {
 				tile: i, x1: tx, y1: ty, x2: (tx + tw - 1), y2: (ty + th - 1),
 				width: tw, height: th
@@ -616,14 +602,14 @@ ImgGrid.prototype.setGrid = function(zLevel, repaint) {
 	this.grid = this.grids[zLevel];
 	this.grid.width = this.grid.origWidth;
 	this.grid.height = this.grid.origHeight;
-	
+
 	// Auto-centre the grid if we should
 	var fillsView = this.fillsViewport(this.grid);
 	this.centreGrid(!fillsView.x, !fillsView.y, false);
-	
+
 	// Properly align the grid to integer boundaries
 	this.alignGrid(false);
-	
+
 	if (repaint)
 		this.paint();
 }
@@ -643,9 +629,9 @@ ImgGrid.prototype.getVisibleGridTiles = function() {
 		// See which tiles are visible in viewport
 		for (var i = 1; i <= this.grid.length; i++) {
 			var tileSpec = this.grid.grid[i];
-			var tileOutside = ((tileSpec.x1 * this.zoom.drawZoom.x) > vpx2 || 
-			                   (tileSpec.x2 * this.zoom.drawZoom.x) < vpx1 || 
-			                   (tileSpec.y1 * this.zoom.drawZoom.y) > vpy2 || 
+			var tileOutside = ((tileSpec.x1 * this.zoom.drawZoom.x) > vpx2 ||
+			                   (tileSpec.x2 * this.zoom.drawZoom.x) < vpx1 ||
+			                   (tileSpec.y1 * this.zoom.drawZoom.y) > vpy2 ||
 			                   (tileSpec.y2 * this.zoom.drawZoom.y) < vpy1);
 			if (!tileOutside)
 				ret[ret.length] = i;
@@ -675,7 +661,7 @@ ImgGrid.prototype.xyToTile = function(x, y, gridAxis) {
 ImgGrid.prototype.getFallbackTile = function(tileNo, tileSpec) {
 	var startLevel = this.zoom.level,
 	    tryLevel  = startLevel;
-	
+
 	// Get current 0-based X,Y coords for required tile
 	// and its normalised position and size
 	var tileXY = this.tileToXY(tileNo, this.grid.axis),
@@ -683,7 +669,7 @@ ImgGrid.prototype.getFallbackTile = function(tileNo, tileSpec) {
 	    rY = tileSpec.y1 / this.grid.origHeight,
 	    rW = tileSpec.width / this.grid.origWidth,
 	    rH = tileSpec.height / this.grid.origHeight;
-	
+
 	// Search all grids (always completes so long as this.initialised)
 	while (--tryLevel >= 1) {
 		var tryGrid = this.grids[tryLevel],
@@ -704,7 +690,7 @@ ImgGrid.prototype.getFallbackTile = function(tileNo, tileSpec) {
 			    srcy = Math.limit(Math.round((rY - rDY) * tryGrid.origHeight), 0, donor.height - 1),
 			    srcw = Math.limit(Math.round(rW * tryGrid.origWidth), 1, donor.width - srcx),
 			    srch = Math.limit(Math.round(rH * tryGrid.origHeight), 1, donor.height - srcy);
-			
+
 			/* console.log('Fallback for z'+this.zoom.level+' tile '+tileNo+' is z'+tryLevel+' tile '+wantTileNo+' from '+srcx+','+srcy+' w'+srcw+' h'+srch); */
 			return { img: donor, srcx: srcx, srcy: srcy, srcw: srcw, srch: srch };
 		}
@@ -729,8 +715,8 @@ ImgGrid.prototype.getImageURL = function(zLevel, tileNo) {
 		this.urlParams.tile = tileNo+':'+this.grids[zLevel].length;
 	else
 		delete this.urlParams.tile;
-	
-	return this.urlBase + this.urlCommand + '?' + Object.toQueryString(this.urlParams);
+
+	return this.urlBase + this.urlCommand + '?' + QU.ObjectToQueryString(this.urlParams);
 }
 
 // Returns the zoom level for the image to best fit the viewport.
@@ -806,11 +792,12 @@ ImgGrid.prototype.pollImageQueue = function() {
 		// Remove top request from the queue
 		var req = this.requests.queue.splice(0, 1)[0];
 		// Create image element to load it from the server
-		this.grids[req.zLevel].images[req.tileNo] = Asset.image(req.url, {
-			onLoad: req.onLoad,
-			onAbort: req.onAbort,
-			onError: req.onError
-		});
+		var imgEl = document.createElement('img');
+		imgEl.onload = req.onLoad;
+		imgEl.onabort = req.onAbort;
+		imgEl.onerror = req.onError;
+		imgEl.src = req.url;
+        this.grids[req.zLevel].images[req.tileNo] = imgEl;
 	}
 	// Reset progress count when nothing left
 	if ((this.requests.queue.length == 0) && (this.requests.active == 0)) {
@@ -825,14 +812,14 @@ ImgGrid.prototype.onImageLoaded = function(zLevel, tileNo) {
 	// Mark image as loaded
 	var imgEl = this.grids[zLevel].images[tileNo];
 	imgEl._loaded = true;
-	
+
 	// Set us as initialised on receipt of first image
 	if (!this.initialised && (zLevel == 1)) {
 		this.initialised = true;
 		if (this.onInitialisedFn)
 			setTimeout(function() { this.onInitialisedFn(this.imageInfo); }.bind(this), 1);
 	}
-	
+
 	// Draw the image if we were waiting for it
 	if ((zLevel == this.zoom.level) && !this.animating)
 		this.paint();
@@ -843,7 +830,7 @@ ImgGrid.prototype.cancelPendingHiddenImages = function() {
 	var visibleTiles = this.getVisibleGridTiles();
 	for (var i = 0; i < this.requests.queue.length; i++) {
 		var req = this.requests.queue[i];
-		if ((req.zLevel != this.zoom.level) || !visibleTiles.contains(req.tileNo)) {
+		if ((req.zLevel != this.zoom.level) || (visibleTiles.indexOf(req.tileNo) === -1)) {
 			// Remove tile from requests
 			this.requests.queue.splice(i, 1);
 			this.requests.requested--;
@@ -852,9 +839,9 @@ ImgGrid.prototype.cancelPendingHiddenImages = function() {
 	}
 }
 
-// Cancels all pending image/tile requests 
+// Cancels all pending image/tile requests
 ImgGrid.prototype.cancelPendingImages = function() {
-	this.requests.queue.empty();
+	this.requests.queue.length = 0;
 	// Control whether we allow the next request to load (usually the first tile at
 	// a new zoom level), even if that means exceeding the request limit. If we
 	// enforce the limit, the next image request must wait for anything that is
@@ -873,7 +860,7 @@ ImgGrid.prototype.fillsViewport = function(obj) {
 	};
 }
 
-// Shifts the graphics context in 2D space to centre the current 
+// Shifts the graphics context in 2D space to centre the current
 // grid vertically and/or horizontally, in the viewport.
 // Note: changes the translate position to be fractional.
 ImgGrid.prototype.centreGrid = function(horizontal, vertical, repaint) {
@@ -882,12 +869,12 @@ ImgGrid.prototype.centreGrid = function(horizontal, vertical, repaint) {
 	var dx = horizontal ? (x - this.g2d.origin.x) : 0,
 	    dy = vertical ? (y - this.g2d.origin.y) : 0;
 
-	if ((dx != 0) || (dy != 0)) {		
+	if ((dx != 0) || (dy != 0)) {
 		this.g2d.ctx.translate(dx, dy);
 		this.g2d.origin.x += dx;
 		this.g2d.origin.y += dy;
 	}
-	
+
 	if (repaint)
 		this.paint();
 }
@@ -899,7 +886,7 @@ ImgGrid.prototype.centreGrid = function(horizontal, vertical, repaint) {
 ImgGrid.prototype.panGrid = function(dx, dy, constrain_h, constrain_v) {
 	if (!this.initialised)
 		return false;
-	
+
 	if (constrain_h || constrain_v) {
 		if (constrain_h && (this.grid.width >= this.viewport.width)) {
 			if (this.g2d.origin.x + dx > 0)
@@ -911,7 +898,7 @@ ImgGrid.prototype.panGrid = function(dx, dy, constrain_h, constrain_v) {
 		}
 		else
 			dx = 0; // width smaller than canvas, prevent panning
-		
+
 		if (constrain_v && (this.grid.height >= this.viewport.height)) {
 			if (this.g2d.origin.y + dy > 0)
 				// prevent top img edge showing
@@ -923,7 +910,7 @@ ImgGrid.prototype.panGrid = function(dx, dy, constrain_h, constrain_v) {
 		else
 			dy = 0; // height smaller than canvas, prevent panning
 	}
-	
+
 	if ((dx != 0) || (dy != 0)) {
 		// Pan
 		this.g2d.ctx.translate(dx, dy);
@@ -939,22 +926,20 @@ ImgGrid.prototype.panGrid = function(dx, dy, constrain_h, constrain_v) {
 ImgGrid.prototype.autoPanGrid = function(dx, dy) {
 	if (!this.initialised || this.animating)
 		return;
-	
+
 	// Check that we can pan
 	if ((this.grid.width <= this.viewport.width) &&
 	    (this.grid.height <= this.viewport.height))
 		return;
-	
+
 	// If grid should be auto-centered, only allow pan in one direction
 	var fillsView = this.fillsViewport(this.grid);
 	if (!fillsView.x) dx = 0;
 	if (!fillsView.y) dy = 0;
-	
+
 	// Start animated zoom to new size
 	this.animating = true;
-	setTimeout(function() {
-		this.animatePan(1, 20, dx, dy, Math.easeOutQuad, this.zoom.fps);
-	}.bind(this), 1);
+	this.animate(function() { this.animatePan(1, 20, dx, dy, Math.easeOutQuad); }.bind(this));
 }
 
 // Shifts the graphics context in 2D space to remove any fractional alignment
@@ -967,7 +952,7 @@ ImgGrid.prototype.alignGrid = function(repaint) {
 		this.g2d.origin.x = Math.round(this.g2d.origin.x);
 		this.g2d.origin.y = Math.round(this.g2d.origin.y);
 	}
-	
+
 	if (repaint)
 		this.paint();
 }
@@ -976,7 +961,7 @@ ImgGrid.prototype.alignGrid = function(repaint) {
 ImgGrid.prototype.zoomFit = function() {
 	if (!this.initialised || this.animating)
 		return;
-	
+
 	var toLevel = this.getBestFitLevel(),
 	    dLevel  = toLevel - this.zoom.level;
 
@@ -988,7 +973,7 @@ ImgGrid.prototype.zoomFit = function() {
 ImgGrid.prototype.zoomGrid = function(delta, zoomCentre) {
 	if (!this.initialised || this.animating)
 		return;
-	
+
 	var newLevel = Math.limit(this.zoom.level + delta, 1, this.zoom.maxLevel);
 	if (newLevel != this.zoom.level) {
 		// Abandon requests for outstanding tiles
@@ -1001,28 +986,27 @@ ImgGrid.prototype.zoomGrid = function(delta, zoomCentre) {
 		};
 		// Start animated zoom to new size
 		this.animating = true;
-		setTimeout(function() {
+		this.animate(function() {
 			this.animateZoom(1, 20,
-				this.grid.width, 
-				this.grid.height, 
+				this.grid.width,
+				this.grid.height,
 				targetSize.width - this.grid.width,
 				targetSize.height - this.grid.height,
 				(targetSize.width / targetSize.height) - (this.grid.width / this.grid.height),
 				zoomCentre,
-				this.zoom.animateFn,
-				this.zoom.fps
+				this.zoom.animateFn
 			);
-		}.bind(this), 1);
+		}.bind(this));
 	}
 }
 
 // Zoom animation routine, invoked for every frame
 ImgGrid.prototype.animateZoom = function(frame, frames, startWidth, startHeight,
-                  changeWidth, changeHeight, changeAspect, centrePoint, easeFn, fps) {
+                  changeWidth, changeHeight, changeAspect, centrePoint, easeFn) {
 	// Check for reset
 	if (!this.animating)
 		return;
-	
+
 	// Get the numbers
 	var prevWidth  = this.grid.width,
 	    prevHeight = this.grid.height,
@@ -1030,13 +1014,13 @@ ImgGrid.prototype.animateZoom = function(frame, frames, startWidth, startHeight,
 	    newHeight  = easeFn(frame, startHeight, changeHeight, frames),
 	    dw         = newWidth - prevWidth,
 	    dh         = newHeight - prevHeight;
-	
+
 	// Set zoom vars
 	this.grid.width = newWidth;
 	this.grid.height = newHeight;
 	this.zoom.drawZoom.x = newWidth / startWidth;
 	this.zoom.drawZoom.y = newHeight / startHeight;
-	
+
 	// Draw zoom
 	var fillsView = this.fillsViewport(this.grid);
 	if (!fillsView.x && !fillsView.y) {
@@ -1058,13 +1042,13 @@ ImgGrid.prototype.animateZoom = function(frame, frames, startWidth, startHeight,
 		if (!this.panGrid(-(dw * centrePoint.x), -(dh * centrePoint.y), true, true))
 			this.paint();
 	}
-	
+
 	// Continue/finish animation
 	if (++frame <= frames) {
-		setTimeout(function() {
+		this.animate(function() {
 			this.animateZoom(frame, frames, startWidth, startHeight,
-			     changeWidth, changeHeight, changeAspect, centrePoint, easeFn, fps);
-		}.bind(this), (1000 / fps));
+			     changeWidth, changeHeight, changeAspect, centrePoint, easeFn);
+		}.bind(this));
 		return;
 	}
 	this.onAnimateZoomComplete();
@@ -1082,20 +1066,18 @@ ImgGrid.prototype.onAnimateZoomComplete = function() {
 }
 
 // Pan animation routine, invoked for every frame
-ImgGrid.prototype.animatePan = function(frame, frames, dx, dy, easeFn, fps) {
+ImgGrid.prototype.animatePan = function(frame, frames, dx, dy, easeFn) {
 	// Check for reset
 	if (!this.animating)
 		return;
-	
+
 	var panx = easeFn(frame, 0, dx, frames),
 	    pany = easeFn(frame, 0, dy, frames);
 
 	if (this.panGrid(dx - panx, dy - pany, true, true)) {
 		// Continue/finish animation
 		if (++frame <= frames) {
-			setTimeout(function() {
-				this.animatePan(frame, frames, dx, dy, easeFn, fps);
-			}.bind(this), (1000 / fps));
+			this.animate(function() { this.animatePan(frame, frames, dx, dy, easeFn); }.bind(this));
 			return;
 		}
 	}
@@ -1137,23 +1119,23 @@ ImgGrid.prototype.paint = function() {
 	var needTiles = [], i = 0,
 	    drawTiles = this.getVisibleGridTiles(),
 	    fillsView = this.fillsViewport(this.grid);
-	
-	// Erase bg if it might show (or for excanvas, every frame to maintain performance)
-	if (this.excanvas || !fillsView.x || !fillsView.y)
+
+	// Erase bg if it might show
+	if (!fillsView.x || !fillsView.y)
 		this.clear();
-	
+
 	// Render all visible tiles
 	for (i = 0; i < drawTiles.length; i++) {
 		var tileSpec = this.grid.grid[drawTiles[i]],
 		    tileImg  = this.grid.images[drawTiles[i]],
 		    offs = (this.zoom.drawZoom.x < 1 ? 0.5 : 0);
-		
+
 		if ((tileImg != undefined) && tileImg._loaded) {
 			// We have the tile image
-			this.g2d.ctx.drawImage(tileImg, 
-				tileSpec.x1 * this.zoom.drawZoom.x, 
-				tileSpec.y1 * this.zoom.drawZoom.y, 
-				tileSpec.width * this.zoom.drawZoom.x + offs, 
+			this.g2d.ctx.drawImage(tileImg,
+				tileSpec.x1 * this.zoom.drawZoom.x,
+				tileSpec.y1 * this.zoom.drawZoom.y,
+				tileSpec.width * this.zoom.drawZoom.x + offs,
 				tileSpec.height * this.zoom.drawZoom.y + offs
 			);
 		}
@@ -1163,7 +1145,7 @@ ImgGrid.prototype.paint = function() {
 				needTiles[needTiles.length] = drawTiles[i];
 			// Draw a temporary tile from our best base image
 			tileImg = this.getFallbackTile(drawTiles[i], tileSpec);
-			this.g2d.ctx.drawImage(tileImg.img, 
+			this.g2d.ctx.drawImage(tileImg.img,
 				tileImg.srcx,
 				tileImg.srcy,
 				tileImg.srcw,
@@ -1175,7 +1157,7 @@ ImgGrid.prototype.paint = function() {
 			);
 		}
 	}
-	
+
 	// Now that grid drawing is complete, request any missing tiles.
 	// But don't bother if we're on our way to a new zoom level (the animation
 	// might stutter, and we might need different tiles at the new zoom level).
@@ -1183,11 +1165,11 @@ ImgGrid.prototype.paint = function() {
 		for (i = 0; i < needTiles.length; i++)
 			this.requestImage(this.zoom.level, needTiles[i]);
 	}
-	
+
 	// Grid test mode
 	if (this.gridOpts.showGrid)
 		this.paintgrid();
-	
+
 	// Show loading status
 	if ((this.requests.requested > 0) && this.requests.showProgress)
 		this.paintprogress();
@@ -1236,14 +1218,13 @@ ImgGrid.prototype.paintgrid = function() {
 		ctx.lineTo(tileSpec.x2 * this.zoom.drawZoom.x, tileSpec.y1 * this.zoom.drawZoom.y);
 		ctx.stroke();
 		ctx.fillText(
-			''+i, 
-			(tileSpec.x1 * this.zoom.drawZoom.x) + (tileSpec.width * this.zoom.drawZoom.x / 2), 
+			''+i,
+			(tileSpec.x1 * this.zoom.drawZoom.x) + (tileSpec.width * this.zoom.drawZoom.x / 2),
 			(tileSpec.y1 * this.zoom.drawZoom.y) + (tileSpec.height * this.zoom.drawZoom.y / 2)
 		);
 	}
 	ctx.restore();
 }
-
 
 /**** UI handler class ****/
 
@@ -1256,7 +1237,6 @@ function ImgCanvasView(container, imageURL, userOpts, events) {
 		quality: true,
 		animation: 'out-quadratic',
 		maxtiles: 256,
-		jsonp: true,
 		stripaligns: false,
 		doubleclickreset: true,
 		controls: {
@@ -1264,7 +1244,7 @@ function ImgCanvasView(container, imageURL, userOpts, events) {
 			title: true,
 			help: true,
 			reset: true,
-			fullscreen: !Browser.ie6, // Sorry, IE6 fans
+			fullscreen: true,
 			zoomin: true,
 			zoomout: true
 		},
@@ -1274,14 +1254,14 @@ function ImgCanvasView(container, imageURL, userOpts, events) {
 	};
 	// Apply options
 	if (userOpts) {
-		this.options = Object.merge(this.options, userOpts);
+		this.options = QU.merge(this.options, userOpts);
 	}
-	
-	this.events = events;
-	
+
+	this.events = events; // Public events
+	this._events = {};    // Private events
+
 	// Track UI state
 	this.uiAttrs = {
-		controlsSlider: null,
 		alertVisible: false,
 		alertEl: null,
 		fullScreen: false,
@@ -1292,7 +1272,7 @@ function ImgCanvasView(container, imageURL, userOpts, events) {
 		fullResizeFn: null,
 		animating: false
 	};
-	
+
 	// Track mouse movements
 	this.mouseAttrs = {
 		down: false,
@@ -1307,57 +1287,56 @@ function ImgCanvasView(container, imageURL, userOpts, events) {
 		last1: { x: 0, y: 0 },
 		last2: { x: 0, y: 0 }
 	};
-	
+
 	// Image data (see onContentReady)
 	this.imageInfo = null;
-	
+
 	// Get container element
-	this.ctrEl = document.id(container);
+	this.ctrEl = QU.id(container);
 	// Clear container of placeholder or previous content
-	this.ctrEl.empty();
-	this.ctrEl.addClass('imageviewer');
-	
+	QU.elClear(this.ctrEl);
+	QU.elSetClass(this.ctrEl, 'imageviewer', true);
+
 	// Create our canvas element
-	this.canvas = new Element('canvas', {
-		width: 1,
-		height: 1,
-		styles: {
-			'-webkit-user-select': 'none',
-			'-khtml-user-select': 'none',
-			'-moz-user-select': 'none',
-			'-o-user-select': 'none',
-			'user-select': 'none',
-			'-webkit-tap-highlight-color': 'rgba(0,0,0,0)',
-			'-webkit-touch-callout': 'none'
-		}
-	});
-	// Excanvas requires the canvas in the DOM before initialising
-	this.ctrEl.grab(this.canvas);
-	// Init Excanvas support
-	if (Browser.ie && window.G_vmlCanvasManager)
-		G_vmlCanvasManager.initElement(this.canvas);
-	// Position and size the canvas
+	this.canvas = document.createElement('canvas');
+	this.canvas.width = 1;
+	this.canvas.	height = 1;
+	// Prevent canvas getting highlighted (particularly on shift-click)
+	this.canvas.unselectable = 'on';
+	QU.elSetStyles(this.canvas, {
+	    WebkitUserSelect: 'none',
+	    MozUserSelect: 'none',
+	    OUserSelect: 'none',
+	    msUserSelect: 'none',
+	    userSelect: 'none',
+	    WebkitTapHighlightColor: 'rgba(0,0,0,0)',
+	    WebkitTouchCallout: 'none'
+    });
+
+    // Position and size the canvas
+	this.ctrEl.appendChild(this.canvas);
 	this.layout();
-	
+
 	// Get the canvas context and set drawing options
 	this.canvasContext = this.canvas.getContext('2d');
 	if (!this.options.quality) {
-		this.canvas.setStyle('-ms-interpolation-mode', 'nearest-neighbor');
-		this.canvas.setStyle('image-rendering', '-webkit-optimize-contrast'); // 'optimizeSpeed'
-		if (context.mozImageSmoothingEnabled != undefined)
-			context.mozImageSmoothingEnabled = false;
+		this.canvas.style.msInterpolationMode = 'nearest-neighbor';
+		this.canvas.style.imageRendering = '-webkit-optimize-contrast'; // 'optimizeSpeed'
+		if (this.canvasContext.mozImageSmoothingEnabled !== undefined)
+			this.canvasContext.mozImageSmoothingEnabled = false;
 	}
-	
+
 	// Create the image grid which will be the canvas content
 	this.content = new ImgGrid(
 		this.canvas.width, this.canvas.height,
-		imageURL, this.options.stripaligns,
-		this.canvasContext, this.options.animation,
+		imageURL,
+		this.options.stripaligns,
+		this.canvasContext,
+		this.options.animation,
 		this.options.maxtiles,
-		this.options.jsonp,
 		function(info) { this.onContentReady(info); }.bind(this)
 	);
-	
+
 	// Get the parsed image src for our events
 	this.imageSrc = this.content.urlParams.src;
 	this.imageServer = this.content.urlBase;
@@ -1372,56 +1351,72 @@ ImgCanvasView.prototype.destroy = function() {
 	this.events = null;
 	this.content.destroy();
 	this.content = null;
-	this.canvas.destroy();
+	this.removeEvents();
+	QU.elRemove(this.canvas);
 	this.canvas = null;
 	this.canvasContext = null;
 }
 
 ImgCanvasView.prototype.init = function() {
 	// Set UI handlers
-	this.canvas.removeEvents();
-	
-	// Note some browsers report touch events even on non-touch devices. No known workaround.
-	if ('ontouchstart' in window && window.Touch) {
-		// Map touch events to mouse events
-		this.canvas.addEvent('touchstart',  function(e) { this.onTouchStart(e); }.bind(this));
-		this.canvas.addEvent('touchmove',   function(e) { this.onTouchMove(e); }.bind(this));
-		this.canvas.addEvent('touchend',    function(e) { this.onTouchEnd(e); }.bind(this));
-		this.canvas.addEvent('touchcancel', function(e) { this.onTouchCancel(e); }.bind(this));
-	}
-	else {
-		// For non-touch use plain mouse events
-		this.canvas.addEvent('mousedown',  function(e) { this.onMouseDown(e); }.bind(this));
-		this.canvas.addEvent('mousemove',  function(e) { this.onMouseMove(e); }.bind(this));
-		this.canvas.addEvent('mouseup',    function(e) { this.onMouseUp(e); }.bind(this));
-		this.canvas.addEvent('mouseleave', function(e) { this.onMouseUp(e); }.bind(this));
-	}
-	
-	// Prevent shift-click selecting and highlighting things in IE
-	// (the canvas' user-select styles cover WebKit and Gecko)
-	this.canvas.addEvent('selectstart', function(e) { return false; });
-	this.canvas.addEvent('dragstart', function(e) { return false; });
+	this.removeEvents();
+	this.addEvents();
+}
+
+// Installs canvas event handlers
+ImgCanvasView.prototype.addEvents = function() {
+    if ('ontouchstart' in window && window.Touch) {
+        this._events.touchstart  = function(e) { this.onTouchStart(e);  }.bind(this);
+        this._events.touchmove   = function(e) { this.onTouchMove(e);   }.bind(this);
+        this._events.touchend    = function(e) { this.onTouchEnd(e);    }.bind(this);
+        this._events.touchcancel = function(e) { this.onTouchCancel(e); }.bind(this);
+        this.canvas.addEventListener('touchstart',  this._events.touchstart, false);
+        this.canvas.addEventListener('touchmove',   this._events.touchmove, false);
+        this.canvas.addEventListener('touchend',    this._events.touchend, false);
+        this.canvas.addEventListener('touchcancel', this._events.touchcancel, false);
+    }
+    else {
+        this._events.mousedown  = function(e) { this.onMouseDown(e); }.bind(this);
+        this._events.mousemove  = function(e) { this.onMouseMove(e); }.bind(this);
+        this._events.mouseup    = function(e) { this.onMouseUp(e);   }.bind(this);
+        this._events.mouseleave = function(e) { this.onMouseUp(e);   }.bind(this);
+        this.canvas.addEventListener('mousedown',  this._events.mousedown, false);
+        this.canvas.addEventListener('mousemove',  this._events.mousemove, false);
+        this.canvas.addEventListener('mouseup',    this._events.mouseup, false);
+        this.canvas.addEventListener('mouseleave', this._events.mouseleave, false);
+    }
+
+    // Prevent shift-click selecting and highlighting things in IE
+    // (the canvas' user-select styles cover WebKit and Gecko)
+    this._events.selectstart = function(e) { return false; };
+    this._events.dragstart   = function(e) { return false; };
+    this.canvas.addEventListener('selectstart', this._events.selectstart, false);
+    this.canvas.addEventListener('dragstart',   this._events.dragstart, false);
+}
+
+// Removes the installed canvas event handlers
+ImgCanvasView.prototype.removeEvents = function() {
+    for (var k in this._events) {
+        this.canvas.removeEventListener(k, this._events[k], false);
+    }
+    this._events = {};
 }
 
 // Reads the current size/position of the container element and (re)sets the canvas size
 ImgCanvasView.prototype.layout = function() {
 	if (!this.canvas)
 		return;
-	
+
 	// Get container x,y and outer dimensions (incl. borders)
-	this.ctrOuterPos = this.ctrEl.getCoordinates();
-	
+	this.ctrOuterPos = QU.elOuterPosition(this.ctrEl);
+
 	// Get container usable inner dimensions (i.e. after padding)
-	this.ctrInnerPos = this.ctrEl.getComputedSize();
-	
-	// Best guess fallbacks if getComputedSize failed
-	if ((this.ctrInnerPos.width == 0) && (this.ctrInnerPos.height == 0))
-		this.ctrInnerPos = { width: this.ctrEl.clientWidth, height: this.ctrEl.clientHeight };
-	if (this.ctrInnerPos.computedTop == undefined)  // top border + top padding
-		this.ctrInnerPos.computedTop = Math.round((this.ctrOuterPos.height - this.ctrInnerPos.height) / 2);
-	if (this.ctrInnerPos.computedLeft == undefined) // left border + left padding
-		this.ctrInnerPos.computedLeft = Math.round((this.ctrOuterPos.width - this.ctrInnerPos.width) / 2);
-	
+	this.ctrInnerPos = QU.elInnerSize(this.ctrEl, false);
+	// And where the inner area begins
+    var ctrInnerOffsets = QU.elInnerOffsets(this.ctrEl);
+    this.ctrInnerPos.offsetLeft = ctrInnerOffsets.left;
+    this.ctrInnerPos.offsetTop = ctrInnerOffsets.top;
+
 	// Apply canvas size
 	this.canvas.width = this.ctrInnerPos.width;
 	this.canvas.height = this.ctrInnerPos.height;
@@ -1438,7 +1433,7 @@ ImgCanvasView.prototype.reset = function() {
 }
 
 ImgCanvasView.prototype.onMouseDown = function(e) {
-	if (!e.rightClick) {
+	if (e.button == 0) {
 		if ((e.api_event == undefined) &&
 			this.options.doubleclickreset &&
 		    (Date.now() - this.mouseAttrs.downTime < 300)) {
@@ -1446,12 +1441,13 @@ ImgCanvasView.prototype.onMouseDown = function(e) {
 			this.reset();
 		}
 		else {
+		    var eventPos = QU.evPosition(e);
 			this.mouseAttrs.down = true;
 			this.mouseAttrs.downTime = Date.now();
-			this.mouseAttrs.down_x = this.mouseAttrs.last_x = e.page.x;
-			this.mouseAttrs.down_y = this.mouseAttrs.last_y = e.page.y;
+			this.mouseAttrs.down_x = this.mouseAttrs.last_x = eventPos.page.x;
+			this.mouseAttrs.down_y = this.mouseAttrs.last_y = eventPos.page.y;
 			this.mouseAttrs.dragged = false;
-			this.canvas.addClass('panning');
+			QU.elSetClass(this.canvas, 'panning', true);
 		}
 	}
 }
@@ -1464,13 +1460,14 @@ ImgCanvasView.prototype.onMouseMove = function(e) {
 			// Perform the pan redraw async so that events can
 			// continue and so we don't lock up slow browsers
 			setTimeout(function() {
-				var dx = (e.page.x - this.mouseAttrs.down_x);
-				var dy = (e.page.y - this.mouseAttrs.down_y);
+			    var eventPos = QU.evPosition(e);
+				var dx = (eventPos.page.x - this.mouseAttrs.down_x);
+				var dy = (eventPos.page.y - this.mouseAttrs.down_y);
 				this.content.panGrid(dx, dy, true, true);
 				this.mouseAttrs.last_x = this.mouseAttrs.down_x;
 				this.mouseAttrs.last_y = this.mouseAttrs.down_y;
-				this.mouseAttrs.down_x = e.page.x;
-				this.mouseAttrs.down_y = e.page.y;
+				this.mouseAttrs.down_x = eventPos.page.x;
+				this.mouseAttrs.down_y = eventPos.page.y;
 			}.bind(this), 1);
 		}
 	}
@@ -1479,31 +1476,31 @@ ImgCanvasView.prototype.onMouseMove = function(e) {
 ImgCanvasView.prototype.onMouseUp = function(e) {
 	if (this.mouseAttrs.down) {
 		this.mouseAttrs.down = false;
-		this.canvas.removeClass('panning');
-		
-		// When full screen, whether to pass clicks made within the canvas but
-		// outside the image through to the mask. Only really makes sense when
-		// the full screen mode canvas background colour is transparent.
-		if (!this.mouseAttrs.dragged && (this.uiAttrs.fullMaskEl != null) && this.options.fullScreenCloseOnClick) {
+		QU.elSetClass(this.canvas, 'panning', false);
+
+		// Whether to close full screen mode for clicks made within the canvas but outside the image.
+		// Only really makes sense when the full screen mode canvas background colour is transparent.
+		if (!this.mouseAttrs.dragged && this.uiAttrs.fullScreen && this.options.fullScreenCloseOnClick) {
 			var clickPos = this.getClickPosition(e, true);
 			if (clickPos.x < 0 || clickPos.x > 1 || clickPos.y < 0 || clickPos.y > 1) {
-				this.uiAttrs.fullMaskEl.fireEvent('click');
+			    this.toggleFullscreen();
 				return;
 			}
 		}
-		
+
 		// Do not zoom until we have an image and are not busy
 		if (this.content && this.content.initialised && !this.content.animating) {
 			// Animate a zoom if this was just a click (the animation is async)
 			if (!this.mouseAttrs.dragged) {
 				var clickPos = this.getClickPosition(e, true);
-				this.content.zoomGrid((e.shift ? -1 : 1), clickPos);
+				this.content.zoomGrid((e.shiftKey ? -1 : 1), clickPos);
 				this.refreshZoomControls();
 			}
 			else {
 				// Animate the current pan to a stop (the animation is async)
-				var dx = (e.page.x - this.mouseAttrs.last_x);
-				var dy = (e.page.y - this.mouseAttrs.last_y);
+			    var eventPos = QU.evPosition(e);
+			    var dx = (eventPos.page.x - this.mouseAttrs.last_x);
+				var dy = (eventPos.page.y - this.mouseAttrs.last_y);
 				if (Math.abs(dx) > 3 || Math.abs(dy) > 3)
 					this.content.autoPanGrid(dx, dy);
 			}
@@ -1515,8 +1512,10 @@ ImgCanvasView.prototype.onTouchStart = function(e) {
 	e.preventDefault();
 	if (e.touches.length == 1) {
 		this.onMouseDown({
-			page: { x: e.touches[0].pageX, y: e.touches[0].pageY },
-			rightClick: false
+		    type: 'mousedown',
+			pageX: e.touches[0].pageX,
+			pageY: e.touches[0].pageY,
+			button: 0
 		});
 	}
 	this.touchPosReset();
@@ -1527,7 +1526,9 @@ ImgCanvasView.prototype.onTouchMove = function(e) {
 	if (e.touches.length == 1) {
 		// Pan
 		this.onMouseMove({
-			page: { x: e.touches[0].pageX, y: e.touches[0].pageY }
+		    type: 'mousemove',
+			pageX: e.touches[0].pageX,
+			pageY: e.touches[0].pageY
 		});
 	}
 	else if (e.touches.length == 2) {
@@ -1550,12 +1551,11 @@ ImgCanvasView.prototype.onTouchMove = function(e) {
 			// Do a pinch zoom
 			if (trigger) {
 				var zEvent = {
-					page: {
-						x: Math.round(this.touchAttrs.last1.x + ((this.touchAttrs.last2.x - this.touchAttrs.last1.x) / 2)), 
-						y: Math.round(this.touchAttrs.last1.y + ((this.touchAttrs.last2.y - this.touchAttrs.last1.y) / 2))
-					},
-					rightClick: false,
-					shift: !zoomIn,
+			        type: 'mousedown',
+					pageX: Math.round(this.touchAttrs.last1.x + ((this.touchAttrs.last2.x - this.touchAttrs.last1.x) / 2)),
+					pageY: Math.round(this.touchAttrs.last1.y + ((this.touchAttrs.last2.y - this.touchAttrs.last1.y) / 2)),
+					button: 0,
+					shiftKey: !zoomIn,
 					api_event: true
 				};
 				this.onMouseDown(zEvent);
@@ -1575,17 +1575,21 @@ ImgCanvasView.prototype.onTouchMove = function(e) {
 
 ImgCanvasView.prototype.onTouchEnd = function(e) {
 	e.preventDefault();
-	this.onMouseUp({ 
-		page: { x: e.changedTouches[0].pageX, y: e.changedTouches[0].pageY },
-		shift: false
+	this.onMouseUp({
+	    type: 'mouseup',
+		pageX: e.changedTouches[0].pageX,
+		pageY: e.changedTouches[0].pageY,
+		shiftKey: false
 	});
 	this.touchPosReset();
 }
 
 ImgCanvasView.prototype.onTouchCancel = function(e) {
-	this.onMouseUp({ 
-		page: { x: e.changedTouches[0].pageX, y: e.changedTouches[0].pageY },
-		shift: false
+	this.onMouseUp({
+	    type: 'mouseup',
+		pageX: e.changedTouches[0].pageX,
+		pageY: e.changedTouches[0].pageY,
+		shiftKey: false
 	});
 	this.touchPosReset();
 }
@@ -1615,7 +1619,7 @@ ImgCanvasView.prototype.onContentReady = function(imageInfo) {
 		this.autoZoomFit();
 	// Fire loaded event
 	if (this.events)
-		_fire_event(this.events.onload, this, [this.imageSrc]);
+		ImgUtils.fireEvent(this.events.onload, this, [this.imageSrc]);
 }
 
 // Invokes a zoom in or out so that the image best fits the visible canvas
@@ -1629,19 +1633,17 @@ ImgCanvasView.prototype.autoZoomFit = function() {
 // Invokes a zoom in or out on the current centre of the visible canvas
 ImgCanvasView.prototype.autoZoom = function(zoomIn) {
 	var zEvent = {
-		page: {
-			x: Math.round(this.ctrOuterPos.left + this.ctrInnerPos.computedLeft + (this.canvas.width / 2)), 
-			y: Math.round(this.ctrOuterPos.top + this.ctrInnerPos.computedTop + (this.canvas.height / 2))
-		},
-		rightClick: false,
-		shift: !zoomIn,
+	    type: 'mousedown',
+		pageX: Math.round(this.ctrOuterPos.x + this.ctrInnerPos.offsetLeft + (this.canvas.width / 2)),
+		pageY: Math.round(this.ctrOuterPos.y + this.ctrInnerPos.offsetTop + (this.canvas.height / 2)),
+		button: 0,
+		shiftKey: !zoomIn,
 		api_event: true
 	};
 	// Correct page coords for when this.ctrOuterPos is position:fixed
 	if (this.uiAttrs.fullScreen && this.options.fullScreenFixed) {
-	    var winScroll = window.getScroll();
-		zEvent.page.x += winScroll.x;
-		zEvent.page.y += winScroll.y;
+		zEvent.pageX += window.pageXOffset;
+		zEvent.pageY += window.pageYOffset;
 	}
 	this.onMouseDown(zEvent);
 	this.onMouseUp(zEvent);
@@ -1676,17 +1678,17 @@ ImgCanvasView.prototype.getViewportPosition = function() {
 // (because the grid may not fill the canvas at low zoom levels).
 ImgCanvasView.prototype.getClickPosition = function(event, forGrid) {
 	// Get click coords for container
-	var relx = event.page.x - this.ctrOuterPos.left;
-	var rely = event.page.y - this.ctrOuterPos.top;
+    var eventPos = QU.evPosition(event);
+	var relx = eventPos.page.x - this.ctrOuterPos.x;
+	var rely = eventPos.page.y - this.ctrOuterPos.y;
 	// Account for when this.ctrOuterPos is position:fixed
 	if (this.uiAttrs.fullScreen && this.options.fullScreenFixed) {
-	    var winScroll = window.getScroll();
-		relx -= winScroll.x;
-		rely -= winScroll.y;
+		relx -= window.pageXOffset;
+		rely -= window.pageYOffset;
 	}
 	// Convert to click coords within viewport (exclude container borders, padding)
-	relx -= this.ctrInnerPos.computedLeft;
-	rely -= this.ctrInnerPos.computedTop;
+	relx -= this.ctrInnerPos.offsetLeft;
+	rely -= this.ctrInnerPos.offsetTop;
 	// Set viewport click position
 	var clickpos = {
 		x: Math.round8(relx / this.canvas.width),
@@ -1708,150 +1710,125 @@ ImgCanvasView.prototype.getClickPosition = function(event, forGrid) {
 // Creates and returns the control panel for the image zoomer
 ImgCanvasView.prototype.createControls = function() {
 	// Create toggle button
+    var toggler;
 	if (this.options.showcontrols == 'auto') {
-		var toggler = new Element('div', {
-			'class': 'controltoggle panelbg',
-			'html': '&nbsp;',
-			'styles': {
-				'position': 'relative'  /* IE 7-8 - show on top of excanvas */
-			}
-		});
-		toggler.addEvent('mousedown', this.toggleControls.bind(this));
-		this.ctrEl.grab(toggler);
+		toggler = document.createElement('div');
+		toggler.className = 'controltoggle panelbg';
+		toggler.innerHTML = '&nbsp;';
+		toggler.style.position = 'relative';  /* IE 7-8 - show on top */
+		toggler.addEventListener('mousedown', this.toggleControls.bind(this), false);
+		this.ctrEl.appendChild(toggler);
 	}
-	
+
 	// Create container elements for the control panel.
 	// Outer panel is full-width transparent container that implements the show/hide toggle.
-	var panel_outer = new Element('div', {
-		styles: {
-			'position': 'relative',    /* On drop down, show on top */
-			'width': '100%',
-			'line-height': 'normal',
-			'text-align': 'center',
-			'cursor': 'default',
-			'visibility': (this.options.showcontrols == 'auto') ? 'hidden' : 'visible'
-		},
-		events: {
-			// In full screen mode, pass through the click to the underlying mask
-			click: function(e) {
-				if (this.uiAttrs.fullMaskEl != null)
-					this.uiAttrs.fullMaskEl.fireEvent('click');
-			}.bind(this)
-		}
+	var panel_outer = document.createElement('div');
+	QU.elSetStyles(panel_outer, {
+	    position: 'relative',
+	    width: '100%',
+	    lineHeight: 'normal',
+	    overflow: 'hidden',    /* hides the control panel when slid up */
+	    textAlign: 'center',
+	    cursor: 'default'
 	});
+	panel_outer.addEventListener('click', function(e) {
+	    // In full screen mode, pass through the click to the underlying mask
+	    if (this.uiAttrs.fullScreen && this.options.fullScreenCloseOnClick)
+	        this.toggleFullscreen();
+	}.bind(this), false);
+
 	// Inner panel is the centered control panel box containing the buttons etc
-	var panel_inner = new Element('span', {
-		'class': 'controlpanel panelbg',
-		events: {
-			// Prevent the panel_outer click firing
-			click: function(e) { e.stopPropagation(); }
-		}
-	});
-	panel_outer.grab(panel_inner);
-	
+	var panel_inner = document.createElement('span');
+	panel_inner.className = 'controlpanel panelbg' + ((this.options.showcontrols == 'auto') ? ' up' : '');
+	panel_inner.addEventListener('click', function(e) {
+	    // Prevent the panel_outer click firing
+	    e.stopPropagation();
+	}, false);
+	panel_outer.appendChild(panel_inner);
+
 	// Create and configure the control panel buttons.
 	// The nbsps are required to persuade IE to draw something.
 
 	if (this.options.controls.title) {
-		var titleArea = new Element('span', {
-			'class': 'controltitle',
-			'html': 'Loading...'
-		});
-		panel_inner.grab(titleArea);
+		var titleArea = document.createElement('span');
+		titleArea.className = 'controltitle';
+		titleArea.innerHTML = 'Loading...';
+		panel_inner.appendChild(titleArea);
 	}
 	if (this.options.controls.download) {
-		var btnDownload = new Element('span', {
-			'class': 'icon download disabled',
-			'title': 'Download',
-			'html': '&nbsp;'
-		});
-		btnDownload.addEvent('mousedown', this.downloadImage.bind(this));
-		panel_inner.grab(btnDownload);
-		
-		var separator = new Element('span', { 
-			'class': 'separator',
-			'html': '&nbsp;'
-		});
-		panel_inner.grab(separator);
+		var btnDownload = document.createElement('span');
+		btnDownload.className = 'icon download disabled';
+		btnDownload.title = 'Download';
+		btnDownload.innerHTML = '&nbsp;';
+		btnDownload.addEventListener('mousedown', this.downloadImage.bind(this), false);
+		panel_inner.appendChild(btnDownload);
+
+		var separator = document.createElement('span');
+		separator.className = 'separator';
+		separator.innerHTML = '&nbsp;';
+		panel_inner.appendChild(separator);
 	}
 	if (this.options.controls.help) {
-		var btnHelp = new Element('span', { 
-			'class': 'icon help',
-			'title': 'Help',
-			'html': '&nbsp;'
-		});
-		btnHelp.addEvent('mousedown',  this.toggleHelp.bind(this));
-		panel_inner.grab(btnHelp);
+		var btnHelp = document.createElement('span');
+		btnHelp.className = 'icon help';
+		btnHelp.title = 'Help';
+		btnHelp.innerHTML = '&nbsp;';
+		btnHelp.addEventListener('mousedown', this.toggleHelp.bind(this), false);
+		panel_inner.appendChild(btnHelp);
 	}
 	if (this.options.controls.reset) {
-		var btnReset = new Element('span', { 
-			'class': 'icon reset',
-			'title': 'Reset zoom',
-			'html': '&nbsp;'
-		});
-		btnReset.addEvent('mousedown', this.reset.bind(this));
-		panel_inner.grab(btnReset);
+		var btnReset = document.createElement('span');
+		btnReset	.className = 'icon reset';
+		btnReset	.title = 'Reset zoom';
+		btnReset	.innerHTML = '&nbsp;';
+		btnReset.addEventListener('mousedown', this.reset.bind(this), false);
+		panel_inner.appendChild(btnReset);
 	}
 	if (this.options.controls.zoomin) {
-		var btnZin   = new Element('span', {
-			'class': 'icon zoomin',
-			'title': 'Zoom in',
-			'html': '&nbsp;'
-		});
-		btnZin.addEvent('mousedown',   function() { this.autoZoom(true); }.bind(this));
-		panel_inner.grab(btnZin);
+		var btnZin = document.createElement('span');
+		btnZin.className = 'icon zoomin';
+		btnZin.title = 'Zoom in';
+		btnZin.innerHTML = '&nbsp;';
+		btnZin.addEventListener('mousedown', function() { this.autoZoom(true); }.bind(this), false);
+		panel_inner.appendChild(btnZin);
 	}
 	if (this.options.controls.zoomout) {
-		var btnZout  = new Element('span', { 
-			'class': 'icon zoomout',
-			'title': 'Zoom out',
-			'html': '&nbsp;'
-		});
-		btnZout.addEvent('mousedown',  function() { this.autoZoom(false); }.bind(this));	
-		panel_inner.grab(btnZout);
+		var btnZout = document.createElement('span');
+		btnZout.className = 'icon zoomout';
+		btnZout.title = 'Zoom out';
+		btnZout.innerHTML = '&nbsp;';
+		btnZout.addEventListener('mousedown', function() { this.autoZoom(false); }.bind(this), false);
+		panel_inner.appendChild(btnZout);
 	}
 	if (this.options.controls.fullscreen) {
-		var btnFull  = new Element('span', { 
-			'class': 'icon fulltoggle',
-			'title': 'Toggle full screen mode',
-			'html': '&nbsp;'
-		});
-		btnFull.addEvent('mousedown',  this.toggleFullscreen.bind(this));
-		panel_inner.grab(btnFull);
+		var btnFull = document.createElement('span');
+		btnFull.className = 'icon fulltoggle';
+		btnFull.title = 'Toggle full screen mode';
+		btnFull.innerHTML = '&nbsp;';
+		btnFull.addEventListener('mousedown', this.toggleFullscreen.bind(this), false);
+		panel_inner.appendChild(btnFull);
 	}
-	
+
 	// Add panel to the DOM
-	this.controlpanel = panel_outer;
-	this.ctrEl.grab(this.controlpanel);
-	
-	// Set rollovers ($$ only works once elements are in the DOM)
-	this.controlpanel.getElements('.icon').each(function(el) {
-		el.addEvent('mouseover', function() { el.addClass('rollover'); });
-		el.addEvent('mouseout',  function() { el.removeClass('rollover'); });
-	});
-	
-	// Create control panel animator
-	if (this.options.showcontrols == 'auto') {
-		this.uiAttrs.controlsSlider = new Fx.Slide(panel_outer, {
-			onComplete: function() {
-				// Update toggle button on slide complete
-				var wasOpen = this.uiAttrs.controlsSlider.open;
-				if (toggler) {
-					wasOpen ? toggler.removeClass('up') : toggler.addClass('up');
-				}
-			}.bind(this)
-		});
-		this.uiAttrs.controlsSlider.hide();
-		panel_outer.setStyle('visibility', 'visible');
+    this.controlpanel = panel_inner;
+	this.ctrEl.appendChild(panel_outer);
+
+	// Set rollovers
+	var icons = this.controlpanel.querySelectorAll('.icon');
+	for (var i = 0; i < icons.length; i++) {
+	    var el = icons[i];
+	    el.addEventListener('mouseover', function() { QU.elSetClass(this, 'rollover', true); }.bind(el), false);
+	    el.addEventListener('mouseout',  function() { QU.elSetClass(this, 'rollover', false); }.bind(el), false);
 	}
 }
 
 // Clears all rollovers in the control panel
 ImgCanvasView.prototype.clearRollovers = function() {
 	if (this.controlpanel) {
-		this.controlpanel.getElements('.icon').each(function(el) {
-			el.removeClass('rollover');
-		});
+	    var icons = this.controlpanel.querySelectorAll('.icon');
+	    for (var i = 0; i < icons.length; i++) {
+	        QU.elSetClass(icons[i], 'rollover', false);
+	    }
 	}
 }
 
@@ -1859,26 +1836,26 @@ ImgCanvasView.prototype.clearRollovers = function() {
 // Assumed to be called at the start of zoom animations (hence the use of nextLevel).
 ImgCanvasView.prototype.refreshZoomControls = function() {
 	if (this.content && this.content.initialised && this.controlpanel) {
-		var zin = this.controlpanel.getElement('.zoomin'),
-		    zout = this.controlpanel.getElement('.zoomout'),
-		    zreset = this.controlpanel.getElement('.reset'),
+		var zin = this.controlpanel.querySelector('.zoomin'),
+		    zout = this.controlpanel.querySelector('.zoomout'),
+		    zreset = this.controlpanel.querySelector('.reset'),
 		    canZoomIn = (this.content.zoom.nextLevel < this.content.zoom.maxLevel),
 		    canZoomOut = (this.content.zoom.nextLevel > 1),
 		    canReset = canZoomOut;
-		
-		if (zin) canZoomIn ? zin.removeClass('disabled') : zin.addClass('disabled');
-		if (zout) canZoomOut ? zout.removeClass('disabled') : zout.addClass('disabled');
-		if (zreset) canReset ? zreset.removeClass('disabled') : zreset.addClass('disabled');
+
+		if (zin) QU.elSetClass(zin, 'disabled', !canZoomIn);
+		if (zout) QU.elSetClass(zout, 'disabled', !canZoomOut);
+		if (zreset) QU.elSetClass(zreset, 'disabled', !canReset);
 	}
 }
 
 // Sets whether the image download control is available
 ImgCanvasView.prototype.enableDownload = function(enable) {
 	if (this.controlpanel) {
-		var dld = this.controlpanel.getElement('.download');
+		var dld = this.controlpanel.querySelector('.download');
 		if (dld) {
-			enable ? dld.removeClass('disabled') : dld.addClass('disabled');
-			dld.set('title', enable ? 'Download full image' : 'Image download not permitted');
+		    QU.elSetClass(dld, 'disabled', !enable);
+			dld.title = (enable ? 'Download full image' : 'Image download not permitted');
 		}
 	}
 }
@@ -1886,7 +1863,7 @@ ImgCanvasView.prototype.enableDownload = function(enable) {
 // Sets the clickable title text for the control panel, which may be truncated
 ImgCanvasView.prototype.setImageTitle = function(imageTitle) {
 	if (this.controlpanel) {
-		var titleEl = this.controlpanel.getElement('.controltitle');
+		var titleEl = this.controlpanel.querySelector('.controltitle');
 		if (titleEl) {
 			var MAX = 24,
 			    useTitle = this.stripTags(imageTitle);
@@ -1901,19 +1878,26 @@ ImgCanvasView.prototype.setImageTitle = function(imageTitle) {
 				useTitle = useTitle.substring(0, truncIdx) + '...';
 			}
 			titleEl.innerHTML = useTitle;
-			titleEl.removeEvents('click');
-			titleEl.addEvent('click',  this.toggleImageInfo.bind(this));
+			if (!titleEl._onclick) {
+			    titleEl._onclick = this.toggleImageInfo.bind(this);
+			    titleEl.addEventListener('click', titleEl._onclick, false);
+			}
 		}
 	}
 }
 
 // Shows or hides the control panel
 ImgCanvasView.prototype.toggleControls = function() {
-	if (this.controlpanel && this.uiAttrs.controlsSlider) {
-		// Animate control panel
+	if (this.controlpanel) {
 		this.clearRollovers();
 		this.refreshZoomControls();
-		this.uiAttrs.controlsSlider.toggle();
+        // Animate control panel
+		var isUp = QU.elHasClass(this.controlpanel, 'up');
+	    QU.elSetClass(this.controlpanel, 'up', !isUp);
+	    var toggler = this.ctrEl.querySelector('.controltoggle');
+	    if (toggler) {
+	        QU.elSetClass(toggler, 'up', isUp);
+	    }
 	}
 }
 
@@ -1922,9 +1906,9 @@ ImgCanvasView.prototype.downloadImage = function() {
 	if (this.imageInfo && this.imageInfo.download) {
 		// Fire download event
 		if (this.events)
-			_fire_event(this.events.ondownload, this, [this.imageSrc]);
+			ImgUtils.fireEvent(this.events.ondownload, this, [this.imageSrc]);
 		// Trigger download
-		window.location.href = this.imageServer + 'original?src=' + encodeURIComponent(this.imageSrc) + '&attach=1';
+		window.location.href = this.imageServer + '/original?src=' + encodeURIComponent(this.imageSrc) + '&attach=1';
 	}
 }
 
@@ -1933,7 +1917,7 @@ ImgCanvasView.prototype.downloadImage = function() {
 // security reasons (text is untrusted) all other HTML tags are stripped.
 ImgCanvasView.prototype.toggleAlert = function(text) {
 	if (this.uiAttrs.alertVisible) {
-		this.uiAttrs.alertEl.destroy();
+	    QU.elRemove(this.uiAttrs.alertEl);
 		this.uiAttrs.alertEl = null;
 		this.uiAttrs.alertVisible = false;
 	}
@@ -1941,52 +1925,49 @@ ImgCanvasView.prototype.toggleAlert = function(text) {
 		// Support \r\n or \n in the text (use &#10; or &#xA; in HTML attributes)
 		text = text.replace(/\r\n?/g, '\n');
 		text = text.replace(/\n/g, '<br/>');
-		
-		this.uiAttrs.alertEl = new Element('div', {
-			styles: {
-				position: 'absolute',
-				width: '0px',
-				height: '0px',
-				'z-index': '1102'    // IE7 z-index fix
-			}
+
+		var alertOuter = document.createElement('div');
+		QU.elSetStyles(alertOuter, {
+		    position: 'absolute',
+		    width: '0px',
+		    height: '0px',
+		    zIndex: '1102' // IE7 z-index fix
 		});
+        this.uiAttrs.alertEl = alertOuter;
+
 		// Putting the alert inside a positioned parent div makes the "absolute"
-		// coords relative to the parent, gives us a handy anchor point.
-		var alertInner = new Element('div', {
-			'class': 'alertpanel panelbg',
-			html: this.stripTags(text, '(?!br)'),
-			styles: {
-				position: 'absolute',
-				'z-index': '1102',
-				'line-height': 'normal',
-				'overflow': 'auto',
-				visibility: 'hidden'
-			},
-			events: {
-				// Close alert on click
-				mousedown: function() { this.toggleAlert(); }.bind(this),
-				// Prevent pinch zoom
-				touchmove: function() { return false; }
-			}
+		// coords relative to the parent, which gives us a handy anchor point.
+		var alertInner = document.createElement('div');
+		alertInner.className = 'alertpanel panelbg';
+		alertInner.innerHTML = this.stripTags(text, '(?!br)');
+		QU.elSetStyles(alertInner, {
+		    position: 'absolute',
+		    zIndex: '1102',
+		    lineHeight: 'normal',
+		    overflow: 'auto',
+		    visibility: 'hidden'
 		});
+		alertInner.addEventListener('mousedown', function() {
+		    this.toggleAlert();  // Close alert on click
+		}.bind(this), false);
+		alertInner.addEventListener('touchmove', function() {
+		    return false;        // Prevent pinch zoom
+		}, false);
+
 		// Add to HTML DOM
-		this.ctrEl.grab(this.uiAttrs.alertEl, 'top');
-		this.uiAttrs.alertEl.grab(alertInner);
+		this.uiAttrs.alertEl.appendChild(alertInner);
+		this.ctrEl.insertBefore(this.uiAttrs.alertEl, this.ctrEl.firstChild);
 		// Position the window now that we can get its size, and show it
-		alertInner.setStyle('left',
-			Math.round((this.canvas.width - alertInner.offsetWidth) / 2) + 'px'
-		);
-		alertInner.setStyle('top',
-			Math.max(0, Math.round((this.canvas.height - alertInner.offsetHeight) / 2)) + 'px'
-		);
+		alertInner.style.left = 	Math.round((this.canvas.width - alertInner.offsetWidth) / 2) + 'px';
+		alertInner.style.top = Math.max(0, Math.round((this.canvas.height - alertInner.offsetHeight) / 2)) + 'px';
 		if (alertInner.offsetHeight > this.ctrInnerPos.height) {
 			// Restrict vertical height to stay within our container
-			var alertDims = alertInner.getComputedSize(),
-			    vPadding  = alertDims.totalHeight - alertDims.height,
+			var innerOffsets = QU.elInnerOffsets(alertInner),
+			    vPadding  = (innerOffsets.top + innerOffsets.bottom),
 			    maxHeight = Math.max(20, (this.ctrInnerPos.height - vPadding));
-			alertInner.setStyle('height', maxHeight + 'px');
+			alertInner.style.height = maxHeight + 'px';
 		}
-		alertInner.setStyle('visibility', 'visible');
+		alertInner.style.visibility = 'visible';
 		this.uiAttrs.alertVisible = true;
 	}
 }
@@ -2018,14 +1999,11 @@ ImgCanvasView.prototype.toggleImageInfo = function() {
 	this.toggleAlert(info);
 	// Fire info shown event
 	if (this.events && this.uiAttrs.alertVisible)
-		_fire_event(this.events.oninfo, this, [this.imageSrc]);
+		ImgUtils.fireEvent(this.events.oninfo, this, [this.imageSrc]);
 }
 
 // Toggles full screen mode
 ImgCanvasView.prototype.toggleFullscreen = function() {
-	// Sorry, IE6 fans
-	if (Browser.ie6)
-		return;
 	// Ignore double-clicks (only affects fade-out)
 	if (this.uiAttrs.animating)
 		return;
@@ -2041,68 +2019,69 @@ ImgCanvasView.prototype.toggleFullscreen = function() {
 		this.uiAttrs.fullKeydownFn = function(e) { this.fullscreenKeydown(e); }.bind(this);
 		this.uiAttrs.fullResizeFn = function(e) { this.fullscreenResize(); }.bind(this);
 	}
+
+	// Define a fader
+	if (!this.uiAttrs.fader) {
+	    this.uiAttrs.fader = new ElementFader(this.ctrEl, 300);
+	}
 	
 	if (this.uiAttrs.fullScreen) {
 		// Fade out container
 		this.uiAttrs.animating = true;
-		new Fx.Tween(this.ctrEl, {
-			duration: 300,
-			onComplete: function() {
-				// Remove event handlers
-				window.removeEvent('resize', this.uiAttrs.fullResizeFn);
-				window.removeEvent('keydown', this.uiAttrs.fullKeydownFn);
-				// Remove the close button
-				this.uiAttrs.fullCloseEl.destroy();
-				this.uiAttrs.fullCloseEl = null;
-				// Take container back out of the page
-				this.ctrEl.dispose();
-				// Restore previous container styles
-				this.ctrEl.setStyles(this.uiAttrs.containerStyles);
-				this.ctrEl.removeClass('fullscreen');
-				// Swap back the temporary container for the real one
-				this.ctrEl.replaces(this.uiAttrs.fullSwapEl);
-				this.uiAttrs.fullSwapEl.destroy();
-				this.uiAttrs.fullSwapEl = null;
-				// Unmask the page
-				this.uiAttrs.fullMaskEl.destroy();
-				this.uiAttrs.fullMaskEl = null;
-				// Reset container size/location
-				this.layout();
-				this.clearRollovers();
-				// Auto zoom out
-				this.reset();
-				
-				this.uiAttrs.animating = false;
-				this.uiAttrs.fullScreen = false;
-				
-				// Fire fullscreen event
-				if (this.events)
-					_fire_event(this.events.onfullscreen, this, [this.imageSrc, false]);
-			}.bind(this)
-		}).start('opacity', 1, 0);
+		this.uiAttrs.fader.fadeOut(function() {
+			// Remove event handlers
+			window.removeEventListener('resize', this.uiAttrs.fullResizeFn, false);
+			window.removeEventListener('keydown', this.uiAttrs.fullKeydownFn, false);
+			// Remove the close button
+			this.uiAttrs.fullCloseEl.removeEventListener('click', this.uiAttrs.fullCloseEl._onclick, false);
+			QU.elRemove(this.uiAttrs.fullCloseEl);
+			this.uiAttrs.fullCloseEl = null;
+			// Take container back out of the page
+			QU.elRemove(this.ctrEl);
+			// Restore previous container styles
+			QU.elSetStyles(this.ctrEl, this.uiAttrs.containerStyles);
+			QU.elSetClass(this.ctrEl, 'fullscreen', false);
+			// Swap back the temporary container for the real one
+			this.uiAttrs.fullSwapEl.parentNode.replaceChild(this.ctrEl, this.uiAttrs.fullSwapEl);
+			this.uiAttrs.fullSwapEl = null;
+			// Unmask the page
+			this.uiAttrs.fullMaskEl.destroy();
+			this.uiAttrs.fullMaskEl = null;
+			// Reset container size/location
+			this.layout();
+			this.clearRollovers();
+			// Auto zoom out
+			this.reset();
+
+			this.uiAttrs.animating = false;
+			this.uiAttrs.fullScreen = false;
+
+			// Fire fullscreen event
+			if (this.events)
+				ImgUtils.fireEvent(this.events.onfullscreen, this, [this.imageSrc, false]);
+		}.bind(this));
 	}
 	else {
 		// Get container destination coords
 		var fsCoords = this.fullscreenGetCoords();
 		// Back up the container's styles
-		this.uiAttrs.containerStyles = this.ctrEl.getStyles(
-			'position', 'z-index', 'opacity', 'left', 'top', 'width', 'height', 'margin'
+		this.uiAttrs.containerStyles = QU.elGetStyles(this.ctrEl,
+		    ['position', 'zIndex', 'opacity', 'left', 'top', 'width', 'height', 'margin']
 		);
 		// Mask the page
-		this.uiAttrs.fullMaskEl = new Mask(document.body, {
-			hideOnClick: false,         // Don't just hide, use onClick below
-			'class': 'fullscreen_mask',
-			style: { 'z-index': '1100' },
-			onClick: this.toggleFullscreen.bind(this)
-		});
+		this.uiAttrs.fullMaskEl = new PageMask(
+		    'fullscreen_mask',
+		    { 'zIndex': '1100' },
+		    function(mask) { this.toggleFullscreen(); }.bind(this)
+		);
 		this.uiAttrs.fullMaskEl.show();
 		// Swap the container for a temporary placeholder of the same size
-		this.uiAttrs.fullSwapEl = this.ctrEl.clone(false, true);
-		this.uiAttrs.fullSwapEl.replaces(this.ctrEl);
+		this.uiAttrs.fullSwapEl = this.ctrEl.cloneNode(false);
+		this.ctrEl.parentNode.replaceChild(this.uiAttrs.fullSwapEl, this.ctrEl);
 		// Override container styles and put it back in the page, now on top of the mask
-		this.ctrEl.setStyles({
+		QU.elSetStyles(this.ctrEl, {
 			position: this.options.fullScreenFixed ? 'fixed' : 'absolute',
-			'z-index': '1101',
+			zIndex: '1101',
 			opacity: '0',
 			left: fsCoords.left + 'px',
 			top: fsCoords.top + 'px',
@@ -2110,38 +2089,36 @@ ImgCanvasView.prototype.toggleFullscreen = function() {
 			height: fsCoords.height + 'px',
 			margin: '0'
 		});
-		this.ctrEl.addClass('fullscreen');
-		document.id(document.body).grab(this.ctrEl, 'top');
+		QU.elSetClass(this.ctrEl, 'fullscreen', true);
+		document.body.insertBefore(this.ctrEl, document.body.firstChild);
 		// Reset container size/location
 		this.layout();
 		this.clearRollovers();
 		// Add a close button
-		this.uiAttrs.fullCloseEl = new Element('a', {
-			'class': 'close_button',
-			styles: {
-				display: 'block', position: 'absolute',
-				'z-index': '1102',    /* same as alert panel */
-				top: '0px', right: '0px', width: '33px', height: '33px'
-			},
-			events: {
-				click: this.toggleFullscreen.bind(this)
-			}
-		});
-		this.ctrEl.grab(this.uiAttrs.fullCloseEl, 'top');
+		this.uiAttrs.fullCloseEl = document.createElement('a');
+		this.uiAttrs.fullCloseEl.className = 'close_button';
+		QU.elSetStyles(this.uiAttrs.fullCloseEl, {
+		    display: 'block',
+		    position: 'absolute',
+		    zIndex: '1102',       // same as alert panel
+		    top: '0px',
+		    right: '0px',
+		    width: '33px',
+		    height: '32px'
+        });
+		this.uiAttrs.fullCloseEl._onclick = this.toggleFullscreen.bind(this);
+		this.uiAttrs.fullCloseEl.addEventListener('click', this.uiAttrs.fullCloseEl._onclick, false);
+		this.ctrEl.insertBefore(this.uiAttrs.fullCloseEl, this.ctrEl.firstChild);
 		// Add event handlers
-		window.addEvent('keydown', this.uiAttrs.fullKeydownFn);
-		window.addEvent('resize', this.uiAttrs.fullResizeFn);
+		window.addEventListener('keydown', this.uiAttrs.fullKeydownFn, false);
+		window.addEventListener('resize', this.uiAttrs.fullResizeFn, false);
 		// Fade in container
-		new Fx.Tween(this.ctrEl, {
-			duration: 500,
-			onComplete: this.autoZoomFit.bind(this) // Auto-fit after fade in (see also onContentReady)
-		}).start('opacity', 0, 1);
-		
+		this.uiAttrs.fader.fadeIn(this.autoZoomFit.bind(this)); // Auto-fit after fade in (see also onContentReady)
 		this.uiAttrs.fullScreen = true;
-		
+
 		// Fire fullscreen event
 		if (this.events)
-			_fire_event(this.events.onfullscreen, this, [this.imageSrc, true]);
+			ImgUtils.fireEvent(this.events.onfullscreen, this, [this.imageSrc, true]);
 	}
 }
 
@@ -2150,8 +2127,8 @@ ImgCanvasView.prototype.fullscreenGetCoords = function() {
 	// Get browser total viewport size
 	// #517 Prefer window.inner* to get the visual viewport in mobile browsers
 	//      http://www.quirksmode.org/mobile/viewports2.html "Measuring the visual viewport"
-	var winSize   = window.innerWidth ? { x: window.innerWidth, y: window.innerHeight } : window.getSize(),
-	    winScroll = this.options.fullScreenFixed ? { x: 0, y: 0 } : window.getScroll(),
+	var winSize   = window.innerWidth ? { x: window.innerWidth, y: window.innerHeight } : { x: document.body.clientWidth, y: document.body.clientHeight },
+	    winScroll = this.options.fullScreenFixed ? { x: 0, y: 0 } : { x: window.pageXOffset, y: window.pageYOffset },
 	    winMargin = Math.min(Math.round(winSize.x / 40), Math.round(winSize.y / 40));
 	// Get target placement of viewer container element
 	var tgtLeft   = (winScroll.x + winMargin),
@@ -2174,7 +2151,8 @@ ImgCanvasView.prototype.fullscreenGetCoords = function() {
 
 // Full-screen mode keydown event handler
 ImgCanvasView.prototype.fullscreenKeydown = function(e) {
-	if (e.code == 27) {
+    var code = (e.which || e.keyCode);
+	if (code === 27) {
 		// Close async because we don't want to be in here when this handler gets removed
 		setTimeout(this.toggleFullscreen.bind(this), 1);
 	}
@@ -2185,31 +2163,182 @@ ImgCanvasView.prototype.fullscreenResize = function() {
 	// The mask resizes itself.
 	// We must resize the viewer container.
 	var fsCoords = this.fullscreenGetCoords();
-	this.ctrEl.setStyles({
-		left: fsCoords.left + 'px',
-		top: fsCoords.top + 'px',
-		width: fsCoords.width + 'px',
-		height: fsCoords.height + 'px'
-	});
+	this.ctrEl.style.left = fsCoords.left + 'px';
+	this.ctrEl.style.top = fsCoords.top + 'px';
+	this.ctrEl.style.width = fsCoords.width + 'px';
+	this.ctrEl.style.height = fsCoords.height + 'px';
 	this.layout();
 }
 
-function _fire_event(fn, thisArg, argList) {
-	if (fn && typeof(fn) === 'function') {
+/**** Element fader utility ****/
+
+// Creates a linear fading animation for an element, with duration in milliseconds.
+// This is the IE9 version. In IE10+ you can toggle a CSS class containing a CSS
+// opacity transition, and hook into the 'transitionend' event.
+function ElementFader(el, duration) {
+    this.element = el;
+    this.steps = Math.round(Math.max(1, duration / 16.66));  // 16.66 == 60fps
+    this.increment = 1 / this.steps;                         // Since opacity goes from 0 to 1
+    this.stepFn = this._step.bind(this);
+    if (window.requestAnimationFrame)
+        this.animate = function() { window.requestAnimationFrame(this.stepFn); };
+    else
+        this.animate = function() { return setTimeout(this.stepFn, 17); };
+}
+
+ElementFader.prototype.fadeIn = function(onCompleteFn) {
+    this.onCompleteFn = onCompleteFn;
+    this.step = 0;
+    this.opacity = 0;
+    this.direction = 1;
+    this.animate();
+}
+
+ElementFader.prototype.fadeOut = function(onCompleteFn) {
+    this.onCompleteFn = onCompleteFn;
+    this.step = 0;    
+    this.opacity = 1;
+    this.direction = -1;
+    this.animate();
+}
+
+ElementFader.prototype.destroy = function() {
+    this.element = null;
+    this.stepFn = function(){};
+    this.animate = function(){};
+}
+
+ElementFader.prototype._step = function() {
+    this.opacity += (this.increment * this.direction);
+    this.element.style.opacity = this.opacity;
+    this.step++;
+    if (this.step < this.steps) {
+        this.animate();
+    } else if (this.onCompleteFn) {
+        this.onCompleteFn();
+    }
+}
+
+/**** Element smooth scrolling utility ****/
+
+// Creates a scrolling animation for a scrolling element, with duration in milliseconds.
+// The easing function can be any of the Math.ease() functions defined above.
+// This is the IE version. In more modern browsers you can look at using
+// element.scrollIntoView({behavior: "smooth"}) although it's not a straight replacement
+// because "into view" is sometimes a margin's width away from where you really want it.
+function ElementScroller(el, duration, easeFn) {
+    this.element = el;
+    this.steps = Math.round(Math.max(1, duration / 16.66));  // 16.66 == 60fps
+    this.easeFn = easeFn;
+    this.stepFn = this._step.bind(this);
+    if (window.requestAnimationFrame)
+        this.animate = function() { window.requestAnimationFrame(this.stepFn); };
+    else
+        this.animate = function() { return setTimeout(this.stepFn, 17); };
+}
+
+ElementScroller.prototype.scrollTo = function(x, y) {
+    this.startX = this.element.scrollLeft;
+    this.startY = this.element.scrollTop;
+    this.dx = (x - this.startX);
+    this.dy = (y - this.startY);
+    this.step = 0;
+    this.animate();
+}
+
+ElementScroller.prototype.destroy = function() {
+    this.element = null;
+    this.stepFn = function(){};
+    this.animate = function(){};
+}
+
+ElementScroller.prototype._step = function() {
+    this.step++;
+    this.element.scrollLeft = this.easeFn(this.step, this.startX, this.dx, this.steps);
+    this.element.scrollTop = this.easeFn(this.step, this.startY, this.dy, this.steps);
+    if (this.step < this.steps) {
+        this.animate();
+    }
+}
+
+/**** Page mask utility ****/
+
+// Creates an initially hidden full-page mask over the current page.
+// e.g. var pm = new PageMask('mask', {'zIndex': '1', 'marginLeft': '2em'}, function(mask) { mask.hide(); });
+// All parameters are optional.
+function PageMask(className, styles, onClickFn) {
+    this.element = document.createElement('div');
+    // Add default styles before user styles
+    this.element.style.position = 'fixed';
+    this.element.style.left = '0px';
+    this.element.style.top = '0px';
+    this.element.style.width = '100vw';
+    this.element.style.height = '100vh';
+
+    if (className) {
+        this.element.className = className;        
+    }
+    if (styles) {
+        for (var key in styles) {
+            this.element.style[key] = styles[key];
+        }
+    }
+    if (onClickFn) {
+        this._onclick = function(e) { onClickFn(this); }.bind(this);
+        this.element.addEventListener('click', this._onclick, false);
+    }
+    if (!className && !styles) {
+        this.element.style.backgroundColor = '#000000';
+        this.element.style.opacity = '0.8';        
+    }
+
+    this.element.style.display = 'none';
+    if (document.body.firstChild)
+        document.body.insertBefore(this.element, document.body.firstChild);
+    else
+        document.body.appendChild(this.element);
+}
+
+// Shows the mask
+PageMask.prototype.show = function() {
+    this.element.style.display = 'block';
+}
+
+// Hides the mask but keeps it in the page
+PageMask.prototype.hide = function() {
+    this.element.style.display = 'none';
+}
+
+// Removes the mask from the page
+PageMask.prototype.destroy = function() {
+    this.hide();
+    if (this._onclick) {
+        this.element.removeEventListener('click', this._onclick, false);
+    }
+    this.element.parentNode.removeChild(this.element);
+}
+
+/**** Local utility functions ****/
+
+ImgUtils = {};
+
+// Asynchronously invokes a user-supplied callback function
+ImgUtils.fireEvent = function (fn, thisArg, argList) {
+	if (fn && typeof fn === 'function') {
 		setTimeout(function() {
 			fn.apply(this, argList);
 		}.bind(thisArg), 1);
 	}
 }
 
-// Returns the image URL of an element, or null
-function _get_image_src(el) {
+// Returns the image URL of an element (img.src or css background image), or null
+ImgUtils.getImageSrc = function(el) {
 	// Prefer img src
 	if (el.src)
 		return el.src;
 	// Try for a CSS background image
-	var bgimg = el.getStyle('background-image');
-	// Expecting url(...), url('...'), or url("...")
+	var bgimg = el.style.backgroundImage;
+	// Handle url(...), url('...'), or url("...")
 	if (bgimg && (bgimg.length > 5) && (bgimg.indexOf('url(') === 0)) {
 		bgimg = bgimg.substring(4);
 		if ((bgimg.charAt(0) == '\'') || (bgimg.charAt(0) == '"'))
@@ -2220,38 +2349,30 @@ function _get_image_src(el) {
 	return null;
 }
 
-// Strips empty query string values from a URL, and converts "+"s to " "s
-function _clean_url(url) {
-	return url ? url.cleanQueryString().replace(/\+/g, ' ') : url;
-}
+/**** Private heleper functions ****/
 
 function _img_fs_zoom_click(imgEl, options, events) {
-	// Sorry, IE6 fans
-	if (Browser.ie6)
-		return;
-	
 	// Get image src or element background image
-	var imageURL = _get_image_src(imgEl);
+	var imageURL = ImgUtils.getImageSrc(imgEl);
 	if (!imageURL)
 		return;
-	
+
 	// Create a hidden div to house the ImgCanvasView
-	var hiddenEl = document.id('_img_fs_zoom_click_el');
+	var hiddenEl = QU.id('_cv_fs_zoom_click_el');
 	if (!hiddenEl) {
 		// We require a fixed width/height div here, so that the images and tiles are
 		// requested at a standard size (independent of browser size), in turn so that
 		// the server can cache everything properly.
-		hiddenEl = new Element('div', {
-			id: '_img_fs_zoom_click_el',
-			styles: {
-				'position': 'absolute',
-				'display': 'block',
-				'width': '500px',
-				'height': '500px',
-				'left': '-1000px'
-			}
+		hiddenEl = document.createElement('div');
+		hiddenEl.id = '_cv_fs_zoom_click_el';
+		QU.elSetStyles(hiddenEl, {
+		    position: 'absolute',
+		    display: 'block',
+		    width: '500px',
+		    height: '500px',
+		    left: '-1000px'
 		});
-		document.id(document.body).grab(hiddenEl, 'top');
+		document.body.insertBefore(hiddenEl, document.body.firstChild);
 	}
 	// Init the hidden div
 	canvas_view_init(hiddenEl, imageURL, options, events);
@@ -2260,39 +2381,35 @@ function _img_fs_zoom_click(imgEl, options, events) {
 }
 
 function _get_ct_viewer(ct) {
-	ct = document.id(ct);
-	return (ct && ct._viewer) ? ct._viewer : null;
+	ct = QU.id(ct);
+	return (ct && ct._cv_viewer) ? ct._cv_viewer : null;
 }
-var _hcvs = null;
 
 /**** Public interface ****/
 
-/* Returns whether the browser supports the canvas element,
- * either natively or (on IE) with excanvas
+/* Returns whether the browser supports the canvas element
  */
 function haveCanvasSupport() {
-	if (_hcvs == null) {
-		var cvEl = new Element('canvas');
-		if (Browser.ie && window.G_vmlCanvasManager)
-			G_vmlCanvasManager.initElement(cvEl);
-		_hcvs = (cvEl && cvEl.getContext);
+	if (window._hcvs === undefined) {
+		var cvEl = document.createElement('canvas');
+		window._hcvs = !!(cvEl && cvEl.getContext);
 	}
-	return _hcvs;
+	return window._hcvs;
 }
 
 /* Creates and initialises a zoomable viewer for the image with
  * URL 'imageURL' inside the element or element with ID 'container'.
  * The 'options' parameter is optional, and all options within it are also optional.
  * The 'events' parameter is optional, and all event callbacks are also optional.
- * 
+ *
  * Available options:
- * 
+ *
  * title - Overrides the image title in the control panel. Defaults to the image's assigned title.
  * description - Overrides the image description. Defaults to the image's assigned description.
  * showcontrols - Whether the control panel is displayed. One value from: 'yes', 'no', 'auto'.
  *                Default 'auto'.
  * quality - A boolean determining whether images are smoothed or not during zooming. Default true.
- * animation - The type of zoom animation. One value from: 'linear', 'in-out-back', 'in-out-quadratic', 
+ * animation - The type of zoom animation. One value from: 'linear', 'in-out-back', 'in-out-quadratic',
  *             'in-out-sine', 'out-back', 'out-quadratic', 'out-sine'. Default 'out-quadratic'.
  * maxtiles - The maximum number of tiles to create when zooming in, or 1 to disable tiling (at maximum
  *            zoom the full image will be downloaded). Must be: 1, 4, 16, 64, or 256. Default 256.
@@ -2302,21 +2419,18 @@ function haveCanvasSupport() {
  *            All default to true except for download. See the examples below.
  * doubleclickreset - A boolean specifying whether to reset the zoom on double tap/click.
  *                    Default true.
- * jsonp - A boolean determining whether the JSONP method is used to load image information
- *         (instead of standard AJAX/XHR). This option is less secure, but is required if
- *         your image server has a different host name to your web server. Default true.
- * 
+ *
  * E.g. { showcontrols: 'yes', quality: true, animation: 'in-out-back' }
  * E.g. { showcontrols: 'auto', controls: { help: false, reset: false } }
- * 
+ *
  * Available events:
- * 
+ *
  * onload       - function(src) - fires when the initial image is displayed
  * oninfo       - function(src) - fires when the user views the image description
  * ondownload   - function(src) - fires when the full image download is invoked
  * onfullscreen - function(src, boolean) - fires when the view enters (boolean true)
  *                                            or leaves (boolean false) full-screen mode
- * 
+ *
  * E.g. {
  *        onload: function(src) {
  *          alert('Image ' + src + ' is now loaded');
@@ -2328,16 +2442,16 @@ function haveCanvasSupport() {
  *      }
  */
 function canvas_view_init(container, imageURL, options, events) {
-	container = document.id(container);
+	container = QU.id(container);
 	if (container) {
-		if (haveCanvasSupport()) {
+		if (haveCanvasSupport() && QU.supported) {
 			// Destroy previous viewer instance (Firefox 12 at least needs this)
-			if (container._viewer != undefined)
-				container._viewer.destroy();
+			if (container._cv_viewer != undefined)
+				container._cv_viewer.destroy();
 			// Assign new viewer instance
 			var viewer = new ImgCanvasView(container, imageURL, options, events);
 			viewer.init();
-			container._viewer = viewer;
+			container._cv_viewer = viewer;
 		}
 		else {
 			container.innerHTML = 'Sorry, this control is unsupported. Try upgrading your web browser.';
@@ -2400,10 +2514,10 @@ function canvas_view_resize(container) {
  * The 'options' and 'events' parameters are optional, see canvas_view_init for info.
  */
 function canvas_view_init_image(image, options, events) {
-	image = document.id(image);
+	image = QU.id(image);
 	if (image) {
 		// Modify a copy of the supplied options!
-		var opts = options ? Object.clone(options) : {};
+		var opts = options ? QU.clone(options) : {};
 		// Use img title/alt if no title specified
 		var imageText = image.title || image.alt;
 		if (imageText) {
@@ -2415,8 +2529,11 @@ function canvas_view_init_image(image, options, events) {
 			opts.stripaligns = true;
 		}
 		// Set onclick
-		image.removeEvents('click');
-		image.addEvent('click', function() { _img_fs_zoom_click(image, opts, events); });
+		if (image._onclick) {
+		    image.removeEventListener('click', image._onclick, false);
+		}
+		image._onclick = function() { _img_fs_zoom_click(image, opts, events); };
+		image.addEventListener('click', image._onclick, false);
 	}
 	return false;
 }
@@ -2426,8 +2543,9 @@ function canvas_view_init_image(image, options, events) {
  * The 'options' and 'events' parameters are optional, see canvas_view_init for info.
  */
 function canvas_view_init_all_images(className, options, events) {
-	$$('.' + className).each(function(img) {
-		canvas_view_init_image(img, options, events);
-	});
+    var images = document.querySelectorAll('.' + className);
+    for (var i = 0; i < images.length; i++) {
+        canvas_view_init_image(images[i], options, events);
+    }
 	return false;
 }

@@ -25,21 +25,16 @@
 	<link rel="stylesheet" href="{{ url_for('static', filename='styles/canvas_view.css') }}" type="text/css" />
 	<link rel="stylesheet" href="{{ url_for('static', filename='styles/gallery_view.css') }}" type="text/css" />
 	{% if settings.DEBUG %}
-	<!--[if lte IE 8]>
-	<script src="{{ url_for('static', filename='js/excanvas.js') }}" type="text/javascript"></script>
-	<![endif]-->
 	<script src="{{ url_for('static', filename='js/canvas_view.js') }}" type="text/javascript"></script>
 	<script src="{{ url_for('static', filename='js/gallery_view.js') }}" type="text/javascript"></script>
+	<script src="{{ url_for('static', filename='js/common_view.js') }}" type="text/javascript"></script>
 	{% else %}
-	<!--[if lte IE 8]>
-	<script src="{{ url_for('static', filename='js/excanvas_yc.js') }}" type="text/javascript"></script>
-	<![endif]-->
-	<script src="{{ url_for('static', filename='js/canvas_view_yc.js') }}" type="text/javascript"></script>
-	<script src="{{ url_for('static', filename='js/gallery_view_yc.js') }}" type="text/javascript"></script>
+	<script src="{{ url_for('static', filename='js/canvas_view.min.js') }}" type="text/javascript"></script>
+	<script src="{{ url_for('static', filename='js/gallery_view.min.js') }}" type="text/javascript"></script>
 	{% endif %}
 	
 	<script type="text/javascript">
-		window.addEvent('domready', function() {
+		QU.whenReady(function() {
 			gallery_view_init('gallery1', {
 				server: '{{ url_for('index') }}',
 				images: [
@@ -64,9 +59,9 @@
 			});
 		});
 		
-		window.addEvent('resize', function() {
+		window.addEventListener('resize', function() {
 			gallery_view_resize('gallery1');
-		});
+		}, false);
 	</script>
 {% endblock %}
 

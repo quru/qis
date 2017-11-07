@@ -4,7 +4,71 @@ Most releases only require replacement application files and a restart of the
 web server, as described in the [change log](changelog.md). Occasionally however
 a more involved upgrade is required; these releases will be documented here.
 
-## v1.50 to v2.4.0
+## v2.n to v2.6
+
+This release contains a number of potentially breaking changes, though only
+users of Internet Explorer 8 and below should be affected
+(which in 2017 is hopefully nobody).
+
+* Minified JavaScript file names have been renamed from the quirky format
+  `foo_yc.js` to the more conventional format `foo.min.js`.
+* The path to the MooTools library has changed, as this library is now only
+  used internally, and is no longer required by client-side code.
+* Removed the _excanvas_ library (Internet Explorer 8 canvas emulation).
+* Removed the JSONP options from the image gallery and viewers;
+  cross-domain API calls now use CORS instead.
+* Dropped support for Internet Explorer 8 and below.
+
+### Upgrading
+
+For upgrading existing installations, an upgrade script has been provided to clean up
+legacy files and optionally to provide compatibility with the old `foo_yc.js`
+JavaScript file paths.
+
+Backup the previous version (excluding images):
+
+    $ export QIS_HOME=/opt/qis
+    $ sudo rsync -a $QIS_HOME/* /tmp/qis-backup --exclude images
+
+Extract the latest files:
+
+    $ cd $QIS_HOME
+    $ sudo -u qis tar --strip-components=1 -xvf /path/to/Quru\ Image\ Server-2.6.0.tar.gz
+
+Then run the upgrade script:
+
+    $ sudo -u qis $QIS_HOME/src/imageserver/scripts/v2.6_upgrade.sh
+
+### Apache configuration
+
+The removal of JSONP requires a new HTTP header to be set in Apache.
+In each of the Apache configuration files:
+
+* `/etc/httpd/conf.d/qis.conf`
+* `/etc/httpd/conf.d/qis-ssl.conf`
+
+Add the following new lines inside the main `VirtualHost` section:
+
+    # Allow other domains to query the data API (required for canvas/zoom image viewer)
+    Header set Access-Control-Allow-Origin "*"
+
+Then reload the Apache configuration:
+
+    $ sudo apachectl -t && sudo apachectl -k graceful
+
+#### robots.txt
+
+This release allows image URLs to be indexed in the web server's `robots.txt` file.
+If you do not want to allow this, copy the older version back:
+
+    $ sudo -u qis cp /tmp/qis-backup/src/imageserver/static/robots.txt $QIS_HOME/conf/local_robots.txt
+
+And change the 2 Apache configuration files to direct requests for `robots.txt`
+across to the older file:
+
+    Alias /robots.txt      /opt/qis/conf/local_robots.txt
+
+## v1.50 to v2.4
 
 This is a major upgrade that requires database changes and a data migration.
 An upgrade script is supplied to automate this process where possible, but some

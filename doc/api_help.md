@@ -49,43 +49,68 @@ support JavaScript. In addition, most of the common JavaScript frameworks such a
 
 ### Calling an API function from a web page
 
-The following HTML fragment illustrates how to call an API function from a web page
-using JavaScript and the MooTools framework. If you are using a different JavaScript framework
-(or no framework), the required code will be different but the concepts are the same.
+The following JavaScript snippet illustrates how to call a public API function
+from a web browser.
 
-	<script src="http://images.example.com/static/js/mootools-core.js" type="text/javascript"></script>
-	
-	<script>
-		var ajaxRequest = new Request.JSON({
-			
-			// Set the URL of the API web service
-			url: 'http://images.example.com/api/v1/list',
-			
-			// Set the parameters for the API call
-			data: { 'path': 'myfolder' },
-			
-			// GET, POST, PUT, or DELETE (as supported by the API call)
-			method: 'GET',
-			
-			// Authentication token, not required for public API functions
-			// user: 'abcdef0123456789abcdef0123456789',
-			// password: 'unused',
-			
-			// Callback function on success
-			onSuccess: function(jsonObj) {
-				alert('Successfully returned with status code ' + jsonObj.status);
-				alert('The folder contains ' + jsonObj.data.length + ' images');
-			},
-			
-			// Callback function on error
-			onFailure: function(xhr) {
-				alert('The request failed with status code ' + xhr.status);
-			}
-		});
-		
-		// Initiate the API request
-		ajaxRequest.send();
-	</script>
+    // URL of the API function
+    var url = 'http://images.example.com/api/v1/list';
+    
+    // GET, POST, PUT, or DELETE (as supported by the API call)
+    var method = 'GET';
+    
+    // Parameters for GET requests
+    var params = '?path=myfolder';
+    
+    // Initiate a new request
+    var request = new XMLHttpRequest();
+    request.open(method, url + params, true);
+    
+    // Callback function on success
+    request.onload = function() {
+        alert('Successfully returned with status code ' + request.status);
+        var resp = JSON.parse(request.responseText);
+        alert('The folder contains ' + resp.data.length + ' images');
+    };
+    
+    // Callback function on error
+    request.onerror = function() {
+    	alert('The request failed with status code ' + request.status);
+    };
+    
+    request.send();
+
+Or to send data to a protected web service:
+
+    // URL of the API function
+    var url = 'http://images.example.com/api/v1/admin/filesystem/folders/';
+    
+    // GET, POST, PUT, or DELETE (as supported by the API call)
+    var method = 'POST';
+    
+    // Initiate a new request
+    var request = new XMLHttpRequest();
+    request.open(method, url, true);
+    
+    // Data for POST, PUT requests
+    var data = 'path=/myfolder';
+    request.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded; charset=utf-8');
+    
+    // Authentication token - call the "token" function first to get this
+    var token = 'abcdef0123456789abcdef0123456789';
+    request.setRequestHeader("Authorization", "Basic " + btoa(token + ":blank"));
+    
+    // Callback function on success
+    request.onload = function() {
+        var resp = JSON.parse(request.responseText);
+        alert('Folder created successfully with ID ' + resp.data.id);
+    };
+    
+    // Callback function on error
+    request.onerror = function() {
+        alert('Folder creation failed with status code ' + request.status);
+    };
+    
+    request.send(data);
 
 ### Calling an API function with cURL
 
@@ -134,10 +159,10 @@ The following JSON illustrates a successful API call:
 The `data` attribute provides the return value from the API call, with the return value
 being different for each API function. On error, the `data` attribute is usually set to `null`.
 
-In the HTML example function call above, the MooTools framework has taken care of converting
-the returned JSON text into a JavaScript object for us, making it available as `jsonObj`.
-The code is then able to access the results of the function as `jsonObj.status`, `jsonObj.message`
-and `jsonObj.data`.
+In the sample JavaScript code above, the line `var resp = JSON.parse(request.responseText);`
+converts the returned JSON text into a JavaScript object, making it available as `resp`.
+The code is then able to access the results of the function as `resp.status`, `resp.message`
+and `resp.data`.
 
 Because the API functions are called using HTTP, in addition to the status code returned
 in the JSON there is also an HTTP status code associated with the whole response. At present
