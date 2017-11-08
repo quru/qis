@@ -19,7 +19,7 @@ ARG AUTHORIZED_KEY
 
 # Create a user for building and running stuff
 RUN groupadd --gid 1001 $BUILD_USER && \
-    useradd --uid 1001 --gid 1001 --create-home --shell /bin/bash $BUILD_USER
+    useradd --uid 1001 --gid 1001 --groups wheel --create-home --shell /bin/bash $BUILD_USER
 
 # Install an authorized key for logging in as the build user
 USER $BUILD_USER
