@@ -7,9 +7,13 @@ FROM centos:7.4.1708
 MAINTAINER Matt Fozard <matt@quru.com>
 
 # Add extra o/s tools
-RUN yum install -y curl wget man git make gcc sed python-dev libpq-dev \
+RUN yum install -y sudo curl wget man git make gcc gcc-c++ sed mlocate \
+                   postgresql-devel openldap-devel openssl-devel libmemcached-devel \
+                   python-devel python-setuptools \
                    openssh-server openssh-clients && \
     yum clean all
+RUN easy_install pip
+RUN pip install wheel
 
 # Build variables
 ARG BUILD_USER=build
@@ -20,6 +24,7 @@ ARG AUTHORIZED_KEY
 # Create a user for building and running stuff
 RUN groupadd --gid 1001 $BUILD_USER && \
     useradd --uid 1001 --gid 1001 --groups wheel --create-home --shell /bin/bash $BUILD_USER
+RUN sed -r -i 's/%wheel\s+ALL=\(ALL\)\s+ALL/%wheel        ALL=(ALL)       NOPASSWD: ALL/g' /etc/sudoers
 
 # Install an authorized key for logging in as the build user
 USER $BUILD_USER
