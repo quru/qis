@@ -20,6 +20,12 @@ RUN yum update -y --disablerepo=*-eus-* --disablerepo=*-htb-* --disablerepo=*sji
 RUN yum-config-manager --disable *-eus-* *-htb-* *-ha-* *-rt-* *-lb-* \
                                  *-rs-* *-sap-* *-sjis-* > /dev/null
 
+# Enable optional RPMs
+RUN yum-config-manager --enable rhel-7-server-optional-rpms
+
+# Install the EPEL repo
+RUN yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-$(rpm -E '%{rhel}').noarch.rpm
+
 # Start again with a standard build script
 FROM registered_system
 

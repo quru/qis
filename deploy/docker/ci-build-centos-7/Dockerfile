@@ -6,6 +6,9 @@ FROM centos:7.4.1708
 
 MAINTAINER Matt Fozard <matt@quru.com>
 
+# Install the EPEL repo
+RUN yum -y install epel-release
+
 # Add extra o/s tools
 RUN yum install -y sudo curl wget man git make gcc gcc-c++ sed mlocate \
                    postgresql-devel openldap-devel openssl-devel libmemcached-devel \
