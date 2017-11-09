@@ -2,7 +2,26 @@
 #
 # RHEL build and testing environment.
 #
-FROM registry.access.redhat.com/rhel7/rhel:7.4
+FROM registry.access.redhat.com/rhel7/rhel:7.4 AS registered_system
+
+# RH subscription variables. Pass these in as build arguments.
+ARG RH_SUBS_USER
+ARG RH_SUBS_PASSWORD
+
+# Subscribe to RH updates before we can use yum
+RUN subscription-manager register --username=$RH_SUBS_USER --password=$RH_SUBS_PASSWORD --auto-attach
+
+# Update the system, ignoring the unusual repos
+RUN yum update -y --disablerepo=*-eus-* --disablerepo=*-htb-* --disablerepo=*sjis* \
+                  --disablerepo=*-ha-* --disablerepo=*-rt-* --disablerepo=*-lb-* \
+                  --disablerepo=*-rs-* --disablerepo=*-sap-*
+
+# Disable the unusual repos
+RUN yum-config-manager --disable *-eus-* *-htb-* *-ha-* *-rt-* *-lb-* \
+                                 *-rs-* *-sap-* *-sjis-* > /dev/null
+
+# Start again with a standard build script
+FROM registered_system
 
 MAINTAINER Matt Fozard <matt@quru.com>
 
