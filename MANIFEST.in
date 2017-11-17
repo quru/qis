@@ -5,7 +5,7 @@ include icc/*.ic*
 graft images/test_images
 include licences/*
 include logs/README
-recursive-include src/imageserver *.css *.js *.png *.gif *.bmp *.ico *.jpg *.jpeg *.sass *.scss *.html *.htm *.txt
+recursive-include src/imageserver *.css *.js *.png *.gif *.bmp *.ico *.jpg *.jpeg *.sass *.scss *.html *.htm *.txt *.sh
 recursive-exclude src/tests *
 include src/wsgi/*
 exclude MANIFEST.in
