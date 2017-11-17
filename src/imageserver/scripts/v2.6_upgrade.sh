@@ -11,7 +11,9 @@ echo "Changing directory to $QIS_HOME/src/imageserver/static/js"
 cd "$QIS_HOME/src/imageserver/static/js"
 
 echo "Removing old Javascript files"
-rm `find . -name '*_yc.js'`
+if [[ $(find . -name '*_yc.js') ]]; then
+    rm `find . -name '*_yc.js'`
+fi
 
 read -p "Do you need to maintain compatibility of Javascript files with earlier versions of QIS? [y/n]" RESP
 
