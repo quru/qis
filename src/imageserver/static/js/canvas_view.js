@@ -1640,10 +1640,18 @@ ImgCanvasView.prototype.autoZoom = function(zoomIn) {
 		shiftKey: !zoomIn,
 		api_event: true
 	};
-	// Correct page coords for when this.ctrOuterPos is position:fixed
-	if (this.uiAttrs.fullScreen && this.options.fullScreenFixed) {
-		zEvent.pageX += window.pageXOffset;
-		zEvent.pageY += window.pageYOffset;
+	// Correct page coords for when this.ctrOuterPos is based on something position:fixed
+	var fixedCtr = this.getFixedContainer();
+	if (fixedCtr) {
+	    // Include the page scroll positions
+	    zEvent.pageX += window.pageXOffset;
+	    zEvent.pageY += window.pageYOffset;
+	    // Account for this.ctrOuterPos being relative to fixedCtr
+	    if (fixedCtr !== this.ctrEl) {
+	        var fixedCtrPos = QU.elOuterPosition(fixedCtr);
+	        zEvent.pageX += fixedCtrPos.x;
+            zEvent.pageY += fixedCtrPos.y;
+	    }
 	}
 	this.onMouseDown(zEvent);
 	this.onMouseUp(zEvent);
@@ -1672,6 +1680,22 @@ ImgCanvasView.prototype.getViewportPosition = function() {
 	};
 }
 
+// Returns the first element from this.ctrEl and its parents (inclusive) that
+// has position:fixed, or null if neither the container or any of its parents
+// have position:fixed. This needs to be known because position:fixed elements
+// have a position based on the viewport instead of a position on the page.
+ImgCanvasView.prototype.getFixedContainer = function() {
+    var styles, el = this.ctrEl;
+    while (el) {
+        styles = QU.elGetStyles(el, ['position']);
+        if (styles.position === 'fixed') {
+            return el;
+        }
+        el = el.parentNode;
+    }
+    return null;
+};
+
 // Returns a normalised x,y value of 0 to 1 for a click position within the
 // viewport, or within the current grid (if forGrid is true). The click position
 // for the grid can be negative or above 1 if the click was outside the grid
@@ -1681,10 +1705,18 @@ ImgCanvasView.prototype.getClickPosition = function(event, forGrid) {
     var eventPos = QU.evPosition(event);
 	var relx = eventPos.page.x - this.ctrOuterPos.x;
 	var rely = eventPos.page.y - this.ctrOuterPos.y;
-	// Account for when this.ctrOuterPos is position:fixed
-	if (this.uiAttrs.fullScreen && this.options.fullScreenFixed) {
-		relx -= window.pageXOffset;
-		rely -= window.pageYOffset;
+	// Account for when this.ctrOuterPos is based on something with position:fixed
+	var fixedCtr = this.getFixedContainer();
+	if (fixedCtr) {
+	    // Take the page scroll positions off
+	    relx -= window.pageXOffset;
+	    rely -= window.pageYOffset;
+	    // Account for this.ctrOuterPos being relative to fixedCtr
+	    if (fixedCtr !== this.ctrEl) {
+	        var fixedCtrPos = QU.elOuterPosition(fixedCtr);
+	        relx -= fixedCtrPos.x;
+	        rely -= fixedCtrPos.y;
+	    }
 	}
 	// Convert to click coords within viewport (exclude container borders, padding)
 	relx -= this.ctrInnerPos.offsetLeft;

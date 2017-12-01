@@ -84,6 +84,10 @@ if (!window.QU) {
     // top border position and the width and height to the far ends of the opposite
     // borders. These values exclude any surrounding margins. The returned values
     // are rounded to integers.
+    // Note that items with position:fixed do not have a position on the page.
+    // The outer position of an element within a position:fixed parent is the
+    // position relative to that parent, and the parent's outer position is
+    // defined in terms of the viewport rather than the page.
     QU.elOuterPosition = function(el) {
         el = QU.id(el);
         // From https://www.quirksmode.org/js/findpos.html
@@ -117,8 +121,8 @@ if (!window.QU) {
 
     // Returns the {left: n, right: n, top: n, bottom: n} dimensions of the
     // combined border and padding sizes within an element. When added to the
-    // values from QU.elInnerSize() this should equal the outer size of the
-    // element as returned by QU.elOuterPosition(). The returned values are
+    // values from QU.elInnerSize() this should equal the outer dimensions of
+    // the element as returned by QU.elOuterPosition(). The returned values are
     // rounded to integers.
     QU.elInnerOffsets = function(el) {
         el = QU.id(el);
