@@ -3,29 +3,32 @@
 Quru Image Server provides a web-based Application Programming Interface (API) so that
 software developers can integrate QIS into their own web sites and imaging solutions.
 
-The API consists a number of HTTP [RESTful web services](http://en.wikipedia.org/wiki/Representational_state_transfer#RESTful_web_services)
-that return data in the [JSON](http://www.json.org/) format.
+The API consists a number of HTTP [RESTful web services](http://en.wikipedia.org/wiki/Representational_state_transfer#RESTful_web_services),
+most of which return data in the [JSON](http://www.json.org/) format.
 
 ## Contents
 
 * [About JSON](#json)
 * [Using the API](#usage)
+* [Public image services](#api_image_group)
+    * [image - retrieve a processed image](#api_image)
+    * [original - retrieve an unmodified image file](#api_original)
 * [Public web services](#api_public)
-	* [list - lists the images in a folder path](#api_list)
-	* [details - retrieve image information by path](#api_details)
+    * [list - list the images in a folder path](#api_list)
+    * [details - retrieve image information by path](#api_details)
 * [Protected web services](#api_private)
-	* [token - obtain an API authentication token](#api_token)
-	* [upload - upload an image](#api_upload)
+    * [token - obtain an API authentication token](#api_token)
+    * [upload - upload an image](#api_upload)
 * [Administration web services](#api_admin)
-	* [image data - manage image metadata](#api_data_images)
-	* [image templates - manage image templates](#api_data_templates)
-	* [users - manage user accounts](#api_data_users)
-	* [groups - manage groups and system permissions](#api_data_groups)
-	* [group membership - manage group members](#api_data_usergroups)
-	* [folder permissions - manage access permissions](#api_data_permissions)
-	* [disk files - manage the file system](#api_disk_files)
-	* [disk folders - manage the file system](#api_disk_folders)
-	* [system tasks - run background tasks](#api_tasks)
+    * [image data - manage image metadata](#api_data_images)
+    * [image templates - manage image templates](#api_data_templates)
+    * [users - manage user accounts](#api_data_users)
+    * [groups - manage groups and system permissions](#api_data_groups)
+    * [group membership - manage group members](#api_data_usergroups)
+    * [folder permissions - manage access permissions](#api_data_permissions)
+    * [disk files - manage the file system](#api_disk_files)
+    * [disk folders - manage the file system](#api_disk_folders)
+    * [system tasks - run background tasks](#api_tasks)
 
 <a name="json"></a>
 ## About JSON
@@ -187,13 +190,87 @@ The following status codes may be returned:
 </table><br>
 
 
+<a name="api_image_group"></a>
+# Public image services
+
+These services return binary image data without a JSON wrapper, and provide the
+main way of accessing the images in the image library. They can be used directly
+in HTML (with `img` or `picture` tags) or from JavaScript (with XHR or `fetch` requests),
+or can form part of a back-end workflow using any language or library that supports
+HTTP requests.
+
+For publicly accessible images, these services can be called from any anonymous
+HTTP client. For images with a [folder permission](#api_data_permissions) in place,
+either an [API token](#api_token) or a QIS web session (via the QIS login page)
+is required. The returned status codes are the same as those defined above for the
+JSON web services.
+
+<a name="api_image"></a>
+## image
+Creates and retrieves (as binary data) a processed image, based on the requested
+template and imaging parameters. If no template is specified, the image will have
+the system's default template applied to it. See the [imaging guide](image_help.md)
+for the full documentation and list of available parameters.
+
+### URL
+* `/image`
+
+### Supported methods
+* `GET`
+
+### Parameters
+* `src` - Mandatory, text - Specifies the image path to retrieve
+* _`[any]`_ - Optional, mixed - See the imaging guide for all other parameters
+
+### Permissions required
+* View permission for the folder containing the image
+* If no authentication token has been provided,
+  the image's folder must be publicly accessible
+
+### Returns
+Binary image data, with a content type that is determined by the image format
+requested (or otherwise the default image format).
+
+### Examples
+
+    $ curl -o myfile.png 'http://images.example.com/image?src=myfolder/myfile.jpg&width=200&format=png'
+
+<a name="api_original"></a>
+## original
+Retrieves an original, unmodified image file as binary data. See the
+[imaging guide](image_help.md) for the full documentation and list of
+available parameters.
+
+### URL
+* `/original`
+
+### Supported methods
+* `GET`
+
+### Parameters
+* `src` - Mandatory, text - Specifies the image path to retrieve
+* _`[any]`_ - Optional, mixed - See the imaging guide for all other parameters
+
+### Permissions required
+* Download permission for the folder containing the image
+* If no authentication token has been provided,
+  the image's folder must have public download permission
+
+### Returns
+Binary image data, with a content type that is determined by the file's image format.
+
+### Examples
+
+    $ curl -o myfile.jpg 'http://images.example.com/original?src=myfolder/myfile.jpg'
+
+
 <a name="api_public"></a>
 # Public web services
 
 For publicly accessible images, these web services can be called from an anonymous
 (not logged in) session without requiring an [API authentication token](#api_token).
-For images with a [folder permission](#api_data_permissions) in place,
-a token is still required however.
+For images with a [folder permission](#api_data_permissions) in place, a token is
+required however.
 
 <a name="api_list"></a>
 ## list
