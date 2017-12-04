@@ -26,16 +26,16 @@ setup(
 
     install_requires=[
         "qismagick>=2.2.0",
-        "Flask==0.12",
-        "python-ldap==2.4.27",
-        "pylibmc==1.5.1",
+        "Flask==0.12.2",
+        "python-ldap==2.4.45",
+        "pylibmc==1.5.2",
         "psycopg2==2.6.2",
-        "SQLAlchemy==1.0.15",
-        "requests==2.11.1",
-        "psutil==2.2.1",
+        "SQLAlchemy==1.1.15",
+        "requests==2.18.4",
+        "psutil==5.4.1",
         "itsdangerous==0.24",
         "importlib",  # Only for Python 2.6
-        "markdown==2.6.2"
+        "markdown==2.6.9"
     ],
 
     setup_requires=[
