@@ -61,7 +61,9 @@ from imageserver.util import validate_number, validate_string
 
 # API login - generates a token to use the API outside of the web site
 @blueprint.route('/token', methods=['POST'])
-@blueprint.route(url_version_prefix + '/token', methods=['POST'])
+@blueprint.route(url_version_prefix + '/token', methods=['POST'])  # Legacy (no slash)
+@blueprint.route('/token/', methods=['POST'], strict_slashes=False)
+@blueprint.route(url_version_prefix + '/token/', methods=['POST'], strict_slashes=False)  # v2.6.1 onwards
 @csrf_exempt
 @login_point(from_web=False)
 @add_api_error_handler
@@ -110,7 +112,9 @@ def token():
 # optionally with the title, description, width, height attributes of each.
 # Any additional parameters are passed on for inclusion in the returned image URLs.
 @blueprint.route('/list', methods=['GET'])
-@blueprint.route(url_version_prefix + '/list', methods=['GET'])
+@blueprint.route(url_version_prefix + '/list', methods=['GET'])  # Legacy (no slash)
+@blueprint.route('/list/', methods=['GET'], strict_slashes=False)
+@blueprint.route(url_version_prefix + '/list/', methods=['GET'], strict_slashes=False)  # v2.6.1 onwards
 @add_api_error_handler
 def imagelist():
     # Check parameters
@@ -201,7 +205,9 @@ def imagelist():
 
 # Returns JSON encoded basic image attributes.
 @blueprint.route('/details', methods=['GET'])
-@blueprint.route(url_version_prefix + '/details', methods=['GET'])
+@blueprint.route(url_version_prefix + '/details', methods=['GET'])  # Legacy (no slash)
+@blueprint.route('/details/', methods=['GET'], strict_slashes=False)
+@blueprint.route(url_version_prefix + '/details/', methods=['GET'], strict_slashes=False)  # v2.6.1 onwards
 @add_api_error_handler
 def imagedetails():
     # Get/check parameters
@@ -229,7 +235,9 @@ def imagedetails():
 # Raw image(s) upload, returns a dict of original filename to image details
 # (as for /details), or filename to error message if an upload failed
 @blueprint.route('/upload', methods=['POST'])
-@blueprint.route(url_version_prefix + '/upload', methods=['POST'])
+@blueprint.route(url_version_prefix + '/upload', methods=['POST'])  # Legacy (no slash)
+@blueprint.route('/upload/', methods=['POST'], strict_slashes=False)
+@blueprint.route(url_version_prefix + '/upload/', methods=['POST'], strict_slashes=False)  # v2.6.1 onwards
 @api_permission_required
 @add_api_error_handler
 def upload():
@@ -241,13 +249,17 @@ def upload():
 
     ret_dict = {}
     try:
-        path_index = parse_int(path_index)
-        overwrite = parse_boolean(overwrite)
-        validate_string(path, 0, 1024)
-
         current_user = get_session_user()
         assert current_user is not None
 
+        # Check params
+        path_index = parse_int(path_index)
+        overwrite = parse_boolean(overwrite)
+        validate_string(path, 0, 1024)
+        if len(file_list) < 1:
+            raise ValueError('No files have been attached')
+
+        # Loop over the upload files
         put_image_exception = None
         can_download = None
         for wkfile in file_list:

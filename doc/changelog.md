@@ -1,3 +1,9 @@
+# v2.6.1
+_Changes: API URL changes for consistency (old URLs still supported)_
+
+* Update the Python and web code
+* Restart the Apache service
+
 # v2.6.0
 _Changes: Remove MooTools library from the public image viewers, gallery and slideshow.
 Upgrade MooTools library to 1.6.0, now for internal use only.

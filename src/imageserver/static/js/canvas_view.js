@@ -317,7 +317,7 @@ ImgGrid.prototype.setViewportSize = function(width, height) {
 
 // Loads image information
 ImgGrid.prototype.loadImageInfo = function() {
-	var dataURL = this.urlBase + '/api/v1/details?src=' + encodeURIComponent(this.urlParams.src);
+	var dataURL = this.urlBase + '/api/v1/details/?src=' + encodeURIComponent(this.urlParams.src);
 	QU.jsonRequest(
 	    dataURL,
 	    'GET',

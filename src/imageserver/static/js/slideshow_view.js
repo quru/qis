@@ -173,7 +173,7 @@ ImgSlideshow.prototype.setMessage = function(msg) {
 };
 
 ImgSlideshow.prototype.addFolderImages = function() {
-	var dataURL = this.options.server + 'api/v1/list?path=' + encodeURIComponent(this.options.folder);
+	var dataURL = this.options.server + 'api/v1/list/?path=' + encodeURIComponent(this.options.folder);
     QU.jsonRequest(
         dataURL,
         'GET',

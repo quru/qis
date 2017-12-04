@@ -80,16 +80,16 @@ class ImageServerAPITests(BaseTestCase):
     # API token login - bad parameters
     def test_token_login_bad_params(self):
         # Missing params
-        rv = self.app.post('/api/token')
+        rv = self.app.post('/api/token/')
         self.assertEqual(rv.status_code, API_CODES.INVALID_PARAM)
         # Invalid username
-        rv = self.app.post('/api/token', data={
+        rv = self.app.post('/api/token/', data={
             'username': 'unclebulgaria',
             'password': 'wimbledon'
         })
         self.assertEqual(rv.status_code, API_CODES.UNAUTHORISED)
         # Invalid password
-        rv = self.app.post('/api/token', data={
+        rv = self.app.post('/api/token/', data={
             'username': 'admin',
             'password': 'wimbledon'
         })
@@ -113,7 +113,7 @@ class ImageServerAPITests(BaseTestCase):
     def test_token_login_http_basic_auth(self):
         setup_user_account('kryten', 'none', allow_api=True)
         creds = base64.b64encode('kryten:kryten')
-        rv = self.app.post('/api/token', headers={
+        rv = self.app.post('/api/token/', headers={
             'Authorization': 'Basic ' + creds
         })
         self.assertEqual(rv.status_code, API_CODES.SUCCESS)
@@ -140,7 +140,7 @@ class ImageServerAPITests(BaseTestCase):
         token = self.api_login('kryten', 'kryten')
         creds = base64.b64encode(token + ':password')
         # Try to get a new token with only the old token
-        rv = self.app.post('/api/token', headers={
+        rv = self.app.post('/api/token/', headers={
             'Authorization': 'Basic ' + creds
         })
         self.assertEqual(rv.status_code, API_CODES.UNAUTHORISED)
@@ -223,19 +223,19 @@ class ImageServerAPITests(BaseTestCase):
     # Folder list
     def test_api_list(self):
         # Unauthorised path
-        rv = self.app.get('/api/list?path=../../../etc/')
+        rv = self.app.get('/api/list/?path=../../../etc/')
         self.assertEqual(rv.status_code, API_CODES.UNAUTHORISED)
         self.assertIn('application/json', rv.headers['Content-Type'])
         obj = json.loads(rv.data)
         self.assertEqual(obj['status'], API_CODES.UNAUTHORISED)
         # Invalid path
-        rv = self.app.get('/api/list?path=non-existent')
+        rv = self.app.get('/api/list/?path=non-existent')
         self.assertEqual(rv.status_code, API_CODES.NOT_FOUND)
         self.assertIn('application/json', rv.headers['Content-Type'])
         obj = json.loads(rv.data)
         self.assertEqual(obj['status'], API_CODES.NOT_FOUND)
         # Valid request
-        rv = self.app.get('/api/list?path=test_images')
+        rv = self.app.get('/api/list/?path=test_images')
         self.assertEqual(rv.status_code, API_CODES.SUCCESS)
         self.assertIn('application/json', rv.headers['Content-Type'])
         obj = json.loads(rv.data)
@@ -243,7 +243,7 @@ class ImageServerAPITests(BaseTestCase):
         self.assertIn('filename', obj['data'][0])
         self.assertIn('url', obj['data'][0])
         # Valid request with extra image params
-        rv = self.app.get('/api/list?path=test_images&width=500')
+        rv = self.app.get('/api/list/?path=test_images&width=500')
         self.assertEqual(rv.status_code, API_CODES.SUCCESS)
         obj = json.loads(rv.data)
         self.assertIn('width=500', obj['data'][0]['url'])
@@ -251,16 +251,16 @@ class ImageServerAPITests(BaseTestCase):
     # Folder list - v2.2.1 support paging
     def test_api_list_paging(self):
         # Maximum 1000
-        rv = self.app.get('/api/list?path=test_images&limit=1001')
+        rv = self.app.get('/api/list/?path=test_images&limit=1001')
         self.assertEqual(rv.status_code, API_CODES.INVALID_PARAM)
         # Test limit
-        rv = self.app.get('/api/list?path=test_images&limit=3')
+        rv = self.app.get('/api/list/?path=test_images&limit=3')
         self.assertEqual(rv.status_code, API_CODES.SUCCESS)
         obj1 = json.loads(rv.data)
         list1 = obj1['data']
         self.assertEqual(len(list1), 3)
         # Test start + limit
-        rv = self.app.get('/api/list?path=test_images&start=1&limit=3')
+        rv = self.app.get('/api/list/?path=test_images&start=1&limit=3')
         self.assertEqual(rv.status_code, API_CODES.SUCCESS)
         obj2 = json.loads(rv.data)
         list2 = obj2['data']
@@ -271,7 +271,7 @@ class ImageServerAPITests(BaseTestCase):
         self.assertEqual(list2[1], list1[2])
         self.assertNotIn(list2[2], list1)
         # Start from the end
-        rv = self.app.get('/api/list?path=test_images&start=999999')
+        rv = self.app.get('/api/list/?path=test_images&start=999999')
         self.assertEqual(rv.status_code, API_CODES.SUCCESS)
         obj3 = json.loads(rv.data)
         list3 = obj3['data']
@@ -280,13 +280,13 @@ class ImageServerAPITests(BaseTestCase):
     # Image details
     def test_api_details(self):
         # Unauthorised path
-        rv = self.app.get('/api/details?src=../../../etc/')
+        rv = self.app.get('/api/details/?src=../../../etc/')
         assert rv.status_code == API_CODES.UNAUTHORISED
         # Try requesting a folder
-        rv = self.app.get('/api/details?src=test_images')
+        rv = self.app.get('/api/details/?src=test_images')
         assert rv.status_code == API_CODES.NOT_FOUND
         # Valid request
-        rv = self.app.get('/api/details?src=test_images/cathedral.jpg')
+        rv = self.app.get('/api/details/?src=test_images/cathedral.jpg')
         assert rv.status_code == API_CODES.SUCCESS
         assert 'application/json' in rv.headers['Content-Type']
         obj = json.loads(rv.data)
@@ -296,7 +296,7 @@ class ImageServerAPITests(BaseTestCase):
     # Database admin API - images
     def test_data_api_images(self):
         # Get image ID
-        rv = self.app.get('/api/details?src=test_images/cathedral.jpg')
+        rv = self.app.get('/api/details/?src=test_images/cathedral.jpg')
         assert rv.status_code == API_CODES.SUCCESS
         image_id = json.loads(rv.data)['data']['id']
         # Set API URL
@@ -852,7 +852,7 @@ class ImageServerAPITests(BaseTestCase):
             # Create a test folder and test image and get their IDs
             make_dirs(temp_folder)
             copy_file('test_images/cathedral.jpg', temp_image)
-            rv = self.app.get('/api/details?src=' + temp_image)
+            rv = self.app.get('/api/details/?src=' + temp_image)
             assert rv.status_code == API_CODES.SUCCESS
             temp_image_id = json.loads(rv.data)['data']['id']
             temp_folder_id = dm.get_folder(folder_path=temp_folder).id
@@ -1300,17 +1300,17 @@ class ImageServerAPITests(BaseTestCase):
             set_default_public_permission(FolderPermission.ACCESS_NONE)
             setup_fp_user(FolderPermission.ACCESS_NONE)
             # Folder list API requires view permission
-            rv = self.app.get('/api/list?path=test_images')
+            rv = self.app.get('/api/list/?path=test_images')
             assert rv.status_code == API_CODES.UNAUTHORISED
             setup_fp_user(FolderPermission.ACCESS_VIEW)
-            rv = self.app.get('/api/list?path=test_images')
+            rv = self.app.get('/api/list/?path=test_images')
             assert rv.status_code == API_CODES.SUCCESS
             # Image details API requires view permission
             setup_fp_user(FolderPermission.ACCESS_NONE)
-            rv = self.app.get('/api/details?src=' + db_image.src)
+            rv = self.app.get('/api/details/?src=' + db_image.src)
             assert rv.status_code == API_CODES.UNAUTHORISED
             setup_fp_user(FolderPermission.ACCESS_VIEW)
-            rv = self.app.get('/api/details?src=' + db_image.src)
+            rv = self.app.get('/api/details/?src=' + db_image.src)
             assert rv.status_code == API_CODES.SUCCESS
             # Image data API - read - requires view permission
             setup_fp_user(FolderPermission.ACCESS_NONE)
@@ -1550,3 +1550,31 @@ class ImageServerAPITests(BaseTestCase):
             self.assertEqual(res['exception']['message'], 'Warp failure')
         finally:
             dm.delete_object(db_task)
+
+    # v2.6.1 Some of the APIs were inconsistent in not having a trailing slash.
+    #        Added support to make this consistent but kept compatibility.
+    def test_trailing_slashes(self):
+        test_get_urls = [
+            ("/api/list", "?path=test_images"),
+            ("/api/details", "?src=test_images/cathedral.jpg"),
+        ]
+        test_post_urls = [
+            "/api/token",
+            "/api/upload",
+        ]
+        for url_parts in test_get_urls:
+            # Test without the slash (legacy)
+            url = url_parts[0] + url_parts[1]
+            rv = self.app.get(url)
+            self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+            # Test with the slash (intended use from now on)
+            url = url_parts[0] + "/" + url_parts[1]
+            rv = self.app.get(url)
+            self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        self.login('admin', 'admin')
+        for url in test_post_urls:
+            # To keep it simple, just check that the return is neither a 301 or a 404
+            rv = self.app.post(url)
+            self.assertEqual(rv.status_code, API_CODES.INVALID_PARAM)
+            rv = self.app.post(url + "/")
+            self.assertEqual(rv.status_code, API_CODES.INVALID_PARAM)

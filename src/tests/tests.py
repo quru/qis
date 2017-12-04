@@ -389,7 +389,7 @@ class BaseTestCase(FlaskTestCase):
 
     # Utility - gets an API token
     def api_login(self, usr, pwd):
-        rv = self.app.post('/api/token', data={
+        rv = self.app.post('/api/token/', data={
             'username': usr,
             'password': pwd
         })
@@ -410,7 +410,7 @@ class BaseTestCase(FlaskTestCase):
     # Returns the app.post() return value.
     def file_upload(self, app, src_file_path, dest_folder, overwrite=1):
         with open(src_file_path) as infile:
-            rv = app.post('/api/upload', data={
+            rv = app.post('/api/upload/', data={
                 'files': infile,
                 'path': dest_folder,
                 'overwrite': str(overwrite)
@@ -641,7 +641,7 @@ class ImageServerBackgroundTaskTests(BaseTestCase):
             )
             self.assertImageMatch(rv.data, p27_test_filename)
             # Check page 27 dimensions in the database
-            rv = self.app.get('/api/details?src=' + burst_path + '/page-00027.png')
+            rv = self.app.get('/api/details/?src=' + burst_path + '/page-00027.png')
             assert rv.status_code == API_CODES.SUCCESS
             obj = json.loads(rv.data)
             assert obj['data']['width'] == expect[0]
@@ -1365,7 +1365,7 @@ class ImageServerTestsFast(BaseTestCase):
                 for image_src in test_case['try_images']:
                     rv = self.app.get('/image?src=' + image_src)
                     self.assertEqual(rv.status_code, 200)
-                    rv = self.app.get('/api/v1/details?src=' + image_src)
+                    rv = self.app.get('/api/v1/details/?src=' + image_src)
                     self.assertEqual(rv.status_code, 200)
                     obj = json.loads(rv.data)
                     image_ids.append(obj['data']['id'])
@@ -2314,7 +2314,7 @@ class ImageServerTestsFast(BaseTestCase):
         dm.delete_image(i, True)
         assert dm.get_image(src=image_path) is None
         # Check db auto-populates from details API
-        rv = self.app.get('/api/details?src=' + image_path)
+        rv = self.app.get('/api/details/?src=' + image_path)
         assert rv.status_code == 200
         i = dm.get_image(src=image_path, load_history=True)
         assert i is not None and i.width == 1600 and i.height == 1200, 'db has '+str(i)
@@ -2454,7 +2454,7 @@ class ImageServerTestsFast(BaseTestCase):
             # Test both files success
             with open(dst_file1) as infile1:
                 with open(dst_file2) as infile2:
-                    rv = self.app.post('/api/upload', data={
+                    rv = self.app.post('/api/upload/', data={
                         'files': [infile1, infile2],
                         'path': 'test_images',
                         'overwrite': '1'
@@ -2472,7 +2472,7 @@ class ImageServerTestsFast(BaseTestCase):
             delete_file('test_images/tmp_qis_uploadfile1.jpg')
             with open(dst_file1) as infile1:
                 with open(dst_file2) as infile2:
-                    rv = self.app.post('/api/upload', data={
+                    rv = self.app.post('/api/upload/', data={
                         'files': [infile1, infile2],
                         'path': 'test_images',
                         'overwrite': '0'  # This will break now on dst_file2
@@ -2536,7 +2536,7 @@ class ImageServerTestsFast(BaseTestCase):
     # File uploads expected failures
     def test_bad_file_uploads(self):
         # Should fail if not logged in
-        rv = self.app.post('/api/upload', data={
+        rv = self.app.post('/api/upload/', data={
             'files': None,
             'path': 'test_images',
             'overwrite': '1'

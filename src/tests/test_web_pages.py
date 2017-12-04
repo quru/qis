@@ -344,11 +344,11 @@ class ImageServerTestsWebPages(BaseTestCase):
 
     # Test that the markdown substitutions are working
     def test_markdown_subs(self):
-        # API help - it's "url = 'http://images.example.com/api/v1/list'" in the Markdown
+        # API help - it's "url = 'http://images.example.com/api/v1/list/'" in the Markdown
         self.call_page_requiring_login(
             '/api/help/',
             False,
-            "url = 'http://localhost/api/v1/list'"
+            "url = 'http://localhost/api/v1/list/'"
         )
         # Image help
         self.login('webuser', 'webuser')

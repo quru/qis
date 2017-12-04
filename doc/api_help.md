@@ -56,7 +56,7 @@ The following JavaScript snippet illustrates how to call a public API function
 from a web browser.
 
     // URL of the API function
-    var url = 'http://images.example.com/api/v1/list';
+    var url = 'http://images.example.com/api/v1/list/';
     
     // GET, POST, PUT, or DELETE (as supported by the API call)
     var method = 'GET';
@@ -124,7 +124,7 @@ useful scripts and quickly test individual functions.
 This document will also use cURL for most of its examples. In these, the `$` represents the
 command line prompt, and is not to be typed. The cURL equivalent of the above HTML example is simply:
 
-	$ curl 'http://images.example.com/api/v1/list?path=myfolder'
+	$ curl 'http://images.example.com/api/v1/list/?path=myfolder'
 
 This displays the raw JSON text returned by the server, but does not check the values or process
 them.
@@ -283,7 +283,7 @@ to implement paging. The end of the results list is reached when you get back
 less than `limit` results.
 
 ### URL
-* `/api/v1/list`
+* `/api/v1/list/`
 
 ### Supported methods
 * `GET`
@@ -311,7 +311,7 @@ parameter set to get the next page of results.
 
 ### Examples
 
-	$ curl 'http://images.example.com/api/v1/list?path=myfolder&limit=3'
+	$ curl 'http://images.example.com/api/v1/list/?path=myfolder&limit=3'
 	{
 	  "data": [
 	    {
@@ -331,7 +331,7 @@ parameter set to get the next page of results.
 	  "status": 200
 	}
 
-	$ curl 'http://images.example.com/api/v1/list?path=myfolder&start=3&limit=1'
+	$ curl 'http://images.example.com/api/v1/list/?path=myfolder&start=3&limit=1'
 	{
 	  "data": [
 	    {
@@ -343,7 +343,7 @@ parameter set to get the next page of results.
 	  "status": 200
 	}
 
-	$ curl 'http://images.example.com/api/v1/list?path=myfolder&attributes=1&tmp=Thumbnail'
+	$ curl 'http://images.example.com/api/v1/list/?path=myfolder&attributes=1&tmp=Thumbnail'
 	{
 	  "data": [
 	    {
@@ -386,7 +386,7 @@ parameter set to get the next page of results.
 Retrieves the attributes of a single image from its path.
 
 ### URL
-* `/api/v1/details`
+* `/api/v1/details/`
 
 ### Supported methods
 * `GET`
@@ -403,7 +403,7 @@ An object containing image attributes, as shown below.
 
 ### Example
 
-	$ curl 'http://images.example.com/api/v1/details?src=myfolder/myimage.jpg'
+	$ curl 'http://images.example.com/api/v1/details/?src=myfolder/myimage.jpg'
 	{
 	  "data": {
 	    "id": 4,
@@ -446,7 +446,7 @@ The token's expiry time is configured by the `API_TOKEN_EXPIRY_TIME` system sett
 The default value is 1 hour.
 
 ### URL
-* `/api/v1/token`
+* `/api/v1/token/`
 
 ### Supported methods
 * `POST`
@@ -471,7 +471,7 @@ with the token as the username value. The password value is unused and can be bl
 
 ### Example
 
-	$ curl -X POST -u username:password 'https://images.example.com/api/v1/token'
+	$ curl -X POST -u username:password 'https://images.example.com/api/v1/token/'
 	{
 	  "data": {
 	    "token": "eyJhbGciOiJIUzI1NiIsImZ4cCI6MTQyOTcwNTI4NSwibWF0IjoxNDI5NzAxNjg1fQ.eyJ1c2VyX2lkIj5zfQ.nVdH2Eee8aw2lUamFSz3Wu6CKPl49GrrGz-2LgN791Y"
@@ -486,7 +486,7 @@ Uploads one or more image files, optionally replacing any existing files that al
 with the same name.
 
 ### URL
-* `/api/v1/upload`
+* `/api/v1/upload/`
 
 ### Supported methods
 * `POST`
@@ -534,7 +534,7 @@ no data object is returned.
 
 ### Examples
 
-	$ curl -X POST -u <token>:unused -F files=@myimage.jpg -F path_index=-1 -F path=test_images -F overwrite=false 'https://images.example.com/api/v1/upload'
+	$ curl -X POST -u <token>:unused -F files=@myimage.jpg -F path_index=-1 -F path=test_images -F overwrite=false 'https://images.example.com/api/v1/upload/'
 	{
 	  "data": {
 	    "myimage.jpg": {
@@ -555,7 +555,7 @@ no data object is returned.
 
 But then running the same command again:
 
-	$ curl -X POST -u <token>:unused -F files=@myimage.jpg -F path_index=-1 -F path=test_images -F overwrite=false 'https://images.example.com/api/v1/upload'
+	$ curl -X POST -u <token>:unused -F files=@myimage.jpg -F path_index=-1 -F path=test_images -F overwrite=false 'https://images.example.com/api/v1/upload/'
 	{
 	  "data": {
 	    "myimage.jpg": {
