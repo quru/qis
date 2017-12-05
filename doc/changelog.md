@@ -1,13 +1,13 @@
 # v2.6.2
 _Changes: Upgrade SQLAlchemy to v1.1, psutil to 5.4,
-plus minor upgrades to python-ldap, pylibmc, requests, and markdown_
+plus minor upgrades to python-ldap, pylibmc, and python-requests_
 
 * Update the Python dependencies (from `requirements.txt` or by installing a
   newer `dependencies.tar.gz`)
 * Restart the Apache service
 
 # v2.6.1
-_Changes: API URL changes for consistency (old URLs still supported)_
+_Changes: API URL changes for consistency (the previous URLs are still supported)_
 
 * Update the Python and web code
 * Restart the Apache service

@@ -30,12 +30,12 @@ setup(
         "python-ldap==2.4.45",
         "pylibmc==1.5.2",
         "psycopg2==2.6.2",
-        "SQLAlchemy==1.1.15",
+        "SQLAlchemy==1.1.15",  # 1.1.x is last support for Python 2.6
         "requests==2.18.4",
         "psutil==5.4.1",
         "itsdangerous==0.24",
-        "importlib",  # Only for Python 2.6
-        "markdown==2.6.9"
+        "importlib",           # Only for Python 2.6
+        "markdown==2.6.2"      # 2.6.2 is last support for Python 2.6
     ],
 
     setup_requires=[
