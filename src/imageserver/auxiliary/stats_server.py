@@ -47,6 +47,7 @@ from threading import Event, Lock, Thread
 from time import sleep
 
 from flask import current_app as app
+from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 
 from imageserver.counter import Counter
@@ -317,7 +318,10 @@ class StatsSocketServer(SocketServer.ThreadingTCPServer):
             db_sys_stats.downloads += stats['downloads']
             db_sys_stats.total_bytes += stats['bytes']
             db_sys_stats.request_seconds += stats['request_seconds']
-            db_sys_stats.max_request_seconds = stats['max_request_seconds']
+            db_sys_stats.max_request_seconds = max(
+                db_sys_stats.max_request_seconds,
+                stats['max_request_seconds']
+            )
             db_sys_stats.cpu_pc = st_cpu
             db_sys_stats.memory_pc = st_ram
             db_sys_stats.cache_pc = st_dcache
@@ -346,7 +350,7 @@ class StatsSocketServer(SocketServer.ThreadingTCPServer):
                 model.downloads: model.downloads + dcount,
                 model.total_bytes: model.total_bytes + bytesum,
                 model.request_seconds: model.request_seconds + rsecs,
-                model.max_request_seconds: maxsecs,
+                model.max_request_seconds: func.greatest(model.max_request_seconds, maxsecs),
                 model.to_time: dt_now
             }, synchronize_session=False)
 
