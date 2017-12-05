@@ -151,10 +151,10 @@ class StatsSocketServer(SocketServer.ThreadingTCPServer):
         self.init_engine()
 
     def init_engine(self):
-        # Initialise hardware stats and psutil
-        self._reset_hardware_caches()
-        self._poll_hardware()  # See psutil.cpu_percent(interval=None) docs
-        self._reset_hardware_caches()
+        # Initialise hardware stats and psutil (see the psutil docs for
+        # cpu_percent(interval=None) for why we run an initial poll here)
+        self._poll_hardware()
+        self._reset_hardware_stats()
         # Create system and image stats caches
         self._reset_caches()
         # Protect caches from simultaneous access problems
@@ -285,11 +285,11 @@ class StatsSocketServer(SocketServer.ThreadingTCPServer):
         # Note the last reset time
         self.caches_started = datetime.utcnow()
 
-    def _reset_hardware_caches(self):
+    def _reset_hardware_stats(self):
         """
-        Clears the current hardware (CPU, RAM) stats caches.
+        Clears the current hardware (i.e. CPU, RAM) stats caches.
         This should happen whenever the system stats record is rolled over.
-        Only the flush thread uses the hardware stats so no locks are required.
+        Only the flush thread polls the hardware stats so no locks are required.
         """
         self.hw_cache = {
             'cpu': [],
@@ -308,9 +308,9 @@ class StatsSocketServer(SocketServer.ThreadingTCPServer):
                     self.caches_started, dt_now
                 )
                 db_session.add(db_sys_stats)
-                self._reset_hardware_caches()
+                self._reset_hardware_stats()
 
-            st_cpu, st_ram, st_dcache = self._poll_hardware()
+            st_cpu, st_ram, st_dcache = self._update_hardware_stats()
 
             db_sys_stats.requests += stats['requests']
             db_sys_stats.views += stats['views']
@@ -489,14 +489,22 @@ class StatsSocketServer(SocketServer.ThreadingTCPServer):
 
     def _poll_hardware(self):
         """
-        Returns a tuple of
-        (average CPU usage, average RAM usage, current cache usage)
-        for the server running the stats process (this!). The CPU and RAM
-        values will be returned as 0 if the psutils package is not installed.
+        Returns a tuple of (current CPU usage, current RAM usage, current cache usage)
+        for the server running the stats process (this!). The CPU and RAM values
+        will be returned as 0 if the psutil package is not installed.
         """
         current_cpu = psutil.cpu_percent(interval=None) if _have_psutil else 0
         current_ram = psutil.virtual_memory().percent if _have_psutil else 0
         current_cache = max(self.data_cache.size_percent(), 0)
+        return (current_cpu, current_ram, current_cache)
+
+    def _update_hardware_stats(self):
+        """
+        Polls the current hardware stats and returns a tuple of
+        (average CPU usage, average RAM usage, current cache usage),
+        giving the averages since _reset_hardware_stats() was last called.
+        """
+        current_cpu, current_ram, current_cache = self._poll_hardware()
 
         self.logger.debug('Server usage: CPU %.1f%%, RAM %.1f%%, cache %d%%' % (
             current_cpu, current_ram, current_cache
