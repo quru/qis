@@ -42,9 +42,15 @@ cd ..
 
 # Upgrade the venv to avoid setuptools bugs
 echo -e '\nUpgrading pip and setuptools'
-pip install -U pip
-pip install -U setuptools
-pip install wheel
+if [ "$PYTHON_VER" = "python2.6" ]; then
+    pip install -U "pip<10"
+    pip install -U "setuptools<37"
+    pip install -U "wheel<0.30"
+else
+    pip install -U pip
+    pip install -U setuptools
+    pip install -U wheel
+fi
 
 # Download and cache the sdists for everything
 echo -e '\nDownloading requirements'

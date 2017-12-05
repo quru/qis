@@ -30,7 +30,11 @@ ${VENV_PATH}/bin/flake8: venv
 	${VENV_ACTIVATE} ; pip install flake8
 
 venv: ${VENV_PATH}/bin/activate doc/requirements.txt setup.py ${QISMAGICK_SO}
+ifeq (${PYTHON},python2.6)
+	${VENV_ACTIVATE} ; pip install --upgrade "pip<10" ; pip install --upgrade "setuptools<37"
+else
 	${VENV_ACTIVATE} ; pip install --upgrade pip ; pip install --upgrade setuptools
+endif
 	${VENV_ACTIVATE} ; pip install --upgrade --force-reinstall --no-index --find-links file://$(QISMAGICK_WHEEL_DIR) qismagick
 	${VENV_ACTIVATE} ; pip install --upgrade -r doc/requirements.txt
 
