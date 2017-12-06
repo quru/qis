@@ -31,6 +31,13 @@ FROM registered_system
 
 MAINTAINER Matt Fozard <matt@quru.com>
 
+# Build variables
+ARG BUILD_USER=build
+ARG IM_VERSION=6.9.9-25
+# This should contain a public key (the actual key, not a filename) that is
+# allowed to log in via SSH. Pass this in as a build argument.
+ARG AUTHORIZED_KEY
+
 # Add extra o/s tools
 RUN yum install -y sudo curl wget man git make gcc gcc-c++ sed mlocate \
                    postgresql-devel openldap-devel openssl-devel libmemcached-devel \
@@ -40,11 +47,13 @@ RUN yum install -y sudo curl wget man git make gcc gcc-c++ sed mlocate \
 RUN easy_install pip
 RUN pip install wheel
 
-# Build variables
-ARG BUILD_USER=build
-# This should contain a public key (the actual key, not a filename) that is
-# allowed to log in via SSH. Pass this in as a build argument.
-ARG AUTHORIZED_KEY
+# Install ImageMagick devel from RPMs (as the RHEL 7 package is a buggy release)
+RUN wget -P /tmp "https://quru.com/static2/ImageMagick-$IM_VERSION.x86_64.rpm" && \
+    wget -P /tmp "https://quru.com/static2/ImageMagick-devel-$IM_VERSION.x86_64.rpm" && \
+    wget -P /tmp "https://quru.com/static2/ImageMagick-libs-$IM_VERSION.x86_64.rpm"
+RUN yum install -y /tmp/ImageMagick-libs-$IM_VERSION.x86_64.rpm
+RUN yum install -y /tmp/ImageMagick-$IM_VERSION.x86_64.rpm
+RUN yum install -y /tmp/ImageMagick-devel-$IM_VERSION.x86_64.rpm
 
 # Create a user for building and running stuff
 RUN groupadd --gid 1001 $BUILD_USER && \
