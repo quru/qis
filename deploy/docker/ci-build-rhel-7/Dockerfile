@@ -45,7 +45,7 @@ RUN yum install -y sudo curl wget man git make gcc gcc-c++ sed mlocate \
                    openssh-server openssh-clients && \
     yum clean all
 RUN easy_install pip
-RUN pip install wheel
+RUN pip install virtualenv && pip install wheel
 
 # Install ImageMagick devel from RPMs (as the RHEL 7 package is a buggy release)
 RUN wget -P /tmp "https://quru.com/static2/imagemagick/ImageMagick-$IM_VERSION.x86_64.rpm" && \
