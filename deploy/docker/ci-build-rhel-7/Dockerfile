@@ -71,6 +71,9 @@ RUN echo "$AUTHORIZED_KEY" > .ssh/authorized_keys && \
 USER root
 RUN ssh-keygen -A
 
+# https://bugzilla.redhat.com/show_bug.cgi?id=1043212
+RUN rm -f /run/nologin
+
 # Run SSHD as the default command
 EXPOSE 22
 CMD ["/usr/sbin/sshd", "-D"]
