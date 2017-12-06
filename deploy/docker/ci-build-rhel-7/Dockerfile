@@ -48,9 +48,9 @@ RUN easy_install pip
 RUN pip install wheel
 
 # Install ImageMagick devel from RPMs (as the RHEL 7 package is a buggy release)
-RUN wget -P /tmp "https://quru.com/static2/ImageMagick-$IM_VERSION.x86_64.rpm" && \
-    wget -P /tmp "https://quru.com/static2/ImageMagick-devel-$IM_VERSION.x86_64.rpm" && \
-    wget -P /tmp "https://quru.com/static2/ImageMagick-libs-$IM_VERSION.x86_64.rpm"
+RUN wget -P /tmp "https://quru.com/static2/imagemagick/ImageMagick-$IM_VERSION.x86_64.rpm" && \
+    wget -P /tmp "https://quru.com/static2/imagemagick/ImageMagick-devel-$IM_VERSION.x86_64.rpm" && \
+    wget -P /tmp "https://quru.com/static2/imagemagick/ImageMagick-libs-$IM_VERSION.x86_64.rpm"
 RUN yum install -y /tmp/ImageMagick-libs-$IM_VERSION.x86_64.rpm
 RUN yum install -y /tmp/ImageMagick-$IM_VERSION.x86_64.rpm
 RUN yum install -y /tmp/ImageMagick-devel-$IM_VERSION.x86_64.rpm
