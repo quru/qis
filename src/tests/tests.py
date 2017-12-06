@@ -2199,15 +2199,15 @@ class ImageServerTestsFast(BaseTestCase):
     # Test ICC colour profiles and colorspace parameter
     def test_icc_profiles(self):
         tempfile = '/tmp/qis_icc_image.jpg'
-        # ICC test, compares the size of a generated image with the IM version
-        def icc_test(img_url, magick_params, magick_size_diff=0):
+        # ICC test, compares a generated image with the IM version
+        def icc_test(img_url, magick_params, tolerance=46):
             # Generate ICC image with ImageMagick
             assert call_im_convert(magick_params), 'ImageMagick convert failed'
             # Generate the same with the image server
             rv = self.app.get(img_url)
             assert rv.status_code == 200, 'Failed to generate ICC image: ' + rv.data
             assert 'image/jpeg' in rv.headers['Content-Type']
-            self.assertImageMatch(rv.data, tempfile)
+            self.assertImageMatch(rv.data, tempfile, tolerance)
             try: os.remove(tempfile)
             except: pass
         # See doc/ICC_tests.txt for more information and expected results
@@ -2258,7 +2258,7 @@ class ImageServerTestsFast(BaseTestCase):
             '-sampling-factor', '1x1',
             tempfile
         ]
-        icc_test(img_url, magick_params)
+        icc_test(img_url, magick_params, 45)
         # Test 4 - dorset.jpg - convert to GRAY
         # convert images/test_images/dorset.jpg -quality 100 -profile icc/sRGB.icc -intent perceptual -profile icc/Greyscale.icm -sampling-factor 1x1 /tmp/qis_icc_image.jpg
         img_url = "/image?src=test_images/dorset.jpg&format=jpg&quality=100&strip=0&icc=Greyscale&intent=perceptual"
