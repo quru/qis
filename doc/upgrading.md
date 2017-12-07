@@ -28,7 +28,8 @@ JavaScript file paths.
 Backup the previous version (excluding images):
 
     $ export QIS_HOME=/opt/qis
-    $ sudo rsync -a $QIS_HOME/* /tmp/qis-backup --exclude images
+    $ mkdir qis-backup && cd qis-backup
+    $ sudo rsync -a $QIS_HOME/* . --exclude images
 
 Extract the latest files:
 
@@ -98,6 +99,10 @@ and from Quru obtain the latest ImageMagick interface for your platform:
 ### Installation and upgrade
 
 * Back up the old `/opt/qis` directory (the `images` sub-directory can be skipped)
+
+    $ mkdir qis-backup && cd qis-backup
+    $ sudo rsync -a /opt/qis/* . --exclude images
+
 * Copy the above build files to `/tmp`
 * Stop the Apache service
 * Install the v2 QIS files (standard upgrade procedure):

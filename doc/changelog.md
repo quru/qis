@@ -2,8 +2,8 @@
 _Changes: Upgrade SQLAlchemy to v1.1, psutil to 5.4,
 plus minor upgrades to python-ldap, pylibmc, and python-requests_
 
-* Update the Python dependencies (from `requirements.txt` or by installing a
-  newer `dependencies.tar.gz`)
+* Update the Python dependencies
+  (from `requirements.txt` or by installing a newer `dependencies.tar.gz`)
 * Restart the Apache service
 
 # v2.6.1
