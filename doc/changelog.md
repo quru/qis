@@ -1,3 +1,9 @@
+# v2.6.3
+_Changes: Fix image zooming on devices with both a mouse/trackpad and a touch-screen_
+
+* Update the Python and web code
+* Restart the Apache service
+
 # v2.6.2
 _Changes: Upgrade SQLAlchemy to v1.1, psutil to 5.4,
 plus minor upgrades to python-ldap, pylibmc, and python-requests_

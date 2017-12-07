@@ -30,6 +30,7 @@
 	11Nov2013  Matt  Add title/description image options, set title on thumbnails
 	11Nov2013  Matt  Add events interface
     02Oct2017  Matt  Remove MooTools, remove JSONP
+    07Dec2017  Matt  Fix event handlers on touch-screen enabled laptops
 */
 
 /**** Private interface ****/
@@ -303,14 +304,15 @@ GalleryView.prototype.addThumbnail = function(src, idx, title, description) {
 	
 	// Add event handlers
 	// Use proper touch events to avoid phantom thumbnail clicks on tablets
+	// #5532 Install both mouse and touch events for devices that support both
 	thumbEl.addEventListener('load', function() { this.onThumbLoaded(thumbEl, idx); }.bind(this), false);
-	if ('ontouchstart' in window && window.Touch) {
+	try {
 		thumbEl.addEventListener('touchstart', function(e) { this.onThumbTouchStart(e, idx); }.bind(this), false);
 		thumbEl.addEventListener('touchend',   function(e) { this.onThumbTouchEnd(e, idx); }.bind(this), false);
-	}
-	else {
+	} catch (e) {}
+	try {
 		thumbEl.addEventListener('click', function() { this.onThumbClick(thumbEl, idx); }.bind(this), false);
-	}
+	} catch (e) {}
 };
 
 GalleryView.prototype.onThumbLoaded = function(img, idx) {

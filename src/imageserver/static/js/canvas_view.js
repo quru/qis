@@ -52,6 +52,7 @@
 	01Apr2015  Matt  Move full-screen close button top-right to match gallery
 	15Jun2015  Matt  Use standardised zoom levels + grid sizes
 	14Sep2017  Matt  Remove MooTools, remove excanvas (IE8) compatibility, remove JSONP
+	07Dec2017  Matt  Fix event handlers on touch-screen enabled laptops
 */
 
 /**
@@ -1365,7 +1366,8 @@ ImgCanvasView.prototype.init = function() {
 
 // Installs canvas event handlers
 ImgCanvasView.prototype.addEvents = function() {
-    if ('ontouchstart' in window && window.Touch) {
+    // #5532 Install both mouse and touch events for devices that support both
+    try {
         this._events.touchstart  = function(e) { this.onTouchStart(e);  }.bind(this);
         this._events.touchmove   = function(e) { this.onTouchMove(e);   }.bind(this);
         this._events.touchend    = function(e) { this.onTouchEnd(e);    }.bind(this);
@@ -1374,8 +1376,8 @@ ImgCanvasView.prototype.addEvents = function() {
         this.canvas.addEventListener('touchmove',   this._events.touchmove, false);
         this.canvas.addEventListener('touchend',    this._events.touchend, false);
         this.canvas.addEventListener('touchcancel', this._events.touchcancel, false);
-    }
-    else {
+    } catch (e) {}
+    try {
         this._events.mousedown  = function(e) { this.onMouseDown(e); }.bind(this);
         this._events.mousemove  = function(e) { this.onMouseMove(e); }.bind(this);
         this._events.mouseup    = function(e) { this.onMouseUp(e);   }.bind(this);
@@ -1384,7 +1386,7 @@ ImgCanvasView.prototype.addEvents = function() {
         this.canvas.addEventListener('mousemove',  this._events.mousemove, false);
         this.canvas.addEventListener('mouseup',    this._events.mouseup, false);
         this.canvas.addEventListener('mouseleave', this._events.mouseleave, false);
-    }
+    } catch (e) {}
 
     // Prevent shift-click selecting and highlighting things in IE
     // (the canvas' user-select styles cover WebKit and Gecko)
