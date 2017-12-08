@@ -14,7 +14,7 @@ most of which return data in the [JSON](http://www.json.org/) format.
     * [image - retrieve a processed image](#api_image)
     * [original - retrieve an unmodified image file](#api_original)
 * [Public web services](#api_public)
-    * [list - list the images in a folder path](#api_list)
+    * [list - list the files in a folder path](#api_list)
     * [details - retrieve image information by path](#api_details)
 * [Protected web services](#api_private)
     * [token - obtain an API authentication token](#api_token)
@@ -274,8 +274,10 @@ required however.
 
 <a name="api_list"></a>
 ## list
-Retrieves the ordered list of the images within a folder path, returning the filename,
-a URL to display the image, and optionally additional image attributes.
+Retrieves the ordered list of the files within a folder path, returning the filename,
+whether the file is a supported image type, and if so, a URL to display the image,
+and optionally some additional image attributes. For unsupported file types, the
+image URL and other image attributes will be zero or empty.
 
 To avoid performance issues, this function returns a maximum of 1,000 results.
 To read the full set of results you can use the `start` and `limit` parameters
@@ -290,15 +292,15 @@ less than `limit` results.
 
 ### Parameters
 * `path` - Mandatory, text - Specifies the folder path to list
-* `attributes` - Optional, boolean - When `true`, adds the unique ID, title, description,
-    width and height fields from the image database to the returned objects.
-    Set to `false` for improved performance if these fields are not required.
+* `attributes` - Optional, boolean - When `true`, adds the unique ID, title,
+  description, width and height fields from the image database to the returned
+  objects. Set to `false` for improved performance if these fields are not required.
 * `start` - Optional, integer - The zero-based result number to start from,
-    default `0`.
+  default `0`.
 * `limit` - Optional, integer - The maximum number of results to return,
-    default `1000`, maximum value `1000`.
-* _`[any]`_ - Optional, mixed - Any additional parameters are appended to the returned image URLs so
-	that for example the required image sizes can be specified
+  default `1000`, and maximum value `1000`.
+* _`[any]`_ - Optional, mixed - Any additional parameters are appended to the
+  returned image URLs so that for example the required image sizes can be specified.
 
 ### Permissions required
 * View permission for the requested folder path
@@ -306,8 +308,8 @@ less than `limit` results.
 
 ### Returns
 An array of 0 or more objects in alphabetical order of filename.
-If the array length equals `limit`, you can make a second call with the `start`
-parameter set to get the next page of results.
+If the array length equals `limit`, you can get the next page of results by making
+a second call with the `start` parameter set.
 
 ### Examples
 
@@ -316,14 +318,17 @@ parameter set to get the next page of results.
 	  "data": [
 	    {
 	      "filename": "image1.jpg",
+	      "supported": true,
 	      "url": "http://images.example.com/image?src=myfolder/image1.jpg" 
         },
 	    {
 	      "filename": "image2.jpg",
+	      "supported": true,
 	      "url": "http://images.example.com/image?src=myfolder/image2.jpg"
 	    },
 	    {
 	      "filename": "image3.jpg",
+	      "supported": true,
 	      "url": "http://images.example.com/image?src=myfolder/image3.jpg"
 	    }
 	  ],
@@ -331,12 +336,18 @@ parameter set to get the next page of results.
 	  "status": 200
 	}
 
-	$ curl 'http://images.example.com/api/v1/list/?path=myfolder&start=3&limit=1'
+	$ curl 'http://images.example.com/api/v1/list/?path=myfolder&start=3&limit=2'
 	{
 	  "data": [
 	    {
 	      "filename": "image4.jpg",
-	      "url": "http://images.example.com/image?src=myfolder/image4.jpg" 
+	      "supported": true,
+	      "url": "http://images.example.com/image?src=myfolder/image4.jpg"
+        },
+        {
+          "filename": "misplaced.docx",
+          "supported": false,
+          "url": ""
         }
 	  ],
 	  "message": "OK",
@@ -354,6 +365,7 @@ parameter set to get the next page of results.
 	      "description": "", 
 	      "height": 1200, 
 	      "width": 1600, 
+	      "supported": true,
 	      "filename": "image1.jpg"
         },
 	    {
@@ -364,6 +376,7 @@ parameter set to get the next page of results.
 	      "description": "", 
 	      "height": 1200, 
 	      "width": 1600, 
+	      "supported": true,
 	      "filename": "image2.jpg"
 	    },
 	    {
@@ -374,6 +387,7 @@ parameter set to get the next page of results.
 	      "description": "", 
 	      "height": 3000, 
 	      "width": 4000, 
+	      "supported": true,
 	      "filename": "image3.jpg"
 	    }
 	  ],

@@ -55,10 +55,10 @@ from imageserver.flask_app import permissions_engine as pm
 from imageserver.api_util import API_CODES
 from imageserver.errors import DoesNotExistError
 from imageserver.filesystem_manager import (
-    copy_file, delete_dir, delete_file
+    copy_file, delete_dir, delete_file, make_dirs
 )
 from imageserver.filesystem_manager import (
-    ensure_path_exists, path_exists, make_dirs
+    get_abs_path, ensure_path_exists, path_exists
 )
 from imageserver.filesystem_sync import (
     auto_sync_existing_file, auto_sync_file
@@ -247,6 +247,12 @@ class ImageServerAPITests(BaseTestCase):
         self.assertEqual(rv.status_code, API_CODES.SUCCESS)
         obj = json.loads(rv.data)
         self.assertIn('width=500', obj['data'][0]['url'])
+        # The list should be sorted
+        imlist = obj['data']
+        self.assertLess(imlist[0]['filename'], imlist[1]['filename'])
+        self.assertLess(imlist[1]['filename'], imlist[2]['filename'])
+        self.assertLess(imlist[2]['filename'], imlist[3]['filename'])
+        self.assertLess(imlist[3]['filename'], imlist[4]['filename'])
 
     # Folder list - v2.2.1 support paging
     def test_api_list_paging(self):
@@ -277,6 +283,30 @@ class ImageServerAPITests(BaseTestCase):
         list3 = obj3['data']
         self.assertEqual(len(list3), 0)
 
+    # v2.6.4 Folder list should now return non-image files
+    def test_api_list_non_image(self):
+        temp_folder = 'test_list'
+        make_dirs(temp_folder)
+        try:
+            copy_file('test_images/cathedral.jpg', temp_folder + '/valid.jpg')
+            copy_file('test_images/cathedral.jpg', temp_folder + '/badfile.docx')
+            # Folder list should return 2 files, one supported, and one not, sorted
+            rv = self.app.get('/api/list/?path=' + temp_folder)
+            self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+            self.assertIn('application/json', rv.headers['Content-Type'])
+            obj = json.loads(rv.data)
+            self.assertEqual(len(obj['data']), 2)
+            f1 = obj['data'][0]
+            f2 = obj['data'][1]
+            self.assertEqual('badfile.docx', f1['filename'])
+            self.assertFalse(f1['supported'])
+            self.assertEqual('', f1['url'])
+            self.assertEqual('valid.jpg', f2['filename'])
+            self.assertTrue(f2['supported'])
+            self.assertIn('valid.jpg', f2['url'])
+        finally:
+            delete_dir(temp_folder, recursive=True)
+
     # Image details
     def test_api_details(self):
         # Unauthorised path
@@ -292,6 +322,17 @@ class ImageServerAPITests(BaseTestCase):
         obj = json.loads(rv.data)
         assert obj['data']['width'] == 1600, 'Did not find data.width=1600, got ' + str(obj)
         assert obj['data']['height'] == 1200
+
+    # v2.6.4 Image details for a non-image file
+    def test_api_details_non_image(self):
+        temp_file = 'test_images/badfile.docx'
+        with open(get_abs_path(temp_file), 'w') as f:
+            f.write('<docx>I am not an image</docx>')
+        try:
+            rv = self.app.get('/api/details/?src=' + temp_file)
+            assert rv.status_code == API_CODES.IMAGE_ERROR
+        finally:
+            delete_file(temp_file)
 
     # Database admin API - images
     def test_data_api_images(self):

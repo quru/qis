@@ -233,9 +233,12 @@ GalleryView.prototype.onDataReady = function(jsonObj) {
 	// Add folder image names to image list
 	if (jsonObj && (jsonObj.status == 200)) {
 		for (var i = 0; i < jsonObj.data.length; i++) {
-			this.options.images.push({
-				src: this.options.folder + jsonObj.data[i].filename
-			});
+		    var imgData = jsonObj.data[i];
+		    if (imgData.supported) {
+		        this.options.images.push({
+		            src: this.options.folder + imgData.filename
+		        });
+		    }
 		}
 	}
 	

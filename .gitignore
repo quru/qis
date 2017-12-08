@@ -25,9 +25,10 @@ man
 qismagick/src/Debug
 qismagick/src/Release
 qismagick/dist/
-images/matt
+images/*
+!images/test_images
+images/test_images/.DS_Store
 images/test_images/pdftest.pdf.d
-Images/iPhoto
 .coverage
 src/coverage.xml
 .#*

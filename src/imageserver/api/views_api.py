@@ -40,9 +40,11 @@ from imageserver.api_util import add_api_error_handler
 from imageserver.api_util import create_api_error_dict
 from imageserver.api_util import make_api_success_response
 from imageserver.csrf import csrf_exempt
-from imageserver.errors import AuthenticationError, DoesNotExistError
-from imageserver.errors import ParameterError, SecurityError
-from imageserver.filesystem_manager import get_directory_listing
+from imageserver.errors import (
+    AuthenticationError, DoesNotExistError, ImageError,
+    ParameterError, SecurityError
+)
+from imageserver.filesystem_manager import get_directory_listing, path_exists
 from imageserver.filesystem_sync import auto_sync_file, auto_sync_existing_file
 from imageserver.filesystem_sync import auto_sync_folder
 from imageserver.flask_app import (
@@ -108,7 +110,7 @@ def token():
     raise SecurityError('Incorrect username or password')
 
 
-# Returns a JSON encoded list of images in a folder (max 1000),
+# Returns a JSON encoded list of files in a folder (max 1000),
 # optionally with the title, description, width, height attributes of each.
 # Any additional parameters are passed on for inclusion in the returned image URLs.
 @blueprint.route('/list', methods=['GET'])
@@ -167,28 +169,36 @@ def imagelist():
         img_types = image_engine.get_image_formats()
         base_folder = add_sep(directory_info.name())
         for f in file_list:
-            # Filter out non-images
-            if get_file_extension(f['filename']) in img_types:
-                entry_path = base_folder + f['filename']
-                entry = {
-                    'filename': f['filename'],
-                    'url': external_url_for('image', src=entry_path, **image_params)
-                }
-                if want_info:
+            # v2.6.4 Return unsupported files too. If you want to reverse this change,
+            # the filtering needs to be elsewhere for 'start' and 'limit' to work properly
+            supported_file = get_file_extension(f['filename']) in img_types
+            file_path = base_folder + f['filename']
+            file_url = (
+                external_url_for('image', src=file_path, **image_params)
+                if supported_file else ''
+            )
+            entry = {
+                'filename': f['filename'],
+                'supported': supported_file,
+                'url': file_url
+            }
+            if want_info:
+                db_entry = None
+                if supported_file:
                     db_entry = auto_sync_existing_file(
-                        entry_path,
+                        file_path,
                         data_engine,
                         task_engine,
                         burst_pdf=False,  # Don't burst a PDF just by finding it here
                         _db_session=db_session
                     )
-                    entry['id'] = db_entry.id if db_entry else 0
-                    entry['folder_id'] = db_entry.folder_id if db_entry else 0
-                    entry['title'] = db_entry.title if db_entry else ''
-                    entry['description'] = db_entry.description if db_entry else ''
-                    entry['width'] = db_entry.width if db_entry else 0
-                    entry['height'] = db_entry.height if db_entry else 0
-                ret_list.append(entry)
+                entry['id'] = db_entry.id if db_entry else 0
+                entry['folder_id'] = db_entry.folder_id if db_entry else 0
+                entry['title'] = db_entry.title if db_entry else ''
+                entry['description'] = db_entry.description if db_entry else ''
+                entry['width'] = db_entry.width if db_entry else 0
+                entry['height'] = db_entry.height if db_entry else 0
+            ret_list.append(entry)
 
         db_commit = True
     finally:
@@ -216,6 +226,11 @@ def imagedetails():
         validate_string(src, 1, 1024)
     except ValueError as e:
         raise ParameterError(e)
+
+    # v2.6.4 Don't allow this call to populate the database with unsupported files
+    supported_file = get_file_extension(src) in image_engine.get_image_formats()
+    if not supported_file and path_exists(src, require_file=True):
+        raise ImageError('The file is not a supported image format')
 
     # Get the image database entry
     db_image = auto_sync_file(src, data_engine, task_engine)
