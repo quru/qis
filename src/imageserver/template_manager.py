@@ -62,6 +62,8 @@ class ImageTemplateManager(object):
         self._template_cache = KeyValueCache()
         self._update_lock = threading.Lock()
         self._last_check = datetime.min
+        self._useable = threading.Event()
+        self._useable.set()
 
     def get_template_list(self):
         """
@@ -197,6 +199,7 @@ class ImageTemplateManager(object):
         if _force or self._last_check < (datetime.utcnow() - timedelta(seconds=check_secs)):
             # Check for newer data version
             if self._update_lock.acquire(0):  # 0 = nonblocking
+                self._useable.clear()
                 try:
                     old_ver = self._data_version
                     db_ver = self._db.get_object(Property, Property.IMAGE_TEMPLATES_VERSION)
@@ -206,7 +209,16 @@ class ImageTemplateManager(object):
                         self._load_data()
                 finally:
                     self._last_check = datetime.utcnow()
+                    self._useable.set()
                     self._update_lock.release()
+            else:
+                # Another thread is running the update. We should wait for the
+                # new data otherwise we'll be using an old or empty cache.
+                self._logger.debug('Another thread is loading image templates, waiting for it')
+                if not self._useable.wait(2.0):
+                    self._logger.warning('Timed out waiting for image template data')
+                else:
+                    self._logger.debug('Got new image template data, continuing')
 
     def _get_cached_names_list(self, sort=False):
         """

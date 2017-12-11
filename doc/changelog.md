@@ -1,11 +1,13 @@
 # v2.6.4
-_Changes: Change the folder list API to return all files in a folder_
+_Changes: Change the folder list API to return all files in a folder,
+fix data loading race condition on startup_
 
-This is a behaviour change but it only affects folders that contain non-image
-files. Previously these files were silently hidden, which could have been misleading.
-There is now a new `supported` flag that indicates whether each file is a supported
-image type. With this change the API now matches the existing behaviour of folder
-browsing in the admin user interface.
+The folder list API has a behaviour change but it only affects folders that
+contain non-image files. Previously these files were silently hidden, which
+could have been misleading. There is now a new `supported` flag in the data
+that indicates whether each file is a supported image type. With this change
+the API now matches the existing behaviour of folder browsing in the admin
+user interface.
 
 * Update the Python and web code
 * Restart the Apache service
