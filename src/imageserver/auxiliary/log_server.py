@@ -30,11 +30,11 @@
 # 09Jan2012  Matt  Read settings from new settings module instead of passing in
 #
 
-import cPickle
+import pickle
 import errno
 import logging.handlers
 import os
-import SocketServer
+import socketserver
 import signal
 import struct
 import sys
@@ -45,7 +45,7 @@ from time import sleep
 from flask import current_app as app
 
 
-class LogRecordStreamHandler(SocketServer.StreamRequestHandler):
+class LogRecordStreamHandler(socketserver.StreamRequestHandler):
     """
     Handler to receive log records sent from a Python logging SocketHandler.
 
@@ -67,13 +67,13 @@ class LogRecordStreamHandler(SocketServer.StreamRequestHandler):
             chunk = self.connection.recv(slen)
             while len(chunk) < slen:
                 chunk = chunk + self.connection.recv(slen - len(chunk))
-            obj = cPickle.loads(chunk)
+            obj = pickle.loads(chunk)
             record = logging.makeLogRecord(obj)
             # Log every record (the client is responsible for filtering by log level)
             self.server.logging_engine.handle(record)
 
 
-class LogRecordSocketReceiver(SocketServer.ThreadingTCPServer):
+class LogRecordSocketReceiver(socketserver.ThreadingTCPServer):
     """
     A TCP server containing a logger.
 
@@ -87,7 +87,7 @@ class LogRecordSocketReceiver(SocketServer.ThreadingTCPServer):
     daemon_threads = True
 
     def __init__(self, bind_addr, bind_port, log_file_path, stdout_echo):
-        SocketServer.ThreadingTCPServer.__init__(
+        socketserver.ThreadingTCPServer.__init__(
             self,
             (bind_addr, bind_port),
             LogRecordStreamHandler
@@ -133,18 +133,18 @@ def _run_server(log_filename, stdout_echo):
         )
         signal.signal(signal.SIGTERM, svr._shutdown)
         svr.serve_forever()
-        print 'Logging server shutdown'
+        print('Logging server shutdown')
 
     except IOError as e:
         if e.errno == errno.EADDRINUSE:
-            print "A logging server is already running."
+            print("A logging server is already running.")
         else:
-            print "Logging server exited: " + str(e)
+            print("Logging server exited: " + str(e))
     except BaseException as e:
         if (len(e.args) > 0 and e.args[0] == errno.EINTR) or not str(e):
-            print "Logging server exited"
+            print("Logging server exited")
         else:
-            print "Logging server exited: " + str(e)
+            print("Logging server exited: " + str(e))
     sys.exit()
 
 
@@ -184,9 +184,9 @@ def run_server_process(log_filename, stdout_echo):
 # Allow the server to be run from the command line
 if __name__ == '__main__':
     if len(sys.argv) != 5:
-        print "Use: log_server <log_file_path> <bind address> <bind port> <stdout_echo>\n"
-        print "E.g. export PYTHONPATH=."
-        print "     python imageserver/auxiliary/log_server.py /path/to/my.log 0.0.0.0 9002 true\n"
+        print("Use: log_server <log_file_path> <bind address> <bind port> <stdout_echo>\n")
+        print("E.g. export PYTHONPATH=.")
+        print("     python imageserver/auxiliary/log_server.py /path/to/my.log 0.0.0.0 9002 true\n")
     else:
         # Create a blank Flask app. We can't use imageserver.flask_app
         # as the first thing it does is spawn this very service!
