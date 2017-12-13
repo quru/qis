@@ -234,7 +234,7 @@ class TemplateAPI(MethodView):
         try:
             template_dict = json.loads(params['template'])
         except ValueError as e:
-            raise ValueError(u'template: ' + unicode(e))
+            raise ValueError('template: ' + str(e))
         # Validate the JSON data values
         self._del_keys(template_dict, TemplateAPI.HIDE_FIELDS)
         template_attrs = TemplateAttrs(params['name'], template_dict)
@@ -560,7 +560,7 @@ class UserGroupAPI(MethodView):
     @add_parameter_error_handler
     def _get_validated_object_parameters(self, data_dict):
         params = {'user_id': parse_int(data_dict['user_id'])}
-        validate_number(params['user_id'], 1, sys.maxint)
+        validate_number(params['user_id'], 1, sys.maxsize)
         return params
 
 
@@ -662,8 +662,8 @@ class FolderPermissionAPI(MethodView):
             'folder_id': parse_int(data_dict['folder_id']),
             'access': parse_int(data_dict['access'])
         }
-        validate_number(params['group_id'], 1, sys.maxint)
-        validate_number(params['folder_id'], 1, sys.maxint)
+        validate_number(params['group_id'], 1, sys.maxsize)
+        validate_number(params['folder_id'], 1, sys.maxsize)
         validate_number(params['access'], FolderPermission.ACCESS_NONE, FolderPermission.ACCESS_ALL)
         return params
 

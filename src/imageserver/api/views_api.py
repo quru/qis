@@ -90,7 +90,7 @@ def token():
         user = authenticate_user(username, password, data_engine, logger)
     except AuthenticationError as e:
         # Return 500 rather than 401 for authentication runtime errors
-        raise Exception(unicode(e))
+        raise Exception(str(e))
 
     if user is not None:
         if not user.allow_api:
@@ -319,7 +319,7 @@ def upload():
     except Exception as e:
         # put_image returns ValueError for parameter errors
         if type(e) is ValueError:
-            e = ParameterError(unicode(e))
+            e = ParameterError(str(e))
         # Attach whatever data we have to return with the error
         # Caller can then decide whether to continue if some files worked
         e.api_data = ret_dict

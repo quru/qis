@@ -29,7 +29,7 @@
 # =========  ====  ============================================================
 #
 
-import cPickle
+import pickle
 
 from flask import request
 from flask.views import MethodView
@@ -233,7 +233,7 @@ class FolderAPI(MethodView):
             task_dict = object_to_dict(task) if task is not None else None
             # Decode the params before returning
             if task_dict and task_dict.get('params'):
-                task_dict['params'] = cPickle.loads(task_dict['params'])
+                task_dict['params'] = pickle.loads(task_dict['params'])
             # Do not give out anything password related
             if task_dict and task_dict.get('user'):
                 del task_dict['user']['password']

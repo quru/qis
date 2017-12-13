@@ -29,7 +29,7 @@
 # =========  ====  ============================================================
 #
 
-import cPickle
+import pickle
 
 from flask import request
 from flask.views import MethodView
@@ -103,7 +103,7 @@ class TaskAPI(MethodView):
         if db_task is None:
             raise AlreadyExistsError('Task is already running')
         # Decode the params before returning
-        db_task.params = cPickle.loads(db_task.params)
+        db_task.params = pickle.loads(db_task.params)
         tdict = object_to_dict(db_task)
         if tdict.get('user') is not None:
             # Do not give out anything password related
