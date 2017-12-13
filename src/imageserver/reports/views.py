@@ -148,7 +148,7 @@ def _db_results_to_flot_data(results, data_type):
     """
     data = []
     for stat in results:
-        stat_time_msec = (timegm(stat.to_time.timetuple()) * 1000L)
+        stat_time_msec = (timegm(stat.to_time.timetuple()) * 1000)
 
         if data_type == 1:
             stat_val = stat.requests
