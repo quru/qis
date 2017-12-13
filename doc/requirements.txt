@@ -1,14 +1,13 @@
 # QIS Python Requirements
 Flask==0.12.2
-python-ldap==2.4.45
+pyldap==2.4.45
 pylibmc==1.5.2
 psycopg2==2.6.2
 SQLAlchemy==1.1.15
 requests==2.18.4
 psutil==5.4.1
 itsdangerous==0.24
-importlib
-markdown==2.6.2
+markdown==2.6.10
 
 # Additional requirements for setup / unit tests
 #wheel
