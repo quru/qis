@@ -39,4 +39,4 @@ __author__ = "Quru Ltd"
 __email__ = "info@quru.com"
 
 __license__ = "GNU Affero General Public License"
-__copyright__ = u"Copyright \xa9 2011 - 2017 Quru Ltd"
+__copyright__ = "Copyright \xa9 2011 - 2017 Quru Ltd"

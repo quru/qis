@@ -35,27 +35,27 @@ from time import sleep
 
 from flask import make_response, redirect, request, session
 
-from errors import DoesNotExistError
-from exif import get_exif_geo_position
-from filesystem_manager import get_upload_directory, get_file_info
-from filesystem_manager import get_directory_listing, path_exists
-from filesystem_manager import DirectoryInfo
-from filesystem_sync import auto_sync_file, auto_sync_folder
-from flask_app import app
-from flask_app import logger
-from flask_app import cache_engine, data_engine, image_engine, permissions_engine, task_engine
-from flask_util import external_url_for, internal_url_for, render_template
-from flask_util import login_point, login_required
-from image_attrs import ImageAttrs
-from template_attrs import TemplateAttrs
-from models import Folder, FolderPermission, Image, ImageHistory, User
-from session_manager import get_session_user, get_session_user_id
-from session_manager import log_in, log_out, logged_in
-from user_auth import authenticate_user
-from util import filepath_filename, filepath_parent
-from util import get_timezone_code, parse_boolean
-from util import strip_seps
-from views_util import log_security_error
+from .errors import DoesNotExistError
+from .exif import get_exif_geo_position
+from .filesystem_manager import get_upload_directory, get_file_info
+from .filesystem_manager import get_directory_listing, path_exists
+from .filesystem_manager import DirectoryInfo
+from .filesystem_sync import auto_sync_file, auto_sync_folder
+from .flask_app import app
+from .flask_app import logger
+from .flask_app import cache_engine, data_engine, image_engine, permissions_engine, task_engine
+from .flask_util import external_url_for, internal_url_for, render_template
+from .flask_util import login_point, login_required
+from .image_attrs import ImageAttrs
+from .template_attrs import TemplateAttrs
+from .models import Folder, FolderPermission, Image, ImageHistory, User
+from .session_manager import get_session_user, get_session_user_id
+from .session_manager import log_in, log_out, logged_in
+from .user_auth import authenticate_user
+from .util import filepath_filename, filepath_parent
+from .util import get_timezone_code, parse_boolean
+from .util import strip_seps
+from .views_util import log_security_error
 
 
 # The "About" page
@@ -145,8 +145,7 @@ def image_help():
     logo_pad_image_attrs = ImageAttrs('test_images/quru470.png')
 
     default_template = image_engine.get_default_template()
-    available_formats = image_engine.get_image_formats()
-    available_formats.sort()
+    available_formats = sorted(image_engine.get_image_formats())
     available_templates = image_engine.get_template_names()
     available_templates.sort()
     available_iccs = {}
@@ -253,7 +252,7 @@ def upload_complete():
 
     # Only send through the images that worked
     success_images = []
-    for v in upload_results.itervalues():
+    for v in upload_results.values():
         if v.get('id', 0) > 0:
             success_images.append(v)
 

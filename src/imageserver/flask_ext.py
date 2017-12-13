@@ -324,7 +324,7 @@ class IncludeMarkdownExtension(Extension):
 
         # Text substitutions
         if subs_dict:
-            for fnd, repl in subs_dict.iteritems():
+            for fnd, repl in subs_dict.items():
                 md_text = md_text.replace(fnd, repl)
 
         # MD to HTML

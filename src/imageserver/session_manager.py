@@ -36,9 +36,9 @@
 
 import flask
 
-from flask_app import cache_engine, data_engine, logger
-from errors import DoesNotExistError, SecurityError
-from models import User
+from .flask_app import cache_engine, data_engine, logger
+from .errors import DoesNotExistError, SecurityError
+from .models import User
 
 
 # Caching the user object and its groups for very long feels dangerous

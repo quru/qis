@@ -31,7 +31,7 @@
 
 from datetime import datetime, timedelta
 
-from models import ImageStats, SystemStats
+from .models import ImageStats, SystemStats
 
 
 def add_zero_stats(dt_list_from, dt_list_to, frequency_mins, stats_list, stats_model):

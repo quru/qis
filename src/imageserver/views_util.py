@@ -39,12 +39,12 @@ import time
 from jinja2 import Markup
 from werkzeug.urls import url_quote_plus
 
-from errors import SecurityError
-from flask_app import app, logger, permissions_engine
-from flask_util import internal_url_for, external_url_for
-from models import FolderPermission, SystemPermissions
-from session_manager import get_session_user, logged_in
-from util import get_file_extension, SimpleODict
+from .errors import SecurityError
+from .flask_app import app, logger, permissions_engine
+from .flask_util import internal_url_for, external_url_for
+from .models import FolderPermission, SystemPermissions
+from .session_manager import get_session_user, logged_in
+from .util import get_file_extension, SimpleODict
 
 
 @app.template_filter('datetimeformat')
@@ -217,7 +217,7 @@ def log_security_error(error, request):
                 request.url,
                 user.username if user else '<anonymous>',
                 ip,
-                unicode(error)
+                str(error)
             )
         )
         return True

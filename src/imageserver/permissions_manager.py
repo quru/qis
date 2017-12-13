@@ -35,12 +35,12 @@ import os.path
 import threading
 import zlib
 
-from errors import DoesNotExistError, SecurityError
-from filesystem_sync import auto_sync_folder, _get_nearest_parent_folder
-from models import FolderPermission, Group, Property, SystemPermissions
-from util import object_to_dict_dict
-from util import filepath_normalize, strip_seps
-from util import KeyValueCache
+from .errors import DoesNotExistError, SecurityError
+from .filesystem_sync import auto_sync_folder, _get_nearest_parent_folder
+from .models import FolderPermission, Group, Property, SystemPermissions
+from .util import object_to_dict_dict
+from .util import filepath_normalize, strip_seps
+from .util import KeyValueCache
 
 FOLDER_ACCESS_TEXT = {
     FolderPermission.ACCESS_NONE: 'No',

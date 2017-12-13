@@ -42,22 +42,22 @@ import os
 import threading
 import time
 
-import exif
+from . import exif
 
-from errors import DBDataError, DoesNotExistError, ImageError, ServerTooBusyError
-from filesystem_manager import get_upload_directory, path_exists
-from filesystem_manager import get_file_data, put_file_data
-from filesystem_manager import get_file_info
-from filesystem_sync import auto_sync_file, set_image_properties
-from image_attrs import ImageAttrs
-from image_wrapper import ImageWrapper
-from imagemagick import imagemagick_init
-from imagemagick import imagemagick_adjust_image, imagemagick_get_image_profile_data
-from imagemagick import imagemagick_get_image_dimensions, imagemagick_get_version_info
-from models import FolderPermission, Image, ImageHistory, Task
-from template_manager import ImageTemplateManager
-from util import default_value, get_file_extension
-from util import filepath_filename, validate_filename
+from .errors import DBDataError, DoesNotExistError, ImageError, ServerTooBusyError
+from .filesystem_manager import get_upload_directory, path_exists
+from .filesystem_manager import get_file_data, put_file_data
+from .filesystem_manager import get_file_info
+from .filesystem_sync import auto_sync_file, set_image_properties
+from .image_attrs import ImageAttrs
+from .image_wrapper import ImageWrapper
+from .imagemagick import imagemagick_init
+from .imagemagick import imagemagick_adjust_image, imagemagick_get_image_profile_data
+from .imagemagick import imagemagick_get_image_dimensions, imagemagick_get_version_info
+from .models import FolderPermission, Image, ImageHistory, Task
+from .template_manager import ImageTemplateManager
+from .util import default_value, get_file_extension
+from .util import filepath_filename, validate_filename
 
 
 class ImageManager(object):
@@ -164,24 +164,24 @@ class ImageManager(object):
         """
         if colorspace is not None:
             return [
-                k for k, v in self._icc_profiles.iteritems() if v[0] == colorspace
+                k for k, v in self._icc_profiles.items() if v[0] == colorspace
             ]
         else:
-            return self._icc_profiles.keys()
+            return list(self._icc_profiles.keys())
 
     def get_icc_profile_colorspaces(self):
         """
         Returns a list of the unique colorspace types of the available ICC
         profiles, e.g. ["RGB", "CMYK", "GRAY"]
         """
-        return list(set(v[0] for v in self._icc_profiles.itervalues()))
+        return list(set(v[0] for v in self._icc_profiles.values()))
 
     def get_image_formats(self):
         """
         Returns a lower case list of supported image formats
         (as file extensions) e.g. ['jpg','png']
         """
-        return self._settings['IMAGE_FORMATS'].keys()
+        return list(self._settings['IMAGE_FORMATS'].keys())
 
     def put_image(self, current_user, file_wrapper, file_name,
                   upload_path_idx=-1, upload_path=None, overwrite=False):
@@ -456,7 +456,7 @@ class ImageManager(object):
                 except ImageError as e:
                     # Image generation failed. Carry on and cache the fact that it's
                     # broken so that other clients don't repeatedly try to re-generate.
-                    ret_image_data = ImageManager.IMAGE_ERROR_HEADER + unicode(e)
+                    ret_image_data = ImageManager.IMAGE_ERROR_HEADER + str(e)
 
                 # Add it to cache for next time
                 if cache_result:
@@ -1169,7 +1169,7 @@ class ImageManager(object):
         profiles = {}
 
         # Find *.icc and *.icm
-        icc_files = glob.glob(unicode(os.path.join(self._settings['ICC_BASE_DIR'], '*.ic*')))
+        icc_files = glob.glob(os.path.join(self._settings['ICC_BASE_DIR'], '*.ic*'))
         for icc_file_path in icc_files:
             (icc_name, _) = os.path.splitext(filepath_filename(icc_file_path))
             icc_name = icc_name.lower()

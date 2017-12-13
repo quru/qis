@@ -73,7 +73,7 @@ class StatsManager(object):
         Re-connects the connection to the server, if it is not connected
         and RECONNECT_WAIT_SECS seconds have passed since the last attempt.
         """
-        now_secs = long(time.time())
+        now_secs = int(time.time())
         if (now_secs - self._sock_last_connect >= RECONNECT_WAIT_SECS):
             self._sock_last_connect = now_secs
             try:

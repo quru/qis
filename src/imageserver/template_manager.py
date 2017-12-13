@@ -33,9 +33,9 @@
 from datetime import datetime, timedelta
 import threading
 
-from models import ImageTemplate, Property
-from template_attrs import TemplateAttrs
-from util import KeyValueCache
+from .models import ImageTemplate, Property
+from .template_attrs import TemplateAttrs
+from .util import KeyValueCache
 
 
 class ImageTemplateManager(object):

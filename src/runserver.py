@@ -65,19 +65,19 @@ if __name__ == '__main__':
         use_reloader = app.config['DEBUG'] and (sys.gettrace() is None)
 
         if not os.environ.get('QIS_SETTINGS'):
-            print '''
+            print('''
                 Warning! The QIS_SETTINGS environment variable is not set
                 and no conf/local_settings.py file was found.
                 Continuing with default settings...
-            '''
+            ''')
 
         app.run(host=host, port=port, debug=app.config['DEBUG'], use_reloader=use_reloader)
 
     except Exception as e:
         normal_exit = False
-        print '\nServer exited with error:\n' + str(e)
-        print 'If the image engine failed to start, ' \
-              'check your settings file and environment variables.\n'
+        print('\nServer exited with error:\n' + str(e))
+        print('If the image engine failed to start, '
+              'check your settings file and environment variables.\n')
         raise
     finally:
         if not normal_exit:

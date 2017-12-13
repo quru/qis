@@ -67,7 +67,7 @@
 #   At runtime only require libmemcached and the lib folder
 #
 
-import cPickle
+import pickle
 import random
 import time
 import threading
@@ -78,9 +78,9 @@ from sqlalchemy import desc, text
 from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import sessionmaker
 
-import errors
-from models import CacheBase, CacheEntry
-from util import unicode_to_ascii
+from . import errors
+from .models import CacheBase, CacheEntry
+from .util import unicode_to_ascii
 
 
 MAX_OBJECT_SLOTS = 32
@@ -116,7 +116,7 @@ class CacheManager(object):
             self._server_list = server_list
             self._db_uri = db_uri
             self._db_pool_size = db_pool_size
-            self._capacity = 0L
+            self._capacity = 0
             self._db = None
             self._logger = logger
             self._locals = threading.local()
@@ -126,11 +126,11 @@ class CacheManager(object):
             self._init_db()
         except OperationalError as e:
             raise errors.StartupError(
-                'Cannot start cache manager. Database connection error: ' + unicode(e)
+                'Cannot start cache manager. Database connection error: ' + str(e)
             )
         except BaseException as e:
             raise errors.StartupError(
-                'Cannot start cache manager: ' + type(e).__name__ + ' ' + unicode(e)
+                'Cannot start cache manager: ' + type(e).__name__ + ' ' + str(e)
             )
 
     def client(self):
@@ -156,7 +156,7 @@ class CacheManager(object):
         """
         Closes connections and releases resources held by this object.
         """
-        self._capacity = 0L
+        self._capacity = 0
         self.client().disconnect_all()
         self._db.dispose()
 
@@ -172,7 +172,7 @@ class CacheManager(object):
         except pylibmc.Error:
             connected = False
         if not connected:
-            self._capacity = 0L
+            self._capacity = 0
         return connected
 
     def search(self, order=None, max_rows=1000, **searchfields):
@@ -214,8 +214,7 @@ class CacheManager(object):
         get() to try and load the object.
         """
         sql_operators = {'eq': '=', 'lt': '<', 'gt': '>', 'lte': '<=', 'gte': '>='}
-        sql_field_ops = searchfields.keys()
-        sql_field_ops.sort()
+        sql_field_ops = sorted(list(searchfields.keys()))
         # Create a blank query to build upon
         db_session = self._db.Session()
         try:
@@ -229,7 +228,7 @@ class CacheManager(object):
                 if sql_value is None:
                     # Add x IS NULL
                     db_query = db_query.filter(text(sql_field + ' is null'))
-                elif type(sql_value) == list:
+                elif isinstance(sql_value, list):
                     # OR the list values
                     sql_operator = sql_operators[sql_opcode]
                     or_query = '('
@@ -266,7 +265,7 @@ class CacheManager(object):
                     'searchfield3': entry.searchfield3,
                     'searchfield4': entry.searchfield4,
                     'searchfield5': entry.searchfield5,
-                    'metadata': None if entry.extradata is None else cPickle.loads(entry.extradata)
+                    'metadata': None if entry.extradata is None else pickle.loads(entry.extradata)
                 })
         finally:
             db_session.close()
@@ -342,9 +341,9 @@ class CacheManager(object):
                 entry.searchfield4 = search_info['searchfield4']
                 entry.searchfield5 = search_info['searchfield5']
                 if search_info['metadata'] is not None:
-                    entry.extradata = cPickle.dumps(
+                    entry.extradata = pickle.dumps(
                         search_info['metadata'],
-                        protocol=cPickle.HIGHEST_PROTOCOL
+                        protocol=pickle.HIGHEST_PROTOCOL
                     )
             # Add/update entry in the control db
             db_session = self._db.Session()
@@ -412,9 +411,9 @@ class CacheManager(object):
         some objects have been stored in chunks due to their size.
         """
         try:
-            cache_items = 0L
+            cache_items = 0
             for (_, stats_dict) in self.client().get_stats():
-                cache_items += long(stats_dict['curr_items'])
+                cache_items += int(stats_dict['curr_items'])
             return cache_items
         except pylibmc.Error:
             return -1
@@ -425,12 +424,12 @@ class CacheManager(object):
         or -1 if the cache is unavailable.
         """
         try:
-            cache_size = 0L
+            cache_size = 0
             for (_, stats_dict) in self.client().get_stats():
                 if 'mem_used' in stats_dict:
-                    cache_size += long(stats_dict['mem_used'])  # Membase
+                    cache_size += int(stats_dict['mem_used'])  # Membase
                 else:
-                    cache_size += long(stats_dict['bytes'])     # Memcached
+                    cache_size += int(stats_dict['bytes'])     # Memcached
             return cache_size
         except pylibmc.Error:
             return -1
@@ -456,19 +455,19 @@ class CacheManager(object):
         internally so that repeated calls incur little cost.
         """
         try:
-            if self._capacity > 0L:
+            if self._capacity > 0:
                 return self._capacity
 
-            self._capacity = 0L
+            self._capacity = 0
             for (_, stats_dict) in self.client().get_stats():
                 if 'ep_max_data_size' in stats_dict:
-                    self._capacity += long(stats_dict['ep_max_data_size'])  # Membase
+                    self._capacity += int(stats_dict['ep_max_data_size'])  # Membase
                 else:
-                    self._capacity += long(stats_dict['limit_maxbytes'])    # Memcached
+                    self._capacity += int(stats_dict['limit_maxbytes'])    # Memcached
             return self._capacity
 
         except pylibmc.Error:
-            self._capacity = 0L
+            self._capacity = 0
             return -1
 
     def clear(self):
@@ -521,7 +520,7 @@ class CacheManager(object):
                 return None
 
             # Header matches, now unpickle the value
-            obj = cPickle.loads(obj[len(expect_header):])
+            obj = pickle.loads(obj[len(expect_header):])
 
         return obj
 
@@ -571,7 +570,7 @@ class CacheManager(object):
             # We have to get obj as a string to prepend the integrity header
             prepared_obj = (
                 self._get_integrity_header(prepared_key) +
-                cPickle.dumps(obj, protocol=cPickle.HIGHEST_PROTOCOL)
+                pickle.dumps(obj, protocol=pickle.HIGHEST_PROTOCOL)
             )
         try:
             return self.client().set(prepared_key, prepared_obj, expiry_secs)
@@ -584,7 +583,7 @@ class CacheManager(object):
         { 'key1':'value1', 'key2':'value2' }
         This method bypasses the cache control database.
         """
-        mapping = dict((self._prepare_cache_key(k), v) for (k, v) in mapping.items())
+        mapping = dict((self._prepare_cache_key(k), v) for (k, v) in list(mapping.items()))
         try:
             failed_keys = self.client().set_multi(mapping, expiry_secs)
             return (len(failed_keys) == 0)

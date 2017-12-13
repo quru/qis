@@ -30,7 +30,7 @@
 # 05Nov2015  Matt  v2 Change template values to be expandable objects
 #
 
-from image_attrs import BooleanValidator, RangeValidator, ImageAttrs
+from .image_attrs import BooleanValidator, RangeValidator, ImageAttrs
 
 
 class TemplateAttrs(object):
@@ -79,7 +79,7 @@ class TemplateAttrs(object):
         self._memo_values = None
         try:
             # We need to populate our ImageAttrs from a raw key/value dict
-            raw_dict = dict((k, v['value']) for (k, v) in self._template.iteritems())
+            raw_dict = dict((k, v['value']) for (k, v) in self._template.items())
         except (KeyError, TypeError):
             raise ValueError('Bad template dictionary format (refer to TemplateAttrs)')
         # Populate our internal ImageAttrs
@@ -89,7 +89,7 @@ class TemplateAttrs(object):
         # Now ImageAttrs did round the floats and lower case (many of) the strings.
         # A few places rely on this, so we need to copy the changed values back again.
         raw_dict = self.get_values_dict()
-        for (k, v) in raw_dict.iteritems():
+        for (k, v) in raw_dict.items():
             if k in self._template:
                 self._template[k]['value'] = v
             elif v is not None:
@@ -115,7 +115,7 @@ class TemplateAttrs(object):
         """
         if self._memo_values is None:
             dct = self._image_attrs.to_dict()
-            for attr in TemplateAttrs.validators().iterkeys():
+            for attr in TemplateAttrs.validators().keys():
                 dct[attr] = self._get_value(attr, False)
             self._memo_values = dct
         return self._memo_values
@@ -191,7 +191,7 @@ class TemplateAttrs(object):
         self._image_attrs.validate()
         try:
             field_name = ''
-            for field_name, val_tuple in TemplateAttrs.validators().iteritems():
+            for field_name, val_tuple in TemplateAttrs.validators().items():
                 validator = val_tuple[0]
                 val = self._get_value(field_name, False)
                 if val is not None:
