@@ -59,14 +59,11 @@ class LDAP_Error(Exception):
             if 'info' in err_dict:
                 self.info = err_dict['info']
 
-    def __unicode__(self):
+    def __str__(self):
         s = self.desc
         if self.info:
             s += ' (' + self.info + ')'
         return s
-
-    def __str__(self):
-        return self.__unicode__().encode('utf-8')
 
 
 class LDAP_Settings(object):
