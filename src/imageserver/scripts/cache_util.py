@@ -57,7 +57,7 @@ def delete_image_ids():
             for src in dbs.query(models.Image.src).all():
                 cache_key = data_engine._get_id_cache_key(src[0])
                 cache_engine.raw_delete(cache_key)
-                print '.',
+                print('.', end=' ')
         finally:
             dbs.close()
         log('Done')
@@ -71,25 +71,25 @@ def log(astr):
     Outputs an informational message if silent mode is disabled.
     """
     if not silent:
-        print astr
+        print(astr)
 
 
 def error(astr):
     """
     Outputs an error message.
     """
-    print 'ERROR: ' + astr
+    print('ERROR: ' + astr)
 
 
 def show_usage():
     """
     Outputs usage information.
     """
-    print '\nAdministration utilities for managing the image cache.'
-    print '\nUsage: su <qis user>'
-    print '       python cache_util.py <command>'
-    print 'Where command can be:'
-    print '       del_ids - delete cached image IDs'
+    print('\nAdministration utilities for managing the image cache.')
+    print('\nUsage: su <qis user>')
+    print('       python cache_util.py <command>')
+    print('Where command can be:')
+    print('       del_ids - delete cached image IDs')
 
 
 if __name__ == '__main__':
@@ -110,6 +110,6 @@ if __name__ == '__main__':
             exit(RETURN_BAD_PARAMS)
 
     except Exception as e:
-        print 'Utility exited with error:\n' + str(e)
-        print 'Ensure you are using the correct user account, ' \
-              'and (optionally) set the QIS_SETTINGS environment variable.'
+        print('Utility exited with error:\n' + str(e))
+        print('Ensure you are using the correct user account, ' \
+              'and (optionally) set the QIS_SETTINGS environment variable.')

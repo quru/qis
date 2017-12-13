@@ -32,7 +32,8 @@
 # Note: this script stands alone and can be run from anywhere that has Python
 #
 
-import urllib2
+import urllib.error
+import urllib.request
 import os
 import sys
 import time
@@ -106,10 +107,10 @@ def validate_params(server_url, num_requests, cache_pct, num_clients):
     # Validate server_url
     log('Checking connectivity to %s' % server_url)
     try:
-        req = urllib2.Request(server_url)
+        req = urllib.request.Request(server_url)
         req.add_header('Referer', REFERRER)
-        urllib2.urlopen(req)
-    except urllib2.URLError as e:
+        urllib.request.urlopen(req)
+    except urllib.error.URLError as e:
         error('Failed to connect to %s: %s' % (server_url, str(e)))
         return RETURN_BAD_PARAMS
 
@@ -131,47 +132,47 @@ def log(astr):
     """
     Outputs an informational message.
     """
-    print 'LOG   ' + str(os.getpid()) + ' - ' + astr
+    print('LOG   ' + str(os.getpid()) + ' - ' + astr)
 
 
 def error(astr):
     """
     Outputs an error message.
     """
-    print 'ERROR ' + str(os.getpid()) + ' - ' + astr
+    print('ERROR ' + str(os.getpid()) + ' - ' + astr)
 
 
 def show_usage():
     """
     Outputs usage information.
     """
-    print '\nRuns a benchmarking test against an image server by requesting a series'
-    print 'of sample image URLs. The test can be tuned by adjusting the number of'
-    print 'image requests, the number of simultaneous requests, and the percentage of'
-    print 'requests to return from cache. Repeating the test with the same parameters'
-    print 'will generate the same set of requests so that timings can be compared.'
-    print '\nUsage:'
-    print '       python bench.py [options] server_url [num_requests] ' \
-          '[cache_percent] [num_clients]'
-    print '\nWhere:'
-    print '       server_url is e.g. http://images.example.com/'
-    print '       num_requests is the number of server requests to make, default 1000'
-    print '       cache_percent is the percentage of images to return from cache, default 90'
-    print '       num_clients is the number of simultaneous requests to make, default 4'
-    print '\nOptions:'
-    print '       --verbose to output more detailed status logs'
-    print '       --only-warm to only warm the cache then skip the actual tests'
-    print '       --skip-warm to skip the cache warming and run the tests immediately'
-    print '\nExamples:'
-    print '       python bench.py http://images.example.com/'
-    print '       python bench.py --verbose http://images.example.com/ 5000 80 10'
-    print '\nNotes:'
-    print 'Set cache_percent to 0 to re-generate every image every time. This is very'
-    print 'CPU intensive on the image server and tests performance under load. Set '
-    print 'cache_percent to 100 to serve every image from cache where possible*. This '
-    print 'tests the level of throughput under ideal conditions. The default value of '
-    print '90 represents a typical workload.'
-    print '\n* The tests also include some URLs that are never returned from cache.\n'
+    print('\nRuns a benchmarking test against an image server by requesting a series')
+    print('of sample image URLs. The test can be tuned by adjusting the number of')
+    print('image requests, the number of simultaneous requests, and the percentage of')
+    print('requests to return from cache. Repeating the test with the same parameters')
+    print('will generate the same set of requests so that timings can be compared.')
+    print('\nUsage:')
+    print('       python bench.py [options] server_url [num_requests] ' \
+          '[cache_percent] [num_clients]')
+    print('\nWhere:')
+    print('       server_url is e.g. http://images.example.com/')
+    print('       num_requests is the number of server requests to make, default 1000')
+    print('       cache_percent is the percentage of images to return from cache, default 90')
+    print('       num_clients is the number of simultaneous requests to make, default 4')
+    print('\nOptions:')
+    print('       --verbose to output more detailed status logs')
+    print('       --only-warm to only warm the cache then skip the actual tests')
+    print('       --skip-warm to skip the cache warming and run the tests immediately')
+    print('\nExamples:')
+    print('       python bench.py http://images.example.com/')
+    print('       python bench.py --verbose http://images.example.com/ 5000 80 10')
+    print('\nNotes:')
+    print('Set cache_percent to 0 to re-generate every image every time. This is very')
+    print('CPU intensive on the image server and tests performance under load. Set ')
+    print('cache_percent to 100 to serve every image from cache where possible*. This ')
+    print('tests the level of throughput under ideal conditions. The default value of ')
+    print('90 represents a typical workload.')
+    print('\n* The tests also include some URLs that are never returned from cache.\n')
 
 
 def get_parameters():
@@ -225,19 +226,19 @@ def single_request(url):
     Requests a single image and returns a tuple of the HTTP status code,
     from-cache flag (as a string or None), and time taken in seconds.
     """
-    req = urllib2.Request(url)
+    req = urllib.request.Request(url)
     req.add_header('Referer', REFERRER)
     status = 0
     from_cache = None
     app_taken_usec = 0
     start_time = time.time()
     try:
-        handler = urllib2.urlopen(req)
+        handler = urllib.request.urlopen(req)
         status = handler.getcode()
         if status == 200:
             from_cache = handler.info().get('X-From-Cache')
             app_taken_usec = int(handler.info().get('X-Time-Taken', 0))
-    except urllib2.HTTPError as e:
+    except urllib.error.HTTPError as e:
         error(str(e))
         status = e.code
     except Exception as e:
@@ -296,12 +297,12 @@ def make_requests(server_url, num_requests, cache_pct, num_clients,
             for image_url in URLS:
                 try:
                     url = server_url + image_url
-                    req = urllib2.Request(url)
+                    req = urllib.request.Request(url)
                     req.add_header('Referer', REFERRER)
-                    urllib2.urlopen(req)
+                    urllib.request.urlopen(req)
                     if verbose:
                         log('OK for ' + url)
-                except urllib2.URLError as e:
+                except urllib.error.URLError as e:
                     error('Error %s for %s, cannot run tests' % (str(e), url))
                     raise Exception('Failed to initialise the tests')
         else:
@@ -356,37 +357,37 @@ def make_requests(server_url, num_requests, cache_pct, num_clients,
         else:
             err_count += 1
 
-    print '\nResults'
-    print '======='
-    print '%d successful requests, %d errors.' % (
+    print('\nResults')
+    print('=======')
+    print('%d successful requests, %d errors.' % (
         ok_count, err_count
-    )
-    print 'Run time %f seconds = %f requests/sec.\n' % (
+    ))
+    print('Run time %f seconds = %f requests/sec.\n' % (
         total_time, ok_count / total_time
-    )
+    ))
     if ok_count != 0:
-        print 'Average response %f seconds' % (ok_time_total / ok_count)
+        print('Average response %f seconds' % (ok_time_total / ok_count))
         if gen_count != 0:
             gen_avg_total = gen_time_total / gen_count
             gen_avg_app = gen_time_app / gen_count
-            print '  * %d non-cached responses' % gen_count
+            print('  * %d non-cached responses' % gen_count)
             if gen_avg_app > 0:
-                print '      * Average app time %f seconds' % gen_avg_app
-            print '      * Average response %f seconds' % gen_avg_total
-            print '      * Worst response %f seconds' % gen_time_worst
+                print('      * Average app time %f seconds' % gen_avg_app)
+            print('      * Average response %f seconds' % gen_avg_total)
+            print('      * Worst response %f seconds' % gen_time_worst)
         else:
-            print '  * 0 non-cached responses'
+            print('  * 0 non-cached responses')
         if cached_count != 0:
             cached_avg_total = cached_time_total / cached_count
             cached_avg_app = cached_time_app / cached_count
-            print '  * %d cached responses' % cached_count
+            print('  * %d cached responses' % cached_count)
             if cached_avg_app > 0:
-                print '      * Average app time %f seconds' % cached_avg_app
-            print '      * Average response %f seconds' % cached_avg_total
-            print '      * Worst response %f seconds' % cached_time_worst
+                print('      * Average app time %f seconds' % cached_avg_app)
+            print('      * Average response %f seconds' % cached_avg_total)
+            print('      * Worst response %f seconds' % cached_time_worst)
         else:
-            print '  * 0 from cache'
-    print ''
+            print('  * 0 from cache')
+    print('')
 
     return RETURN_OK
 
@@ -411,5 +412,5 @@ if __name__ == '__main__':
         exit(rc)
 
     except Exception as e:
-        print 'Utility exited with error:\n' + str(e)
+        print('Utility exited with error:\n' + str(e))
         raise

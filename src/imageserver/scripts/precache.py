@@ -130,7 +130,7 @@ def precache_images(start_dir, file_specs, templates):
     # Walk directory tree
     try:
         for cur_dir, sub_dirs, files in os.walk(
-            unicode(start_dir), onerror=walk_err, followlinks=True
+            start_dir, onerror=walk_err, followlinks=True
         ):
             log(cur_dir)
             stats.inc_total_dir_count()
@@ -224,8 +224,6 @@ def validate_params(start_dir, file_specs, templates):
         error('Start directory does not exist: ' + start_dir_abs)
         return RETURN_BAD_PARAMS
     if not start_dir_abs.startswith(images_dir_abs):
-        print start_dir_abs
-        print images_dir_abs
         error(
             'Start directory \'%s\' must lie within the image server\'s repository at \'%s\''
             % (start_dir_abs, images_dir_abs)
@@ -255,39 +253,39 @@ def log(astr):
     Outputs an informational message if silent mode is disabled.
     """
     if not silent:
-        print astr
+        print(astr)
 
 
 def error(astr):
     """
     Outputs an error message.
     """
-    print 'ERROR: ' + astr
+    print('ERROR: ' + astr)
 
 
 def show_usage():
     """
     Outputs usage information.
     """
-    print '\nRecursively searches a directory tree for images to pre-process and store'
-    print 'in the image server\'s cache. Multiple file types and template names can be'
-    print 'specified by separating each with a comma (without spaces). Target images that'
-    print 'are already in the cache are not re-generated. Any file or directory beginning'
-    print 'with a \'.\' is ignored. Note that by its nature, this utility will cause high'
-    print 'CPU usage for as long as it is running. The utility will stop either when there'
-    print 'are no more files to process, or when the cache is 80% full.'
-    print '\nUsage: su <qis user>'
-    print '       python precache.py [-silent] start_dir file_spec(s) template(s)'
-    print 'Where:'
-    print '       -silent   (optional) suppresses output to the console.'
-    print '       start_dir is the directory to search recursively.'
-    print '       file_spec is one or more image file names to match.'
-    print '       template  is one or more template names defined in the image server that'
-    print '                 describe how the images found are to be processed.'
-    print '\nExample: python precache.py /home/images/ *.jpg,*.tif MediumJpeg,SmallJpeg'
-    print '\nWhen specifying multiple templates to generate different sizes of image,'
-    print 'as in the example, order the templates with the largest image size first'
-    print 'to speed up processing (the second template can use the output from the first).'
+    print('\nRecursively searches a directory tree for images to pre-process and store')
+    print('in the image server\'s cache. Multiple file types and template names can be')
+    print('specified by separating each with a comma (without spaces). Target images that')
+    print('are already in the cache are not re-generated. Any file or directory beginning')
+    print('with a \'.\' is ignored. Note that by its nature, this utility will cause high')
+    print('CPU usage for as long as it is running. The utility will stop either when there')
+    print('are no more files to process, or when the cache is 80% full.')
+    print('\nUsage: su <qis user>')
+    print('       python precache.py [-silent] start_dir file_spec(s) template(s)')
+    print('Where:')
+    print('       -silent   (optional) suppresses output to the console.')
+    print('       start_dir is the directory to search recursively.')
+    print('       file_spec is one or more image file names to match.')
+    print('       template  is one or more template names defined in the image server that')
+    print('                 describe how the images found are to be processed.')
+    print('\nExample: python precache.py /home/images/ *.jpg,*.tif MediumJpeg,SmallJpeg')
+    print('\nWhen specifying multiple templates to generate different sizes of image,')
+    print('as in the example, order the templates with the largest image size first')
+    print('to speed up processing (the second template can use the output from the first).')
 
 
 def get_parameters():
@@ -332,9 +330,9 @@ if __name__ == '__main__':
             exit(rc)
 
     except Exception as e:
-        print 'Utility exited with error:\n' + str(e)
-        print 'Ensure you are using the correct user account, ' \
-              'and (optionally) set the QIS_SETTINGS environment variable.\n'
+        print('Utility exited with error:\n' + str(e))
+        print('Ensure you are using the correct user account, ' \
+              'and (optionally) set the QIS_SETTINGS environment variable.\n')
         raise
     finally:
         # Also stop any background processes we started
