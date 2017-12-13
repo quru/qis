@@ -32,6 +32,7 @@
 #
 
 from calendar import timegm
+from collections import OrderedDict
 from datetime import datetime
 import markdown
 import time
@@ -44,7 +45,7 @@ from .flask_app import app, logger, permissions_engine
 from .flask_util import internal_url_for, external_url_for
 from .models import FolderPermission, SystemPermissions
 from .session_manager import get_session_user, logged_in
-from .util import get_file_extension, SimpleODict
+from .util import get_file_extension
 
 
 @app.template_filter('datetimeformat')
@@ -188,14 +189,13 @@ def url_for_thumbnail(src, external=False, stats=False):
     Use this function to generate standard-sized and standard-formatted
     thumbnail images in the UI so that they are cached correctly.
     """
-    url_args = SimpleODict(
-        src=src,
-        width='200',             # Also update the getPreviewImageURL()
-        height='200',            # function in preview_popup.js
-        format='jpg',            # if you change any if these...
-        colorspace='srgb',
-        strip='1'
-    )
+    url_args = OrderedDict()
+    url_args['src'] = src
+    url_args['width'] = '200'             # Also update the getPreviewImageURL()
+    url_args['height'] = '200'            # function in preview_popup.js
+    url_args['format'] = 'jpg'            # if you change any if these...
+    url_args['colorspace'] = 'srgb'
+    url_args['strip'] = '1'
     if not stats:
         url_args['stats'] = '0'  # stats does not affect caching
 
