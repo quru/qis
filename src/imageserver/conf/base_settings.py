@@ -149,9 +149,9 @@ ALLOW_UNICODE_FILENAMES = True
 # Permissions to apply when creating images and directories.
 # Applicable to *nix platforms only. The system umask is ignored.
 # File default is 0644 (rw-r--r--).
-IMAGES_FILE_MODE = 0644
+IMAGES_FILE_MODE = 0o644
 # Directory default is 0755 (rwxr-xr-x).
-IMAGES_DIR_MODE = 0755
+IMAGES_DIR_MODE = 0o755
 
 # The logging server's name or IP address, or an empty string "" to disable logging
 LOGGING_SERVER = "localhost"
