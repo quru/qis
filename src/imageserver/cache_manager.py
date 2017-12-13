@@ -80,7 +80,6 @@ from sqlalchemy.orm import sessionmaker
 
 from . import errors
 from .models import CacheBase, CacheEntry
-from .util import unicode_to_ascii
 
 
 MAX_OBJECT_SLOTS = 32
@@ -650,20 +649,16 @@ class CacheManager(object):
 
     def _prepare_cache_key(self, key):
         """
-        Ensures a key is valid for memcached by converting to ascii if
-        necessary and replacing spaces. Returns the modified key,
-        or raises a ValueError if the key is empty or too long.
+        Ensures a key is valid for memcached by checking the value and replacing
+        spaces. Returns the modified key, or raises a ValueError if the key is
+        empty or too long.
         """
-        try:
-            ascii_key = key if isinstance(key, str) else key.encode('ascii')
-        except UnicodeEncodeError:
-            ascii_key = unicode_to_ascii(key)
-        ascii_key = ascii_key.replace(' ', '_')
-        if not ascii_key:
+        key = key.replace(' ', '_')
+        if not key:
             raise ValueError('Cache key is empty')
-        if not ascii_key or len(ascii_key) > SERVER_MAX_KEY_LENGTH:
-            raise ValueError('Cache key is too long: ' + ascii_key)
-        return ascii_key
+        if len(key) > SERVER_MAX_KEY_LENGTH:
+            raise ValueError('Cache key is too long: ' + key)
+        return key
 
     def _prepare_cache_keys(self, keys):
         """

@@ -38,8 +38,7 @@ import threading
 from .flask_app import app
 
 from .util import (
-    filepath_filename, filepath_parent, filepath_normalize,
-    get_file_extension, unicode_to_ascii,
+    filepath_filename, filepath_parent, filepath_normalize, get_file_extension,
     validate_number, validate_tile_spec
 )
 
@@ -225,7 +224,7 @@ class ImageAttrs():
         self._normalise_floats()
 
     def __str__(self):
-        filename = unicode_to_ascii(self.filename(with_path=False))
+        filename = self.filename(with_path=False)
         if self._db_id > 0:
             return filename + ' ' + self.get_cache_key()
         else:
