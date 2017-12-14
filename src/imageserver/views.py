@@ -55,9 +55,8 @@ from .util import default_value, etag, unicode_to_utf8
 from .views_util import log_security_error
 
 
-# Requires "EnableSendfile On" in the Apache conf, but hasn't (yet) been seen
-# to deliver any performance improvement. Also the use of StringIO to create
-# a "file" is something of a hack. Cleaner would be Python 3's BytesIO.
+# Requires "EnableSendfile On" in the Apache conf,
+# but hasn't (yet) been seen to deliver any performance improvement.
 _USE_SENDFILE = False
 
 
@@ -437,7 +436,7 @@ def make_image_response(image_wrapper, is_original, stats=None, as_attachment=No
     # Create the HTTP response
     if _USE_SENDFILE:
         response = send_file(
-            io.StringIO(image_wrapper.data()),
+            io.BytesIO(image_wrapper.data()),
             image_attrs.mime_type()
         )
     else:
