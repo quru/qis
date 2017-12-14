@@ -61,11 +61,12 @@ _windows_device_files = ('CON', 'AUX', 'COM1', 'COM2', 'COM3', 'COM4', 'LPT1',
 
 def etag(*vals):
     """
-    Make an ETag that obscures the underlying content.
+    Make an ETag from a number of strings (or byte buffers),
+    obscuring the underlying content.
     """
     h = hashlib.sha1()
     for v in vals:
-        h.update(v)
+        h.update(v if isinstance(v, bytes) else v.encode('utf8'))
     return h.hexdigest()
 
 
@@ -128,9 +129,9 @@ def get_computer_id():
     # 48-bit number with its eighth bit set to 1 as recommended in RFC 4122
     if (mac >> 40) % 2:
         mac = 123456789012345  # We don't want a random number
-    h = hashlib.sha1('cid')
-    h.update(repr(mac))
-    h.update(get_computer_hostname())
+    h = hashlib.sha1(bytes('cid', 'utf8'))
+    h.update(bytes(repr(mac), 'utf8'))
+    h.update(bytes(get_computer_hostname(), 'utf8'))
     return h.hexdigest()
 
 

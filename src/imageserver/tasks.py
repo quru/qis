@@ -234,12 +234,12 @@ def upload_usage_stats(**kwargs):
             'time': to_iso_datetime(to_time),
             'stats': stats
         }
-        h = hashlib.sha256(__tag__ + '_usage_stats')
-        h.update(payload['version'])
-        h.update(payload['host_id'])
-        h.update(payload['time'])
-        h.update(str(payload['stats']['requests']))
-        h.update(str(payload['stats']['bytes']))
+        h = hashlib.sha256(bytes(__tag__ + '_usage_stats', 'utf8'))
+        h.update(bytes(payload['version'], 'utf8'))
+        h.update(bytes(payload['host_id'], 'utf8'))
+        h.update(bytes(payload['time'], 'utf8'))
+        h.update(bytes(str(payload['stats']['requests']), 'utf8'))
+        h.update(bytes(str(payload['stats']['bytes']), 'utf8'))
         payload['hash'] = h.hexdigest()
         sent = requests.post(
             report_url,
