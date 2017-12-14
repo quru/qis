@@ -30,6 +30,7 @@
 # 03 Mar 12  Matt  Apply custom file permissions for uploaded images
 # 19 Mar 13  Matt  Bug fixes to support unicode paths
 # 17 Jul 14  Matt  Handle possible os.chmod error when overwriting files
+# 13 Dec 17  Matt  Python 3, remove unicode handling
 #
 
 import errno

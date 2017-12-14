@@ -44,6 +44,7 @@
 #                  (requires python-memcached v1.51)
 # 11May2015  Matt  Changed to use the pylibmc client, hopefully fixes very occasional
 #                  corruption seen with python-memcached, and is about 30% faster
+# 13Dec2017  Matt  Python 3, remove unicode handling
 #
 
 # Old Membase notes:
