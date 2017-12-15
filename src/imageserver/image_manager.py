@@ -385,7 +385,7 @@ class ImageManager(object):
                 self._logger.debug('Waiting while another client generates ' + str(image_attrs))
             wait_until = time.time() + wait_timeout
             while self._is_image_lock(cache_key) and time.time() < wait_until:
-                time.sleep(1)
+                time.sleep(0.1)
             # Try again
             ret_image_data = self._cache.get(cache_key)
             if ret_image_data is None:
@@ -477,7 +477,9 @@ class ImageManager(object):
 
         # If there was an imaging error (just now or previously cached),
         # raise the exception now
-        if ret_image_data.startswith(ImageManager.IMAGE_ERROR_HEADER):
+        if (isinstance(ret_image_data, str) and
+            ret_image_data.startswith(ImageManager.IMAGE_ERROR_HEADER)
+        ):
             msg = ret_image_data[len(ImageManager.IMAGE_ERROR_HEADER):]
             raise ImageError(msg)
 
