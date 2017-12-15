@@ -444,7 +444,7 @@ class StatsSocketServer(socketserver.ThreadingTCPServer):
             self.logger.debug(
                 'Statistics flush took ' + str(
                     (flush_delta.seconds * 1000) +
-                    (flush_delta.microseconds / 1000)
+                    (flush_delta.microseconds // 1000)
                 ) + ' milliseconds'
             )
 
@@ -514,8 +514,8 @@ class StatsSocketServer(socketserver.ThreadingTCPServer):
         self.hw_cache['ram'].append(current_ram)
         self.hw_cache['cache'].append(current_cache)
 
-        avg_cpu = sum(self.hw_cache['cpu']) / len(self.hw_cache['cpu'])
-        avg_ram = sum(self.hw_cache['ram']) / len(self.hw_cache['ram'])
+        avg_cpu = sum(self.hw_cache['cpu']) // len(self.hw_cache['cpu'])
+        avg_ram = sum(self.hw_cache['ram']) // len(self.hw_cache['ram'])
         latest_cache = self.hw_cache['cache'][-1]
         return (avg_cpu, avg_ram, latest_cache)
 

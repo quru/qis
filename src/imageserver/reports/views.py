@@ -158,7 +158,7 @@ def _db_results_to_flot_data(results, data_type):
             stat_val = stat.cached_views
         elif data_type == 4:
             stat_val = 0 if stat.views == 0 else (
-                (stat.cached_views * 100.0) / stat.views
+                (stat.cached_views * 100.0) // stat.views
             )
         elif data_type == 5:
             stat_val = stat.downloads

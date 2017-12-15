@@ -648,7 +648,7 @@ class CacheManager(object):
         """
         Returns the number of cache slots required to store the given number of bytes.
         """
-        slots = (num_bytes / MAX_SLOT_SIZE)
+        slots = (num_bytes // MAX_SLOT_SIZE)
         if num_bytes % MAX_SLOT_SIZE > 0:
             slots += 1
         return max(1, slots)

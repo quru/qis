@@ -516,8 +516,8 @@ class Ratio:
     def reduce(self):
         div = self.gcd(self.num, self.den)
         if div > 1:
-            self.num = self.num / div
-            self.den = self.den / div
+            self.num = self.num // div
+            self.den = self.den // div
 
     def gcd(self, a, b):
         if b == 0:

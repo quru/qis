@@ -262,7 +262,7 @@ def make_requests(server_url, num_requests, cache_pct, num_clients,
     _vb = verbose
 
     # Create a URL list of num_requests
-    loops = num_requests / len(URLS)
+    loops = num_requests // len(URLS)
     plus = num_requests % len(URLS)
     url_list = (URLS * loops) + URLS[:plus]
 

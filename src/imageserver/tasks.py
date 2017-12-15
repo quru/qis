@@ -431,8 +431,8 @@ def create_image_pyramid(**kwargs):
     app.log.debug(
         'Starting pyramid images for image ID %d, start %d MP, target %d MP' % (
             image_id,
-            (start_width * start_height) / 1000000,
-            target_pixels / 1000000
+            (start_width * start_height) // 1000000,
+            target_pixels // 1000000
         )
     )
     assert app.cache_engine.connected(), \
