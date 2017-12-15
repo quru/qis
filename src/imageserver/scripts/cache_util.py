@@ -94,10 +94,10 @@ def show_usage():
 
 if __name__ == '__main__':
     try:
+        pver = sys.version_info
         # Pythonpath - escape sub-folder and add custom libs
         site.addsitedir('../..')
-        site.addsitedir('../../../lib/python2.6/site-packages')
-        site.addsitedir('../../../lib/python2.7/site-packages')
+        site.addsitedir('../../../lib/python%d.%d/site-packages' % (pver.major, pver.minor))
         # Get params
         cmd = ''
         if len(sys.argv) == 2:

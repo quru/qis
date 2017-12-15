@@ -41,6 +41,7 @@ import os
 import signal
 import site
 import shutil
+import sys
 
 
 # Utility to allow no value for a config file option
@@ -271,10 +272,10 @@ def log(astr):
 
 if __name__ == '__main__':
     try:
+        pver = sys.version_info
         # Pythonpath - escape sub-folder and add custom libs
         site.addsitedir('../..')
-        site.addsitedir('../../../lib/python2.6/site-packages')
-        site.addsitedir('../../../lib/python2.7/site-packages')
+        site.addsitedir('../../../lib/python%d.%d/site-packages' % (pver.major, pver.minor))
         # Get confirmation
         print('This utility will upgrade your QIS v1.x installation to v2.')
         conf = input('To proceed, type Y and press [Enter].\n')
