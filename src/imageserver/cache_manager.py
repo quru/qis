@@ -637,7 +637,7 @@ class CacheManager(object):
         """
         as_bytes = isinstance(header, bytes)
         marker = b'$' if as_bytes else '$'
-        if len(header) == SLOT_HEADER_SIZE and header[0] == marker and header[-1] == marker:
+        if len(header) == SLOT_HEADER_SIZE and header[:1] == marker and header[-1:] == marker:
             return int(header[1:-1])
         else:
             return 0
