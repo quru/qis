@@ -113,7 +113,7 @@ class StatsManager(object):
                     return False
 
             with self._sock_lock:
-                self._sock.send(json.dumps(data) + "\r\n")
+                self._sock.send(bytes(json.dumps(data) + "\r\n", "utf8"))
             return True
 
         except Exception as e:

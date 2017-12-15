@@ -83,7 +83,7 @@ class StatsRequestHandler(socketserver.StreamRequestHandler):
         if not data:
             raise StopIteration()
 
-        stats_dict = json.loads(data)
+        stats_dict = json.loads(data.decode('utf8'))
         for image_key, stats_obj in stats_dict.items():
             image_id = int(image_key)
             self._sys_cache(stats_obj)
