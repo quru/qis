@@ -177,14 +177,15 @@ class TimedTokenBasicAuthentication(BaseHttpAuthentication):
     def generate_auth_token(self, auth_obj):
         """
         Generates a new encrypted authentication token that embeds token_obj
-        and is valid for API_TOKEN_EXPIRY_TIME seconds.
+        and is valid for API_TOKEN_EXPIRY_TIME seconds. The token is returned
+        as a string.
         """
         s = Serializer(
             self.secret_key,
             salt='auth_token',
             expires_in=self.expiry_seconds
         )
-        return s.dumps(auth_obj)
+        return s.dumps(auth_obj).decode('ascii')
 
     def decode_auth_token(self, token):
         """
@@ -196,6 +197,8 @@ class TimedTokenBasicAuthentication(BaseHttpAuthentication):
             salt='auth_token'
         )
         try:
+            if isinstance(token, str):
+                token = bytes(token, 'ascii')
             return s.loads(token)
         except SignatureExpired:
             return None
