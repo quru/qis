@@ -34,8 +34,8 @@
 import os
 import shutil
 
-import tests as main_tests
-from tests import BaseTestCase, setup_user_account
+from . import tests as main_tests
+from .tests import BaseTestCase, setup_user_account
 
 from imageserver.flask_app import data_engine as dm
 from imageserver.flask_app import cache_engine as cm

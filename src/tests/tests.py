@@ -51,7 +51,7 @@ IMAGEMAGICK_PATHS = [
     ""                        # Default / first found in the PATH
 ]
 
-print "Importing imageserver libraries"
+print("Importing imageserver libraries")
 
 import binascii
 import json
@@ -61,8 +61,7 @@ import subprocess
 import tempfile
 import time
 import timeit
-
-import unittest2 as unittest
+import unittest
 
 import mock
 import flask
@@ -128,7 +127,7 @@ def teardown():
         try:
             os.kill(int(pid), signal.SIGTERM)
         except:
-            print "Failed to kill child process %s" % pid
+            print("Failed to kill child process %s" % pid)
 
 
 # Utility - delete and re-create the internal databases
@@ -2509,7 +2508,7 @@ class ImageServerTestsFast(BaseTestCase):
         self.login('admin', 'admin')
         # Copy a test file to upload
         src_file = get_abs_path('test_images/cathedral.jpg')
-        dst_file = u'/tmp/qis uplo\xe4d f\xefle.jpg'
+        dst_file = '/tmp/qis uplo\xe4d f\xefle.jpg'
         shutil.copy(src_file, dst_file)
         try:
             # Upload
@@ -2517,19 +2516,19 @@ class ImageServerTestsFast(BaseTestCase):
             self.assertEqual(rv.status_code, 200)
             obj = json.loads(rv.data)['data']
             self.assertEqual(len(obj), 1)
-            self.assertIn(u'/tmp/qis uplo\xe4d f\xefle.jpg', obj)
-            imgdata = obj[u'/tmp/qis uplo\xe4d f\xefle.jpg']
-            self.assertEqual(imgdata['src'], u'test_images/tmp_qis uplo\xe4d f\xefle.jpg')
+            self.assertIn('/tmp/qis uplo\xe4d f\xefle.jpg', obj)
+            imgdata = obj['/tmp/qis uplo\xe4d f\xefle.jpg']
+            self.assertEqual(imgdata['src'], 'test_images/tmp_qis uplo\xe4d f\xefle.jpg')
             self.assertGreater(imgdata['id'], 0)
             # Make sure it works
-            rv = self.app.get(u'/image?src=test_images/tmp_qis uplo\xe4d f\xefle.jpg')
+            rv = self.app.get('/image?src=test_images/tmp_qis uplo\xe4d f\xefle.jpg')
             self.assertEqual(rv.status_code, 200)
         finally:
             # Remove the test files
             os.remove(dst_file)
-            delete_file(u'test_images/tmp_qis uplo\xe4d f\xefle.jpg')
+            delete_file('test_images/tmp_qis uplo\xe4d f\xefle.jpg')
         # Remove the data too
-        db_img = dm.get_image(src=u'test_images/tmp_qis uplo\xe4d f\xefle.jpg')
+        db_img = dm.get_image(src='test_images/tmp_qis uplo\xe4d f\xefle.jpg')
         assert db_img is not None, 'Upload did not create image data'
         dm.delete_image(db_img, True)
 
@@ -2572,7 +2571,7 @@ class ImageServerTestsFast(BaseTestCase):
 
     # Test unicode characters in filenames, especially dashes!
     def test_unicode_filenames(self):
-        temp_dir = u'\u00e2 te\u00dft \u2014 of \u00e7har\u0292'
+        temp_dir = '\u00e2 te\u00dft \u2014 of \u00e7har\u0292'
         temp_file = os.path.join(temp_dir, temp_dir + '.jpg')
         try:
             with flask_app.test_request_context():
@@ -3022,7 +3021,7 @@ class ImageServerTestsFast(BaseTestCase):
                 environ_base={'REMOTE_ADDR': '127.0.0.1'}
             )
             mocklog.assert_called_once_with(mock.ANY)
-            self.assertIn(u'IP 127.0.0.1', mocklog.call_args[0][0])
+            self.assertIn('IP 127.0.0.1', mocklog.call_args[0][0])
         # With proxy support enabled, expect the headers to be respected
         flask_app.config['PROXY_SERVERS'] = 1
         add_proxy_server_support(flask_app, flask_app.config['PROXY_SERVERS'])
@@ -3037,7 +3036,7 @@ class ImageServerTestsFast(BaseTestCase):
                 environ_base={'REMOTE_ADDR': '127.0.0.1'}
             )
             mocklog.assert_called_once_with(mock.ANY)
-            self.assertIn(u'IP 1.2.3.4', mocklog.call_args[0][0])
+            self.assertIn('IP 1.2.3.4', mocklog.call_args[0][0])
 
     # #2799 User names should be case insensitive
     def test_username_case(self):

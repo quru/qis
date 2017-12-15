@@ -43,7 +43,6 @@ setup(
     ],
 
     tests_require=[
-        "unittest2",
         "mock",
         "coverage"
     ],

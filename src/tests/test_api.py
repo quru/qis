@@ -33,7 +33,7 @@
 
 import base64
 import json
-import cPickle
+import pickle
 import datetime
 import os
 import time
@@ -41,8 +41,8 @@ import time
 from werkzeug.urls import url_quote_plus
 
 
-import tests as main_tests
-from tests import (
+from . import tests as main_tests
+from .tests import (
     BaseTestCase, setup_user_account, set_default_public_permission
 )
 
@@ -853,14 +853,14 @@ class ImageServerAPITests(BaseTestCase):
         self.assertEqual(rv.status_code, API_CODES.SUCCESS)
         obj = json.loads(rv.data)['data']
         self.assertEqual(strip_dict(obj['template']), {
-            u'format': {u'value': u'jpg'},
-            u'fill': {u'value': u'blue'},
-            u'left': {u'value': 0.1},
-            u'attachment': {u'value': True},
-            u'width': {u'value': 200},
-            u'height': {u'value': 100},
-            u'overlay_src': {u'value': u'Mixed Case/Path.png'},
-            u'colorspace': {u'value': u'gray'}
+            'format': {'value': 'jpg'},
+            'fill': {'value': 'blue'},
+            'left': {'value': 0.1},
+            'attachment': {'value': True},
+            'width': {'value': 200},
+            'height': {'value': 100},
+            'overlay_src': {'value': 'Mixed Case/Path.png'},
+            'colorspace': {'value': 'gray'}
         })
         # Delete
         rv = self.app.delete('/api/admin/templates/' + str(new_tmp_id) + '/')
@@ -1460,11 +1460,11 @@ class ImageServerAPITests(BaseTestCase):
 
     # Test unicode characters in filenames, especially dashes!
     def test_unicode_filenames(self):
-        temp_dir = u'\u00e2 te\u00dft \u2014 of \u00e7har\u0292'
+        temp_dir = '\u00e2 te\u00dft \u2014 of \u00e7har\u0292'
         temp_filename = temp_dir + '.jpg'
         temp_file = os.path.join(temp_dir, temp_filename)
-        temp_file2 = os.path.join(temp_dir, u're\u00f1\u00e3med.jpg')
-        temp_new_dir = os.path.join(temp_dir, u'New F\u00f6lder')
+        temp_file2 = os.path.join(temp_dir, 're\u00f1\u00e3med.jpg')
+        temp_new_dir = os.path.join(temp_dir, 'New F\u00f6lder')
         try:
             with flask_app.test_request_context():
                 list_url = internal_url_for('api.imagelist', path=temp_dir, attributes=1)
@@ -1515,36 +1515,36 @@ class ImageServerAPITests(BaseTestCase):
             self.login('kryten', 'kryten')
             # Create a folder
             rv = self.app.post('/api/admin/filesystem/folders/', data={
-                'path': u'/bell\x07/etc/* | more/'
+                'path': '/bell\x07/etc/* | more/'
             })
             self.assertEqual(rv.status_code, API_CODES.SUCCESS)
             json_folder = json.loads(rv.data)['data']
             self.assertGreater(json_folder['id'], 0)
             # The bell byte, *, | and surrounding spaces should be gone
-            self.assertEqual(json_folder['path'], u'/bell/etc/more')
-            self.assertTrue(path_exists(u'/bell/etc/more', require_directory=True))
+            self.assertEqual(json_folder['path'], '/bell/etc/more')
+            self.assertTrue(path_exists('/bell/etc/more', require_directory=True))
             # Rename it
             rv = self.app.put('/api/admin/filesystem/folders/%d/' % json_folder['id'], data={
-                'path': u'/bell/etc/m\xf6re\x07bells'
+                'path': '/bell/etc/m\xf6re\x07bells'
             })
             self.assertEqual(rv.status_code, API_CODES.SUCCESS)
             json_folder = json.loads(rv.data)['data']
             # The bell byte should be gone, the umlaut o remaining
-            self.assertEqual(json_folder['path'], u'/bell/etc/m\xf6rebells')
+            self.assertEqual(json_folder['path'], '/bell/etc/m\xf6rebells')
             # Put a file in there
-            copy_file(u'test_images/cathedral.jpg', u'/bell/etc/m\xf6rebells/cathedral.jpg')
-            db_img = auto_sync_file(u'/bell/etc/m\xf6rebells/cathedral.jpg', dm, tm)
+            copy_file('test_images/cathedral.jpg', '/bell/etc/m\xf6rebells/cathedral.jpg')
+            db_img = auto_sync_file('/bell/etc/m\xf6rebells/cathedral.jpg', dm, tm)
             self.assertIsNotNone(db_img)
             # Rename the file
             rv = self.app.put('/api/admin/filesystem/images/%d/' % db_img.id, data={
-                'path': u'/bell/etc/m\xf6rebells/cath\xebdral*\x09echo>\'hi\'.jpg'
+                'path': '/bell/etc/m\xf6rebells/cath\xebdral*\x09echo>\'hi\'.jpg'
             })
             self.assertEqual(rv.status_code, API_CODES.SUCCESS)
             json_file = json.loads(rv.data)['data']
             # The tab, *, > and ' should be gone, the umlaut e remaining
-            self.assertEqual(json_file['src'], u'bell/etc/m\xf6rebells/cath\xebdralechohi.jpg')
+            self.assertEqual(json_file['src'], 'bell/etc/m\xf6rebells/cath\xebdralechohi.jpg')
         finally:
-            delete_dir(u'/bell', recursive=True)
+            delete_dir('/bell', recursive=True)
 
     # Flask by default encodes JSON dates in the awful RFC1123 format, so we override that
     def test_json_date_encoding(self):
@@ -1552,7 +1552,7 @@ class ImageServerAPITests(BaseTestCase):
         dt_time = datetime.datetime(2100, 1, 1, 12, 13, 15)
         task = Task(
             None, 'Unit test dummy task', 'noop',
-            cPickle.dumps({}, protocol=cPickle.HIGHEST_PROTOCOL),
+            pickle.dumps({}, protocol=pickle.HIGHEST_PROTOCOL),
             Task.PRIORITY_NORMAL, 'debug', 'error', 0
         )
         task.status = Task.STATUS_COMPLETE
@@ -1574,11 +1574,11 @@ class ImageServerAPITests(BaseTestCase):
         # Create a dummy task with an exception result
         task = Task(
             None, 'Unit test dummy task', 'noop',
-            cPickle.dumps({}, protocol=cPickle.HIGHEST_PROTOCOL),
+            pickle.dumps({}, protocol=pickle.HIGHEST_PROTOCOL),
             Task.PRIORITY_NORMAL, 'debug', 'error', 0
         )
         task.status = Task.STATUS_COMPLETE
-        task.result = cPickle.dumps(ValueError('Warp failure'), protocol=cPickle.HIGHEST_PROTOCOL)
+        task.result = pickle.dumps(ValueError('Warp failure'), protocol=pickle.HIGHEST_PROTOCOL)
         db_task = dm.save_object(task, refresh=True)
         try:
             # Get the task with the API

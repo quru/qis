@@ -30,10 +30,8 @@
 # =========  ====  ============================================================
 #
 
-from __future__ import absolute_import
-
 from collections import defaultdict
-from cStringIO import StringIO
+from io import StringIO
 from datetime import datetime
 import time
 
