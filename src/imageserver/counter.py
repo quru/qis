@@ -85,7 +85,7 @@ class Counter(dict):
 
         '''
         if iterable is not None:
-            if hasattr(iterable, 'iteritems'):
+            if hasattr(iterable, 'items'):
                 if self:
                     self_get = self.get
                     for elem, count in iterable.items():

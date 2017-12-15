@@ -1135,7 +1135,7 @@ class ImageManager(object):
         if icc_data is not None and len(icc_data) > 128:
             # The colorspace flag is 4 bytes from position 16 in the 128 byte header
             # See http://www.color.org/specification/ICC1v43_2010-12.pdf
-            return icc_data[16:20].strip()
+            return icc_data[16:20].strip().decode('ascii')
         return None
 
     @property
@@ -1162,7 +1162,7 @@ class ImageManager(object):
         Finds and returns the configured ICC profiles by searching for files
         in the ICC profiles directory. Returns a dictionary with keys of
         filename (lower case, without file extension) mapped to a tuple of
-        (icc_colorspace, icc_data).
+        (icc_colorspace<string>, icc_data<bytes>).
         """
         profiles = {}
 

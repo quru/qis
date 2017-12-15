@@ -299,7 +299,7 @@ class IncludeMarkdownExtension(Extension):
         super(IncludeMarkdownExtension, self).__init__(environment)
 
     def parse(self, parser):
-        line_no = parser.stream.next().lineno
+        line_no = next(parser.stream).lineno
         tag_args = [parser.parse_expression()]
 
         # If there is a comma, the user provided a text substitutions dict
@@ -318,9 +318,12 @@ class IncludeMarkdownExtension(Extension):
             with open(
                 os.path.join(self.environment.markdown_base_dir, md_path), 'rb'
             ) as f:
-                md_text = f.read()
+                md_bytes = f.read()
         except:
             raise TemplateNotFound(md_path)
+
+        # Convert bytes to string
+        md_text = md_bytes.decode('utf8')
 
         # Text substitutions
         if subs_dict:

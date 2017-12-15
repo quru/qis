@@ -8,7 +8,7 @@
 #}
 
 <ul>
-{% for k, v in template.get_values_dict().iteritems() if k != 'filename' and (template_show_blank or v) %}
+{% for k, v in template.get_values_dict().items() if k != 'filename' and (template_show_blank or v) %}
 	<li>
 		{% if k == 'format' %}File format
 		{% elif k == 'align_h'%}Horizontal align
