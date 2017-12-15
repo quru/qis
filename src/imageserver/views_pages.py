@@ -243,10 +243,7 @@ def upload_form():
 def upload_complete():
     # v1.20 Multiple images - get user's last upload data
     assert get_session_user_id() > 0
-    upload_results = cache_engine.raw_get(
-        'UPLOAD_API:' + str(get_session_user_id()),
-        integrity_check=True
-    )
+    upload_results = cache_engine.raw_get('UPLOAD_API:' + str(get_session_user_id()))
     if not upload_results:
         upload_results = {}
 

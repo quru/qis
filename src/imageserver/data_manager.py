@@ -655,7 +655,7 @@ class DataManager(object):
         src = self._normalize_image_path(src)
         # Try cache
         cache_key = self._get_id_cache_key(src)
-        cache_obj = self._cache.raw_get(cache_key, integrity_check=True)
+        cache_obj = self._cache.raw_get(cache_key)
         # #1589 Check this really is a database ID
         if cache_obj is not None and not isinstance(cache_obj, int):
             self._logger.error('Cached ID is unexpected type: ' + str(type(cache_obj)))
@@ -670,7 +670,7 @@ class DataManager(object):
                 return -1
             if db_obj.status == Image.STATUS_DELETED and not return_deleted:
                 return 0
-            self._cache.raw_put(cache_key, db_obj.id, integrity_check=True)
+            self._cache.raw_put(cache_key, db_obj.id)
             return db_obj.id
 
     @db_operation

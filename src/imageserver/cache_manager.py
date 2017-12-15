@@ -85,7 +85,6 @@ from .models import CacheBase, CacheEntry
 
 MAX_OBJECT_SLOTS = 32
 SLOT_HEADER_SIZE = 4
-INTEGRITY_HEADER = '$IC'
 
 SERVER_MAX_KEY_LENGTH = 250
 SERVER_MAX_VALUE_LENGTH = 1024*1024
@@ -483,11 +482,10 @@ class CacheManager(object):
         self.client().flush_all()
         return True
 
-    def raw_get(self, key, integrity_check=False):
+    def raw_get(self, key):
         """
         Returns the binary object with the given key from cache,
         or None if the key does not exist in the cache.
-        The integrity_check flag must match that given at raw_put().
         This method bypasses the cache control database.
         """
         try:
@@ -495,33 +493,6 @@ class CacheManager(object):
             obj = self.client().get(prepared_key)
         except pylibmc.Error:
             obj = None
-
-        if integrity_check and obj is not None:
-            expect_header = self._get_integrity_header(prepared_key)
-            try:
-                if not obj.startswith(expect_header):
-                    if not obj.startswith(INTEGRITY_HEADER):
-                        self._logger.error(
-                            'Cache value integrity: No value header for key: ' + key
-                        )
-                    else:
-                        header_end = max(min(obj.find('$', len(INTEGRITY_HEADER) + 1), 255), 5)
-                        self._logger.error(
-                            'Cache value integrity: Incorrect value header: ' +
-                            obj[:header_end + 1] + ' for key: ' + key
-                        )
-                    self.raw_delete(key)  # Wipe the value, caller can reset it
-                    return None
-            except:
-                self._logger.error(
-                    'Cache value integrity: Expected a string value for key: ' + key
-                )
-                self.raw_delete(key)  # Wipe the value, caller can reset it
-                return None
-
-            # Header matches, now unpickle the value
-            obj = pickle.loads(obj[len(expect_header):])
-
         return obj
 
     def raw_getn(self, keys):
@@ -554,26 +525,15 @@ class CacheManager(object):
         except pylibmc.Error:
             return False
 
-    def raw_put(self, key, obj, expiry_secs=0, integrity_check=False):
+    def raw_put(self, key, obj, expiry_secs=0):
         """
-        Adds or replaces an object in cache, with an optional expiry time in
-        seconds, and an optional self-integrity check that stores the key
-        alongside the value, requiring the same flag at raw_get().
-        The pickled object size cannot be greater than MAX_SLOT_SIZE,
-        or (MAX_SLOT_SIZE - len(key) - 5) if the integrity check is enabled.
+        Adds or replaces an object in cache, with an optional expiry time in seconds.
+        The pickled object size cannot be greater than MAX_SLOT_SIZE.
         Returns a boolean indicating success.
         This method bypasses the cache control database.
         """
-        prepared_key = self._prepare_cache_key(key)
-        prepared_obj = obj
-        if integrity_check:
-            # We have to get obj as a string to prepend the integrity header
-            prepared_obj = (
-                self._get_integrity_header(prepared_key) +
-                pickle.dumps(obj, protocol=pickle.HIGHEST_PROTOCOL)
-            )
         try:
-            return self.client().set(prepared_key, prepared_obj, expiry_secs)
+            return self.client().set(self._prepare_cache_key(key), obj, expiry_secs)
         except pylibmc.Error:
             return False
 
@@ -692,14 +652,6 @@ class CacheManager(object):
         if num_bytes % MAX_SLOT_SIZE > 0:
             slots += 1
         return max(1, slots)
-
-    def _get_integrity_header(self, prepared_key):
-        """
-        Returns a string header for prepending to a string cache value.
-        The header incorporates the cache key, so that the value can be verified
-        against the same key upon retrieval.
-        """
-        return INTEGRITY_HEADER + '$' + prepared_key + '$'
 
     def _open_cache(self):
         """

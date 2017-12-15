@@ -525,10 +525,7 @@ class ImageManager(object):
         Note that even if the last modification time is known, the associated
         image itself may not still be in cache (or may never have been cached).
         """
-        image_metadata = self._cache.raw_get(
-            image_attrs.get_metadata_cache_key(),
-            integrity_check=True
-        )
+        image_metadata = self._cache.raw_get(image_attrs.get_metadata_cache_key())
         return image_metadata['modified'] if image_metadata else 0
 
     def get_image_original_modified_time(self, image_attrs):
@@ -776,8 +773,7 @@ class ImageManager(object):
         ok = self._cache.raw_put(
             image_attrs.get_metadata_cache_key(), {
                 'modified': modified_time
-            },
-            integrity_check=True
+            }
         )
         if not ok:
             self._logger.warn(

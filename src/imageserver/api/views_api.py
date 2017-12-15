@@ -329,8 +329,7 @@ def upload():
         cache_engine.raw_put(
             'UPLOAD_API:' + str(current_user.id),
             ret_dict,
-            expiry_secs=(60 * 60 * 24 * 7),
-            integrity_check=True
+            expiry_secs=(60 * 60 * 24 * 7)
         )
 
     # If here, all files were uploaded successfully

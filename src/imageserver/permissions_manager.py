@@ -244,10 +244,7 @@ class PermissionsManager(object):
         if user is None:
             cache_val = self._public_fp_cache.get(folder_path)
         else:
-            cache_val = self._cache.raw_get(
-                self._get_cache_key(user, folder_path),
-                integrity_check=True
-            )
+            cache_val = self._cache.raw_get(self._get_cache_key(user, folder_path))
         # Cache entries are (value, version)
         if cache_val and cache_val[1] == current_version:
             return cache_val[0]
@@ -335,8 +332,7 @@ class PermissionsManager(object):
                 self._cache.raw_put(
                     self._get_cache_key(user, folder_path),
                     (final_access, current_version),
-                    PermissionsManager.USER_PERMISSIONS_TIMEOUT,
-                    integrity_check=True
+                    PermissionsManager.USER_PERMISSIONS_TIMEOUT
                 )
                 db_commit = True
                 return final_access
