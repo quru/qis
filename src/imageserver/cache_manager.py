@@ -281,6 +281,8 @@ class CacheManager(object):
         # avoids the need for any database lookups.
         chunk = self.raw_get(key+'_1')
         if chunk is not None:
+            is_bytes = isinstance(chunk, bytes)
+            blank = b'' if is_bytes else ''
             num_slots = self._get_slot_header_value(chunk[0:SLOT_HEADER_SIZE])
             if num_slots <= 0:
                 # Looks like an unmanaged object (no header).
@@ -292,12 +294,11 @@ class CacheManager(object):
                 # Read the other chunks. Some or all may have been expired/purged.
                 chunk_keys = [key+'_'+str(num) for num in range(2, num_slots + 1)]
                 # Pre-process chunk_keys here so that the returned dictionary keys will match up
-                chunk_keys = self._prepare_cache_keys(chunk_keys)
                 chunks = self.raw_getn(chunk_keys)
                 if len(chunks) == len(chunk_keys):
                     # Return correctly ordered, re-constituted object
                     chunk1 = chunk[SLOT_HEADER_SIZE:]
-                    return chunk1 + ''.join(chunks[k] for k in chunk_keys)
+                    return chunk1 + blank.join(chunks[k] for k in chunk_keys)
         # If we get here it's a plain cache miss or one or more chunks are missing.
         # For the former, just ensure the control record (if any) is deleted too.
         # For the latter, also delete any orphaned chunks that may still exist.
@@ -324,10 +325,12 @@ class CacheManager(object):
         num_slots = self._slots_for_size(len(obj))
         if num_slots > MAX_OBJECT_SLOTS:
             return False
+        is_bytes = isinstance(obj, bytes)
+        blank = b'' if is_bytes else ''
         for slot in range(1, num_slots + 1):
             from_offset = (slot - 1) * MAX_SLOT_SIZE
             to_offset = len(obj) if slot == num_slots else (slot * MAX_SLOT_SIZE)
-            slot_header = self._get_slot_header(num_slots) if slot == 1 else ''
+            slot_header = self._get_slot_header(num_slots, is_bytes) if slot == 1 else blank
             chunks[key+'_'+str(slot)] = slot_header + obj[from_offset:to_offset]
         # Add chunks to cache
         if self.raw_putn(chunks, expiry_secs):
@@ -489,8 +492,7 @@ class CacheManager(object):
         This method bypasses the cache control database.
         """
         try:
-            prepared_key = self._prepare_cache_key(key)
-            obj = self.client().get(prepared_key)
+            obj = self.client().get(self._prepare_cache_key(key))
         except pylibmc.Error:
             obj = None
         return obj
@@ -633,16 +635,21 @@ class CacheManager(object):
         Returns the number of slots specified by a string slot header, or 0 if
         the supplied string is not a valid slot header.
         """
-        if len(header) == SLOT_HEADER_SIZE and header[0] == '$' and header[-1] == '$':
+        as_bytes = isinstance(header, bytes)
+        marker = b'$' if as_bytes else '$'
+        if len(header) == SLOT_HEADER_SIZE and header[0] == marker and header[-1] == marker:
             return int(header[1:-1])
         else:
             return 0
 
-    def _get_slot_header(self, num_slots):
+    def _get_slot_header(self, num_slots, as_bytes):
         """
-        Returns the string slot header for a given number of slots.
+        Returns the slot header for a given number of slots as a string or as bytes.
         """
-        return "$%02d$" % num_slots
+        if as_bytes:
+            return b"$" + ("%02d" % num_slots).encode('ascii') + b"$"
+        else:
+            return "$%02d$" % num_slots
 
     def _slots_for_size(self, num_bytes):
         """
