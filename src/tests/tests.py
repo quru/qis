@@ -1387,75 +1387,104 @@ class ImageServerTestsFast(BaseTestCase):
     def test_overflow_params(self):
         buf = 'a' * 1025
         rv = self.app.get('/image?src=' + buf)
-        assert rv.status_code == 400 and 'out of range' in rv.data
+        self.assertEqual(rv.status_code, 400)
+        self.assertIn('out of range', rv.data.decode('utf8'))
         rv = self.app.get('/original?src=' + buf)
-        assert rv.status_code == 400 and 'out of range' in rv.data
+        self.assertEqual(rv.status_code, 400)
+        self.assertIn('out of range', rv.data.decode('utf8'))
         rv = self.app.get('/image?src=test_images/test.jpg&overlay=' + buf)
-        assert rv.status_code == 400 and 'out of range' in rv.data
+        self.assertEqual(rv.status_code, 400)
+        self.assertIn('out of range', rv.data.decode('utf8'))
         buf = 'a' * 257
         rv = self.app.get('/image?src=test_images/test.jpg&format=' + buf)
-        assert rv.status_code == 400 and 'not a valid choice' in rv.data
+        self.assertEqual(rv.status_code, 400)
+        self.assertIn('not a valid choice', rv.data.decode('utf8'))
         rv = self.app.get('/image?src=test_images/test.jpg&tmp=' + buf)
-        assert rv.status_code == 400 and 'not a valid choice' in rv.data
+        self.assertEqual(rv.status_code, 400)
+        self.assertIn('not a valid choice', rv.data.decode('utf8'))
         rv = self.app.get('/image?src=test_images/test.jpg&angle=1&fill=' + buf)
-        assert rv.status_code == 400 and 'out of range' in rv.data
+        self.assertEqual(rv.status_code, 400)
+        self.assertIn('out of range', rv.data.decode('utf8'))
         rv = self.app.get('/image?src=test_images/test.jpg&icc=' + buf)
-        assert rv.status_code == 400 and 'not a valid choice' in rv.data
+        self.assertEqual(rv.status_code, 400)
+        self.assertIn('not a valid choice', rv.data.decode('utf8'))
         rv = self.app.get('/image?src=test_images/test.jpg&ovpos=' + buf)
-        assert rv.status_code == 400 and 'not a valid choice' in rv.data
+        self.assertEqual(rv.status_code, 400)
+        self.assertIn('not a valid choice', rv.data.decode('utf8'))
 
     # #1864 Test buffer overflow protection on unicode string params (thanks script kiddies)
     def test_unicode_overflow_params(self):
         buf = 'ø' * 1025
         rv = self.app.get('/image?src=' + buf)
-        assert rv.status_code == 400 and 'out of range' in rv.data
+        self.assertEqual(rv.status_code, 400)
+        self.assertIn('out of range', rv.data.decode('utf8'))
         rv = self.app.get('/original?src=' + buf)
-        assert rv.status_code == 400 and 'out of range' in rv.data
+        self.assertEqual(rv.status_code, 400)
+        self.assertIn('out of range', rv.data.decode('utf8'))
         rv = self.app.get('/image?src=test_images/test.jpg&overlay=' + buf)
-        assert rv.status_code == 400 and 'out of range' in rv.data
+        self.assertEqual(rv.status_code, 400)
+        self.assertIn('out of range', rv.data.decode('utf8'))
 
     # Test bad params
     def test_bad_params(self):
         rv = self.app.get('/image?src=test_images/test.jpg&width=99999')
-        assert rv.status_code == 400 and 'out of range' in rv.data
+        self.assertEqual(rv.status_code, 400)
+        self.assertIn('out of range', rv.data.decode('utf8'))
         rv = self.app.get('/image?src=test_images/test.jpg&height=-10')
-        assert rv.status_code == 400 and 'out of range' in rv.data
+        self.assertEqual(rv.status_code, 400)
+        self.assertIn('out of range', rv.data.decode('utf8'))
         rv = self.app.get('/image?src=test_images/test.jpg&top=1.1')
-        assert rv.status_code == 400 and 'out of range' in rv.data
+        self.assertEqual(rv.status_code, 400)
+        self.assertIn('out of range', rv.data.decode('utf8'))
         rv = self.app.get('/image?src=test_images/test.jpg&bottom=-0.5')
-        assert rv.status_code == 400 and 'out of range' in rv.data
+        self.assertEqual(rv.status_code, 400)
+        self.assertIn('out of range', rv.data.decode('utf8'))
         rv = self.app.get('/image?src=test_images/cathedral.jpg&format=eggs')
-        assert rv.status_code == 400 and 'not a valid choice' in rv.data
+        self.assertEqual(rv.status_code, 400)
+        self.assertIn('not a valid choice', rv.data.decode('utf8'))
         rv = self.app.get('/image?src=test_images/cathedral.jpg&width=500&height=500&fill=spam')
-        assert rv.status_code == 415 and 'unsupported fill colour' in rv.data
+        self.assertEqual(rv.status_code, 415)
+        self.assertIn('unsupported fill colour', rv.data.decode('utf8'))
         rv = self.app.get('/image?src=test_images/cathedral.jpg&tmp=eggs_and_spam')
-        assert rv.status_code == 400
+        self.assertEqual(rv.status_code, 400)
         rv = self.app.get('/image?src=test_images/cathedral.jpg&icc=eggs_and_spam')
-        assert rv.status_code == 400
+        self.assertEqual(rv.status_code, 400)
         rv = self.app.get('/image?src=test_images/cathedral.jpg&overlay=eggs_and_spam')
-        assert rv.status_code == 404 and 'not found' in rv.data
+        self.assertEqual(rv.status_code, 404)
+        self.assertIn('not found', rv.data.decode('utf8'))
         rv = self.app.get('/image?src=test_images/cathedral.jpg&ovopacity=1.1')
-        assert rv.status_code == 400 and 'out of range' in rv.data
+        self.assertEqual(rv.status_code, 400)
+        self.assertIn('out of range', rv.data.decode('utf8'))
         rv = self.app.get('/image?src=test_images/cathedral.jpg&ovsize=-0.5')
-        assert rv.status_code == 400 and 'out of range' in rv.data
+        self.assertEqual(rv.status_code, 400)
+        self.assertIn('out of range', rv.data.decode('utf8'))
         rv = self.app.get('/image?src=test_images/cathedral.jpg&icc=AdobeRGB1998&intent=perceptive')
-        assert rv.status_code == 400 and 'not a valid choice' in rv.data
+        self.assertEqual(rv.status_code, 400)
+        self.assertIn('not a valid choice', rv.data.decode('utf8'))
         rv = self.app.get('/image?src=test_images/cathedral.jpg&tile=5')
-        assert rv.status_code == 400 and 'invalid format' in rv.data
+        self.assertEqual(rv.status_code, 400)
+        self.assertIn('invalid format', rv.data.decode('utf8'))
         rv = self.app.get('/image?src=test_images/cathedral.jpg&tile=1:400')
-        assert rv.status_code == 400 and 'out of range' in rv.data
+        self.assertEqual(rv.status_code, 400)
+        self.assertIn('out of range', rv.data.decode('utf8'))
         rv = self.app.get('/image?src=test_images/cathedral.jpg&tile=1:12')
-        assert rv.status_code == 400 and 'not square' in rv.data
+        self.assertEqual(rv.status_code, 400)
+        self.assertIn('not square', rv.data.decode('utf8'))
         rv = self.app.get('/image?src=test_images/cathedral.jpg&tile=0:9')
-        assert rv.status_code == 400 and 'out of range' in rv.data
+        self.assertEqual(rv.status_code, 400)
+        self.assertIn('out of range', rv.data.decode('utf8'))
         rv = self.app.get('/image?src=test_images/cathedral.jpg&tile=10:9')
-        assert rv.status_code == 400 and 'out of range' in rv.data
+        self.assertEqual(rv.status_code, 400)
+        self.assertIn('out of range', rv.data.decode('utf8'))
         rv = self.app.get('/image?src=test_images/cathedral.jpg&page=-1')
-        assert rv.status_code == 400 and 'out of range' in rv.data
+        self.assertEqual(rv.status_code, 400)
+        self.assertIn('out of range', rv.data.decode('utf8'))
         rv = self.app.get('/image?src=test_images/cathedral.jpg&page=1024768')
-        assert rv.status_code == 400 and 'out of range' in rv.data
+        self.assertEqual(rv.status_code, 400)
+        self.assertIn('out of range', rv.data.decode('utf8'))
         rv = self.app.get('/image?src=test_images/cathedral.jpg&flip=x')
-        assert rv.status_code == 400 and 'not a valid choice' in rv.data
+        self.assertEqual(rv.status_code, 400)
+        self.assertIn('not a valid choice', rv.data.decode('utf8'))
 
     # #2590 Some clients request "x=1&amp;y=2" instead of "x=1&y=2"
     def test_bad_query_string(self):
@@ -2588,29 +2617,29 @@ class ImageServerTestsFast(BaseTestCase):
             copy_file('test_images/thames.jpg', temp_file)
             # Test plain image views
             rv = self.app.get(image_url)
-            assert rv.status_code == 200, rv.data
+            self.assertEqual(rv.status_code, 200)
             rv = self.app.get(original_url)
-            assert rv.status_code == 200, rv.data
+            self.assertEqual(rv.status_code, 200)
             # Test image with a unicode overlay name
             rv = self.app.get(overlayed_image_url)
-            assert rv.status_code == 200, rv.data
+            self.assertEqual(rv.status_code, 200)
             # Test directory listing
             self.login('admin', 'admin')
             rv = self.app.get(list_url)
-            assert rv.status_code == 200, rv.data
-            assert 'class="error' not in rv.data, rv.data
+            self.assertEqual(rv.status_code, 200)
+            self.assertNotIn('class="error', rv.data.decode('utf8'))
             # Test viewing details
             rv = self.app.get(details_url)
-            assert rv.status_code == 200, rv.data
-            assert 'class="error' not in rv.data, rv.data
+            self.assertEqual(rv.status_code, 200)
+            self.assertNotIn('class="error', rv.data.decode('utf8'))
             # Test folder permission admin
             rv = self.app.get(fp_admin_url)
-            assert rv.status_code == 200, rv.data
-            assert 'class="error' not in rv.data, rv.data
+            self.assertEqual(rv.status_code, 200)
+            self.assertNotIn('class="error', rv.data.decode('utf8'))
             # Test permissions tracing
             rv = self.app.get(fp_trace_url)
-            assert rv.status_code == 200, rv.data
-            assert 'class="error' not in rv.data, rv.data
+            self.assertEqual(rv.status_code, 200)
+            self.assertNotIn('class="error', rv.data.decode('utf8'))
         finally:
             delete_dir(temp_dir, recursive=True)
 
@@ -2987,7 +3016,7 @@ class ImageServerTestsFast(BaseTestCase):
             self.assertIsNone(rv.headers.get('Content-Length'))
             self.assertIsNone(rv.headers.get('X-From-Cache'))
             self.assertIsNone(rv.headers.get('Content-Disposition'))
-            self.assertEqual(rv.data, '')
+            self.assertEqual(rv.data, b'')
             # Now reset the image
             if api == 'image':
                 im.reset_image(ImageAttrs('test_images/dorset.jpg'))
