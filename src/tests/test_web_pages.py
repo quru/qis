@@ -91,7 +91,7 @@ class ImageServerTestsWebPages(BaseTestCase):
         self.assertEqual(rv.status_code, 200)
         self.assertIn(
             __about__.__title__ + ' v' + __about__.__version__,
-            rv.data
+            rv.data.decode('utf8')
         )
 
     # Help page
@@ -202,13 +202,13 @@ class ImageServerTestsWebPages(BaseTestCase):
     def test_browse_folder_page_bad_folder(self):
         self.call_page_requiring_login(
             '/list/?path=/test_images\x00uh oh&view=list',
-            required_text='must be encoded string without NULL bytes'
+            required_text='embedded NUL character'
         )
 
     def test_browse_folder_page_bad_folder_grid(self):
         self.call_page_requiring_login(
             '/list/?path=/test_images\x00uh oh&view=grid',
-            required_text='must be encoded string without NULL bytes'
+            required_text='embedded NUL character'
         )
 
     # Image detail page
