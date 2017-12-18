@@ -31,7 +31,7 @@
 #
 
 from collections import defaultdict
-from io import StringIO
+from io import BytesIO
 from datetime import datetime
 import time
 
@@ -47,9 +47,9 @@ from imageserver.flask_app import data_engine as dm
 from imageserver.stats_manager import StatsManager
 
 
-class StringIOConnection(object):
+class BytesIOConnection(object):
     def __init__(self, value=None):
-        self.buf = StringIO(value) if value else StringIO()
+        self.buf = BytesIO(value) if value else BytesIO()
         self.buf.seek(0)
 
     def recv(self, n, flags=None):
@@ -68,7 +68,7 @@ class StringIOConnection(object):
 class StatsHandlerTests(main_tests.FlaskTestCase):
     # Returns a mocked server side "request" object
     def _mock_stats_request(self, data):
-        return StringIOConnection(data)
+        return BytesIOConnection(data)
 
     # Returns a mocked stats_server StatsSocketServer
     def _mock_stats_server(self):
@@ -90,7 +90,7 @@ class StatsHandlerTests(main_tests.FlaskTestCase):
     @mock.patch('imageserver.stats_manager.StatsManager._client_connect')
     def test_make_request(self, mock_connect):
         sc = StatsManager(None, 'Mock', 1)
-        sc._sock = StringIOConnection()
+        sc._sock = BytesIOConnection()
         sc.log_request(7, 0.01)
         server = self._mock_server_call(sc._sock.value())
         self.assertEqual(
@@ -105,7 +105,7 @@ class StatsHandlerTests(main_tests.FlaskTestCase):
     @mock.patch('imageserver.stats_manager.StatsManager._client_connect')
     def test_make_request_nostats(self, mock_connect):
         sc = StatsManager(None, 'Mock', 1)
-        sc._sock = StringIOConnection()
+        sc._sock = BytesIOConnection()
         sc.log_request(7, 0.01, False)
         server = self._mock_server_call(sc._sock.value())
         self.assertEqual(
@@ -120,7 +120,7 @@ class StatsHandlerTests(main_tests.FlaskTestCase):
     @mock.patch('imageserver.stats_manager.StatsManager._client_connect')
     def test_make_view(self, mock_connect):
         sc = StatsManager(None, 'Mock', 1)
-        sc._sock = StringIOConnection()
+        sc._sock = BytesIOConnection()
         sc.log_view(7, 1024, False, 0.22)
         server = self._mock_server_call(sc._sock.value())
         self.assertEqual(
@@ -137,7 +137,7 @@ class StatsHandlerTests(main_tests.FlaskTestCase):
     @mock.patch('imageserver.stats_manager.StatsManager._client_connect')
     def test_make_view_nostats(self, mock_connect):
         sc = StatsManager(None, 'Mock', 1)
-        sc._sock = StringIOConnection()
+        sc._sock = BytesIOConnection()
         sc.log_view(7, 1024, False, 0.22, False)
         server = self._mock_server_call(sc._sock.value())
         self.assertEqual(
@@ -153,7 +153,7 @@ class StatsHandlerTests(main_tests.FlaskTestCase):
     @mock.patch('imageserver.stats_manager.StatsManager._client_connect')
     def test_make_cached_view(self, mock_connect):
         sc = StatsManager(None, 'Mock', 1)
-        sc._sock = StringIOConnection()
+        sc._sock = BytesIOConnection()
         sc.log_view(7, 1024, True, 0.02)
         server = self._mock_server_call(sc._sock.value())
         self.assertEqual(
@@ -170,7 +170,7 @@ class StatsHandlerTests(main_tests.FlaskTestCase):
     @mock.patch('imageserver.stats_manager.StatsManager._client_connect')
     def test_make_download(self, mock_connect):
         sc = StatsManager(None, 'Mock', 1)
-        sc._sock = StringIOConnection()
+        sc._sock = BytesIOConnection()
         sc.log_download(7, 1024, 1)
         server = self._mock_server_call(sc._sock.value())
         self.assertEqual(
@@ -187,7 +187,7 @@ class StatsHandlerTests(main_tests.FlaskTestCase):
     @mock.patch('imageserver.stats_manager.StatsManager._client_connect')
     def test_make_download_nostats(self, mock_connect):
         sc = StatsManager(None, 'Mock', 1)
-        sc._sock = StringIOConnection()
+        sc._sock = BytesIOConnection()
         sc.log_download(7, 1024, 1, False)
         server = self._mock_server_call(sc._sock.value())
         self.assertEqual(
