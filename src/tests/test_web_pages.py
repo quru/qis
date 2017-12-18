@@ -120,10 +120,14 @@ class ImageServerTestsWebPages(BaseTestCase):
             # Test upload complete page
             rv = self.app.get('/uploadcomplete/')
             self.assertEqual(rv.status_code, 200)
-            self.assertIn('1 image was uploaded successfully.', rv.data.decode('utf8'))
+            page_text = rv.data.decode('utf8')
+            self.assertIn('1 image was uploaded successfully.', page_text)
             # #2575 The thumbnail needs to set "&format=jpg" otherwise it breaks for
             #       browser-unsupported types e.g. TIF, PDF files
-            self.assertIn('src=test_images/tmp_qis_uploadfile.jpg&amp;format=jpg', rv.data.decode('utf8'))
+            start_idx = page_text.index('<img class')
+            end_idx = page_text.index('>', start_idx)
+            self.assertIn('src=test_images/tmp_qis_uploadfile.jpg', page_text[start_idx:end_idx])
+            self.assertIn('format=jpg', page_text[start_idx:end_idx])
         finally:
             # Remove the test files and data
             os.remove(dst_file)
