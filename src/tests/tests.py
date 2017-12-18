@@ -365,7 +365,7 @@ class BaseTestCase(FlaskTestCase):
                 raise ValueError('Test image not found: ' + match_file)
         temp_img = '/tmp/qis_img.tmp'
         try:
-            with open(temp_img, 'w') as f:
+            with open(temp_img, 'wb') as f:
                 f.write(img_data)
             psnr = compare_images(temp_img, static_img)
             self.assertGreaterEqual(psnr, tolerance)
@@ -408,7 +408,7 @@ class BaseTestCase(FlaskTestCase):
     # the filename with slashes converted to underscores.
     # Returns the app.post() return value.
     def file_upload(self, app, src_file_path, dest_folder, overwrite=1):
-        with open(src_file_path) as infile:
+        with open(src_file_path, 'rb') as infile:
             rv = app.post('/api/upload/', data={
                 'files': infile,
                 'path': dest_folder,
@@ -679,7 +679,7 @@ class ImageServerTestsRegressions(BaseTestCase):
                 )
                 self.assertEqual(png.status_code, 200)
                 self.assertNotEqual(jpg.data, png.data)
-                with open(tempfile, 'w') as f:
+                with open(tempfile, 'wb') as f:
                     f.write(png.data)
                 self.assertImageMatch(jpg.data, tempfile, 1000)
         finally:
@@ -2281,7 +2281,7 @@ class ImageServerTestsFast(BaseTestCase):
         try:
             # Create a php.ini
             with open(tempfile, 'w') as tfile:
-                tfile.write('UNIT TEST! This is my php.ini file containing interesting info.')
+                tfile.write('QIS TEST. This is my php.ini file containing interesting info.')
             # Test we can't now serve that up
             rv = self.app.get('/original?src=php.ini')
             self.assertEqual(rv.status_code, 415)
@@ -2451,8 +2451,8 @@ class ImageServerTestsFast(BaseTestCase):
         shutil.copy(src_file, dst_file2)
         try:
             # Test both files success
-            with open(dst_file1) as infile1:
-                with open(dst_file2) as infile2:
+            with open(dst_file1, 'rb') as infile1:
+                with open(dst_file2, 'rb') as infile2:
                     rv = self.app.post('/api/upload/', data={
                         'files': [infile1, infile2],
                         'path': 'test_images',
@@ -2469,8 +2469,8 @@ class ImageServerTestsFast(BaseTestCase):
             self.assertGreater(imgdata['id'], 0)
             # Test 1 file success, 1 file failure
             delete_file('test_images/tmp_qis_uploadfile1.jpg')
-            with open(dst_file1) as infile1:
-                with open(dst_file2) as infile2:
+            with open(dst_file1, 'rb') as infile1:
+                with open(dst_file2, 'rb') as infile2:
                     rv = self.app.post('/api/upload/', data={
                         'files': [infile1, infile2],
                         'path': 'test_images',
