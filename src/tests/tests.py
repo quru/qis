@@ -3151,42 +3151,6 @@ class ImageServerCacheTests(BaseTestCase):
         header2 = cm._get_slot_header(MAX_OBJECT_SLOTS)
         self.assertEqual(len(header2), SLOT_HEADER_SIZE)
 
-    # #1589 Test hash collision detection
-    def test_cache_integrity_checks(self):
-        # Check normal value set/get
-        ret = cm.raw_put('knight', ImageAttrs('round/table.jpg', 1001), integrity_check=True)
-        self.assertTrue(ret)
-        ret = cm.raw_get('knight', integrity_check=True)
-        self.assertIsNotNone(ret)
-        self.assertIsInstance(ret, ImageAttrs)
-        self.assertEqual(ret.filename(), 'round/table.jpg')
-        self.assertEqual(ret.database_id(), 1001)
-        ret = cm.raw_put('knight', 'ABC123', integrity_check=True)
-        self.assertTrue(ret)
-        ret = cm.raw_get('knight', integrity_check=True)
-        self.assertEqual(ret, 'ABC123')
-        # Check that value stored without an integrity check fails at raw_get()
-        _val = 'ABC123'
-        ret = cm.raw_put('knight', _val, integrity_check=False)
-        self.assertTrue(ret)
-        with mock.patch('imageserver.flask_app.logger.error') as mocklogger:
-            ret = cm.raw_get('knight', integrity_check=True)
-            self.assertIsNone(ret)
-            mocklogger.assert_called_once_with(mock.ANY)
-        # Check that value stored under a different key fails at raw_get()
-        _val = cm._get_integrity_header('thewrongkey') + 'ABC123'
-        ret = cm.raw_put('knight', _val, integrity_check=False)
-        self.assertTrue(ret)
-        with mock.patch('imageserver.flask_app.logger.error') as mocklogger:
-            ret = cm.raw_get('knight', integrity_check=True)
-            self.assertIsNone(ret)
-            mocklogger.assert_called_once_with(mock.ANY)
-        # Check delete
-        ret = cm.raw_delete('knight')
-        self.assertTrue(ret)
-        ret = cm.raw_get('knight')
-        self.assertIsNone(ret)
-
 
 class UtilityTests(unittest.TestCase):
     def test_image_attrs_serialisation(self):
