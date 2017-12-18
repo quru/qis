@@ -3146,9 +3146,9 @@ class ImageServerCacheTests(BaseTestCase):
     def test_cache_slot_headers(self):
         from imageserver.cache_manager import SLOT_HEADER_SIZE
         from imageserver.cache_manager import MAX_OBJECT_SLOTS
-        header1 = cm._get_slot_header(1)
+        header1 = cm._get_slot_header(1, True)
         self.assertEqual(len(header1), SLOT_HEADER_SIZE)
-        header2 = cm._get_slot_header(MAX_OBJECT_SLOTS)
+        header2 = cm._get_slot_header(MAX_OBJECT_SLOTS, True)
         self.assertEqual(len(header2), SLOT_HEADER_SIZE)
 
 

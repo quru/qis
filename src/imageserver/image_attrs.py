@@ -111,8 +111,8 @@ class TypeValidator(AttributeValidator):
     def __call__(self, value):
         if not isinstance(value, self.valid_type):
             raise ValueError(
-                "Value %r had type %r, not %r" %
-                (value, type(value), self.valid_type)
+                "Value %r had type %s, but expected %s" %
+                (value, type(value).__name__, self.valid_type.__name__)
             )
         return True
 

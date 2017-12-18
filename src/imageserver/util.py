@@ -281,7 +281,8 @@ def validate_number(val, min_val, max_val):
     Raises a ValueError if val is not a number, or is below min_val
     or above max_val, otherwise does nothing.
     """
-    if not isinstance(val, int) and not isinstance(val, float):
+    is_bool = isinstance(val, bool)  # Python bools are ints :(
+    if is_bool or (not isinstance(val, int) and not isinstance(val, float)):
         raise ValueError('Value is not a number')
     if val < min_val or val > max_val:
         fmt = '%0.2f' if isinstance(val, float) else '%d'
