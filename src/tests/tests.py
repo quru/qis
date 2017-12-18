@@ -2850,7 +2850,7 @@ class ImageServerTestsFast(BaseTestCase):
                 set_default_expiry(-1)
                 img = self.app.get(img_url)
                 self.assertEqual(img.headers.get('Expires'), http_date(0))
-                self.assertEqual(img.headers.get('Cache-Control'), 'no-cache, public')
+                self.assertIn(img.headers.get('Cache-Control'), ['no-cache, public', 'public, no-cache'])
                 set_default_expiry(0)
                 img = self.app.get(img_url)
                 self.assertIsNone(img.headers.get('Expires'))
@@ -2858,7 +2858,7 @@ class ImageServerTestsFast(BaseTestCase):
                 set_default_expiry(60)
                 img = self.app.get(img_url)
                 self.assertEqual(img.headers.get('Expires'), http_date(int(time.time() + 60)))
-                self.assertEqual(img.headers.get('Cache-Control'), 'public, max-age=60')
+                self.assertIn(img.headers.get('Cache-Control'), ['public, max-age=60', 'max-age=60, public'])
         finally:
             reset_default_image_template()
 
@@ -2897,17 +2897,17 @@ class ImageServerTestsFast(BaseTestCase):
         self.login('kryten', 'kryten')  # Login to allow cache=0
         img_url = '/image?src=test_images/dorset.jpg&width=250&cache=0'
         rv = self.app.get(img_url)
-        assert rv.headers['X-From-Cache'] == 'False'
-        assert rv.headers.get('ETag') is not None
-        assert rv.headers.get('Expires') == http_date(int(time.time() + 604800))
-        assert rv.headers.get('Cache-Control') == 'public, max-age=604800'
+        self.assertEqual(rv.headers['X-From-Cache'], 'False')
+        self.assertIsNotNone(rv.headers.get('ETag'))
+        self.assertEqual(rv.headers.get('Expires'), http_date(int(time.time() + 604800)))
+        self.assertIn(rv.headers.get('Cache-Control'), ['public, max-age=604800', 'max-age=604800, public'])
         etag = rv.headers.get('ETag')
         # Etag should stay the same for the same re-generated image
         rv = self.app.get(img_url)
-        assert rv.headers['X-From-Cache'] == 'False'
-        assert rv.headers.get('Expires') == http_date(int(time.time() + 604800))
-        assert rv.headers.get('Cache-Control') == 'public, max-age=604800'
-        assert rv.headers.get('ETag') == etag
+        self.assertEqual(rv.headers['X-From-Cache'], 'False')
+        self.assertEqual(rv.headers.get('Expires'), http_date(int(time.time() + 604800)))
+        self.assertIn(rv.headers.get('Cache-Control'), ['public, max-age=604800', 'max-age=604800, public'])
+        self.assertEqual(rv.headers.get('ETag'), etag)
 
     # Test that etags are removed when client side caching is off
     def test_no_client_caching_etags(self):
@@ -2981,7 +2981,7 @@ class ImageServerTestsFast(BaseTestCase):
                     http_date(int(time.time() + 604800))       # Expected
                 ]
             )
-            self.assertEqual(rv.headers.get('Cache-Control'), 'public, max-age=604800')
+            self.assertIn(rv.headers.get('Cache-Control'), ['public, max-age=604800', 'max-age=604800, public'])
             # Flask bug? Content type gets here but is correctly absent outside of unit tests
             # self.assertIsNone(rv.headers.get('Content-Type'))
             self.assertIsNone(rv.headers.get('Content-Length'))
