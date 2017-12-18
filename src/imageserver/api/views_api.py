@@ -131,16 +131,12 @@ def imagelist():
     except ValueError as e:
         raise ParameterError(e)
 
-    # Get extra parameters for image URL construction
+    # Get extra parameters for image URL construction, remove API parameters
     image_params = request.args.to_dict()
-    if 'path' in image_params:
-        del image_params['path']
-    if 'attributes' in image_params:
-        del image_params['attributes']
-    if 'start' in image_params:
-        del image_params['start']
-    if 'limit' in image_params:
-        del image_params['limit']
+    image_params.pop('path', None)
+    image_params.pop('attributes', None)
+    image_params.pop('start', None)
+    image_params.pop('limit', None)
 
     # Get directory listing
     directory_info = get_directory_listing(from_path, False, 2, start, limit)
