@@ -117,103 +117,112 @@ with app.app_context():
     from .stats_manager import StatsManager
     from .task_manager import TaskManager
 
-    # Create the logging client+server
-    logger = LogManager(
-        __about__.__tag__.lower() + '_' + str(os.getpid()),
-        app.config['DEBUG'],
-        app.config['LOGGING_SERVER'],
-        app.config['LOGGING_SERVER_PORT']
-    )
-    app.log = logger
-    LogManager.run_server(
-        app.config['LOGGING_SERVER'],
-        app.config['LOGGING_SERVER_PORT'],
-        __about__.__tag__.lower() + '.log',
-        app.config['DEBUG']
-    )
-    # Capture Flask's internal logging
-    app.logger.addHandler(logger.logging_handler)
+    logger = None
+    try:
+        # Create the logging client+server
+        logger = LogManager(
+            __about__.__tag__.lower() + '_' + str(os.getpid()),
+            app.config['DEBUG'],
+            app.config['LOGGING_SERVER'],
+            app.config['LOGGING_SERVER_PORT']
+        )
+        app.log = logger
+        LogManager.run_server(
+            app.config['LOGGING_SERVER'],
+            app.config['LOGGING_SERVER_PORT'],
+            __about__.__tag__.lower() + '.log',
+            app.config['DEBUG']
+        )
+        # Capture Flask's internal logging
+        app.logger.addHandler(logger.logging_handler)
 
-    # Announce startup
-    logger.info(__about__.__title__ + ' v' + __about__.__version__ + ' engine startup')
-    logger.info('Using settings ' + app.config['_SETTINGS_IN_USE'])
-    if app.config['DEBUG']:
-        logger.info('*** Debug mode ENABLED ***')
-    if app.config['BENCHMARKING']:
-        logger.info('*** Benchmarking mode ENABLED ***')
+        # Announce startup
+        logger.info(__about__.__title__ + ' v' + __about__.__version__ + ' engine startup')
+        logger.info('Using settings ' + app.config['_SETTINGS_IN_USE'])
+        if app.config['DEBUG']:
+            logger.info('*** Debug mode ENABLED ***')
+        if app.config['BENCHMARKING']:
+            logger.info('*** Benchmarking mode ENABLED ***')
 
-    # Create the stats recording client
-    stats_engine = StatsManager(
-        logger,
-        app.config['STATS_SERVER'],
-        app.config['STATS_SERVER_PORT']
-    )
-    app.stats_engine = stats_engine
+        # Create the stats recording client
+        stats_engine = StatsManager(
+            logger,
+            app.config['STATS_SERVER'],
+            app.config['STATS_SERVER_PORT']
+        )
+        app.stats_engine = stats_engine
 
-    # Create caching engine
-    cache_engine = CacheManager(
-        logger,
-        app.config['MEMCACHED_SERVERS'],
-        app.config['CACHE_DATABASE_CONNECTION'],
-        app.config['CACHE_DATABASE_POOL_SIZE']
-    )
-    app.cache_engine = cache_engine
+        # Create caching engine
+        cache_engine = CacheManager(
+            logger,
+            app.config['MEMCACHED_SERVERS'],
+            app.config['CACHE_DATABASE_CONNECTION'],
+            app.config['CACHE_DATABASE_POOL_SIZE']
+        )
+        app.cache_engine = cache_engine
 
-    # Create database management engine
-    data_engine = DataManager(
-        cache_engine,
-        logger,
-        app.config['MGMT_DATABASE_CONNECTION'],
-        app.config['MGMT_DATABASE_POOL_SIZE']
-    )
-    app.data_engine = data_engine
+        # Create database management engine
+        data_engine = DataManager(
+            cache_engine,
+            logger,
+            app.config['MGMT_DATABASE_CONNECTION'],
+            app.config['MGMT_DATABASE_POOL_SIZE']
+        )
+        app.data_engine = data_engine
 
-    # Create background task processing client
-    task_engine = TaskManager(
-        data_engine,
-        logger
-    )
-    task_engine.init_housekeeping_tasks()
-    app.task_engine = task_engine
+        # Create background task processing client
+        task_engine = TaskManager(
+            data_engine,
+            logger
+        )
+        task_engine.init_housekeeping_tasks()
+        app.task_engine = task_engine
 
-    # Create a user permissions engine
-    permissions_engine = PermissionsManager(
-        data_engine,
-        cache_engine,
-        task_engine,
-        app.config,
-        logger
-    )
-    app.permissions_engine = permissions_engine
+        # Create a user permissions engine
+        permissions_engine = PermissionsManager(
+            data_engine,
+            cache_engine,
+            task_engine,
+            app.config,
+            logger
+        )
+        app.permissions_engine = permissions_engine
 
-    # Create the main imaging engine
-    image_engine = ImageManager(
-        data_engine,
-        cache_engine,
-        task_engine,
-        permissions_engine,
-        app.config,
-        logger
-    )
-    app.image_engine = image_engine
+        # Create the main imaging engine
+        image_engine = ImageManager(
+            data_engine,
+            cache_engine,
+            task_engine,
+            permissions_engine,
+            app.config,
+            logger
+        )
+        app.image_engine = image_engine
 
-    # Import app views and template filters
-    from . import views                                      # @UnusedImport
-    from . import views_util                                 # @UnusedImport
-    from . import views_pages                                # @UnusedImport
+        # Import app views and template filters
+        from . import views                                      # @UnusedImport
+        from . import views_util                                 # @UnusedImport
+        from . import views_pages                                # @UnusedImport
 
-    # Import blueprints
-    from . import api
-    app.register_blueprint(api.blueprint, url_prefix='/api')
+        # Import blueprints
+        from . import api
+        app.register_blueprint(api.blueprint, url_prefix='/api')
 
-    from . import admin
-    app.register_blueprint(admin.blueprint, url_prefix='/admin')
+        from . import admin
+        app.register_blueprint(admin.blueprint, url_prefix='/admin')
 
-    from . import reports
-    app.register_blueprint(reports.blueprint, url_prefix='/reports')
+        from . import reports
+        app.register_blueprint(reports.blueprint, url_prefix='/reports')
 
-    # Import global template functions
-    views_util.register_template_funcs()
+        # Import global template functions
+        views_util.register_template_funcs()
+
+    except Exception as e:
+        # Startup error - this is fatal, but try to get the error message into our
+        #                 main log file (for easier debugging) before bombing out
+        if logger:
+            logger.error("Error starting up: " + str(e) + "\nThe process will now exit.")
+        raise
 
 
 @app.before_first_request
