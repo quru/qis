@@ -44,19 +44,27 @@
 # TODO Change DPI to _dpi_x and _dpi_y, support x,y format in templates, web params, PDF handling
 # TODO Consider testing/setting MAGICK_THREAD_LIMIT environment variable under mod_wsgi
 
-import qismagick
+__qismagick_import_error = None
+try:
+    import qismagick
+except Exception as e:
+    __qismagick_import_error = e
 
 
 def imagemagick_init(gs_path, temp_files_path, pdf_default_dpi):
     """
     Initialises the ImageMagick library.
     This function must be called once before the other functions can be used.
+    An ImportError is raised if the ImageMagick library failed to load.
 
     gs_path - for PDF file support, the path to the Ghostscript command, e.g. "gs"
     temp_files_path - the directory in which to create temp files, e.g. "/tmp"
     pdf_default_dpi - the default target DPI when converting PDFs to images,
                       or when requesting the dimensions of a PDF, e.g. 150
     """
+    global __qismagick_import_error
+    if __qismagick_import_error:
+        raise ImportError("Failed to import qismagick.so: " + str(__qismagick_import_error))
     qismagick.init(gs_path, temp_files_path, pdf_default_dpi)
 
 
