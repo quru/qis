@@ -69,6 +69,16 @@ When the Memcached service is full, your server must still have enough RAM free 
 run the other applications (if relevant) and cache operating system files, without
 swapping. This is an advanced topic, see the [tuning guide](tuning.md) for more information.
 
+By default, Memcached accepts remote connections from anywhere*. If Apache will be
+installed on a different server, this is fine, but add a firewall rule to prevent
+connections from elsewhere. If Apache will be installed on the same server, tell
+Memcached to accept local connections only. Edit `/etc/sysconfig/memcached` and
+change `OPTIONS`:
+
+    OPTIONS="-l 127.0.0.1"
+
+  *Some Debian-based systems set `-l 127.0.0.1` by default in `/etc/memcached.conf`.
+
 Set the service to start on boot and start it now:
 
 	$ sudo systemctl enable memcached
@@ -196,13 +206,13 @@ process by adding a few lines to the file `/etc/sysconfig/httpd`:
 Create Apache configuration files to run QIS:
 
 	$ cd /opt/qis
-	$ sudo cp deploy/fedora20/wsgi.conf /etc/httpd/conf.d/wsgi.conf
-	$ sudo cp deploy/fedora20/httpd.conf.sample /etc/httpd/conf.d/qis.conf
-	$ sudo cp deploy/fedora20/httpd-ssl.conf.sample /etc/httpd/conf.d/qis-ssl.conf
+	$ sudo cp deploy/centos7/wsgi.conf /etc/httpd/conf.d/wsgi.conf
+	$ sudo cp deploy/centos7/httpd.conf.sample /etc/httpd/conf.d/qis.conf
+	$ sudo cp deploy/centos7/httpd-ssl.conf.sample /etc/httpd/conf.d/qis-ssl.conf
 
-Substituting `fedora20` for the directory name in `/opt/qis/deploy` that most closesly
-matches your operating system. Ubuntu 14 and Fedora 20 ship with Apache v2.4, while
-Red Hat 6.5 ships with Apache v2.2. The two Apache versions have rather different
+Substituting `centos7` for the directory name in `/opt/qis/deploy` that most closesly
+matches your operating system. Ubuntu 14 and CentOS 7 ship with Apache v2.4, while
+CentOS 6 ships with Apache v2.2. The two Apache versions have rather different
 configuration files.
 
 Tailor the `qis.conf` and `qis-ssl.conf` files for your server.
@@ -304,17 +314,36 @@ To enable log compression, archive daily, and keep 7 days worth of logs, add the
 
 ## Optional - Raising the system limits
 
-Some Linux systems ship with a limit on the number of running processes (including threads),
-and files (including network connections) that can cause errors on a busy web server.
-To check these limits, run:
+Some Linux-based systems default to a low limit on the number of running processes
+(including threads) and files (including network connections), which can cause
+errors on a busy web server. To check these limits, run:
 
 	$ ulimit -n -u
 	open files                      (-n) 1024
 	max user processes              (-u) 1024
 
-Raise these limits above `1024` by creating a text file `/etc/security/limits.d/qis.conf`.
-You can find an example file in the QIS distribution - `/opt/qis/deploy/rhel6.5/limits.conf` -
-which you can copy into place.
+### With systemd
+
+On recent systems such as CentOS 7 that use systemd, system limits are controlled
+at the service level. Do not edit the main service file, instead install a
+service override file to raise the limits:
+
+    $ cd /opt/qis
+    $ sudo mkdir /etc/systemd/system/httpd.service.d
+    $ sudo cp deploy/centos7/httpd-limits.conf /etc/systemd/system/httpd.service.d/limits.conf
+    $ sudo systemctl daemon-reload
+    $ sudo systemctl restart httpd.service
+
+### Without systemd
+
+On older systems such as CentOS 6, system limits are defined at the user level.
+To raise the limits, install a configuration file into `/etc/security/limits.d/`:
+
+    $ cd /opt/qis
+    $ sudo cp deploy/centos6/limits.conf /etc/security/limits.d/qis.conf
+    $ sudo service httpd restart
+
+### Postgres
 
 PostgreSQL, especially versions 9.2 and below, allocates a block of memory on startup that
 may exceed the system's "shared memory" limit. If the Postgres service fails to start, check
@@ -333,7 +362,7 @@ You can also refer to the [Postgres documentation](http://www.postgresql.org/doc
 
 If your system has a firewall enabled, you will need to allow web traffic to
 reach the server. How to do this is operating system specific. With `firewalld`
-(Fedora 15+, CentOS 7+, Red Hat 7+), run:
+(Fedora 15+, CentOS 7+), run:
 
     $ sudo firewall-cmd --zone=public --permanent --add-service=http
     $ sudo firewall-cmd --zone=public --permanent --add-service=https
@@ -373,7 +402,7 @@ Otherwise, see if the `semanage` command is available, and if not install it:
 Install the QIS security policy, and allow the Apache service to write to the
 QIS logs and images directories:
 
-	$ sudo semodule --install=/opt/qis/deploy/fedora20/qis.pp
+	$ sudo semodule --install=/opt/qis/deploy/centos7/qis.pp
 	$ sudo semanage fcontext --add --type httpd_log_t "/opt/qis/logs(/.*)?"
 	$ sudo semanage fcontext --add --type httpd_user_rw_content_t "/opt/qis/images(/.*)?"
 	$ sudo restorecon -rv /opt/qis/logs/
