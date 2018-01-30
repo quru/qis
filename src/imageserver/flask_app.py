@@ -126,6 +126,7 @@ with app.app_context():
             app.config['LOGGING_SERVER'],
             app.config['LOGGING_SERVER_PORT']
         )
+        app.log = logger
         LogManager.run_server(
             app.config['LOGGING_SERVER'],
             app.config['LOGGING_SERVER_PORT'],
