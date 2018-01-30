@@ -304,17 +304,36 @@ To enable log compression, archive daily, and keep 7 days worth of logs, add the
 
 ## Optional - Raising the system limits
 
-Some Linux systems ship with a limit on the number of running processes (including threads),
-and files (including network connections) that can cause errors on a busy web server.
-To check these limits, run:
+Some Linux-based systems default to a low limit on the number of running processes
+(including threads) and files (including network connections), which can cause
+errors on a busy web server. To check these limits, run:
 
 	$ ulimit -n -u
 	open files                      (-n) 1024
 	max user processes              (-u) 1024
 
-Raise these limits above `1024` by creating a text file `/etc/security/limits.d/qis.conf`.
-You can find an example file in the QIS distribution - `/opt/qis/deploy/centos6/limits.conf` -
-which you can copy into place.
+### With systemd
+
+On recent systems such as CentOS 7 that use systemd, system limits are controlled
+at the service level. Do not edit the main service file, instead install a
+service override file to raise the limits:
+
+    $ cd /opt/qis
+    $ sudo mkdir /etc/systemd/system/httpd.service.d
+    $ sudo cp deploy/centos7/httpd-limits.conf /etc/systemd/system/httpd.service.d/limits.conf
+    $ sudo systemctl daemon-reload
+    $ sudo systemctl restart httpd.service
+
+### Without systemd
+
+On older systems such as CentOS 6, system limits are defined at the user level.
+To raise the limits, install a configuration file into `/etc/security/limits.d/`:
+
+    $ cd /opt/qis
+    $ sudo cp deploy/centos6/limits.conf /etc/security/limits.d/qis.conf
+    $ sudo service httpd restart
+
+### Postgres
 
 PostgreSQL, especially versions 9.2 and below, allocates a block of memory on startup that
 may exceed the system's "shared memory" limit. If the Postgres service fails to start, check
