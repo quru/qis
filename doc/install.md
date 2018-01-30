@@ -69,6 +69,16 @@ When the Memcached service is full, your server must still have enough RAM free 
 run the other applications (if relevant) and cache operating system files, without
 swapping. This is an advanced topic, see the [tuning guide](tuning.md) for more information.
 
+By default, Memcached accepts remote connections from anywhere*. If Apache will be
+installed on a different server, this is fine, but add a firewall rule to prevent
+connections from elsewhere. If Apache will be installed on the same server, tell
+Memcached to accept local connections only. Edit `/etc/sysconfig/memcached` and
+change `OPTIONS`:
+
+    OPTIONS="-l 127.0.0.1"
+
+  *Some Debian-based systems set `-l 127.0.0.1` by default in `/etc/memcached.conf`.
+
 Set the service to start on boot and start it now:
 
 	$ sudo systemctl enable memcached
