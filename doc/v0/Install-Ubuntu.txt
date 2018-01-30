@@ -1,5 +1,5 @@
 QIS install process on Ubuntu 14.04.2 LTS
-Based on the Fedora Dockerfile
+Based on the Fedora/CentOS Dockerfile
 
 sudo apt-get update
 sudo apt-get upgrade
@@ -79,9 +79,9 @@ cd ../..
 
 tar --strip-components=1 -xvf ~/qis/dist/Quru\ Image\ Server-1.25.0.tar.gz
 
-sudo cp ~qis/deploy/fedora20/wsgi.conf /etc/apache2/conf-available/
-sudo cp ~qis/deploy/fedora20/httpd.conf.sample /etc/apache2/sites-available/qis.conf
-sudo cp ~qis/deploy/fedora20/httpd-ssl.conf.sample /etc/apache2/sites-available/qis-ssl.conf
+sudo cp ~qis/deploy/ubuntu14/wsgi.conf /etc/apache2/conf-available/
+sudo cp ~qis/deploy/ubuntu14/httpd.conf.sample /etc/apache2/sites-available/qis.conf
+sudo cp ~qis/deploy/ubuntu14/httpd-ssl.conf.sample /etc/apache2/sites-available/qis-ssl.conf
 
 sudo a2enconf wsgi
 sudo a2ensite qis

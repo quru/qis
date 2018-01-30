@@ -9,7 +9,7 @@ Follow the normal install documentation for:
   * Run `sudo easy_install pip` instead of `sudo yum install python-pip`
 * QIS application files
 * Apache server
-  * Install the conf files from the `deploy/fedora20` folder
+  * Install the conf files from the `deploy/centos7` folder
   * If the Apache worker limit needs to be higher than 256, add new limits (here 500) to
     `/etc/httpd/conf/httpd.conf`:
   * ```# For prefork MPM only
@@ -21,7 +21,7 @@ Follow the normal install documentation for:
     ```
 * System limits
 * selinux
-  * Use the policy files from the `deploy/fedora20` folder
+  * Use the policy files from the `deploy/centos7` folder
 
 Additional steps to create a build server:
 

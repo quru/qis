@@ -196,13 +196,13 @@ process by adding a few lines to the file `/etc/sysconfig/httpd`:
 Create Apache configuration files to run QIS:
 
 	$ cd /opt/qis
-	$ sudo cp deploy/fedora20/wsgi.conf /etc/httpd/conf.d/wsgi.conf
-	$ sudo cp deploy/fedora20/httpd.conf.sample /etc/httpd/conf.d/qis.conf
-	$ sudo cp deploy/fedora20/httpd-ssl.conf.sample /etc/httpd/conf.d/qis-ssl.conf
+	$ sudo cp deploy/centos7/wsgi.conf /etc/httpd/conf.d/wsgi.conf
+	$ sudo cp deploy/centos7/httpd.conf.sample /etc/httpd/conf.d/qis.conf
+	$ sudo cp deploy/centos7/httpd-ssl.conf.sample /etc/httpd/conf.d/qis-ssl.conf
 
-Substituting `fedora20` for the directory name in `/opt/qis/deploy` that most closesly
-matches your operating system. Ubuntu 14 and Fedora 20 ship with Apache v2.4, while
-Red Hat 6.5 ships with Apache v2.2. The two Apache versions have rather different
+Substituting `centos7` for the directory name in `/opt/qis/deploy` that most closesly
+matches your operating system. Ubuntu 14 and CentOS 7 ship with Apache v2.4, while
+CentOS 6 ships with Apache v2.2. The two Apache versions have rather different
 configuration files.
 
 Tailor the `qis.conf` and `qis-ssl.conf` files for your server.
@@ -313,7 +313,7 @@ To check these limits, run:
 	max user processes              (-u) 1024
 
 Raise these limits above `1024` by creating a text file `/etc/security/limits.d/qis.conf`.
-You can find an example file in the QIS distribution - `/opt/qis/deploy/rhel6.5/limits.conf` -
+You can find an example file in the QIS distribution - `/opt/qis/deploy/centos6/limits.conf` -
 which you can copy into place.
 
 PostgreSQL, especially versions 9.2 and below, allocates a block of memory on startup that
@@ -333,7 +333,7 @@ You can also refer to the [Postgres documentation](http://www.postgresql.org/doc
 
 If your system has a firewall enabled, you will need to allow web traffic to
 reach the server. How to do this is operating system specific. With `firewalld`
-(Fedora 15+, CentOS 7+, Red Hat 7+), run:
+(Fedora 15+, CentOS 7+), run:
 
     $ sudo firewall-cmd --zone=public --permanent --add-service=http
     $ sudo firewall-cmd --zone=public --permanent --add-service=https
@@ -373,7 +373,7 @@ Otherwise, see if the `semanage` command is available, and if not install it:
 Install the QIS security policy, and allow the Apache service to write to the
 QIS logs and images directories:
 
-	$ sudo semodule --install=/opt/qis/deploy/fedora20/qis.pp
+	$ sudo semodule --install=/opt/qis/deploy/centos7/qis.pp
 	$ sudo semanage fcontext --add --type httpd_log_t "/opt/qis/logs(/.*)?"
 	$ sudo semanage fcontext --add --type httpd_user_rw_content_t "/opt/qis/images(/.*)?"
 	$ sudo restorecon -rv /opt/qis/logs/
