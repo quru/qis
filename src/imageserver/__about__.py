@@ -40,3 +40,21 @@ __email__ = "info@quru.com"
 
 __license__ = "GNU Affero General Public License"
 __copyright__ = "Copyright \xa9 2011 - 2017 Quru Ltd"
+
+
+# Support running this from the command line to get version info
+if __name__ == '__main__':
+    import sys
+    info = dict(vars())
+    if len(sys.argv) == 1:
+        ignore_list = [
+            'sys', '__file__', '__builtins__', '__name__', '__doc__', '__package__',
+            '__cached__', '__loader__', '__spec__'
+        ]
+        for k in info:
+            if k not in ignore_list:
+                print(k.strip('_') + ' = ' + str(info[k]))
+    elif len(sys.argv) == 2 and sys.argv[1] == '--version':
+        print(info['__version__'])
+    else:
+        print('Usage: python __about__.py [--version]')
