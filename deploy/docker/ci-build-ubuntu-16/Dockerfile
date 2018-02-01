@@ -21,7 +21,8 @@ RUN apt-get update && \
             openssl postgresql-client-9.5 \
             ghostscript imagemagick-6.q16 imagemagick-common libmagickwand-6.q16-dev \
             apache2 apache2-utils logrotate libapache2-mod-wsgi \
-            python-letsencrypt-apache python-pip python-virtualenv && \
+            python-letsencrypt-apache python-pip python-virtualenv \
+            openssh-server && \
     apt-get clean
 
 # Use latest Python tools
@@ -47,6 +48,9 @@ RUN echo "$AUTHORIZED_KEY" > .ssh/authorized_keys && \
 # Set up SSHD
 USER root
 RUN ssh-keygen -A
+
+# https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=864190
+RUN mkdir -p /var/run/sshd
 
 # Run SSHD as the default command
 EXPOSE 22
