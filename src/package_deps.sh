@@ -5,7 +5,7 @@
 # Creates an empty virtualenv, installs all requirements, then creates a
 # tarball.gz of the resulting lib/python2.x/site-packages directory.
 #
-# Usage: package_deps.sh <python2.6 | python2.7>
+# Usage: src/package_deps.sh <python2.6 | python2.7>
 #
 # Outputs: $DIST_DIR/dependencies.tar.gz
 #
@@ -16,7 +16,7 @@ DIST_DIR=$(pwd)/dist
 BUILD_DIR=$(pwd)/build
 WHEELS_DIR=$BUILD_DIR/wheels
 CACHE_DIR=$BUILD_DIR/cache
-QISMAGICK_DIR=~/qis-build/qismagick
+QISMAGICK_DIR=$HOME/qis-build/qismagick
 
 if [ "$PYTHON_VER" = "" ]; then
 	echo "You must specify which python version to use, e.g. package_deps.sh python2.7"
