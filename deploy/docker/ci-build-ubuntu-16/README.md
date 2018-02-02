@@ -20,7 +20,7 @@ It runs an SSH service so that CI build servers can connect remotely.
     # Add the SSH key of your build server into .ssh/authorized_keys
     [build@0ce64dbed542 ~]$ vi .ssh/authorized_keys
     # Install any packages required by your build server, e.g.
-    [build@0ce64dbed542 ~]$ sudo apt-get -y install java
+    [build@0ce64dbed542 ~]$ sudo apt-get -y install default-jdk
     [build@0ce64dbed542 ~]$ exit
     # Open port 9024/tcp on the firewall of your docker host
     # Set your build server to connect as build@<docker host> on port 9024
