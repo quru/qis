@@ -172,19 +172,20 @@ Create the QIS base directory and install the files:
 The installation should look like this:
 
 	$ ls -l /opt/qis/
-	total 52
-	drwxr-xr-x 2 qis apache 4096 May  22 10:27 conf
-	drwxr-xr-x 2 qis apache 4096 May  22 10:27 deploy
-	drwxr-xr-x 2 qis apache 4096 May  22 10:27 doc
-	drwxr-xr-x 2 qis apache 4096 May  22 10:27 icc
-	drwxr-xr-x 3 qis apache 4096 May  22 10:27 images
-	drwxr-xr-x 3 qis apache 4096 May  22 10:27 lib
-	drwxr-xr-x 2 qis apache 4096 May  22 10:27 licences
-	drwxr-xr-x 2 qis apache 4096 May  22 10:27 logs
-	-rw-r--r-- 1 qis apache  311 May  22 10:27 PKG-INFO
-	-rw-r--r-- 1 qis apache  522 May  22 10:27 setup.cfg
-	-rw-r--r-- 1 qis apache 1077 May  22 10:27 setup.py	
-	drwxr-xr-x 5 qis apache 4096 May  22 10:27 src
+	total 40
+	drwxr-xr-x.  2 qis qis    45 Feb  5 12:19 conf
+	drwxr-xr-x. 10 qis qis   123 Feb  5 12:19 deploy
+	drwxr-xr-x.  3 qis qis  4096 Feb  5 12:19 doc
+	drwxr-xr-x.  2 qis qis  4096 Feb  5 12:19 icc
+	drwxr-xr-x.  9 qis qis   109 Feb  5 12:19 images
+	drwxr-xr-x.  3 qis qis    23 Feb  5 12:18 lib
+	drwxr-xr-x.  2 qis qis  4096 Feb  5 12:19 licences
+	drwxr-xr-x.  2 qis qis    35 Feb  5 12:19 logs
+	-rw-r--r--.  1 qis qis   465 Feb  5 12:19 PKG-INFO
+	-rw-r--r--.  1 qis qis 13206 Feb  5 11:19 README.md
+	-rw-r--r--.  1 qis qis   547 Feb  5 12:19 setup.cfg
+	-rw-r--r--.  1 qis qis  1257 Dec  5 10:19 setup.py
+	drwxr-xr-x.  5 qis qis    71 Feb  5 12:19 src
 
 ## Install Apache and friends
 
