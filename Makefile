@@ -46,4 +46,4 @@ ${QISMAGICK_SO}: setup.py doc/requirements.txt
 ${VENV_PATH}/bin/activate:
 	virtualenv --python=${PYTHON} ${VENV_PATH}
 
-.PHONY: distribute jenkins test runtests runserver webpack venv
+.PHONY: distribute jenkins test runtests runserver webpack flake8.txt venv

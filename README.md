@@ -222,10 +222,10 @@ when `DEBUG` is `False`, run:
 To run QIS in production, you will need files:
 
 * `Quru Image Server-2.xx.tar.gz` - the main QIS Python web application
-* `dependencies.tar.gz` - the application's Python dependencies,
+* `QIS-libs.tar.gz` - the application's Python dependencies,
   including compiled C extensions as platform-specific binaries
-* and unless your `dependencies.tar.gz` was supplied by Quru, you will also
-  need to [request a copy of the `qismagick` package](#qismagick.so) for your
+* and unless your `QIS-libs.tar.gz` was supplied by Quru, you will also need
+  to [request a copy of the `qismagick` package](#qismagick.so) for your
   production platform
 
 To generate these from the development project, run:
@@ -235,8 +235,8 @@ To generate these from the development project, run:
 	[build script output]
 	...
 	$ ls -l dist/
-	-rw-r--r--  1 matt  staff  27441170 28 Aug 11:19 Quru Image Server-2.40.tar.gz
-	-rw-r--r--  1 matt  staff   5064883 28 Aug 11:19 dependencies.tar.gz
+	-rw-r--r--  1 matt  staff   5798089  5 Feb 10:19 QIS-libs.tar.gz
+	-rw-r--r--  1 matt  staff  54698387  5 Feb 10:19 Quru Image Server-2.6.5.tar.gz
 
 With these files prepared you should then follow the [install guide](doc/install.md).
 
