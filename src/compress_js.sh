@@ -1,4 +1,4 @@
-#!/bin/bash -e -v
+#!/bin/bash -ev
 
 # Who needs Webpack anyway...
 
