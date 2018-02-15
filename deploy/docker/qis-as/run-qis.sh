@@ -16,7 +16,7 @@ APACHE_APP2_CONF_FILE=/etc/apache2/sites-available/002-qis-ssl.conf
 if [ ! -f "$FIRST_RUN_LOG_FILE" ]; then
 	
 	# Set Apache tuning parameters
-	# TODO these values appear to be for the worker rather than the event MPM
+	# TODO these settings need updating for the event MPM on Ubuntu
 	#APACHE_WORKERS_MAX=$(expr $HTTP_THREADS \* $HTTP_PROCESSES + $HTTPS_THREADS \* $HTTPS_PROCESSES \* 4)
 	#echo "ServerLimit $APACHE_WORKERS_MAX" >> $APACHE_GLOBAL_CONF_FILE
 	#echo "MaxRequestWorkers $APACHE_WORKERS_MAX" >> $APACHE_GLOBAL_CONF_FILE
