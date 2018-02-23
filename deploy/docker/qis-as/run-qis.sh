@@ -15,12 +15,14 @@ APACHE_APP2_CONF_FILE=/etc/apache2/sites-available/002-qis-ssl.conf
 
 if [ ! -f "$FIRST_RUN_LOG_FILE" ]; then
 	
-	# Set Apache tuning parameters
-	# TODO these values appear to be for the worker rather than the event MPM
-	#APACHE_WORKERS_MAX=$(expr $HTTP_THREADS \* $HTTP_PROCESSES + $HTTPS_THREADS \* $HTTPS_PROCESSES \* 4)
-	#echo "ServerLimit $APACHE_WORKERS_MAX" >> $APACHE_GLOBAL_CONF_FILE
-	#echo "MaxRequestWorkers $APACHE_WORKERS_MAX" >> $APACHE_GLOBAL_CONF_FILE
-	#echo "MaxConnectionsPerChild 10000" >> $APACHE_GLOBAL_CONF_FILE
+	# Set Apache tuning parameters (for event or worker MPM)
+	APACHE_WORKERS_MAX=$(expr $HTTP_THREADS \* $HTTP_PROCESSES + $HTTPS_THREADS \* $HTTPS_PROCESSES \* 4)
+	APACHE_PROC_MAX=$(expr $APACHE_WORKERS_MAX / 25)
+	echo "ThreadsPerChild 25" >> $APACHE_GLOBAL_CONF_FILE
+	echo "ThreadLimit 25" >> $APACHE_GLOBAL_CONF_FILE
+	echo "MaxRequestWorkers $APACHE_WORKERS_MAX" >> $APACHE_GLOBAL_CONF_FILE
+	echo "ServerLimit $APACHE_PROC_MAX" >> $APACHE_GLOBAL_CONF_FILE
+	echo "MaxConnectionsPerChild 20000" >> $APACHE_GLOBAL_CONF_FILE
 	
 	# Set Apache host name and mod_wsgi process groups
 	sed -i -e 's/.*ServerName.*/    ServerName '$HOSTNAME'/g' $APACHE_APP1_CONF_FILE

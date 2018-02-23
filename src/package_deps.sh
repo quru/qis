@@ -3,11 +3,11 @@
 # Script to pre-package all the Python dependencies for QIS
 # (with C extensions compiled for the local platform).
 # Creates an empty virtualenv, installs all requirements, then creates a
-# tarball.gz of the resulting lib/python2.x/site-packages directory.
+# tarball.gz of the resulting lib (incorporating site-packages) directory.
 #
-# Usage: package_deps.sh <python2.6 | python2.7>
+# Usage: src/package_deps.sh <python2.6 | python2.7>
 #
-# Outputs: $DIST_DIR/dependencies.tar.gz
+# Outputs: $DIST_DIR/QIS-libs.tar.gz
 #
 
 PYTHON_VER=$1
@@ -16,7 +16,7 @@ DIST_DIR=$(pwd)/dist
 BUILD_DIR=$(pwd)/build
 WHEELS_DIR=$BUILD_DIR/wheels
 CACHE_DIR=$BUILD_DIR/cache
-QISMAGICK_DIR=~/qis-build/qismagick
+QISMAGICK_DIR=$HOME/qis-build/qismagick
 
 if [ "$PYTHON_VER" = "" ]; then
 	echo "You must specify which python version to use, e.g. package_deps.sh python2.7"
@@ -40,16 +40,15 @@ virtualenv --python=$PYTHON_VER $VENV
 . $VENV/bin/activate
 cd ..
 
-# Upgrade the venv to avoid setuptools bugs
+# Upgrade or downgrade setuptools for known bugs or issues
 echo -e '\nUpgrading pip and setuptools'
 if [ "$PYTHON_VER" = "python2.6" ]; then
     pip install -U "pip<10"
     pip install -U "setuptools<37"
     pip install -U "wheel<0.30"
 else
-    pip install -U pip
-    pip install -U setuptools
-    pip install -U wheel
+    pip install setuptools
+    pip install wheel
 fi
 
 # Download and cache the sdists for everything
@@ -75,8 +74,13 @@ echo -e '\nAdding qismagick.so wheel'
 echo -e '\nInstalling all wheels into the build environment'
 find $WHEELS_DIR -type f -name '*.whl' -exec wheel install --force {} \;
 
+# Remove the pyc and pyo files
+cd $BUILD_DIR
+rm `find $VENV -name '*.py[co]'`
+cd ..
+
 # Package the virtualenv's lib directory for distribution
-echo -e '\nTarballing the lib/python2.x/site-packages folder'
+echo -e '\nTarballing the virtualenv lib folder'
 [ -d $DIST_DIR ] || mkdir $DIST_DIR
 cd $BUILD_DIR
-tar -C $VENV/lib/$PYTHON_VER -czf $DIST_DIR/dependencies.tar.gz site-packages
+tar -C $VENV -czf $DIST_DIR/QIS-libs.tar.gz lib

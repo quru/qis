@@ -90,7 +90,7 @@ Follow the build instructions in the README file to build the QIS application
 package and the Python library dependencies for your platform:
 
     Quru Image Server-2.4.0.tar.gz
-    dependencies.tar.gz
+    QIS-libs.tar.gz
 
 and from Quru obtain the latest ImageMagick interface for your platform:
 
@@ -110,9 +110,7 @@ and from Quru obtain the latest ImageMagick interface for your platform:
     $ sudo pip install -U pip
     $ cd /opt/qis/
     $ sudo -u qis tar --strip-components=1 -xvf /tmp/Quru\ Image\ Server-2.4.0.tar.gz
-    $ cd lib/python2.7
-    $ sudo -u qis tar -xvf /tmp/dependencies.tar.gz
-    $ cd ../..
+    $ sudo -u qis tar -xvf /tmp/QIS-libs.tar.gz
     $ sudo -u qis pip install --prefix /opt/qis /tmp/qismagick-2.1.0-cp27-cp27mu-linux_x86_64.whl
 
 * Run the v2 upgrade script:

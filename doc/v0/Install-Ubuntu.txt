@@ -70,13 +70,7 @@ sudo update-rc.d postgresql defaults
 sudo service postgresql restart
 
 cd ~qis
-
-mkdir -p lib/python2.7
-cd lib/python2.7
-tar -xzf ~/qis/dist/dependencies.tar.gz
-
-cd ../..
-
+tar -xzf ~/qis/dist/QIS-libs.tar.gz
 tar --strip-components=1 -xvf ~/qis/dist/Quru\ Image\ Server-1.25.0.tar.gz
 
 sudo cp ~qis/deploy/ubuntu14/wsgi.conf /etc/apache2/conf-available/

@@ -32,7 +32,7 @@ RUN locale-gen en_GB.UTF-8 && update-locale LANG=en_GB.UTF-8 LC_ALL=en_GB.UTF-8
 RUN pip install -U pip virtualenv
 
 # Build variables
-ARG QIS_VERSION=2.5.1
+ARG QIS_VERSION=3.0.0
 ARG QIS_USER=qis
 ARG QIS_INSTALL_DIR=/opt/qis
 ARG WEB_USER=www-data

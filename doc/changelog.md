@@ -1,3 +1,11 @@
+# v2.6.5
+_Changes: Development and build improvements_
+
+This release contains a number of tidy-ups to the development and build scripts.
+The version number was bumped to 2.6.5 to make these changes available under
+a release in GitHub. There are no changes to the application itself, and no need
+to upgrade.
+
 # v2.6.4
 _Changes: Change the folder list API to return all files in a folder,
 fix data loading race condition on startup_
@@ -23,7 +31,7 @@ _Changes: Upgrade SQLAlchemy to v1.1, psutil to 5.4,
 plus minor upgrades to python-ldap, pylibmc, and python-requests_
 
 * Update the Python dependencies
-  (from `requirements.txt` or by installing a newer `dependencies.tar.gz`)
+  (from `requirements.txt` or by installing a newer `QIS-libs.tar.gz`)
 * Restart the Apache service
 
 # v2.6.1

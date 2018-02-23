@@ -177,9 +177,13 @@ Get the code, create a virtualenv and install the Python dependencies:
 
 	$ git clone https://github.com/quru/qis.git
 	$ cd qis
-	$ virtualenv .
+	$ make venv
+
+You will need to [request a copy of the `qismagick` package](#qismagick.so)
+for your development platform, and install it:
+
 	$ . bin/activate
-	$ pip install -r doc/requirements.txt
+	$ pip install qismagick-2.1.0-cp27-none-macosx_10_12_intel.whl
 
 Create 2 empty Postgres databases, `qis-cache` and `qis-mgmt`.
 Create a `local_settings.py` file in the `conf` folder, and add settings:
@@ -192,14 +196,12 @@ Create a `local_settings.py` file in the `conf` folder, and add settings:
 To see the default values and other settings you can override, see the
 [default settings file](src/imageserver/conf/base_settings.py).
 
-You will need to [request a copy of the `qismagick` package](#qismagick.so)
-for your development platform, and install it:
-
-	$ pip install qismagick-2.1.0-cp27-none-macosx_10_12_intel.whl
-
 Then run the server in development mode with:
 
-	$ python src/runserver.py
+	$ make runserver
+	...
+	[checks/installs Python libraries]
+	...
 	2017-03-06 16:11:39,932 qis_37720  INFO     Quru Image Server v2.4.0 engine startup
 	2017-03-06 16:11:39,934 qis_37720  INFO     Using settings base_settings + local_settings.py
 	...
@@ -210,25 +212,31 @@ automatically. Watch the output for the creation of the `admin` user account,
 and make a note of the password. If you didn't enable `DEBUG` mode, look for it
 in `logs/qis.log` instead.
 
+While `DEBUG` is `True`, the un-minified versions of JavaScript files are served
+up, and you can make JavaScript changes and refresh your browser to bring them in.
+When your changes are complete, to minify the JavaScript files for deployment and
+when `DEBUG` is `False`, run:
+
+	$ make webpack
+
 To run QIS in production, you will need files:
 
 * `Quru Image Server-2.xx.tar.gz` - the main QIS Python web application
-* `dependencies.tar.gz` - the application's Python dependencies,
+* `QIS-libs.tar.gz` - the application's Python dependencies,
   including compiled C extensions as platform-specific binaries
-* and unless your `dependencies.tar.gz` was supplied by Quru, you will also
-  need to [request a copy of the `qismagick` package](#qismagick.so) for your
+* and unless your `QIS-libs.tar.gz` was supplied by Quru, you will also need
+  to [request a copy of the `qismagick` package](#qismagick.so) for your
   production platform
 
-To generate these from the development project:
+To generate these from the development project, run:
 
-	$ cd <project root>
-	$ . bin/activate
-	$ python setup.py sdist
-	$ ./package_deps.sh python2.7
-	$ ls -l dist/
+	$ make distribute
 	...
-	-rw-r--r--  1 matt  staff  27441170 28 Aug 11:19 Quru Image Server-2.40.tar.gz
-	-rw-r--r--  1 matt  staff   5064883 28 Aug 11:19 dependencies.tar.gz
+	[build script output]
+	...
+	$ ls -l dist/
+	-rw-r--r--  1 matt  staff   5798089  5 Feb 10:19 QIS-libs.tar.gz
+	-rw-r--r--  1 matt  staff  54698387  5 Feb 10:19 Quru Image Server-2.6.5.tar.gz
 
 With these files prepared you should then follow the [install guide](doc/install.md).
 
