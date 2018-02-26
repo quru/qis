@@ -35,6 +35,7 @@
     WSGIImportScript /opt/qis/src/wsgi/runserver.wsgi process-group=qis application-group=qis
 
     <Directory /opt/qis/src/wsgi>
+        AllowOverride None
         Order deny,allow
         Allow from all
     </Directory>
@@ -42,18 +43,21 @@
     <Directory /opt/qis/src/imageserver/static>
         ExpiresActive On
         ExpiresDefault "access plus 7 days"
+        AllowOverride None
         Order deny,allow
         Allow from all
     </Directory>
     <Directory /opt/qis/src/imageserver/admin/static>
         ExpiresActive On
         ExpiresDefault "access plus 7 days"
+        AllowOverride None
         Order deny,allow
         Allow from all
     </Directory>
     <Directory /opt/qis/src/imageserver/reports/static>
         ExpiresActive On
         ExpiresDefault "access plus 7 days"
+        AllowOverride None
         Order deny,allow
         Allow from all
     </Directory>
