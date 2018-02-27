@@ -1,6 +1,8 @@
 QIS v2 Replace default image settings with default templates, add image security
 ================================================================================
 
+Current status: phase 1 complete, phases 2 and 3 deferred
+
 This change follows the move of image templates from being flat text files to
 being entities in the database. It starts with a simple observation:
 
@@ -121,14 +123,14 @@ There will also be a change in the behaviour of how final image parameters are
 calculated. In QIS v1 there were up to 3 levels that determined the final value
 of a parameter such as `dpi`:
 
-1) From an image URL parameter (`...&dpi=300`)
-2) From a named template (`...&tmp=print`)
-3) From a `DEFAULT` system setting (`IMAGE_DPI_DEFAULT = 300`)
+1) From an image URL parameter (`...&dpi=300`)  
+2) From a named template (`...&tmp=print`)  
+3) From a `DEFAULT` system setting (`IMAGE_DPI_DEFAULT = 300`)  
 
 In QIS v2 there will only be 2 levels:
 
-1) From an image URL parameter
-2) From a named template or - if none is specified - from the default template
+1) From an image URL parameter  
+2) From a named template or - if none is specified - from the default template  
 
 And level (1) may be disallowed, depending on the override flags in the template.
 
@@ -260,10 +262,10 @@ while enforcing a watermark on large versions of it.
 
 TODO all the rest below is still open for discussion / subject to change
 
-TODO Main topics:
-- Having default templates at different folder levels (instead of root)
-- Having different default templates for different groups (and different folders?)
-- Restricting access to all templates
+TODO Main topics:  
+- Having default templates at different folder levels (instead of root)  
+- Having different default templates for different groups (and different folders?)  
+- Restricting access to all templates  
 
 QIS already has a mechanism for defining access rules by user group and
 folder - the folder permissions. Since this is where we define whether a user
@@ -291,20 +293,20 @@ folder permissions.
 
 More thoughts
 
-[14/10/2015 10:16:56] Matt Fozard: Our proposal from yesterday really screws up the image publisher.  The person logged in might not be allowed to set some of the image parameters.  Then if they can, the published image might look totally different to the public and/or different groups.  You need the preview image to be a "view as [select group]" function.
-[14/10/2015 10:19:58] Matt Fozard: Perhaps it comes down to having a "Publish for [select group || public]" bit at the top.
-That would establish the correct default template.
-[14/10/2015 10:20:29] Matt Fozard: Then the publisher just allows access to everything, and if the template doesn't allow override then it just has no effect.
-[14/10/2015 10:22:16] Roland Whitehead: OK, I like the "publish for" menu on the top of the publish screen. It should default to "Public"
-[14/10/2015 10:23:17] Roland Whitehead: But chosing the group should then add in a line : "This group's access to this image is limited by template <templatename>" with a link to that template (assuming that they can actually edit the templates...)
-[14/10/2015 10:28:01] Matt Fozard: That would be OK. At the moment anyone with an admin function can view the templates, but only super user can edit them.
-[14/10/2015 10:34:49] Matt Fozard: Next question. If you have "download original" permission to an image, do you think we should ignore the override flags on the default template? There doesn't seem much point restricting access to things when you can get the full image anyway.
-[14/10/2015 10:35:52] Matt Fozard: This would also solve the problem of permissions in the publisher.  You need download permission to use the publisher.  If you had it, you would then be able to preview the effect of all the parameters without you yourself being blocked.
-[14/10/2015 10:36:49] Roland Whitehead: If you have download permission then the /original or /details commands ignore any templates... However, /image should still stick to the template rules...
-[14/10/2015 10:37:13] Roland Whitehead: Sounds sensible that you need the download permission to use the publisher.
-[14/10/2015 10:37:42] Roland Whitehead: If you have upload permission, do you also automatically have the download permission? Could we have a situation where someone can upload an image but not download it?
-[14/10/2015 10:39:21] Matt Fozard: Currently, upload permission includes download permission. So if you can upload you would always be able to download.
-[14/10/2015 10:41:59] Roland Whitehead: So yes, the publish option should only be available for people with download...
+	[14/10/2015 10:16:56] Matt Fozard: Our proposal from yesterday really screws up the image publisher.  The person logged in might not be allowed to set some of the image parameters.  Then if they can, the published image might look totally different to the public and/or different groups.  You need the preview image to be a "view as [select group]" function.
+	[14/10/2015 10:19:58] Matt Fozard: Perhaps it comes down to having a "Publish for [select group || public]" bit at the top.
+	That would establish the correct default template.
+	[14/10/2015 10:20:29] Matt Fozard: Then the publisher just allows access to everything, and if the template doesn't allow override then it just has no effect.
+	[14/10/2015 10:22:16] Roland Whitehead: OK, I like the "publish for" menu on the top of the publish screen. It should default to "Public"
+	[14/10/2015 10:23:17] Roland Whitehead: But chosing the group should then add in a line : "This group's access to this image is limited by template <templatename>" with a link to that template (assuming that they can actually edit the templates...)
+	[14/10/2015 10:28:01] Matt Fozard: That would be OK. At the moment anyone with an admin function can view the templates, but only super user can edit them.
+	[14/10/2015 10:34:49] Matt Fozard: Next question. If you have "download original" permission to an image, do you think we should ignore the override flags on the default template? There doesn't seem much point restricting access to things when you can get the full image anyway.
+	[14/10/2015 10:35:52] Matt Fozard: This would also solve the problem of permissions in the publisher.  You need download permission to use the publisher.  If you had it, you would then be able to preview the effect of all the parameters without you yourself being blocked.
+	[14/10/2015 10:36:49] Roland Whitehead: If you have download permission then the /original or /details commands ignore any templates... However, /image should still stick to the template rules...
+	[14/10/2015 10:37:13] Roland Whitehead: Sounds sensible that you need the download permission to use the publisher.
+	[14/10/2015 10:37:42] Roland Whitehead: If you have upload permission, do you also automatically have the download permission? Could we have a situation where someone can upload an image but not download it?
+	[14/10/2015 10:39:21] Matt Fozard: Currently, upload permission includes download permission. So if you can upload you would always be able to download.
+	[14/10/2015 10:41:59] Roland Whitehead: So yes, the publish option should only be available for people with download...
 
 Terminology
 
