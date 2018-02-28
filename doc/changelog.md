@@ -1,3 +1,11 @@
+# v2.7.0
+_Changes: Add the back-end and API for portfolios_
+
+See [the Portfolios specification](v2/Portfolios.md).
+
+* Update the Python and web code
+* Restart the Apache service
+
 # v2.6.5
 _Changes: Development and build improvements_
 

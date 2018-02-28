@@ -266,14 +266,20 @@ QIS version 2 brings these new features:
 * Built-in support for RAW digital camera image formats
 * Faster image serving for logged-in users (and authenticated API callers)
 * Bug fixes to the image publisher
-* A new JavaScript library for lazily loading images
-  * See Quru's [image-defer library](https://github.com/quru/image-defer)
-* Removed the requirement to use the MooTools library on the client side
 * Web interface improvements
   * New grid / thumbnail browse view
   * New icons and a more consistent page layout
   * New next/previous image navigation
   * The order of files and folders in the web interface is no longer case sensitive
+* A new JavaScript library for lazily loading images (new in v2.5)
+  * See Quru's [image-defer library](https://github.com/quru/image-defer)
+* Removed the requirement to use the MooTools library on the client side (new in v2.6)
+* Image portfolios (new in v2.7)
+  * The creation of a virtual folder of selected images
+  * A friendly URL to view the images
+  * Download all as a zip file
+  * Private, restricted, or public access levels
+  * API support currently, user interface support to come in a future release
 
 While still on the to-do list for version 2 is:
 
@@ -282,6 +288,11 @@ While still on the to-do list for version 2 is:
   * New checkbox in the image publisher
   * Add to REST API
   * Tiny URL admin pages in the web interface
+* Image portfolios user interface
+  * Addition of "add to basket" while image browsing in the admin interface
+  * Addition of portfolios administration to the admin interface
+  * Portfolio publishing (to zip) from the admin interface
+  * Viewing a portfolio from the gallery and slideshow viewers
 
 An upgrade script is provided to migrate v1 installations to v2, including the
 import of image templates from flat files into the database. For more information
@@ -302,11 +313,6 @@ Under consideration for future versions:
   * User-defined
   * Tagging a zone or location on an image
   * Searching by tag
-* Image folios
-  * A "basket" or virtual folder of selected images
-  * Short URL to view the images (gallery viewer integration)
-  * Download all as a zip
-  * Special access controls, e.g. guest access?
 * The ability to use an object store (e.g. Amazon S3) for back-end image storage
 * New imaging operations
   * Automatic crop to target dimensions
