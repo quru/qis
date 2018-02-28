@@ -29,9 +29,11 @@
 # =========  ====  ============================================================
 # 19Mar2015  Matt  Added DatabaseModel base class
 # 03Sep2015  Matt  Change classes to SQLAlchemy declarative syntax
+# 28Feb2018  Matt  Add portfolios models
 #
 
 import os.path
+from datetime import datetime
 
 from sqlalchemy import func
 from sqlalchemy import ForeignKey
@@ -195,6 +197,10 @@ class Group(Base, BaseMixin, IDEqualityMixin):
         'FolderPermission',
         cascade='all, delete-orphan'
     )
+    folio_permissions = relationship(
+        'FolioPermission',
+        cascade='all, delete-orphan'
+    )
 
     __tablename__ = 'groups'
     __table_args__ = (
@@ -326,8 +332,8 @@ class FolderPermission(Base, BaseMixin, IDEqualityMixin):
     group_id = Column(Integer, ForeignKey('groups.id'), nullable=False)
     access = Column(Integer, nullable=False)
 
-    group = relationship('Group')
     folder = relationship('Folder')
+    group = relationship('Group')
 
     __tablename__ = 'folderpermissions'
     __table_args__ = (
@@ -611,3 +617,202 @@ class Property(Base, BaseMixin):
 
     def __unicode__(self):
         return u'Property: ' + self.key + '=' + str(self.value)
+
+
+class Folio(Base, BaseMixin, IDEqualityMixin):
+    """
+    SQLAlchemy ORM wrapper for a portfolio header record.
+    """
+    id = Column(BigInteger, nullable=False, autoincrement=True, primary_key=True)
+    human_id = Column(String(64), nullable=False)
+    name = Column(String(255), nullable=False)
+    description = Column(Text, nullable=False)
+    owner_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    last_updated = Column(DateTime, nullable=False)
+
+    owner = relationship('User')
+    images = relationship(
+        'FolioImage',
+        order_by='FolioImage.order_num, FolioImage.id',
+        cascade='all, delete-orphan'
+    )
+    permissions = relationship(
+        'FolioPermission',
+        lazy='joined',
+        cascade='all, delete-orphan'
+    )
+    history = relationship(
+        'FolioHistory',
+        order_by='FolioHistory.id',
+        cascade='all, delete-orphan'
+    )
+    downloads = relationship(
+        'FolioExport',
+        cascade='all, delete-orphan'
+    )
+
+    __tablename__ = 'folios'
+    __table_args__ = (
+        Index('idx_folio_hid', human_id, unique=True),
+        Index('idx_folio_owner', owner_id),
+    )
+
+    def __init__(self, human_id, name, description, owner):
+        self.id = None
+        self.human_id = human_id
+        self.name = name
+        self.description = description
+        self.owner = owner
+        self.last_updated = datetime.utcnow()
+
+    def __unicode__(self):
+        return u'Portfolio: ' + self.human_id
+
+
+class FolioImage(Base, BaseMixin, IDEqualityMixin):
+    """
+    SQLAlchemy ORM wrapper for a portfolio image record.
+    """
+    id = Column(BigInteger, nullable=False, autoincrement=True, primary_key=True)
+    folio_id = Column(BigInteger, ForeignKey('folios.id'), nullable=False)
+    image_id = Column(BigInteger, ForeignKey('images.id'), nullable=False)
+    parameters = Column(JSON, nullable=False)
+    filename = Column(String(255), nullable=False)
+    order_num = Column(Integer, nullable=False)
+
+    portfolio = relationship('Folio')
+    image = relationship('Image', lazy='joined')
+
+    __tablename__ = 'folioimages'
+    __table_args__ = (
+        Index('idx_folimg_pk', folio_id, image_id, unique=True),
+    )
+
+    def __init__(self, portfolio, image, image_params_dict=None, image_filename='', order_num=0):
+        self.id = None
+        self.portfolio = portfolio
+        self.image = image
+        self.parameters = image_params_dict or {}
+        self.filename = image_filename
+        self.order_num = order_num
+
+    def __unicode__(self):
+        return u'PortfolioImage: Portfolio %d + Image %d' % (
+            self.folio_id, self.image_id
+        )
+
+
+class FolioPermission(Base, BaseMixin, IDEqualityMixin):
+    """
+    SQLAlchemy ORM wrapper for a portfolio permission record.
+    """
+    ACCESS_NONE = 0
+    ACCESS_VIEW = 10
+    ACCESS_DOWNLOAD = 20
+    ACCESS_EDIT = 30
+    ACCESS_DELETE = 50  # To match FolderPermission
+
+    id = Column(BigInteger, nullable=False, autoincrement=True, primary_key=True)
+    folio_id = Column(BigInteger, ForeignKey('folios.id'), nullable=False)
+    group_id = Column(Integer, ForeignKey('groups.id'), nullable=False)
+    access = Column(Integer, nullable=False)
+
+    portfolio = relationship('Folio')
+    group = relationship('Group')
+
+    __tablename__ = 'foliopermissions'
+    __table_args__ = (
+        Index('idx_folperm_pk', folio_id, group_id, unique=True),
+    )
+
+    def __init__(self, portfolio, group, access):
+        self.id = None
+        self.portfolio = portfolio
+        self.group = group
+        self.access = access
+
+    def __unicode__(self):
+        return u'PortfolioPermission: Portfolio %d + Group %d = %d' % (
+            self.folio_id, self.group_id, self.access
+        )
+
+
+class FolioHistory(Base, BaseMixin, IDEqualityMixin):
+    """
+    SQLAlchemy ORM wrapper for a portfolio history (audit) record.
+    """
+    ACTION_CREATED = 1
+    ACTION_EDITED = 2
+    ACTION_IMAGE_CHANGE = 3
+    ACTION_PUBLISHED = 4
+    ACTION_DOWNLOADED = 5
+    ACTION_PUBLISH_EXPIRED = 6
+
+    id = Column(BigInteger, nullable=False, autoincrement=True, primary_key=True)
+    folio_id = Column(BigInteger, ForeignKey('folios.id'), nullable=False)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=True)
+    action = Column(Integer, nullable=False)
+    action_info = Column(Text, nullable=False)
+    action_time = Column(DateTime, nullable=False)
+
+    portfolio = relationship('Folio')
+    user = relationship('User', lazy='joined', innerjoin=False)
+
+    __tablename__ = 'foliosaudit'
+    __table_args__ = (
+        Index('idx_fola_folio_action', folio_id, action, unique=False),
+        Index('idx_fola_user', user_id, unique=False),
+        Index('idx_fola_time', action_time, unique=False),
+    )
+
+    def __init__(self, portfolio, user, action, action_info, action_time):
+        self.id = None
+        self.portfolio = portfolio
+        self.user = user
+        self.action = action
+        self.action_info = action_info
+        self.action_time = action_time
+
+    def __unicode__(self):
+        return u'Portfolio ' + str(self.folio_id) + ': Action ' + \
+               str(self.action) + ' at ' + str(self.action_time)
+
+
+class FolioExport(Base, BaseMixin, IDEqualityMixin):
+    """
+    SQLAlchemy ORM wrapper for a portfolio export record.
+    """
+    id = Column(BigInteger, nullable=False, autoincrement=True, primary_key=True)
+    folio_id = Column(BigInteger, ForeignKey('folios.id'), nullable=False)
+    description = Column(Text, nullable=False)
+    originals = Column(Boolean, nullable=False)
+    parameters = Column(JSON, nullable=False)
+    task_id = Column(BigInteger, ForeignKey('tasks.id'), nullable=True)
+    filename = Column(String(255), nullable=False)
+    filesize = Column(BigInteger, nullable=False)
+    created = Column(DateTime, nullable=False)
+    keep_until = Column(DateTime, nullable=False)
+
+    portfolio = relationship('Folio')
+
+    __tablename__ = 'folioexports'
+    __table_args__ = (
+        Index('idx_folex_folio', folio_id, unique=False),
+        Index('idx_folex_filename', filename, unique=True, postgresql_where=func.length(filename) > 0),
+        Index('idx_folex_expiry', keep_until, unique=False),
+    )
+
+    def __init__(self, portfolio, description, originals, image_params_dict=None, keep_until=None):
+        self.id = None
+        self.portfolio = portfolio
+        self.description = description
+        self.originals = originals
+        self.parameters = image_params_dict or {}
+        self.task_id = None
+        self.filename = ''
+        self.filesize = 0
+        self.created = datetime.utcnow()
+        self.keep_until = keep_until or datetime(2099, 12, 31)
+
+    def __unicode__(self):
+        return u'PortfolioExport: ' + (self.filename or 'Pending')

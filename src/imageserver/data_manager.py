@@ -54,6 +54,7 @@ from models import Base
 from models import User, Folder, FolderPermission, Group
 from models import Image, ImageTemplate, ImageHistory, ImageStats, Property
 from models import SystemPermissions, SystemStats, Task, UserGroup
+from models import Folio, FolioImage, FolioPermission, FolioHistory, FolioExport
 from util import add_sep, strip_sep
 from util import filepath_components, filepath_parent, filepath_normalize
 from util import generate_password
@@ -845,7 +846,7 @@ class DataManager(object):
             if db_group.group_type == Group.GROUP_TYPE_LDAP:
                 raise ValueError('Cannot delete LDAP group')
 
-            # Auto cascades system and folder permissions
+            # Auto cascades system and folder and folio permissions
             db_session.delete(db_group)
             if _commit:
                 db_session.commit()
@@ -868,8 +869,9 @@ class DataManager(object):
         try:
             db_image = db_session.merge(image)
             if purge:
-                # Physically delete (manual cascade of stats, auto cascade of history)
+                # Physically delete (manual cascade of stats and folioimages, auto cascade of history)
                 db_session.query(ImageStats).filter(ImageStats.image_id == db_image.id).delete()
+                db_session.query(FolioImage).filter(FolioImage.image_id == db_image.id).delete()
                 db_session.delete(db_image)
             else:
                 # Flag as deleted
@@ -1646,6 +1648,21 @@ class DataManager(object):
                 if not Property.__table__.exists(self._db):
                     Property.__table__.create(self._db)
                     create_properties = True
+
+                if not Folio.__table__.exists(self._db):
+                    Folio.__table__.create(self._db)
+
+                if not FolioImage.__table__.exists(self._db):
+                    FolioImage.__table__.create(self._db)
+
+                if not FolioPermission.__table__.exists(self._db):
+                    FolioPermission.__table__.create(self._db)
+
+                if not FolioHistory.__table__.exists(self._db):
+                    FolioHistory.__table__.create(self._db)
+
+                if not FolioExport.__table__.exists(self._db):
+                    FolioExport.__table__.create(self._db)
 
                 # Create system data (needs all tables in place first)
                 if create_default_groups:
