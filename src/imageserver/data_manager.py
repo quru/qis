@@ -419,6 +419,39 @@ class DataManager(object):
                 db_session.close()
 
     @db_operation
+    def get_portfolio_permission(self, folio, group, _db_session=None):
+        """
+        Returns the FolioPermission object for the given portfolio and group,
+        or None if there is no exact match in the database.
+        """
+        db_session = _db_session or self._db.Session()
+        try:
+            q = db_session.query(FolioPermission)
+            q = q.filter(FolioPermission.portfolio == folio)
+            q = q.filter(FolioPermission.group == group)
+            return q.first()
+        finally:
+            if not _db_session:
+                db_session.close()
+
+    @db_operation
+    def get_top_portfolio_permission(self, folio, group_list, _db_session=None):
+        """
+        Returns the FolioPermission object with the highest access level for
+        the given portfolio and list of groups, or returns None if there are
+        no permission records for any of the groups.
+        """
+        db_session = _db_session or self._db.Session()
+        try:
+            q = db_session.query(FolioPermission)
+            q = q.filter(FolioPermission.portfolio == folio)
+            q = q.filter(FolioPermission.group_id.in_([g.id for g in group_list]))
+            return q.order_by(desc(FolioPermission.access)).limit(1).first()
+        finally:
+            if not _db_session:
+                db_session.close()
+
+    @db_operation
     def create_user(self, user, _db_session=None, _commit=True):
         """
         Creates a new user account from the supplied User object, applies
@@ -1768,6 +1801,7 @@ class DataManager(object):
 
                 if create_properties:
                     self.save_object(Property(Property.FOLDER_PERMISSION_VERSION, '1'))
+                    self.save_object(Property(Property.FOLIO_PERMISSION_VERSION, '1'))
                     self.save_object(Property(Property.IMAGE_TEMPLATES_VERSION, '1'))
                     self.save_object(Property(Property.DEFAULT_TEMPLATE, 'default'))
 

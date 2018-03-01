@@ -603,6 +603,7 @@ class Property(Base, BaseMixin):
     SQLAlchemy ORM wrapper for a simple key/value properties store.
     """
     FOLDER_PERMISSION_VERSION = 'fp_version'
+    FOLIO_PERMISSION_VERSION = 'foliop_version'
     IMAGE_TEMPLATES_VERSION = 'template_version'
     DEFAULT_TEMPLATE = 'pubimage_default_template'
 
@@ -711,6 +712,7 @@ class FolioPermission(Base, BaseMixin, IDEqualityMixin):
     ACCESS_DOWNLOAD = 20
     ACCESS_EDIT = 30
     ACCESS_DELETE = 50  # To match FolderPermission
+    ACCESS_ALL = ACCESS_DELETE
 
     id = Column(BigInteger, nullable=False, autoincrement=True, primary_key=True)
     folio_id = Column(BigInteger, ForeignKey('folios.id'), nullable=False)
