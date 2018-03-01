@@ -47,10 +47,11 @@ gallery and slideshow libraries to display portfolios is also deferred.
 
 Any user in a group with _folio_ permission can create portfolios. They can choose
 whether the portfolio is private (visible only to them), visible to logged-in users,
-or public. Separately they can also choose the same 3 options for who is allowed to
-download a published zip of the whole portfolio. Only the owner or a folio
-administrator can publish or change or delete the portfolio. The owner can add any
-image to the portfolio that they already have permission to view.
+or public. In addition they can also choose the same 3 levels for who is allowed to
+download a published zip of the whole portfolio. Just as for image folders, download
+permission will infer view permission. Only the owner or a folio administrator can
+publish or change or delete the portfolio. The owner can add any image to the
+portfolio that they already have permission to view.
 
 A user in a group with _admin___folios_ permission can see and manage any portfolio.
 This will be required in future so that someone other than the portfolio creator has
@@ -307,8 +308,8 @@ rather than `/api/v1/admin/portfolios/`.
   * URL `/api/v1/portfolios/` for `GET` (list) and `POST` (create)
   * URL `/api/v1/portfolios/[portfolio id]/` for `GET`, `PUT`, and `DELETE`
   * No parameters for `GET` or `DELETE`
-  * Parameters `human_id` (optional), `name`, `description`, `view_access`
-    (0, 1, or 2), `download_access` (0, 1, or 2) for `POST` and `PUT`
+  * Parameters `human_id` (optional), `name`, `description`, `internal_access`
+    (0, 10, or 20), `public_access` (0, 10, or 20) for `POST` and `PUT`
   * No permissions required for `GET` (list)
     * But the returned list is filtered by `VIEW` permission
   * Folio `VIEW` permission required for `GET` (ID)
@@ -318,11 +319,11 @@ rather than `/api/v1/admin/portfolios/`.
     (after a delete)
   * Note that the 2 `GET` URLs actually implement the 2 "public web services"
     exactly as described above
-  * The `view_access` and `download_access` values will act as shortcuts for which
+  * The `internal_access` and `public_access` values will act as shortcuts for which
     data rows should be present in the `foliopermissions` table. A future release
     of QIS may add new API functions, similar to those existing for
     _folder permissions_, that enable more granular permissions to be set for
-    individual groups.
+    individual groups. If both values are zero, the portfolio will be private.
   * Deleting a portfolio will cascade the delete to the `folioimages`,
     `foliopermissions`, `folioexports` and `folioaudit` tables, and delete
     exported zip files from the filesystem
