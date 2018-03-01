@@ -609,7 +609,7 @@ class FolderPermissionAPI(MethodView):
             try:
                 if db_commit:
                     db_session.commit()
-                    permissions_engine.reset()
+                    permissions_engine.reset_folder_permissions()
                 else:
                     db_session.rollback()
             finally:
@@ -623,7 +623,7 @@ class FolderPermissionAPI(MethodView):
             raise DoesNotExistError(str(permission_id))
         fp.access = params['access']
         data_engine.save_object(fp)
-        permissions_engine.reset()
+        permissions_engine.reset_folder_permissions()
         return make_api_success_response(object_to_dict(fp))
 
     @add_api_error_handler
@@ -650,7 +650,7 @@ class FolderPermissionAPI(MethodView):
         finally:
             if db_commit:
                 db_session.commit()
-                permissions_engine.reset()
+                permissions_engine.reset_folder_permissions()
             else:
                 db_session.rollback()
             db_session.close()

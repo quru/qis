@@ -492,6 +492,26 @@ class PermissionsManager(object):
 
     def reset(self):
         """
+        Shortcut to invalidate both portfolio and folder permissions,
+        in all image server processes.
+        """
+        self.reset_portfolio_permissions()
+        self.reset_folder_permissions()
+
+    def reset_portfolio_permissions(self):
+        """
+        Marks as expired all cached portfolio permissions data, for all image
+        server processes, by incrementing the database data version number.
+        """
+        with self._data_refresh_lock:
+            new_ver = self._db.increment_property(Property.FOLIO_PERMISSION_VERSION)
+        self._foliop_last_check = datetime.min
+        self._logger.info(
+            'Portfolio permissions setting new version ' + new_ver
+        )
+
+    def reset_folder_permissions(self):
+        """
         Marks as expired all cached folder permissions data, for all image
         server processes, by incrementing the database data version number.
         """

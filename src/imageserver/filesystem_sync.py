@@ -852,7 +852,7 @@ def move_folder(db_folder, target_path, user_account, data_manager, permissions_
 
         # Clear folder permissions cache as folder tree has changed
         if success:
-            permissions_manager.reset()
+            permissions_manager.reset_folder_permissions()
 
 
 def delete_folder(db_folder, user_account, data_manager, permissions_manager, logger):

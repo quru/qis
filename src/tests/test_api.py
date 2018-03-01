@@ -1330,7 +1330,7 @@ class ImageServerAPITests(BaseTestCase):
                 db_folder = dm.get_folder(folder_path='test_images')
                 tf_fp = dm.get_folder_permission(db_folder, db_group)
                 if tf_fp is not None: dm.delete_object(tf_fp)
-            pm.reset()
+            pm.reset_folder_permissions()
             # v1.23 Also clear cached permissions for the task server process
             cm.clear()
         try:

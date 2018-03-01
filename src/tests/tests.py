@@ -154,7 +154,7 @@ def set_default_public_permission(access):
     default_fp = dm.get_object(FolderPermission, 1)
     default_fp.access = access
     dm.save_object(default_fp)
-    pm.reset()
+    pm.reset_folder_permissions()
 
 
 def reset_default_image_template():
@@ -2630,7 +2630,7 @@ class ImageServerTestsFast(BaseTestCase):
         # Clear out the image caches and permissions caches
         im.reset_image(ImageAttrs(test_image))
         delete_image_ids()
-        pm.reset()
+        pm.reset_folder_permissions()
         # Viewing an image will trigger SQL for the image record and folder permissions reads
         rv = self.app.get('/image?src=' + test_image)
         assert rv.status_code == 200
@@ -2669,7 +2669,7 @@ class ImageServerTestsFast(BaseTestCase):
             db_group = dm.get_group(groupname='Red Dwarf')
             db_folder = dm.get_folder(folder_path='')
             dm.save_object(FolderPermission(db_folder, db_group, FolderPermission.ACCESS_VIEW))
-            pm.reset()
+            pm.reset_folder_permissions()
             # Log in, test_images should be viewable now
             self.login('kryten', 'kryten')
             rv = self.app.get('/image?src=test_images/cathedral.jpg')
@@ -2680,7 +2680,7 @@ class ImageServerTestsFast(BaseTestCase):
             # Update test group permission to allow download for test_images folder
             db_folder = dm.get_folder(folder_path='test_images')
             dm.save_object(FolderPermission(db_folder, db_group, FolderPermission.ACCESS_DOWNLOAD))
-            pm.reset()
+            pm.reset_folder_permissions()
             # Download should be denied for root, but now allowed for test_images
             copy_file('test_images/cathedral.jpg', tempfile)
             rv = self.app.get('/original?src=' + tempfile)
@@ -2753,7 +2753,7 @@ class ImageServerTestsFast(BaseTestCase):
             # Run numbered tests - first with no permission
             fp = FolderPermission(db_folder, db_group, FolderPermission.ACCESS_NONE)
             fp = dm.save_object(fp, refresh=True)
-            pm.reset()
+            pm.reset_folder_permissions()
             test_pages((False, False, False, False, False, False))
             # Also test permission tracing (ATPT)
             with self.app as this_session:
@@ -2763,7 +2763,7 @@ class ImageServerTestsFast(BaseTestCase):
             # With view permission
             fp.access = FolderPermission.ACCESS_VIEW
             dm.save_object(fp)
-            pm.reset()
+            pm.reset_folder_permissions()
             test_pages((True, True, True, False, False, False))
             # ATPT
             with self.app as this_session:
@@ -2773,7 +2773,7 @@ class ImageServerTestsFast(BaseTestCase):
             # With download permission
             fp.access = FolderPermission.ACCESS_DOWNLOAD
             dm.save_object(fp)
-            pm.reset()
+            pm.reset_folder_permissions()
             test_pages((True, True, True, True, False, False))
             # ATPT
             with self.app as this_session:
@@ -2783,7 +2783,7 @@ class ImageServerTestsFast(BaseTestCase):
             # With edit permission
             fp.access = FolderPermission.ACCESS_EDIT
             dm.save_object(fp)
-            pm.reset()
+            pm.reset_folder_permissions()
             test_pages((True, True, True, True, True, False))
             # ATPT
             with self.app as this_session:
@@ -2793,7 +2793,7 @@ class ImageServerTestsFast(BaseTestCase):
             # With upload permission
             fp.access = FolderPermission.ACCESS_UPLOAD
             dm.save_object(fp)
-            pm.reset()
+            pm.reset_folder_permissions()
             test_pages((True, True, True, True, True, True))
             # ATPT
             with self.app as this_session:
