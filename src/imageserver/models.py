@@ -602,6 +602,7 @@ class Property(Base, BaseMixin):
     """
     SQLAlchemy ORM wrapper for a simple key/value properties store.
     """
+    DATABASE_MIGRATION_VERSION = 'db_migration_version'
     FOLDER_PERMISSION_VERSION = 'fp_version'
     FOLIO_PERMISSION_VERSION = 'foliop_version'
     IMAGE_TEMPLATES_VERSION = 'template_version'

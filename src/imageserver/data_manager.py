@@ -99,6 +99,7 @@ class DataManager(object):
                 self._enable_sql_time_logging()
             self._open_db()
             self._init_db()
+            self._upgrade_db()
         except OperationalError as e:
             raise errors.StartupError('Database connection error: ' + str(e))
         except BaseException as e:
@@ -1810,3 +1811,45 @@ class DataManager(object):
 
         # Show a startup message on success
         self._logger.info('Management + stats database opened')
+
+    def _upgrade_db(self):
+        """
+        Applies any database migrations required (other than create actions
+        that _init_db already does) to bring the database schema up to date.
+        """
+        # Bump this up whenever you add a new migration
+        FINAL_MIGRATION_VERSION = 1
+
+        db_session = self._db.Session()
+        done = False
+        try:
+            # Get the database starting internal version
+            db_ver = db_session.query(Property).get(Property.DATABASE_MIGRATION_VERSION)
+            ver = int(db_ver.value) if db_ver else 0
+
+            if ver < FINAL_MIGRATION_VERSION:
+                # Run migrations
+                self._migrations(ver, db_session)
+                # Set the database new internal version
+                db_session.merge(Property(
+                    Property.DATABASE_MIGRATION_VERSION,
+                    str(FINAL_MIGRATION_VERSION)
+                ))
+            done = True
+        except Exception as e:
+            self._logger.error('Error upgrading database: ' + str(e))
+        finally:
+            if done:
+                db_session.commit()
+            else:
+                db_session.rollback()
+            db_session.close()
+
+    def _migrations(self, current_number, db_session):
+        """
+        Back end to _upgrade_db, performs the actual database migrations.
+        """
+        if current_number < 1:
+            # v2.7 migration number 1 adds portfolios
+            self._logger.info('Applying database migration number 1')
+            db_session.merge(Property(Property.FOLIO_PERMISSION_VERSION, '1'))
