@@ -17,7 +17,7 @@ def tearDown():
 
 
 # Utility - kill the aux child processes
-def kill_aux_processes():
+def kill_aux_processes(nicely=True):
     this_pid = os.getpid()
     p = subprocess.Popen(
         ['pgrep', '-g', str(this_pid)],
@@ -29,6 +29,6 @@ def kill_aux_processes():
     child_pids = [p for p in output.split() if p != str(this_pid)]
     for pid in child_pids:
         try:
-            os.kill(int(pid), signal.SIGTERM)
+            os.kill(int(pid), signal.SIGTERM if nicely else signal.SIGKILL)
         except Exception as e:
             print "Failed to kill child process %s: %s" % (pid, str(e))

@@ -44,6 +44,7 @@ from imageserver.auxiliary import stats_server
 from imageserver.counter import Counter
 from imageserver.filesystem_manager import copy_file, delete_file
 from imageserver.flask_app import data_engine as dm
+from imageserver.flask_app import stats_engine as sm
 from imageserver.stats_manager import StatsManager
 
 from tests import kill_aux_processes
@@ -208,9 +209,12 @@ class StatsServerTests(main_tests.FlaskTestCase):
     def setUpClass(cls):
         super(StatsServerTests, cls).setUpClass()
         # Kill stats collection from earlier tests
-        kill_aux_processes()
+        kill_aux_processes(nicely=False)
         # Wipe the database, restart stats collection
         main_tests.init_tests()
+        # Reset the connection to the stats server
+        sm._client_close()
+        sm._client_connect()
 
     def test_stats_engine(self):
         # Test constants
