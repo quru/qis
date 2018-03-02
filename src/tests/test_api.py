@@ -75,7 +75,7 @@ class ImageServerAPITests(BaseTestCase):
     @classmethod
     def setUpClass(cls):
         super(ImageServerAPITests, cls).setUpClass()
-        main_tests.setup()
+        main_tests.init_tests()
 
     # API token login - bad parameters
     def test_token_login_bad_params(self):

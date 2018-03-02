@@ -37,7 +37,20 @@
 # 26Aug2016  Matt  Moved web page tests into test_web_pages.py
 #
 
+import binascii
+import json
 import os
+import shutil
+import subprocess
+import tempfile
+import time
+import timeit
+
+import unittest2 as unittest
+
+import mock
+import flask
+from werkzeug.http import http_date
 
 # Do not use the base or any other current environment settings,
 # as we'll be clearing down the database
@@ -53,21 +66,6 @@ IMAGEMAGICK_PATHS = [
 
 print "Importing imageserver libraries"
 
-import binascii
-import json
-import shutil
-import signal
-import subprocess
-import tempfile
-import time
-import timeit
-
-import unittest2 as unittest
-
-import mock
-import flask
-from werkzeug.http import http_date
-
 # Assign global managers, same as the main app uses
 from imageserver.flask_app import app as flask_app
 from imageserver.flask_app import logger as lm
@@ -76,6 +74,7 @@ from imageserver.flask_app import data_engine as dm
 from imageserver.flask_app import image_engine as im
 from imageserver.flask_app import task_engine as tm
 from imageserver.flask_app import permissions_engine as pm
+from imageserver.flask_app import launch_aux_processes
 
 from imageserver.api_util import API_CODES
 from imageserver.errors import AlreadyExistsError
@@ -107,35 +106,23 @@ MAGICK_ROTATION_VERSION = 673
 GS_LINES_VERSION = 914
 
 
-# For nose
-def setup():
-    reset_databases()
+# Module level setUp - run by nose
+def setUp():
+    init_tests()
+
+
+# Utility - resets the database and cache, starts the aux processes
+def init_tests():
     cm.clear()
-
-
-def teardown():
-    # Kill the aux child processes
-    this_pid = os.getpid()
-    p = subprocess.Popen(
-        ['pgrep', '-g', str(this_pid)],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE
-    )
-    output = p.communicate()
-    output = (output[1] or output[0])
-    child_pids = [p for p in output.split() if p != str(this_pid)]
-    for pid in child_pids:
-        try:
-            os.kill(int(pid), signal.SIGTERM)
-        except:
-            print "Failed to kill child process %s" % pid
+    reset_databases()
+    launch_aux_processes()
+    time.sleep(1)  # Allow aux processes to start
 
 
 # Utility - delete and re-create the internal databases
 def reset_databases():
     assert flask_app.config['TESTING'], \
         'Testing settings have not been applied, not clearing the database!'
-
     cm._drop_db()
     dm._drop_db()
     cm._init_db()
@@ -173,17 +160,6 @@ def reset_default_image_template():
     dm.save_object(default_it)
     # Clear template cache
     im.reset_templates()
-
-
-# Returns the first of paths+app_name that exists, else app_name
-def get_app_path(app_name, paths):
-    app_path = app_name
-    for p in paths:
-        try_path = os.path.join(p, app_name)
-        if os.path.exists(try_path):
-            app_path = try_path
-            break
-    return app_path
 
 
 # Utility - create/reset a test user having a certain system permission
@@ -244,6 +220,17 @@ def setup_user_account(login_name, user_type='none', allow_api=False):
         db_session.close()
         # Clear old cached user permissions
         pm.reset()
+
+
+# Returns the first of paths+app_name that exists, else app_name
+def get_app_path(app_name, paths):
+    app_path = app_name
+    for p in paths:
+        try_path = os.path.join(p, app_name)
+        if os.path.exists(try_path):
+            app_path = try_path
+            break
+    return app_path
 
 
 # Utility - invoke ImageMagick convert command, wait for completion,
@@ -464,7 +451,7 @@ class ImageServerTestsSlow(BaseTestCase):
         temp_env['QIS_SETTINGS'] = TESTING_SETTINGS
         rs_path = 'src/runserver.py' if os.path.exists('src/runserver.py') else 'runserver.py'
         inner_server = subprocess.Popen('python ' + rs_path, cwd='.', shell=True, env=temp_env)
-        time.sleep(10)
+        time.sleep(5)
         # Set the xref base URL so it will get generated if we pass the right thing as width
         flask_app.config['DEBUG'] = True
         flask_app.config['XREF_TRACKING_URL'] = \
@@ -483,12 +470,6 @@ class ImageServerTestsSlow(BaseTestCase):
 
 
 class ImageServerBackgroundTaskTests(BaseTestCase):
-    @classmethod
-    def setUpClass(cls):
-        super(ImageServerBackgroundTaskTests, cls).setUpClass()
-        # Invoke @app.before_first_request to launch the aux servers
-        flask_app.test_client().get('/')
-
     # Similar to test_db_auto_population, but with the emphasis
     # on auto-detecting external changes to the file system
     def test_db_auto_sync(self):
