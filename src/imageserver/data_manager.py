@@ -563,7 +563,7 @@ class DataManager(object):
             if len(action_info) > 4096:
                 action_info = action_info[:4093] + '...'
 
-            history = ImageHistory(db_image, db_user, action, action_info, datetime.datetime.utcnow())
+            history = ImageHistory(db_image, db_user, action, action_info)
             db_session.add(history)
             if _commit:
                 db_session.commit()

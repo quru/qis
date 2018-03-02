@@ -446,13 +446,13 @@ class ImageHistory(Base, BaseMixin, IDEqualityMixin):
         Index('idx_ia_time', action_time, unique=False),
     )
 
-    def __init__(self, image, user, action, action_info, action_time):
+    def __init__(self, image, user, action, action_info):
         self.id = None
         self.image = image
         self.user = user
         self.action = action
         self.action_info = action_info
-        self.action_time = action_time
+        self.action_time = datetime.utcnow()
 
     def __unicode__(self):
         return u'Image ' + str(self.image_id) + ': Action ' + \
@@ -767,13 +767,13 @@ class FolioHistory(Base, BaseMixin, IDEqualityMixin):
         Index('idx_fola_time', action_time, unique=False),
     )
 
-    def __init__(self, portfolio, user, action, action_info, action_time):
+    def __init__(self, portfolio, user, action, action_info):
         self.id = None
         self.portfolio = portfolio
         self.user = user
         self.action = action
         self.action_info = action_info
-        self.action_time = action_time
+        self.action_time = datetime.utcnow()
 
     def __unicode__(self):
         return u'Portfolio ' + str(self.folio_id) + ': Action ' + \

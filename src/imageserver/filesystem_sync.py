@@ -78,8 +78,7 @@ def on_image_db_create_anon_history(db_image):
     on_image_db_create(db_image)
     db_image.history.append(ImageHistory(
         db_image, None, ImageHistory.ACTION_CREATED,
-        'File detected: ' + db_image.src,
-        datetime.utcnow()
+        'File detected: ' + db_image.src
     ))
 
 
