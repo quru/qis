@@ -349,6 +349,8 @@ rather than `/api/v1/admin/portfolios/`.
     portfolio is published to a zip file
   * The optional `image_parameters` value will accept JSON in the same structure
     as defined for the existing _image templates_ API
+  * Includes a calculated view URL field for each image, which will incorporate
+    the `image_parameters` (if any)
   * Adds a `foliosaudit` record for change actions
 
 * Portfolio publishing (export) and distribution

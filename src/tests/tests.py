@@ -162,7 +162,7 @@ def reset_default_image_template():
     im.reset_templates()
 
 
-# Utility - create/reset a test user having a certain system permission
+# Utility - create/reset and return a test user having a certain system permission
 def setup_user_account(login_name, user_type='none', allow_api=False):
     db_session = dm.db_get_session()
     try:
@@ -196,8 +196,9 @@ def setup_user_account(login_name, user_type='none', allow_api=False):
         testgroup.permissions = SystemPermissions(
             testgroup, False, False, False, False, False, False, False
         )
-        # Wipe folder permissions
+        # Wipe folder and folio permissions
         del testgroup.folder_permissions[:]
+        del testgroup.folio_permissions[:]
         # Apply permissions for requested test type
         if user_type == 'none':
             pass
@@ -205,6 +206,8 @@ def setup_user_account(login_name, user_type='none', allow_api=False):
             testgroup.permissions.admin_users = True
         elif user_type == 'admin_files':
             testgroup.permissions.admin_files = True
+        elif user_type == 'admin_folios':
+            testgroup.permissions.admin_folios = True
         elif user_type == 'admin_permissions':
             testgroup.permissions.admin_users = True
             testgroup.permissions.admin_permissions = True
@@ -216,6 +219,7 @@ def setup_user_account(login_name, user_type='none', allow_api=False):
         testuser.groups = [testgroup]
         dm.save_object(testuser, _db_session=db_session)
         db_session.commit()
+        return testuser
     finally:
         db_session.close()
         # Clear old cached user permissions
