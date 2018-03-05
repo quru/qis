@@ -39,9 +39,12 @@ from imageserver.flask_app import task_engine as tm
 from imageserver.flask_app import permissions_engine as pm
 
 from imageserver.api_util import API_CODES
-from imageserver.filesystem_sync import auto_sync_existing_file
+from imageserver.filesystem_manager import (
+    copy_file, delete_dir, make_dirs
+)
+from imageserver.filesystem_sync import auto_sync_existing_file, auto_sync_folder
 from imageserver.models import (
-    Group,
+    FolderPermission, Group,
     Folio, FolioImage, FolioPermission, FolioHistory, FolioExport
 )
 
@@ -178,20 +181,105 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         self.assertEqual(rv.status_code, API_CODES.ALREADY_EXISTS)
 
     # Tests adding and removing images from a portfolio
-    def test_folio_add_remove_images(self):
-        pass
+    def test_folio_add_remove_image(self):
+        db_folio = dm.get_portfolio(human_id='private')
+        db_img = auto_sync_existing_file('test_images/thames.jpg', dm, tm)
+        api_url = '/api/portfolios/' + str(db_folio.id) + '/images/'
+        self.login('foliouser', 'foliouser')
+        # Get the initial image list
+        rv = self.app.get(api_url)
+        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        obj = json.loads(rv.data)
+        self.assertEqual(len(obj['data']), 2)  # see reset_fixtures()
+        # Add another image
+        rv = self.app.post(api_url, data={
+            'image_id': db_img.id
+        })
+        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        # Get the new image list
+        db_folio = dm.get_portfolio(db_folio.id, load_images=True, load_history=True)
+        self.assertEqual(len(db_folio.images), 3)  # initial + 1
+        # Check the audit trail was updated
+        add_history = db_folio.history[-1]
+        self.assertEqual(add_history.action, FolioHistory.ACTION_IMAGE_CHANGE)
+        self.assertIn(db_img.src, add_history.action_info)
+        # Check that we can't add a duplicate image
+        rv = self.app.post(api_url, data={
+            'image_id': db_img.id
+        })
+        self.assertEqual(rv.status_code, API_CODES.ALREADY_EXISTS)
+        # Remove the image
+        api_url = '/api/portfolios/' + str(db_folio.id) + '/images/' + str(db_img.id) + '/'
+        rv = self.app.delete(api_url)
+        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        # Check the image list again
+        db_folio = dm.get_portfolio(db_folio.id, load_images=True, load_history=True)
+        self.assertEqual(len(db_folio.images), 2)  # back to initial
+        # Check the audit trail was updated again
+        del_history = db_folio.history[-1]
+        self.assertEqual(del_history.action, FolioHistory.ACTION_IMAGE_CHANGE)
+        self.assertIn(db_img.src, del_history.action_info)
+        self.assertGreater(del_history.id, add_history.id)
+        # Check that we can't remove it again
+        rv = self.app.delete(api_url)
+        self.assertEqual(rv.status_code, API_CODES.NOT_FOUND)
 
-# API test adding images, test no dupes
-#     test portfolio view
-#     test audit trail
-#     test remove images
-#     test portfolio view
-#     test audit trail
+    # Tests handling of bad permissions when adding and removing images
+    def test_folio_add_remove_image_permissions(self):
+        db_folio = dm.get_portfolio(human_id='private')
+        db_img = auto_sync_existing_file('test_images/thames.jpg', dm, tm)
+        api_url = '/api/portfolios/' + str(db_folio.id) + '/images/'
+        # Must be logged in
+        rv = self.app.post(api_url, data={
+            'image_id': db_img.id
+        })
+        self.assertEqual(rv.status_code, API_CODES.REQUIRES_AUTH)
+        # Cannot change another user's portfolio
+        db_user = main_tests.setup_user_account('anotherfoliouser')
+        db_group = db_user.groups[-1]
+        db_group.permissions.folios = True
+        dm.save_object(db_group)
+        self.login('anotherfoliouser', 'anotherfoliouser')
+        rv = self.app.post(api_url, data={
+            'image_id': db_img.id
+        })
+        self.assertEqual(rv.status_code, API_CODES.UNAUTHORISED)
+        # The portfolio owner must have view permission for the image being added
+        self.login('foliouser', 'foliouser')
+        db_owner = dm.get_user(username='foliouser', load_groups=True)
+        self.assertEqual(len(db_owner.groups), 1)  # Ensure no other group permissions need changing
+        db_group = db_owner.groups[-1]
+        unauth_image_dir = '/secret_images'
+        unauth_image_path = unauth_image_dir + '/cathedral.jpg'
+        try:
+            # Put an image into a folder that is not viewable by foliouser
+            make_dirs(unauth_image_dir)
+            copy_file('test_images/cathedral.jpg', unauth_image_path)
+            db_folder = auto_sync_folder(unauth_image_dir, dm, tm, False)
+            fp = FolderPermission(db_folder, db_group, FolderPermission.ACCESS_NONE)
+            dm.save_object(fp)
+            pm.reset_folder_permissions()
+            # Now try to add that image
+            db_img = auto_sync_existing_file(unauth_image_path, dm, tm)
+            rv = self.app.post(api_url, data={
+                'image_id': db_img.id
+            })
+            self.assertEqual(rv.status_code, API_CODES.UNAUTHORISED)
+            # This is a complicated test, so prove that it does work with the correct permission
+            fp.access = FolderPermission.ACCESS_VIEW
+            dm.save_object(fp)
+            pm.reset_folder_permissions()
+            rv = self.app.post(api_url, data={
+                'image_id': db_img.id
+            })
+            self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        finally:
+            delete_dir(unauth_image_dir, recursive=True)
+
 
 # API test image reordering, test required permissions
 #     test audit trail
 
-# API test image view permission is required to add image
 # API test normal user cannot publish another user's portfolio
 # API test portfolio administrator can change, unpublish and delete another user's portfolios
 
@@ -203,6 +291,7 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
 # API get - test internal portfolio can only be logged in users
 # API get - test public portfolio can be viewed by public
 # API get - test private and internal portfolios can't be viewed by public
+#           test change of group permissions
 
 # API delete - test required permissions
 #              test all files removed
