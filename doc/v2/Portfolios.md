@@ -354,6 +354,11 @@ rather than `/api/v1/admin/portfolios/`.
     as defined for the existing _image templates_ API
   * Includes a calculated view URL field for each image, which will incorporate
     the `image_parameters` (if any)
+  * Note that setting the `index` value using the _change image_ function will
+    not change the ordering number on other images in the portfolio. This may
+    result in duplicate values, with the order then being determined by which
+    image was added to the portfolio first. To ensure that each image has a
+    unique order number, use the _reorder image_ function.
   * Adds a `foliosaudit` record for change actions
 
 * Portfolio publishing (export) and distribution
