@@ -632,7 +632,10 @@ class Folio(Base, BaseMixin, IDEqualityMixin):
     owner_id = Column(Integer, ForeignKey('users.id'), nullable=False)
     last_updated = Column(DateTime, nullable=False)
 
-    owner = relationship('User')
+    owner = relationship(
+        'User',
+        lazy='joined'
+    )
     images = relationship(
         'FolioImage',
         order_by='FolioImage.order_num, FolioImage.id',
@@ -650,6 +653,7 @@ class Folio(Base, BaseMixin, IDEqualityMixin):
     )
     downloads = relationship(
         'FolioExport',
+        lazy='joined',
         cascade='all, delete-orphan'
     )
 
