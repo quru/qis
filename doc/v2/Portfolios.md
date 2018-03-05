@@ -319,6 +319,9 @@ rather than `/api/v1/admin/portfolios/`.
     (after a delete)
   * Note that the 2 `GET` URLs actually implement the 2 "public web services"
     exactly as described above
+  * The `human_id` parameter is a unique value that will be used to identify the
+    portfolio in "friendly" shareable URLs. If no value is given, the application
+    will generate a unique string value.
   * The `internal_access` and `public_access` values will act as shortcuts for which
     data rows should be present in the `foliopermissions` table. A future release
     of QIS may add new API functions, similar to those existing for

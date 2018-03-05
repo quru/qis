@@ -420,6 +420,27 @@ class DataManager(object):
                 db_session.close()
 
     @db_operation
+    def get_portfolio(self, folio_id=0, human_id=None, load_images=False, _db_session=None):
+        """
+        Returns the Folio object with the given ID or human ID,
+        or None if there is no match in the database.
+        """
+        db_session = _db_session or self._db.Session()
+        try:
+            if not folio_id and not human_id:
+                raise ValueError('Portfolio ID or short-code must be provided')
+            q = db_session.query(Folio)
+            if load_images:
+                q = q.options(eagerload('images'))
+            if folio_id:
+                return q.get(folio_id)
+            else:
+                return q.filter(Folio.human_id == human_id).first()
+        finally:
+            if not _db_session:
+                db_session.close()
+
+    @db_operation
     def get_portfolio_permission(self, folio, group, _db_session=None):
         """
         Returns the FolioPermission object for the given portfolio and group,

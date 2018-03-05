@@ -30,15 +30,15 @@
 # =========  ====  ============================================================
 #
 
+import json
+
 import tests as main_tests
-from tests import (
-    BaseTestCase, setup_user_account
-)
 
 from imageserver.flask_app import data_engine as dm
 from imageserver.flask_app import task_engine as tm
 from imageserver.flask_app import permissions_engine as pm
 
+from imageserver.api_util import API_CODES
 from imageserver.filesystem_sync import auto_sync_existing_file
 from imageserver.models import (
     Group,
@@ -46,27 +46,31 @@ from imageserver.models import (
 )
 
 
-class PortfoliosAPITests(BaseTestCase):
+class PortfoliosAPITests(main_tests.BaseTestCase):
     @classmethod
     def setUpClass(cls):
         super(PortfoliosAPITests, cls).setUpClass()
         main_tests.init_tests()
 
     def setUp(self):
+        super(PortfoliosAPITests, self).setUp()
         # Restore clean test data before each test
         self.reset_fixtures()
 
     def reset_fixtures(self):
         # Wipe the old data
         db_session = dm.db_get_session()
-        db_session.query(Folio).delete()
         db_session.query(FolioImage).delete()
         db_session.query(FolioPermission).delete()
         db_session.query(FolioHistory).delete()
         db_session.query(FolioExport).delete()
+        db_session.query(Folio).delete()
         db_session.commit()
         # Create private, internal and public test portfolios
-        db_user = setup_user_account('foliouser')
+        db_user = main_tests.setup_user_account('foliouser')
+        db_group = db_user.groups[-1]
+        db_group.permissions.folios = True
+        dm.save_object(db_group)
         self.create_portfolio('private', db_user,
                               FolioPermission.ACCESS_NONE, FolioPermission.ACCESS_NONE)
         self.create_portfolio('internal', db_user,
@@ -90,18 +94,88 @@ class PortfoliosAPITests(BaseTestCase):
         dm.save_object(FolioPermission(db_folio, db_pub_group, public_access))
         dm.save_object(FolioPermission(db_folio, db_normal_group, internal_access))
 
-    def test_nothing(self):
-        pass
+    # Tests portfolio creation and permissions
+    def test_folio_create(self):
+        api_url = '/api/portfolios/'
+        # Must be logged in to create
+        rv = self.app.post(api_url)
+        self.assertEqual(rv.status_code, API_CODES.REQUIRES_AUTH)
+        # Must have folio permission to create
+        main_tests.setup_user_account('testuser')
+        self.login('testuser', 'testuser')
+        rv = self.app.post(api_url)
+        self.assertEqual(rv.status_code, API_CODES.UNAUTHORISED)
+        # So this should work
+        db_owner = dm.get_user(username='foliouser')
+        self.login('foliouser', 'foliouser')
+        rv = self.app.post(api_url, data={
+            'human_id': 'mypf1',
+            'name': 'Portfolio 1',
+            'description': 'This is a test portfolio',
+            'owner_id': db_owner.id
+        })
+        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        obj = json.loads(rv.data)
+        self.assertGreater(obj['data']['id'], 0)
+        self.assertEqual(obj['data']['human_id'], 'mypf1')
+        self.assertEqual(obj['data']['description'], 'This is a test portfolio')
+        self.assertEqual(obj['data']['owner_id'], db_owner.id)
 
-# API test portfolio creation
-#     test adding images
+    # Test the human ID value when creating portfolios
+    def test_folio_human_id(self):
+        api_url = '/api/portfolios/'
+        db_owner = dm.get_user(username='foliouser')
+        self.login('foliouser', 'foliouser')
+        # Creation - blank human ID should have one allocated
+        rv = self.app.post(api_url, data={
+            'human_id': '',
+            'name': 'Test portfolio',
+            'description': 'This is a test portfolio',
+            'owner_id': db_owner.id
+        })
+        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        obj = json.loads(rv.data)
+        self.assertGreater(len(obj['data']['human_id']), 0)
+        # Creation - duplicate human ID should not be allowed
+        rv = self.app.post(api_url, data={
+            'human_id': 'private',          # see reset_fixtures()
+            'name': 'Test portfolio',
+            'description': 'This is a test portfolio',
+            'owner_id': db_owner.id
+        })
+        self.assertEqual(rv.status_code, API_CODES.ALREADY_EXISTS)
+        # Updates - blank human ID should have one allocated
+        db_folio = dm.get_portfolio(human_id='public')
+        api_url = '/api/portfolios/' + str(db_folio.id) + '/'
+        rv = self.app.put(api_url, data={
+            'id': db_folio.id,
+            'human_id': '',
+            'name': 'Test portfolio',
+            'description': 'This is a test portfolio',
+            'owner_id': db_owner.id
+        })
+        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        obj = json.loads(rv.data)
+        self.assertGreater(len(obj['data']['human_id']), 0)
+        self.assertNotEqual(obj['data']['human_id'], 'public')
+        # Updates - duplicate human ID should not be allowed
+        rv = self.app.put(api_url, data={
+            'id': db_folio.id,
+            'human_id': 'private',          # see reset_fixtures()
+            'name': 'Test portfolio',
+            'description': 'This is a test portfolio',
+            'owner_id': db_owner.id
+        })
+        self.assertEqual(rv.status_code, API_CODES.ALREADY_EXISTS)
+
+
+# API test adding images
 #     test portfolio view
 #     test audit trail
 #     test remove images
 #     test portfolio view
 #     test audit trail
 
-# API test portfolio create permission is required for creation
 # API test image view permission is required to add image
 # API test normal user cannot publish another user's portfolio
 # API test portfolio administrator can change, unpublish and delete another user's portfolios
