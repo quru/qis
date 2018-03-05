@@ -112,7 +112,8 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
             'human_id': 'mypf1',
             'name': 'Portfolio 1',
             'description': 'This is a test portfolio',
-            'owner_id': db_owner.id
+            'internal_access': FolioPermission.ACCESS_NONE,
+            'public_access': FolioPermission.ACCESS_NONE
         })
         self.assertEqual(rv.status_code, API_CODES.SUCCESS)
         obj = json.loads(rv.data)
@@ -120,18 +121,23 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         self.assertEqual(obj['data']['human_id'], 'mypf1')
         self.assertEqual(obj['data']['description'], 'This is a test portfolio')
         self.assertEqual(obj['data']['owner_id'], db_owner.id)
+        # Audit trail should have a "created" entry
+        db_folio = dm.get_portfolio(obj['data']['id'], load_history=True)
+        self.assertIsNotNone(db_folio)
+        self.assertEqual(len(db_folio.history), 1)
+        self.assertEqual(db_folio.history[0].action, FolioHistory.ACTION_CREATED)
 
     # Test the human ID value when creating portfolios
     def test_folio_human_id(self):
         api_url = '/api/portfolios/'
-        db_owner = dm.get_user(username='foliouser')
         self.login('foliouser', 'foliouser')
         # Creation - blank human ID should have one allocated
         rv = self.app.post(api_url, data={
             'human_id': '',
             'name': 'Test portfolio',
             'description': 'This is a test portfolio',
-            'owner_id': db_owner.id
+            'internal_access': FolioPermission.ACCESS_NONE,
+            'public_access': FolioPermission.ACCESS_NONE
         })
         self.assertEqual(rv.status_code, API_CODES.SUCCESS)
         obj = json.loads(rv.data)
@@ -141,7 +147,8 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
             'human_id': 'private',          # see reset_fixtures()
             'name': 'Test portfolio',
             'description': 'This is a test portfolio',
-            'owner_id': db_owner.id
+            'internal_access': FolioPermission.ACCESS_NONE,
+            'public_access': FolioPermission.ACCESS_NONE
         })
         self.assertEqual(rv.status_code, API_CODES.ALREADY_EXISTS)
         # Updates - blank human ID should have one allocated
@@ -152,7 +159,8 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
             'human_id': '',
             'name': 'Test portfolio',
             'description': 'This is a test portfolio',
-            'owner_id': db_owner.id
+            'internal_access': FolioPermission.ACCESS_NONE,
+            'public_access': FolioPermission.ACCESS_NONE
         })
         self.assertEqual(rv.status_code, API_CODES.SUCCESS)
         obj = json.loads(rv.data)
@@ -164,16 +172,23 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
             'human_id': 'private',          # see reset_fixtures()
             'name': 'Test portfolio',
             'description': 'This is a test portfolio',
-            'owner_id': db_owner.id
+            'internal_access': FolioPermission.ACCESS_NONE,
+            'public_access': FolioPermission.ACCESS_NONE
         })
         self.assertEqual(rv.status_code, API_CODES.ALREADY_EXISTS)
 
+    # Tests adding and removing images from a portfolio
+    def test_folio_add_remove_images(self):
+        pass
 
-# API test adding images
+# API test adding images, test no dupes
 #     test portfolio view
 #     test audit trail
 #     test remove images
 #     test portfolio view
+#     test audit trail
+
+# API test image reordering, test required permissions
 #     test audit trail
 
 # API test image view permission is required to add image
@@ -191,9 +206,6 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
 
 # API delete - test required permissions
 #              test all files removed
-
-# API test image reordering, test required permissions
-#     test audit trail
 
 # API test single image changes come out in URLs for portfolio image list
 

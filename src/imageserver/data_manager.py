@@ -420,7 +420,8 @@ class DataManager(object):
                 db_session.close()
 
     @db_operation
-    def get_portfolio(self, folio_id=0, human_id=None, load_images=False, _db_session=None):
+    def get_portfolio(self, folio_id=0, human_id=None,
+                      load_images=False, load_history=False, _db_session=None):
         """
         Returns the Folio object with the given ID or human ID,
         or None if there is no match in the database.
@@ -432,6 +433,8 @@ class DataManager(object):
             q = db_session.query(Folio)
             if load_images:
                 q = q.options(eagerload('images'))
+            if load_history:
+                q = q.options(eagerload('history'))
             if folio_id:
                 return q.get(folio_id)
             else:
