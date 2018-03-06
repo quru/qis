@@ -1,5 +1,6 @@
 # v2.7.0
-_Changes: Add the back-end and API for portfolios_
+_Changes: Add the back-end and API for portfolios, bug fix to background task
+locking in a multi-server deployment_
 
 See [the Portfolios specification](v2/Portfolios.md).
 
