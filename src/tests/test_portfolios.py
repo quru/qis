@@ -345,18 +345,55 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         self.assertEqual(db_folio.history[-3].action, FolioHistory.ACTION_IMAGE_CHANGE)
         self.assertIn(db_img.src, db_folio.history[-3].action_info)
 
-# API test normal user cannot publish another user's portfolio
-# API test portfolio administrator can change, unpublish and delete another user's portfolios
+    # Test folio discoverability
+    def test_folio_listing(self):
+        api_url = '/api/portfolios/'
+        # Public users should only see public portfolios
+        rv = self.app.post(api_url)
+        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        obj = json.loads(rv.data)
+        hids = [folio.human_id for folio in obj['data']]
+        self.assertEqual(len(hids), 1)
+        self.assertEqual(hids[0], 'public')
+        # Internal users should see internal + public portfolios
+        main_tests.setup_user_account('janeaustin')
+        self.login('janeaustin', 'janeaustin')
+        rv = self.app.post(api_url)
+        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        obj = json.loads(rv.data)
+        hids = [folio.human_id for folio in obj['data']]
+        self.assertEqual(len(hids), 2)
+        self.assertIn('public', hids)
+        self.assertIn('internal', hids)
+        # Portfolio owners should see their own + internal + public portfolios
+        self.login('foliouser', 'foliouser')
+        rv = self.app.post(api_url)
+        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        obj = json.loads(rv.data)
+        hids = [folio.human_id for folio in obj['data']]
+        self.assertEqual(len(hids), 3)
+        self.assertIn('public', hids)
+        self.assertIn('internal', hids)
+        self.assertIn('private', hids)
 
-# API list - test public users see only public portfolios
-# API list - test internal users see internal + public portfolios
-# API list - test internal users see owned + internal + public portfolios
+    # Tests that the portfolio list API does not return the image lists and audit
+    # trail too. This is only a performance concern, not a functional one.
+    def test_folio_listing_fields(self):
+        api_url = '/api/portfolios/'
+        rv = self.app.post(api_url)
+        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        obj = json.loads(rv.data)
+        self.assertGreater(len(obj['data']), 0)
+        folio = obj['data'][0]
+        self.assertFalse(hasattr(folio, 'images'))
+        self.assertFalse(hasattr(folio, 'history'))
 
 # API get - test private portfolio can only be viewed by owner
 # API get - test internal portfolio can only be logged in users
 # API get - test public portfolio can be viewed by public
 # API get - test private and internal portfolios can't be viewed by public
 #           test change of group permissions
+# and the same for view page
 
 # API delete - test required permissions
 #              test all files removed
@@ -368,6 +405,7 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
 # API test export with resize
 # API test export with resize and single image changes
 # API test export with filename changes
+# API test normal user cannot export another user's portfolio
 
 # URLs test download of zip, check zip content
 #      test format changes change file extension
@@ -386,3 +424,5 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
 #     test audit trail
 
 # API test files folder removed when empty
+
+# API test portfolio administrator can change, unpublish and delete another user's portfolios

@@ -284,15 +284,15 @@ portfolios however, a token is required.
   * `GET` method
   * No parameters
   * Returns a JSON list of portfolios for which the current user has folio `VIEW` permission
-  * Returns portfolio header fields only (no image list and no zip file information)
+  * Returns portfolio header fields only (no image list and no audit trail)
 
 * Portfolio details
   * URL `/api/v1/portfolios/[portfolio id]/`
   * `GET` method
   * No parameters
   * Requires folio `VIEW` permission for the requested ID
-  * Returns a JSON object with full portfolio details, including the image list and
-    list of published (and non-expired) zip files available for download
+  * Returns a JSON object with full portfolio details, including the ordered image list,
+    audit trail and list of published (and non-expired) zip files available for download
 
 ### Protected web services
 
