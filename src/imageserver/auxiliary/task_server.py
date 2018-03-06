@@ -104,8 +104,8 @@ def _run_server(debug_mode):
     The task serving main function.
     This function does not return until the process is killed.
     """
-    BUSY_WAIT = 5       #
-    IDLE_WAIT = 10      # All in seconds
+    BUSY_WAIT = 2       #
+    IDLE_WAIT = 5       # All in seconds
     CLEANUP_EVERY = 10  #
 
     try:
@@ -119,7 +119,7 @@ def _run_server(debug_mode):
         dummy = socket()
         dummy.bind((app.config['TASK_SERVER'], app.config['TASK_SERVER_PORT']))
 
-        # If here, we opened the port so we're the only task server running.
+        # If here, we opened the port so we're the only task server running locally
         shutdown_ev = Event()
         logger = app.log
         data_engine = app.data_engine

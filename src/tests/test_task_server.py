@@ -93,7 +93,7 @@ class TaskServerTests(main_tests.FlaskTestCase):
         task = tasks[-1]
         self.assertEqual(task.id, task_obj.id)
         # Wait for task completion
-        tm.wait_for_task(task_obj.id, 20)
+        tm.wait_for_task(task_obj.id, 10)
         # We should now have no stats
         t_now = datetime.utcnow()
         sys_stats = dm.search_system_stats(t_now - timedelta(minutes=60), t_now)
@@ -117,7 +117,7 @@ class TaskServerTests(main_tests.FlaskTestCase):
             Task.PRIORITY_NORMAL, 'info', 'error', 5
         )
         self.assertIsNotNone(task_obj)
-        tm.wait_for_task(task_obj.id, 20)
+        tm.wait_for_task(task_obj.id, 10)
         task_obj = tm.get_task(task_obj.id, decode_attrs=True)
         self.assertIsNone(task_obj.result)
         dm.delete_object(task_obj)
@@ -131,7 +131,7 @@ class TaskServerTests(main_tests.FlaskTestCase):
             Task.PRIORITY_NORMAL, 'info', 'error', 5
         )
         self.assertIsNotNone(task_obj)
-        tm.wait_for_task(task_obj.id, 20)
+        tm.wait_for_task(task_obj.id, 10)
         task_obj = tm.get_task(task_obj.id, decode_attrs=True)
         self.assertEqual(task_obj.result, {'my_bool': True})
         dm.delete_object(task_obj)
@@ -145,7 +145,7 @@ class TaskServerTests(main_tests.FlaskTestCase):
             Task.PRIORITY_NORMAL, 'info', 'error', 5
         )
         self.assertIsNotNone(task_obj)
-        tm.wait_for_task(task_obj.id, 20)
+        tm.wait_for_task(task_obj.id, 10)
         task_obj = tm.get_task(task_obj.id, decode_attrs=True)
         self.assertIsInstance(task_obj.result, ValueError)
         self.assertEqual(repr(task_obj.result), repr(ValueError('An error happened')))
