@@ -519,8 +519,46 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         self.assertIn('width=800', image_list[0].url)
         self.assertIn('format=tif', image_list[0].url)
 
-# API delete - test required permissions
-#              test all files removed
+    # Tests deletion of portfolios
+    def test_folio_delete(self):
+        db_folio = dm.get_portfolio(human_id='private')
+        api_url = '/api/portfolios/' + str(db_folio.id) + '/'
+        # Public access should be denied
+        rv = self.app.delete(api_url)
+        self.assertEqual(rv.status_code, API_CODES.UNAUTHORISED)
+        # Deleting another user's portfolio should be denied
+        main_tests.setup_user_account('plainuser')
+        self.login('plainuser', 'plainuser')
+        rv = self.app.delete(api_url)
+        self.assertEqual(rv.status_code, API_CODES.UNAUTHORISED)
+        # Deleting your own portfolio should work
+        self.login('foliouser', 'foliouser')
+        rv = self.app.delete(api_url)
+        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        # Check it's really gone
+        db_folio = dm.get_portfolio(db_folio.id)
+        self.assertIsNone(db_folio)
+
+    # Tests that folio administrators can change other user's portfolios
+    def test_folio_administrator_permission(self):
+        db_folio = dm.get_portfolio(human_id='private')
+        api_url = '/api/portfolios/' + str(db_folio.id) + '/'
+        main_tests.setup_user_account('folioadmin', user_type='admin_folios')
+        self.login('folioadmin', 'folioadmin')
+        # Edit permission
+        rv = self.app.put(api_url, data={
+            'id': db_folio.id,
+            'human_id': db_folio.human_id,
+            'name': 'Change name',
+            'description': 'Change description',
+            'internal_access': FolioPermission.ACCESS_NONE,
+            'public_access': FolioPermission.ACCESS_NONE
+        })
+        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        # Delete permission
+        rv = self.app.delete(api_url)
+        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+
 
 # API test export of originals
 #     test audit trail
@@ -528,6 +566,7 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
 # API test export with resize and single image changes
 # API test export with filename changes
 # API test normal user cannot export another user's portfolio
+#     test all files removed after delete
 
 # URLs test download of zip, check zip content
 #      test format changes change file extension
@@ -544,5 +583,3 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
 #     test audit trail
 
 # API test files folder removed when empty
-
-# API test portfolio administrator can change, unpublish and delete another user's portfolios
