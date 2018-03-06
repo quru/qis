@@ -305,14 +305,14 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         api_url = '/api/portfolios/' + str(db_folio.id) + '/images/' + str(db_img.id) + '/position/'
         main_tests.setup_user_account('anna')
         self.login('anna', 'anna')
-        rv = self.app.post(api_url, data={
+        rv = self.app.put(api_url, data={
             'index': 0
         })
         self.assertEqual(rv.status_code, API_CODES.UNAUTHORISED)
         # OK log in as the owner
         self.login('foliouser', 'foliouser')
         # Setting index before list start should use index 0
-        rv = self.app.post(api_url, data={
+        rv = self.app.put(api_url, data={
             'index': -10
         })
         self.assertEqual(rv.status_code, API_CODES.SUCCESS)
@@ -321,7 +321,7 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         self.assertEqual(db_folio.images[1].image.src, 'test_images/blue bells.jpg')
         self.assertEqual(db_folio.images[2].image.src, 'test_images/cathedral.jpg')
         # Setting index to the middle should do as asked
-        rv = self.app.post(api_url, data={
+        rv = self.app.put(api_url, data={
             'index': 1
         })
         self.assertEqual(rv.status_code, API_CODES.SUCCESS)
@@ -330,7 +330,7 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         self.assertEqual(db_folio.images[1].image.src, 'test_images/tiger.svg')
         self.assertEqual(db_folio.images[2].image.src, 'test_images/cathedral.jpg')
         # Setting index after list end should use index len(list)-1
-        rv = self.app.post(api_url, data={
+        rv = self.app.put(api_url, data={
             'index': 999
         })
         self.assertEqual(rv.status_code, API_CODES.SUCCESS)
@@ -349,7 +349,7 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
     def test_folio_listing(self):
         api_url = '/api/portfolios/'
         # Public users should only see public portfolios
-        rv = self.app.post(api_url)
+        rv = self.app.get(api_url)
         self.assertEqual(rv.status_code, API_CODES.SUCCESS)
         obj = json.loads(rv.data)
         hids = [folio.human_id for folio in obj['data']]
@@ -358,7 +358,7 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         # Internal users should see internal + public portfolios
         main_tests.setup_user_account('janeaustin')
         self.login('janeaustin', 'janeaustin')
-        rv = self.app.post(api_url)
+        rv = self.app.get(api_url)
         self.assertEqual(rv.status_code, API_CODES.SUCCESS)
         obj = json.loads(rv.data)
         hids = [folio.human_id for folio in obj['data']]
@@ -367,7 +367,7 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         self.assertIn('internal', hids)
         # Portfolio owners should see their own + internal + public portfolios
         self.login('foliouser', 'foliouser')
-        rv = self.app.post(api_url)
+        rv = self.app.get(api_url)
         self.assertEqual(rv.status_code, API_CODES.SUCCESS)
         obj = json.loads(rv.data)
         hids = [folio.human_id for folio in obj['data']]
@@ -380,7 +380,7 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
     # trail too. This is only a performance concern, not a functional one.
     def test_folio_listing_fields(self):
         api_url = '/api/portfolios/'
-        rv = self.app.post(api_url)
+        rv = self.app.get(api_url)
         self.assertEqual(rv.status_code, API_CODES.SUCCESS)
         obj = json.loads(rv.data)
         self.assertGreater(len(obj['data']), 0)
