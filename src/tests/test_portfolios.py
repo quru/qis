@@ -388,12 +388,83 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         self.assertFalse(hasattr(folio, 'images'))
         self.assertFalse(hasattr(folio, 'history'))
 
-# API get - test private portfolio can only be viewed by owner
-# API get - test internal portfolio can only be logged in users
-# API get - test public portfolio can be viewed by public
-# API get - test private and internal portfolios can't be viewed by public
-#           test change of group permissions
-# and the same for view page
+    # Tests viewing of portfolios
+    def test_folio_viewing(self):
+        # Set up test URLs
+        db_public_folio = dm.get_portfolio(human_id='public')
+        db_internal_folio = dm.get_portfolio(human_id='internal')
+        db_private_folio = dm.get_portfolio(human_id='private')
+        public_api_url = '/api/portfolios/' + str(db_public_folio.id) + '/'
+        public_view_url = '/portfolios/' + str(db_public_folio.human_id) + '/'
+        internal_api_url = '/api/portfolios/' + str(db_internal_folio.id) + '/'
+        internal_view_url = '/portfolios/' + str(db_internal_folio.human_id) + '/'
+        private_api_url = '/api/portfolios/' + str(db_private_folio.id) + '/'
+        private_view_url = '/portfolios/' + str(db_private_folio.human_id) + '/'
+        # On top of the standard test fixtures, create another private portfolio
+        priv_user2 = main_tests.setup_user_account('janeaustin')
+        self.create_portfolio('private2', priv_user2, FolioPermission.ACCESS_NONE, FolderPermission.ACCESS_NONE)
+        db_private2_folio = dm.get_portfolio(human_id='private2')
+        private2_api_url = '/api/portfolios/' + str(db_private2_folio.id) + '/'
+        private2_view_url = '/portfolios/' + str(db_private2_folio.human_id) + '/'
+
+        def view_pf(api_url, view_url, expect_success):
+            rv = self.app.get(api_url)
+            self.assertEqual(
+                rv.status_code,
+                API_CODES.SUCCESS if expect_success else API_CODES.UNAUTHORISED
+            )
+            rv = self.app.get(view_url)
+            self.assertEqual(
+                rv.status_code,
+                API_CODES.SUCCESS if expect_success else API_CODES.UNAUTHORISED
+            )
+
+        def run_test_cases(test_cases):
+            for tc in test_cases:
+                view_pf(tc[0], tc[1], tc[2])
+
+        # Public user should be able to view public portfolio, not others
+        test_cases = [
+            (public_api_url, public_view_url, True),
+            (internal_api_url, internal_view_url, False),
+            (private_api_url, private_view_url, False),
+        ]
+        run_test_cases(test_cases)
+        # Internal user should be able to view internal + public portfolio, not private
+        test_cases = [
+            (public_api_url, public_view_url, True),
+            (internal_api_url, internal_view_url, True),
+            (private_api_url, private_view_url, False),
+        ]
+        main_tests.setup_user_account('plainuser')
+        self.login('plainuser', 'plainuser')
+        run_test_cases(test_cases)
+        # Portfolio owners should see their own + internal + public portfolios, not another private
+        test_cases = [
+            (public_api_url, public_view_url, True),
+            (internal_api_url, internal_view_url, True),
+            (private_api_url, private_view_url, True),
+            (private2_api_url, private2_view_url, False),
+        ]
+        self.login('foliouser', 'foliouser')
+        run_test_cases(test_cases)
+
+    # Tests that the portfolio viewing API contains the expected data fields
+    def test_folio_viewing_fields(self):
+        db_public_folio = dm.get_portfolio(human_id='public')
+        api_url = '/api/portfolios/' + str(db_public_folio.id) + '/'
+        rv = self.app.get(api_url)
+        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        obj = json.loads(rv.data)
+        folio = obj['data']
+        self.assertTrue(hasattr(folio, 'owner'))
+        self.assertGreater(len(folio.images), 0)
+        self.assertGreater(len(folio.permissions), 0)
+        self.assertGreater(len(folio.history), 0)
+        self.assertTrue(hasattr(folio, 'downloads'))
+
+
+# test changing of group permissions
 
 # API delete - test required permissions
 #              test all files removed
