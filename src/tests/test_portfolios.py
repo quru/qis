@@ -179,6 +179,18 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
             'public_access': FolioPermission.ACCESS_NONE
         })
         self.assertEqual(rv.status_code, API_CODES.ALREADY_EXISTS)
+        # A human ID of all whitespace should be treated the same as a blank
+        rv = self.app.post(api_url, data={
+            'human_id': '  ',
+            'name': 'Test portfolio',
+            'description': 'This is a test portfolio',
+            'internal_access': FolioPermission.ACCESS_NONE,
+            'public_access': FolioPermission.ACCESS_NONE
+        })
+        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        obj = json.loads(rv.data)
+        self.assertGreater(len(obj['data']['human_id']), 0)
+        self.assertNotEqual(obj['data']['human_id'].strip(), '')
 
     # Tests adding and removing images from a portfolio
     def test_folio_add_remove_image(self):
