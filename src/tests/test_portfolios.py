@@ -34,6 +34,7 @@ import json
 
 import tests as main_tests
 
+from imageserver.flask_app import app as flask_app
 from imageserver.flask_app import data_engine as dm
 from imageserver.flask_app import task_engine as tm
 from imageserver.flask_app import permissions_engine as pm
@@ -376,8 +377,7 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         self.assertIn('internal', hids)
         self.assertIn('private', hids)
 
-    # Tests that the portfolio list API does not return the image lists and audit
-    # trail too. This is only a performance concern, not a functional one.
+    # Tests that the portfolio listing API contains the expected data fields
     def test_folio_listing_fields(self):
         api_url = '/api/portfolios/'
         rv = self.app.get(api_url)
@@ -385,6 +385,17 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         obj = json.loads(rv.data)
         self.assertGreater(len(obj['data']), 0)
         folio = obj['data'][0]
+        # Check that the viewing URL is included
+        self.assertTrue(hasattr(folio, 'url'))
+        self.assertEqual(
+            folio.url,
+            flask_app.config['PREFERRED_URL_SCHEME'] + '://' +
+            flask_app.config['PUBLIC_HOST_NAME'] +
+            flask_app.config['APPLICATION_ROOT'] +
+            'portfolios/' + str(folio.human_id) + '/'
+        )
+        # We're not expecting the image list or audit trail
+        # (this is only a performance concern, not a functional one)
         self.assertFalse(hasattr(folio, 'images'))
         self.assertFalse(hasattr(folio, 'history'))
 
@@ -462,14 +473,54 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         self.assertGreater(len(folio.permissions), 0)
         self.assertGreater(len(folio.history), 0)
         self.assertTrue(hasattr(folio, 'downloads'))
+        self.assertTrue(hasattr(folio, 'url'))
+        self.assertEqual(
+            folio.url,
+            flask_app.config['PREFERRED_URL_SCHEME'] + '://' +
+            flask_app.config['PUBLIC_HOST_NAME'] +
+            flask_app.config['APPLICATION_ROOT'] +
+            'portfolios/' + str(db_public_folio.human_id) + '/'
+        )
 
-
-# test changing of group permissions
+    # Tests that single-image parameters get stored and get applied
+    def test_image_parameters(self):
+        db_folio = dm.get_portfolio(human_id='private', load_images=True)
+        db_img = db_folio.images[0]
+        api_url = '/api/portfolios/' + str(db_folio.id) + '/images/' + str(db_img.id) + '/'
+        self.login('foliouser', 'foliouser')
+        # Invalid image parameters should fail validation
+        params = {'width': 'badnumber'}
+        rv = self.app.put(api_url, data={
+            'image_parameters': json.dumps(params)
+        })
+        self.assertEqual(rv.status_code, API_CODES.INVALID_PARAM)
+        # Valid image parameters should get saved
+        params = {'width': 800, 'format': 'tif'}
+        rv = self.app.put(api_url, data={
+            'image_parameters': json.dumps(params)
+        })
+        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        # The API should return the parameters in the generated image URLs
+        api_url = '/api/portfolios/' + str(db_folio.id) + '/'
+        rv = self.app.get(api_url)
+        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        obj = json.loads(rv.data)
+        folio = obj['data']
+        self.assertTrue(hasattr(folio.images[0], 'url'))
+        self.assertIn('width=800', folio.images[0].url)
+        self.assertIn('format=tif', folio.images[0].url)
+        # And again
+        api_url = '/api/portfolios/' + str(db_folio.id) + '/images/'
+        rv = self.app.get(api_url)
+        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        obj = json.loads(rv.data)
+        image_list = obj['data']
+        self.assertTrue(hasattr(image_list[0], 'url'))
+        self.assertIn('width=800', image_list[0].url)
+        self.assertIn('format=tif', image_list[0].url)
 
 # API delete - test required permissions
 #              test all files removed
-
-# API test single image changes come out in URLs for portfolio image list
 
 # API test export of originals
 #     test audit trail
@@ -483,8 +534,6 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
 # URLs test download of zip requires download permission
 # URLs test download of zip with public download permission
 #      test audit trail
-# URLs test basic view page requires view permission
-# URLs test basic view page with public view permission
 
 # API test unpublish
 #     test files removed
