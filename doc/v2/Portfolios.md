@@ -379,9 +379,10 @@ rather than `/api/v1/admin/portfolios/`.
   * When a new record is created, the returned `filename` and `filesize` fields
     will be blank, the status code will be `202`, and the `task_id` field will be
     set to a value that can be monitored with the _system tasks_ API
-  * When the associated background task has completed successfully, the
-    `filename` and `filesize` fields will be set, and the `task_id` field blank
-  * If the background task fails, the `task_id` field will be left in place
+  * When the associated background task has completed, the `filename` and
+    `filesize` fields will be set, and the `task_id` field blank
+  * If the background task fails, the the `filename` and `filesize` fields will
+    remain blank
   * It will not be possible to change a zip file (`PUT` is not supported)
   * Deleting an export will delete the associated zip file from the filesystem
   * Deleting an export before the associated task has completed will return an

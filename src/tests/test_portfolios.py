@@ -30,7 +30,10 @@
 # =========  ====  ============================================================
 #
 
+import os
 import json
+import zipfile
+from datetime import datetime, timedelta
 
 import tests as main_tests
 
@@ -41,13 +44,15 @@ from imageserver.flask_app import permissions_engine as pm
 
 from imageserver.api_util import API_CODES
 from imageserver.filesystem_manager import (
-    copy_file, delete_dir, make_dirs
+    copy_file, delete_dir, make_dirs, path_exists, get_abs_path, get_file_info,
+    get_portfolio_export_file_path
 )
 from imageserver.filesystem_sync import auto_sync_existing_file, auto_sync_folder
 from imageserver.models import (
     FolderPermission, Group,
     Folio, FolioImage, FolioPermission, FolioHistory, FolioExport
 )
+from imageserver.util import to_iso_datetime
 
 
 class PortfoliosAPITests(main_tests.BaseTestCase):
@@ -97,6 +102,28 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         dm.save_object(FolioHistory(db_folio, owner, FolioHistory.ACTION_IMAGE_CHANGE, 'Added image 2'))
         dm.save_object(FolioPermission(db_folio, db_pub_group, public_access))
         dm.save_object(FolioPermission(db_folio, db_normal_group, internal_access))
+
+    # Publishes a portfolio and waits for the task to finish,
+    # returning the associated FolioExport object
+    def publish_portfolio(self, folio, description, originals=True, image_params_dict=None, expiry_time=None):
+        if not image_params_dict:
+            image_params_dict = {}
+        if not expiry_time:
+            expiry_time = datetime.utcnow() + timedelta(days=365)
+        api_url = '/api/portfolios/' + str(folio.id) + '/exports/'
+        main_tests.setup_user_account('folioadmin', user_type='admin_folios')
+        self.login('folioadmin', 'folioadmin')
+        rv = self.app.post(api_url, data={
+            'description': description,
+            'originals': originals,
+            'image_parameters': json.dumps(image_params_dict),
+            'expiry_time': to_iso_datetime(expiry_time)
+        })
+        self.assertEqual(rv.status_code, API_CODES.SUCCESS_TASK_ACCEPTED)
+        obj = json.loads(rv.data)
+        task = tm.wait_for_task(obj.task_id, 20)
+        self.assertIsNotNone(task, 'Portfolio export task was cleaned up')
+        return task.result
 
     # Tests portfolio creation and permissions
     def test_folio_create(self):
@@ -559,20 +586,67 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         rv = self.app.delete(api_url)
         self.assertEqual(rv.status_code, API_CODES.SUCCESS)
 
+    def test_publish_originals(self):
+        db_folio = dm.get_portfolio(human_id='public')
+        export = self.publish_portfolio(
+            db_folio, 'Test export of public portfolio', originals=True
+        )
+        self.assertGreater(len(export.filename), 0)
+        self.assertGreater(export.filesize, 0)
+        published_filepath = get_portfolio_export_file_path(export)
+        try:
+            # Audit trail should have been updated
+            db_folio = dm.get_portfolio(db_folio.id, load_images=True, load_history=True)
+            self.assertEqual(db_folio.history[-1].action, FolioHistory.ACTION_PUBLISHED)
+            # Check the export file exists
+            self.assertTrue(path_exists(published_filepath, require_file=True))
+            # Check the images in the zip are in order and match the originals
+            exzip = zipfile.ZipFile(get_abs_path(published_filepath), 'r')
+            try:
+                zip_list = exzip.infolist()
+                for idx, entry in enumerate(zip_list):
+                    img_file_path = db_folio.images[idx].image.src
+                    img_info = get_file_info(img_file_path)
+                    self.assertIsNotNone(img_info)
+                    self.assertEqual(entry.filename, os.path.basename(img_file_path))
+                    self.assertEqual(entry.file_size, img_info['size'])
+            finally:
+                exzip.close()
+        finally:
+            # Clean up
+            delete_dir(os.path.dirname(published_filepath), recursive=True)
 
-# API test export of originals
-#     test audit trail
+    # Tests access required for publishing
+    def test_publish_permissions(self):
+        db_folio = dm.get_portfolio(human_id='public')
+        api_url = '/api/portfolios/' + str(db_folio.id) + '/exports/'
+        # A portfolio user cannot publish another user's portfolio, even a public one
+        db_user = main_tests.setup_user_account('anotherfoliouser')
+        db_group = db_user.groups[-1]
+        db_group.permissions.folios = True
+        dm.save_object(db_group)
+        self.login('anotherfoliouser', 'anotherfoliouser')
+        rv = self.app.post(api_url, data={
+            'description': 'Test',
+            'originals': True,
+            'image_parameters': '{}',
+            'expiry_time': to_iso_datetime(datetime.utcnow())
+        })
+        self.assertEqual(rv.status_code, API_CODES.UNAUTHORISED)
+
+
 # API test export with resize
 # API test export with resize and single image changes
 # API test export with filename changes
-# API test normal user cannot export another user's portfolio
-#     test all files removed after delete
+# API delete export - test all files removed after delete
+# API delete portfolio - test all files removed after delete
 
 # URLs test download of zip, check zip content
 #      test format changes change file extension
 # URLs test download of zip requires download permission
 # URLs test download of zip with public download permission
 #      test audit trail
+# test directory traversal via zip name
 
 # API test unpublish
 #     test files removed

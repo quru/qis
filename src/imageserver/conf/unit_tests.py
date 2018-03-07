@@ -22,7 +22,6 @@ DOCS_BASE_DIR = INSTALL_DIR + "doc/"
 ICC_BASE_DIR = INSTALL_DIR + "icc/"
 IMAGES_BASE_DIR = INSTALL_DIR + "images/"
 LOGGING_BASE_DIR = INSTALL_DIR + "logs/"
-FOLIO_EXPORTS_DIR = IMAGES_BASE_DIR + ".folio_exports/"
 
 # Test automatic PDF bursting
 PDF_BURST_TO_PNG = True

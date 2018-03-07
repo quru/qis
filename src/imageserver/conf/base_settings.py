@@ -137,7 +137,10 @@ DOCS_BASE_DIR = INSTALL_DIR + "doc/"
 ICC_BASE_DIR = INSTALL_DIR + "icc/"
 IMAGES_BASE_DIR = INSTALL_DIR + "images/"
 LOGGING_BASE_DIR = INSTALL_DIR + "logs/"
-FOLIO_EXPORTS_DIR = IMAGES_BASE_DIR + ".folio_exports/"
+
+# The directory to store published portfolios in, inside IMAGES_BASE_DIR.
+# Prefix the name with a single dot/period to hide it in the admin interface.
+FOLIO_EXPORTS_DIR = ".folio_exports"
 
 # The path where temporary imaging files are stored.
 # Old temporary files will be periodically deleted.
