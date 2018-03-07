@@ -832,7 +832,14 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         # Wait for expiry
         time.sleep(1)
         # Force the expiry cleanup background job to run
-        task_obj = tm.add_task(None, 'Expire portfolio exports', 'expire_portfolio_exports')
+        task_obj = tm.add_task(
+            None,
+            'Expire portfolio exports',
+            'expire_portfolio_exports',
+            Task.PRIORITY_NORMAL,
+            log_level='info',
+            error_log_level='error'
+        )
         self.assertIsNotNone(task_obj)
         tm.wait_for_task(task_obj.id, 10)
         # Check that the download is now a 404
