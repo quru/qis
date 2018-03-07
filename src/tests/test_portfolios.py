@@ -542,9 +542,9 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         self.assertEqual(rv.status_code, API_CODES.SUCCESS)
         obj = json.loads(rv.data)
         folio = obj['data']
-        self.assertTrue('url' in folio.images[0])
-        self.assertIn('width=800', folio.images[0]['url'])
-        self.assertIn('format=tif', folio.images[0]['url'])
+        self.assertTrue('url' in folio['images'][0])
+        self.assertIn('width=800', folio['images'][0]['url'])
+        self.assertIn('format=tif', folio['images'][0]['url'])
         # And again for the .../images/ endpoint
         api_url = '/api/portfolios/' + str(db_folio.id) + '/images/'
         rv = self.app.get(api_url)
