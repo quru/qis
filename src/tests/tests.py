@@ -1280,6 +1280,19 @@ class ImageServerTestsFast(BaseTestCase):
         self.assertEqual(rv.status_code, 403)
         rv = self.app.get('/original?src=../../../../../../../../../etc/passwd')
         self.assertEqual(rv.status_code, 403)
+        rv = self.app.get('/image?src=%2Fetc%2Fpasswd')
+        self.assertEqual(rv.status_code, 404)
+        rv = self.app.get('/original?src=%2Fetc%2Fpasswd')
+        self.assertEqual(rv.status_code, 404)
+        # Also try leading // to see if the code only strips one of them
+        rv = self.app.get('/image?src=//etc/passwd')
+        self.assertEqual(rv.status_code, 404)
+        rv = self.app.get('/original?src=//etc/passwd')
+        self.assertEqual(rv.status_code, 404)
+        rv = self.app.get('/image?src=%2F%2Fetc%2Fpasswd')
+        self.assertEqual(rv.status_code, 404)
+        rv = self.app.get('/original?src=%2F%2Fetc%2Fpasswd')
+        self.assertEqual(rv.status_code, 404)
 
     # Test 403 on insecure unicode src param
     def test_unicode_insecure_src(self):

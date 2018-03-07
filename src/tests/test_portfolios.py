@@ -739,8 +739,30 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         self.assertEqual(db_internal_folio.history[-1].action, FolioHistory.ACTION_DOWNLOADED)
         self.assertIn('emilybronte', db_internal_folio.history[-1].action_info)
 
+    # Tests that the download filename cannot be used to access other files
+    def test_portfolio_download_bad_access(self):
+        # Get a known working download URL
+        db_public_folio = dm.get_portfolio(human_id='public')
+        export = self.publish_portfolio(db_public_folio, 'Public export', True)
+        api_base_url = '/portfolios/public/downloads/'
+        rv = self.app.get(api_base_url + export.filename)
+        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        # Now try to use this URL to pull down an image file instead
+        rv = self.app.get(api_base_url + '../test_images/cathedral.jpg')
+        self.assertEqual(rv.status_code, API_CODES.NOT_FOUND)
+        # Try to pull a system file
+        rv = self.app.get(api_base_url + '~root/../../../etc/passwd')
+        self.assertEqual(rv.status_code, API_CODES.UNAUTHORISED)
+        rv = self.app.get(api_base_url + '../../../../../../../../../etc/passwd')
+        self.assertEqual(rv.status_code, API_CODES.UNAUTHORISED)
+        rv = self.app.get(api_base_url + '%2Fetc%2Fpasswd')
+        self.assertEqual(rv.status_code, API_CODES.NOT_FOUND)
+        # Also try leading // to see if the code only strips one of them
+        rv = self.app.get(api_base_url + '%2F%2Fetc%2Fpasswd')
+        self.assertEqual(rv.status_code, API_CODES.NOT_FOUND)
+        rv = self.app.get(api_base_url + '%2F/etc%2Fpasswd')
+        self.assertEqual(rv.status_code, API_CODES.NOT_FOUND)
 
-# test directory traversal via zip name
 
 # API delete portfolio - test all files removed after delete
 
