@@ -60,11 +60,20 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
     def setUpClass(cls):
         super(PortfoliosAPITests, cls).setUpClass()
         main_tests.init_tests()
+        assert 'test' in flask_app.config['FOLIO_EXPORTS_DIR'], \
+            'Testing settings have not been applied, main_tests should do this!'
 
     def setUp(self):
         super(PortfoliosAPITests, self).setUp()
         # Restore clean test data before each test
         self.reset_fixtures()
+
+    def tearDown(self):
+        super(PortfoliosAPITests, self).tearDown()
+        # Clean up any exported files after each test
+        export_dir = flask_app.config['FOLIO_EXPORTS_DIR']
+        if 'test' in export_dir:
+            delete_dir(export_dir, recursive=True)
 
     def reset_fixtures(self):
         # Wipe the old data
@@ -596,25 +605,21 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         self.assertGreater(export.filesize, 0)
         published_filepath = get_portfolio_export_file_path(export)
         self.assertTrue(path_exists(published_filepath, require_file=True))
+        # Audit trail should have been updated
+        db_folio = dm.get_portfolio(db_folio.id, load_images=True, load_history=True)
+        self.assertEqual(db_folio.history[-1].action, FolioHistory.ACTION_PUBLISHED)
+        # Check the images in the zip are in order and match the originals
+        exzip = zipfile.ZipFile(get_abs_path(published_filepath), 'r')
         try:
-            # Audit trail should have been updated
-            db_folio = dm.get_portfolio(db_folio.id, load_images=True, load_history=True)
-            self.assertEqual(db_folio.history[-1].action, FolioHistory.ACTION_PUBLISHED)
-            # Check the images in the zip are in order and match the originals
-            exzip = zipfile.ZipFile(get_abs_path(published_filepath), 'r')
-            try:
-                zip_list = exzip.infolist()
-                for idx, entry in enumerate(zip_list):
-                    img_file_path = db_folio.images[idx].image.src
-                    img_info = get_file_info(img_file_path)
-                    self.assertIsNotNone(img_info)
-                    self.assertEqual(entry.filename, os.path.basename(img_file_path))
-                    self.assertEqual(entry.file_size, img_info['size'])
-            finally:
-                exzip.close()
+            zip_list = exzip.infolist()
+            for idx, entry in enumerate(zip_list):
+                img_file_path = db_folio.images[idx].image.src
+                img_info = get_file_info(img_file_path)
+                self.assertIsNotNone(img_info)
+                self.assertEqual(entry.filename, os.path.basename(img_file_path))
+                self.assertEqual(entry.file_size, img_info['size'])
         finally:
-            # Clean up
-            delete_dir(os.path.dirname(published_filepath), recursive=True)
+            exzip.close()
 
     # Tests an export of resized images
     def test_publish_resized(self):
@@ -627,21 +632,17 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         self.assertGreater(export.filesize, 0)
         published_filepath = get_portfolio_export_file_path(export)
         self.assertTrue(path_exists(published_filepath, require_file=True))
+        # Check the images in the zip have been resized
+        exzip = zipfile.ZipFile(get_abs_path(published_filepath), 'r')
         try:
-            # Check the images in the zip have been resized
-            exzip = zipfile.ZipFile(get_abs_path(published_filepath), 'r')
-            try:
-                zip_list = exzip.infolist()
-                for idx, entry in enumerate(zip_list):
-                    img_file_path = db_folio.images[idx].image.src
-                    img_info = get_file_info(img_file_path)
-                    self.assertIsNotNone(img_info)
-                    self.assertLess(entry.file_size, img_info['size'])
-            finally:
-                exzip.close()
+            zip_list = exzip.infolist()
+            for idx, entry in enumerate(zip_list):
+                img_file_path = db_folio.images[idx].image.src
+                img_info = get_file_info(img_file_path)
+                self.assertIsNotNone(img_info)
+                self.assertLess(entry.file_size, img_info['size'])
         finally:
-            # Clean up
-            delete_dir(os.path.dirname(published_filepath), recursive=True)
+            exzip.close()
 
     # Tests an export with both portfolio level and single image changes
     def test_publish_mixed_changes(self):
@@ -660,22 +661,18 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         )
         published_filepath = get_portfolio_export_file_path(export)
         self.assertTrue(path_exists(published_filepath, require_file=True))
+        # Check the images in the zip have been renamed, resized, and saved as PNG
+        exzip = zipfile.ZipFile(get_abs_path(published_filepath), 'r')
         try:
-            # Check the images in the zip have been renamed, resized, and saved as PNG
-            exzip = zipfile.ZipFile(get_abs_path(published_filepath), 'r')
-            try:
-                entries = exzip.infolist()
-                self.assertEqual(entries[0].filename, 'image1.png')
-                self.assertEqual(entries[1].filename, 'image2.png')
-                for fname in ['image1.png', 'image2.png']:
-                    img_file = exzip.open(fname, 'r')
-                    png_dims = main_tests.get_png_dimensions(img_file.read())
-                    self.assertEqual(png_dims[0], 100)
-            finally:
-                exzip.close()
+            entries = exzip.infolist()
+            self.assertEqual(entries[0].filename, 'image1.png')
+            self.assertEqual(entries[1].filename, 'image2.png')
+            for fname in ['image1.png', 'image2.png']:
+                img_file = exzip.open(fname, 'r')
+                png_dims = main_tests.get_png_dimensions(img_file.read())
+                self.assertEqual(png_dims[0], 100)
         finally:
-            # Clean up
-            delete_dir(os.path.dirname(published_filepath), recursive=True)
+            exzip.close()
 
     # Tests access required for publishing
     def test_publish_permissions(self):

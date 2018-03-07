@@ -23,6 +23,9 @@ ICC_BASE_DIR = INSTALL_DIR + "icc/"
 IMAGES_BASE_DIR = INSTALL_DIR + "images/"
 LOGGING_BASE_DIR = INSTALL_DIR + "logs/"
 
+# Export portfolios to a separate directory that is safe to delete
+FOLIO_EXPORTS_DIR = '.test_folio_exports'
+
 # Test automatic PDF bursting
 PDF_BURST_TO_PNG = True
 PDF_BURST_DPI = 150
