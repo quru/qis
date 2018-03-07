@@ -586,6 +586,7 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         rv = self.app.delete(api_url)
         self.assertEqual(rv.status_code, API_CODES.SUCCESS)
 
+    # Tests an export of image originals
     def test_publish_originals(self):
         db_folio = dm.get_portfolio(human_id='public')
         export = self.publish_portfolio(
@@ -594,12 +595,11 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         self.assertGreater(len(export.filename), 0)
         self.assertGreater(export.filesize, 0)
         published_filepath = get_portfolio_export_file_path(export)
+        self.assertTrue(path_exists(published_filepath, require_file=True))
         try:
             # Audit trail should have been updated
             db_folio = dm.get_portfolio(db_folio.id, load_images=True, load_history=True)
             self.assertEqual(db_folio.history[-1].action, FolioHistory.ACTION_PUBLISHED)
-            # Check the export file exists
-            self.assertTrue(path_exists(published_filepath, require_file=True))
             # Check the images in the zip are in order and match the originals
             exzip = zipfile.ZipFile(get_abs_path(published_filepath), 'r')
             try:
@@ -610,6 +610,67 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
                     self.assertIsNotNone(img_info)
                     self.assertEqual(entry.filename, os.path.basename(img_file_path))
                     self.assertEqual(entry.file_size, img_info['size'])
+            finally:
+                exzip.close()
+        finally:
+            # Clean up
+            delete_dir(os.path.dirname(published_filepath), recursive=True)
+
+    # Tests an export of resized images
+    def test_publish_resized(self):
+        db_folio = dm.get_portfolio(human_id='public')
+        export = self.publish_portfolio(
+            db_folio, 'Test export of public portfolio', originals=False,
+            image_params_dict={'width': 200}
+        )
+        self.assertGreater(len(export.filename), 0)
+        self.assertGreater(export.filesize, 0)
+        published_filepath = get_portfolio_export_file_path(export)
+        self.assertTrue(path_exists(published_filepath, require_file=True))
+        try:
+            # Check the images in the zip have been resized
+            exzip = zipfile.ZipFile(get_abs_path(published_filepath), 'r')
+            try:
+                zip_list = exzip.infolist()
+                for idx, entry in enumerate(zip_list):
+                    img_file_path = db_folio.images[idx].image.src
+                    img_info = get_file_info(img_file_path)
+                    self.assertIsNotNone(img_info)
+                    self.assertLess(entry.file_size, img_info['size'])
+            finally:
+                exzip.close()
+        finally:
+            # Clean up
+            delete_dir(os.path.dirname(published_filepath), recursive=True)
+
+    # Tests an export with both portfolio level and single image changes
+    def test_publish_mixed_changes(self):
+        # Set the portfolio files as renamed and resized
+        db_folio = dm.get_portfolio(human_id='internal', load_images=True)
+        db_folio.images[0].filename = 'image1.jpg'
+        db_folio.images[0].parameters = {'width': 100}
+        dm.save_object(db_folio.images[0])
+        db_folio.images[1].filename = 'image2.jpg'
+        db_folio.images[1].parameters = {'width': 100}
+        dm.save_object(db_folio.images[1])
+        # Now export the portfolio as PNG files
+        export = self.publish_portfolio(
+            db_folio, 'Test export of internal portfolio', originals=False,
+            image_params_dict={'format': 'png'}
+        )
+        published_filepath = get_portfolio_export_file_path(export)
+        self.assertTrue(path_exists(published_filepath, require_file=True))
+        try:
+            # Check the images in the zip have been renamed, resized, and saved as PNG
+            exzip = zipfile.ZipFile(get_abs_path(published_filepath), 'r')
+            try:
+                entries = exzip.infolist()
+                self.assertEqual(entries[0].filename, 'image1.png')
+                self.assertEqual(entries[1].filename, 'image2.png')
+                for fname in ['image1.png', 'image2.png']:
+                    img_file = exzip.open(fname, 'r')
+                    png_dims = main_tests.get_png_dimensions(img_file.read())
+                    self.assertEqual(png_dims[0], 100)
             finally:
                 exzip.close()
         finally:
@@ -635,18 +696,13 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         self.assertEqual(rv.status_code, API_CODES.UNAUTHORISED)
 
 
-# API test export with resize
-# API test export with resize and single image changes
-# API test export with filename changes
-# API delete export - test all files removed after delete
-# API delete portfolio - test all files removed after delete
-
 # URLs test download of zip, check zip content
-#      test format changes change file extension
 # URLs test download of zip requires download permission
 # URLs test download of zip with public download permission
 #      test audit trail
 # test directory traversal via zip name
+
+# API delete portfolio - test all files removed after delete
 
 # API test unpublish
 #     test files removed
