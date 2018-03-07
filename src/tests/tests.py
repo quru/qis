@@ -357,7 +357,7 @@ class BaseTestCase(FlaskTestCase):
                 raise ValueError('Test image not found: ' + match_file)
         temp_img = '/tmp/qis_img.tmp'
         try:
-            with open(temp_img, 'w') as f:
+            with open(temp_img, 'wb') as f:
                 f.write(img_data)
             psnr = compare_images(temp_img, static_img)
             self.assertGreaterEqual(psnr, tolerance)
@@ -665,7 +665,7 @@ class ImageServerTestsRegressions(BaseTestCase):
                 )
                 self.assertEqual(png.status_code, 200)
                 self.assertNotEqual(jpg.data, png.data)
-                with open(tempfile, 'w') as f:
+                with open(tempfile, 'wb') as f:
                     f.write(png.data)
                 self.assertImageMatch(jpg.data, tempfile, 1000)
         finally:

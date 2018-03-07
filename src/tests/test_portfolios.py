@@ -695,11 +695,51 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         })
         self.assertEqual(rv.status_code, API_CODES.UNAUTHORISED)
 
+    def test_portfolio_download(self):
+        # Publish the public portfolio
+        db_public_folio = dm.get_portfolio(human_id='public')
+        public_export = self.publish_portfolio(db_public_folio, 'Public export', True)
+        self.assertGreater(len(public_export.filename), 0)
+        # Publish the internal portfolio
+        db_internal_folio = dm.get_portfolio(human_id='internal')
+        internal_export = self.publish_portfolio(db_internal_folio, 'Internal export', True)
+        self.assertGreater(len(internal_export.filename), 0)
+        # Public download of a public portfolio should be OK
+        api_url = '/portfolios/public/downloads/' + public_export.filename
+        rv = self.app.get(api_url)
+        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        # Public download of an internal portfolio should not be allowed
+        api_url = '/portfolios/internal/downloads/' + internal_export.filename
+        rv = self.app.get(api_url)
+        self.assertEqual(rv.status_code, API_CODES.UNAUTHORISED)
+        # But when logged in it should work
+        main_tests.setup_user_account('emilybronte')
+        self.login('emilybronte', 'emilybronte')
+        rv = self.app.get(api_url)
+        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        # Check that we got back a valid zip file
+        self.assertIn('application/zip', rv.headers['Content-Type'])
+        self.assertIn('attachment', rv.headers['Content-Disposition'])
+        temp_zip_file = '/tmp/qis_download.zip'
+        try:
+            with open(temp_zip_file, 'wb') as f:
+                f.write(rv.data)
+            dlzip = zipfile.ZipFile(temp_zip_file, 'r')
+            try:
+                entries = dlzip.infolist()
+                # These should match what reset_fixtures() does
+                self.assertEqual(entries[0].filename, 'blue bells.jpg')
+                self.assertEqual(entries[1].filename, 'cathedral.jpg')
+            finally:
+                dlzip.close()
+        finally:
+            os.remove(temp_zip_file)
+        # Check the audit trail was updated
+        db_internal_folio = dm.get_portfolio(db_internal_folio.id, load_history=True)
+        self.assertEqual(db_internal_folio.history[-1].action, FolioHistory.ACTION_DOWNLOADED)
+        self.assertIn('emilybronte', db_internal_folio.history[-1].action_info)
 
-# URLs test download of zip, check zip content
-# URLs test download of zip requires download permission
-# URLs test download of zip with public download permission
-#      test audit trail
+
 # test directory traversal via zip name
 
 # API delete portfolio - test all files removed after delete
