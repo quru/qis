@@ -130,7 +130,7 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         })
         self.assertEqual(rv.status_code, API_CODES.SUCCESS_TASK_ACCEPTED)
         obj = json.loads(rv.data)
-        task = tm.wait_for_task(obj.task_id, 20)
+        task = tm.wait_for_task(obj['data']['task_id'], 20)
         self.assertIsNotNone(task, 'Portfolio export task was cleaned up')
         return task.result
 
@@ -389,7 +389,7 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         rv = self.app.get(api_url)
         self.assertEqual(rv.status_code, API_CODES.SUCCESS)
         obj = json.loads(rv.data)
-        hids = [folio.human_id for folio in obj['data']]
+        hids = [folio['human_id'] for folio in obj['data']]
         self.assertEqual(len(hids), 1)
         self.assertEqual(hids[0], 'public')
         # Internal users should see internal + public portfolios
@@ -398,7 +398,7 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         rv = self.app.get(api_url)
         self.assertEqual(rv.status_code, API_CODES.SUCCESS)
         obj = json.loads(rv.data)
-        hids = [folio.human_id for folio in obj['data']]
+        hids = [folio['human_id'] for folio in obj['data']]
         self.assertEqual(len(hids), 2)
         self.assertIn('public', hids)
         self.assertIn('internal', hids)
@@ -407,7 +407,7 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         rv = self.app.get(api_url)
         self.assertEqual(rv.status_code, API_CODES.SUCCESS)
         obj = json.loads(rv.data)
-        hids = [folio.human_id for folio in obj['data']]
+        hids = [folio['human_id'] for folio in obj['data']]
         self.assertEqual(len(hids), 3)
         self.assertIn('public', hids)
         self.assertIn('internal', hids)
@@ -422,18 +422,18 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         self.assertGreater(len(obj['data']), 0)
         folio = obj['data'][0]
         # Check that the viewing URL is included
-        self.assertTrue(hasattr(folio, 'url'))
+        self.assertTrue('url' in folio)
         self.assertEqual(
-            folio.url,
+            folio['url'],
             flask_app.config['PREFERRED_URL_SCHEME'] + '://' +
             flask_app.config['PUBLIC_HOST_NAME'] +
             flask_app.config['APPLICATION_ROOT'] +
-            'portfolios/' + str(folio.human_id) + '/'
+            'portfolios/' + folio['human_id'] + '/'
         )
         # We're not expecting the image list or audit trail
         # (this is only a performance concern, not a functional one)
-        self.assertFalse(hasattr(folio, 'images'))
-        self.assertFalse(hasattr(folio, 'history'))
+        self.assertFalse('images' in folio)
+        self.assertFalse('history' in folio)
 
     # Tests viewing of portfolios
     def test_folio_viewing(self):
@@ -442,17 +442,17 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         db_internal_folio = dm.get_portfolio(human_id='internal')
         db_private_folio = dm.get_portfolio(human_id='private')
         public_api_url = '/api/portfolios/' + str(db_public_folio.id) + '/'
-        public_view_url = '/portfolios/' + str(db_public_folio.human_id) + '/'
+        public_view_url = '/portfolios/' + db_public_folio.human_id + '/'
         internal_api_url = '/api/portfolios/' + str(db_internal_folio.id) + '/'
-        internal_view_url = '/portfolios/' + str(db_internal_folio.human_id) + '/'
+        internal_view_url = '/portfolios/' + db_internal_folio.human_id + '/'
         private_api_url = '/api/portfolios/' + str(db_private_folio.id) + '/'
-        private_view_url = '/portfolios/' + str(db_private_folio.human_id) + '/'
+        private_view_url = '/portfolios/' + db_private_folio.human_id + '/'
         # On top of the standard test fixtures, create another private portfolio
         priv_user2 = main_tests.setup_user_account('janeaustin')
         self.create_portfolio('private2', priv_user2, FolioPermission.ACCESS_NONE, FolderPermission.ACCESS_NONE)
         db_private2_folio = dm.get_portfolio(human_id='private2')
         private2_api_url = '/api/portfolios/' + str(db_private2_folio.id) + '/'
-        private2_view_url = '/portfolios/' + str(db_private2_folio.human_id) + '/'
+        private2_view_url = '/portfolios/' + db_private2_folio.human_id + '/'
 
         def view_pf(api_url, view_url, expect_success):
             rv = self.app.get(api_url)
@@ -504,18 +504,18 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         self.assertEqual(rv.status_code, API_CODES.SUCCESS)
         obj = json.loads(rv.data)
         folio = obj['data']
-        self.assertTrue(hasattr(folio, 'owner'))
-        self.assertGreater(len(folio.images), 0)
-        self.assertGreater(len(folio.permissions), 0)
-        self.assertGreater(len(folio.history), 0)
-        self.assertTrue(hasattr(folio, 'downloads'))
-        self.assertTrue(hasattr(folio, 'url'))
+        self.assertTrue('owner' in folio)
+        self.assertGreater(len(folio['images']), 0)
+        self.assertGreater(len(folio['permissions']), 0)
+        self.assertGreater(len(folio['history']), 0)
+        self.assertTrue('downloads' in folio)
+        self.assertTrue('url' in folio)
         self.assertEqual(
-            folio.url,
+            folio['url'],
             flask_app.config['PREFERRED_URL_SCHEME'] + '://' +
             flask_app.config['PUBLIC_HOST_NAME'] +
             flask_app.config['APPLICATION_ROOT'] +
-            'portfolios/' + str(db_public_folio.human_id) + '/'
+            'portfolios/' + db_public_folio['human_id'] + '/'
         )
 
     # Tests that single-image parameters get stored and get applied
@@ -542,18 +542,18 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         self.assertEqual(rv.status_code, API_CODES.SUCCESS)
         obj = json.loads(rv.data)
         folio = obj['data']
-        self.assertTrue(hasattr(folio.images[0], 'url'))
-        self.assertIn('width=800', folio.images[0].url)
-        self.assertIn('format=tif', folio.images[0].url)
-        # And again
+        self.assertTrue('url' in folio.images[0])
+        self.assertIn('width=800', folio.images[0]['url'])
+        self.assertIn('format=tif', folio.images[0]['url'])
+        # And again for the .../images/ endpoint
         api_url = '/api/portfolios/' + str(db_folio.id) + '/images/'
         rv = self.app.get(api_url)
         self.assertEqual(rv.status_code, API_CODES.SUCCESS)
         obj = json.loads(rv.data)
         image_list = obj['data']
-        self.assertTrue(hasattr(image_list[0], 'url'))
-        self.assertIn('width=800', image_list[0].url)
-        self.assertIn('format=tif', image_list[0].url)
+        self.assertTrue('url' in image_list[0])
+        self.assertIn('width=800', image_list[0]['url'])
+        self.assertIn('format=tif', image_list[0]['url'])
 
     # Tests deletion of portfolios
     def test_folio_delete(self):
