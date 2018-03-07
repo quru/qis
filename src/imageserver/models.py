@@ -753,7 +753,7 @@ class FolioHistory(Base, BaseMixin, IDEqualityMixin):
     ACTION_IMAGE_CHANGE = 3
     ACTION_PUBLISHED = 4
     ACTION_DOWNLOADED = 5
-    ACTION_PUBLISH_EXPIRED = 6
+    ACTION_UNPUBLISHED = 6
 
     id = Column(BigInteger, nullable=False, autoincrement=True, primary_key=True)
     folio_id = Column(BigInteger, ForeignKey('folios.id'), nullable=False)

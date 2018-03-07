@@ -189,7 +189,7 @@ Add new database tables as follows:
 	id
 	folio_id - FK to folios
 	user_id - FK to users, optional
-	action - CREATED 1, EDITED 3, PUBLISHED 5, DOWNLOADED 6, PUBLISH_EXPIRED 7
+	action - CREATED 1, EDITED 3, PUBLISHED 5, DOWNLOADED 6, UNPUBLISHED 7
 	action_info
 	action_time - timestamp
 

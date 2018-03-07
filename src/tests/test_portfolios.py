@@ -32,6 +32,7 @@
 
 import os
 import json
+import time
 import zipfile
 from datetime import datetime, timedelta
 
@@ -49,7 +50,7 @@ from imageserver.filesystem_manager import (
 )
 from imageserver.filesystem_sync import auto_sync_existing_file, auto_sync_folder
 from imageserver.models import (
-    FolderPermission, Group,
+    FolderPermission, Group, Task,
     Folio, FolioImage, FolioPermission, FolioHistory, FolioExport
 )
 from imageserver.util import to_iso_datetime
@@ -760,15 +761,85 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         rv = self.app.get(api_base_url + '%2F/etc%2Fpasswd')
         self.assertEqual(rv.status_code, API_CODES.NOT_FOUND)
 
+    # Tests that deleting a portfolio deletes the exported files too
+    def test_folio_delete_all(self):
+        db_folio = dm.get_portfolio(human_id='private')
+        export = self.publish_portfolio(db_folio, 'Private portfolio export', True)
+        # Export directory should exist
+        export_dir = os.path.dirname(get_portfolio_export_file_path(export))
+        self.assertTrue(path_exists(export_dir, require_directory=True))
+        # Delete the whole portfolio
+        api_url = '/api/portfolios/' + str(db_folio.id) + '/'
+        self.login('foliouser', 'foliouser')
+        rv = self.app.delete(api_url)
+        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        # Export directory should be gone
+        self.assertFalse(path_exists(export_dir))
 
-# API delete portfolio - test all files removed after delete
+    # Tests unpublishing a portfolio
+    def test_publish_unpublish(self):
+        db_folio = dm.get_portfolio(human_id='private')
+        export1 = self.publish_portfolio(db_folio, 'Private portfolio export 1', True)
+        export2 = self.publish_portfolio(db_folio, 'Private portfolio export 2', False)
+        # Check the published files exist
+        self.assertTrue(path_exists(get_portfolio_export_file_path(export1), require_file=True))
+        self.assertTrue(path_exists(get_portfolio_export_file_path(export2), require_file=True))
+        # Check the API returns the download details
+        self.login('foliouser', 'foliouser')
+        api_url = '/api/portfolios/' + str(db_folio.id) + '/'
+        rv = self.app.get(api_url)
+        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        obj = json.loads(rv.data)
+        self.assertEqual(len(obj['data']['downloads']), 2)
+        # And again for the .../exports/ endpoint
+        api_url = '/api/portfolios/' + str(db_folio.id) + '/exports/'
+        rv = self.app.get(api_url)
+        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        obj = json.loads(rv.data)
+        self.assertEqual(len(obj['data']), 2)
+        # Unpublish both exports
+        api_url = '/api/portfolios/' + str(db_folio.id) + '/exports/' + str(export1.id) + '/'
+        rv = self.app.delete(api_url)
+        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        api_url = '/api/portfolios/' + str(db_folio.id) + '/exports/' + str(export2.id) + '/'
+        rv = self.app.delete(api_url)
+        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        # The audit trail should say unpublished x2
+        db_folio = dm.get_portfolio(db_folio.id, load_history=True)
+        self.assertEqual(db_folio.history[-1].action, FolioHistory.ACTION_UNPUBLISHED)
+        self.assertEqual(db_folio.history[-2].action, FolioHistory.ACTION_UNPUBLISHED)
+        # And the export directory should be gone
+        export_dir = os.path.dirname(get_portfolio_export_file_path(export1))
+        self.assertFalse(path_exists(export_dir))
 
-# API test unpublish
-#     test files removed
-#     test audit trail
-
-# API test export expiry
-#     test files removed
-#     test audit trail
-
-# API test files folder removed when empty
+    # Tests the expiry of exported portfolios
+    def test_publish_expiry(self):
+        # Publish the public portfolio with a 1 second TTL
+        db_folio = dm.get_portfolio(human_id='public')
+        export = self.publish_portfolio(
+            db_folio, 'Public portfolio export', True, expiry_time=datetime.utcnow() + timedelta(seconds=1)
+        )
+        # Check that the export directory is there
+        export_dir = os.path.dirname(get_portfolio_export_file_path(export))
+        self.assertTrue(path_exists(export_dir))
+        # Check that the download works
+        api_url = '/portfolios/public/downloads/' + export.filename
+        rv = self.app.get(api_url)
+        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        # Check that the audit trail says published
+        db_folio = dm.get_portfolio(db_folio.id, load_history=True)
+        self.assertEqual(db_folio.history[-1].action, FolioHistory.ACTION_PUBLISHED)
+        # Wait for expiry
+        time.sleep(1)
+        # Force the expiry cleanup background job to run
+        task_obj = tm.add_task(None, 'Expire portfolio exports', 'expire_portfolio_exports')
+        self.assertIsNotNone(task_obj)
+        tm.wait_for_task(task_obj.id, 10)
+        # Check that the download is now a 404
+        rv = self.app.get(api_url)
+        self.assertEqual(rv.status_code, API_CODES.NOT_FOUND)
+        # Check that the export directory is gone
+        self.assertFalse(path_exists(export_dir))
+        # Check that the audit trail says unpublished
+        db_folio = dm.get_portfolio(db_folio.id, load_history=True)
+        self.assertEqual(db_folio.history[-1].action, FolioHistory.ACTION_UNPUBLISHED)
