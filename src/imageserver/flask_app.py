@@ -214,6 +214,9 @@ with app.app_context():
         import reports
         app.register_blueprint(reports.blueprint, url_prefix='/reports')
 
+        import portfolios
+        app.register_blueprint(portfolios.blueprint, url_prefix='/portfolios')
+
         # Import global template functions
         views_util.register_template_funcs()
 

@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block copyright %}
+<!-- 
+	Document:      portfolio_view.html
+	Date started:  09 Mar 2018
+	By:            Matt Fozard
+	Purpose:       Quru Image Server file details
+	Requires:      
+	Copyright:     Quru Ltd (www.quru.com)
+	
+	Last Changed:  $Date$ $Rev$ by $Author$
+	
+	Notable modifications:
+	Date       By    Details
+	=========  ====  ============================================================
+-->
+{% endblock %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_head %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/list.css') }}" type="text/css" />
+
+    <script src="{{ url_for('static', filename='js/image-defer.min.js') }}" type="text/javascript" defer></script>
+{% endblock %}
+
+{% block body %}
+    <h2>{{ title }}</h2>
+    {% if err_msg %}
+        <br/>
+        <div class="error">{{ err_msg|newlines }}</div>
+    {% else %}
+
+        {% if folio.description %}
+        <p>{{ folio.description }}</p>
+        {% endif %}
+
+        {% if removed_count %}
+        <p>
+            <img src="{{ url_for('static', filename='images/icon-info.png') }}" alt="Info"/>
+            {{ removed_count }} {% if removed_count == 1 %}image is{% else %}images are{% endif %}
+            not shown because you do not have permission to view
+            {% if removed_count == 1 %}it{% else %}them{% endif %}.
+        </p>
+        {% endif %}
+
+        <div class="grid odd">
+        {% for folio_image in folio.images %}
+            <div id="fi-{{ folio_image.id }}" class="grid-cell border even">
+                <div class="image-placeholder lazy-load">
+                    <img src="{{ url_for('static', filename='images/spacer.png') }}"
+                         data-defer-src="{{ folio_image.url }}" />
+                </div>
+                <div>{{ folio_image.filename or folio_image.image.src|filename }}</div>
+            </div>
+        {% else %}
+            There are no images to show.
+        {% endfor %}
+        </div>
+	{% endif %}
+{% endblock %}

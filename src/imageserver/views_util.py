@@ -44,7 +44,7 @@ from flask_app import app, logger, permissions_engine
 from flask_util import internal_url_for, external_url_for
 from models import FolderPermission, SystemPermissions
 from session_manager import get_session_user, logged_in
-from util import get_file_extension, SimpleODict
+from util import get_file_extension, filepath_filename, SimpleODict
 
 
 @app.template_filter('datetimeformat')
@@ -90,6 +90,14 @@ def file_extension_filter(filename):
     A template filter to return the lower case file extension of a file name.
     """
     return get_file_extension(filename)
+
+
+@app.template_filter('filename')
+def filename_filter(filepath):
+    """
+    A template filter to return the last part of a file path.
+    """
+    return filepath_filename(filepath)
 
 
 @app.template_filter('decamelcase')

@@ -115,7 +115,7 @@ Phase 2
 
 * Add URLs for users to create, publish, manage their own portfolios
   * `/portfolios/`
-  * `/portfolios/<<portfolio human ID>>/`
+  * `/portfolios/<<portfolio human ID>>/edit/`
   * `/portfolios/<<portfolio human ID>>/publish/`
   * `/portfolios/<<portfolio human ID>>/downloads/`
 * Add URLs for administrators to view and manage all portfolios
