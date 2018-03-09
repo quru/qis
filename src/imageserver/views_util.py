@@ -182,7 +182,7 @@ def wrap_is_folder_permitted(folder, folder_access):
     )
 
 
-def url_for_thumbnail(src, external=False, stats=False):
+def url_for_thumbnail(src, external=False, stats=True):
     """
     Returns the URL for a thumbnail image of an image src.
     Use this function to generate standard-sized and standard-formatted
@@ -198,6 +198,19 @@ def url_for_thumbnail(src, external=False, stats=False):
     )
     if not stats:
         url_args['stats'] = '0'  # stats does not affect caching
+
+    url_fn = external_url_for if external else internal_url_for
+    return url_fn('image', **url_args)
+
+
+def url_for_image_attrs(image_attrs, external=False, stats=True):
+    """
+    Returns the image URL for the image represented by image_attrs.
+    """
+    image_attrs.normalise_values()
+    url_args = image_attrs.to_web_dict()
+    if not stats:
+        url_args['stats'] = '0'
 
     url_fn = external_url_for if external else internal_url_for
     return url_fn('image', **url_args)

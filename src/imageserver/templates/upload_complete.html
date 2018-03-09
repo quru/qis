@@ -56,7 +56,7 @@
 				{% if settings['IMAGE_UPLOADED_TEMPLATE'] %}
 				<img class="border shadow" src="{{ url_for('image', src=image.src, tmp=settings['IMAGE_UPLOADED_TEMPLATE']) }}" />
 				{% else %}
-				<img class="border shadow" src="{{ url_for_thumbnail(src=image.src) }}" />
+				<img class="border shadow" src="{{ url_for_thumbnail(src=image.src, stats=False) }}" />
 				{% endif %}
 			</a>
 			<a href="{{ url_for('details', src=image.src) }}">View image details</a><br/>
@@ -67,7 +67,7 @@ HTML snippets:<br>
 {% if settings['IMAGE_UPLOADED_TEMPLATE'] %}
 &lt;img src="{{ external_url_for('image', src=image.src) }}&amp;tmp={{settings['IMAGE_UPLOADED_TEMPLATE']}}"&gt;
 {% else %}
-&lt;img src="{{ url_for_thumbnail(src=image.src, external=True, stats=True) }}"&gt;
+&lt;img src="{{ url_for_thumbnail(src=image.src, external=True) }}"&gt;
 {% endif %}
 &lt;!-- To link to the original image --&gt;
 &lt;img src="{{ external_url_for('original', src=image.src) }}"&gt;

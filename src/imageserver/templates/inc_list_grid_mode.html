@@ -46,7 +46,7 @@
 				</div>
 			{% else %}
 				{% set fpath = (directory_info.name() + pathsep) if directory_info.name() != pathsep else '' %}
-				{% set thumb_url = url_for_thumbnail(src=fpath + entry.filename) %}
+				{% set thumb_url = url_for_thumbnail(src=fpath + entry.filename, stats=False) %}
 				{% set view_url = url_for('details', src=fpath + entry.filename) %}
 				{% set can_view = entry.filename|fileextension in image_formats %}
 
