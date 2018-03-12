@@ -5,6 +5,7 @@
 	Purpose:       Quru Image Server File Browsing helpers
 	Requires:      base.js
 	               preview_popup.js
+	               image-defer.js
 	               MooTools Core 1.3 (no compat)
 	               MooTools More 1.3 - Assets, String.QueryString
 	Copyright:     Quru Ltd (www.quru.com)

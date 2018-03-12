@@ -111,14 +111,25 @@ def portfolio_view(human_id):
 
         # Generate the image viewing URLs, including any portfolio-specific changes
         web_view_params = {
-            'width': 800,
-            'height': 800,
             'format': 'jpg',
             'colorspace': 'srgb'
         }
+        sizing_view_params = {
+            'width': 800,
+            'height': 800,
+            'size_fit': True
+        }
+        sized_images = [
+            fol_img for fol_img in folio.images if fol_img.parameters and (
+                ('width' in fol_img.parameters and fol_img.parameters['width']['value']) or
+                ('height' in fol_img.parameters and fol_img.parameters['height']['value'])
+            )
+        ]
         for fol_img in folio.images:
             image_attrs = get_portfolio_image_attrs(fol_img, False)
             image_attrs.apply_dict(web_view_params, True, False, False)
+            if len(sized_images) == 0:
+                image_attrs.apply_dict(sizing_view_params, True, False, False)
             fol_img.url = url_for_image_attrs(image_attrs)
 
         return render_template(

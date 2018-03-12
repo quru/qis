@@ -57,6 +57,9 @@ td.count {
 	font-size: 95%;
 	/* Emulate the blank first tr of the list view */
 	margin-top: 2em;
+	/* Pad bottom/right to match grid cell top/left margin */
+	padding-right: 1em;
+	padding-bottom: 1em;
 }
 .grid-row,
 .grid-cell {
@@ -67,7 +70,8 @@ td.count {
 }
 .grid-cell {
 	display: inline-block;
-	margin: 1em 0.5em 0.8em 1em;
+	margin-top: 1em;
+	margin-left: 1em;
 	padding: 10px;
 	text-align: center;
 	overflow: hidden;
@@ -77,20 +81,33 @@ td.count {
 	margin-bottom: 3px;
 }
 
+/* Sizing for a grid of max 200x200 thumbnail images */
 .cell-size-thumbnail .grid-cell {
-	width: 200px;   /* expects preview image of 200x200 */
-	height: 240px;  /* plus 40px for filename and info  */
+	width: 200px;
+	height: 240px;  /* 200 plus 40px for filename and info  */
 }
 .cell-size-thumbnail .image-placeholder {
-	/* For thumbnails that are returned smaller than 200x200 */
 	width: 200px;
 	height: 200px;
 	line-height: 200px;
 	vertical-align: middle;
 }
 .cell-size-thumbnail .icon-placeholder {
-	/* Vertical centre the icon in 240 height */
-	padding-top: 55px;
+	padding-top: 55px;  /* vertically centre an icon in 240 height */
+}
+
+/* Sizing for a grid of variable sized, responsive, but width-limited images */
+.cell-size-variable {
+	text-align: center;
+}
+.cell-size-variable .image-placeholder,
+.cell-size-variable .image-placeholder img {
+	min-width: 120px;  /* space for lazy loading icon */
+	min-height: 120px;
+}
+.cell-size-variable .image-placeholder img {
+	width: 100%;
+	max-width: 800px;
 }
 
 .image-placeholder.lazy-load {

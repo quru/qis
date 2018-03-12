@@ -6,7 +6,8 @@
 	Date started:  09 Mar 2018
 	By:            Matt Fozard
 	Purpose:       Quru Image Server file details
-	Requires:      
+	Requires:      common_view.js
+                   image-defer.js
 	Copyright:     Quru Ltd (www.quru.com)
 	
 	Last Changed:  $Date$ $Rev$ by $Author$
@@ -22,7 +23,8 @@
 {% block extra_head %}
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/list.css') }}" type="text/css" />
 
-    <script src="{{ url_for('static', filename='js/image-defer.min.js') }}" type="text/javascript" defer></script>
+    <script src="{{ url_for('static', filename='js/common_view.min.js') }}" type="text/javascript"></script>
+    <script src="{{ url_for('static', filename='js/image-defer.min.js') }}" type="text/javascript"></script>
 {% endblock %}
 
 {% block body %}
@@ -45,18 +47,43 @@
         </p>
         {% endif %}
 
-        <div class="grid odd">
+        <div class="grid odd cell-size-variable">
         {% for folio_image in folio.images %}
             <div id="fi-{{ folio_image.id }}" class="grid-cell border even">
                 <div class="image-placeholder lazy-load">
                     <img src="{{ url_for('static', filename='images/spacer.png') }}"
                          data-defer-src="{{ folio_image.url }}" />
                 </div>
-                <div>{{ folio_image.filename or folio_image.image.src|filename }}</div>
+                <div class="left">{{ folio_image.filename or folio_image.image.src|filename }}</div>
             </div>
         {% else %}
-            There are no images to show.
+            <div class="grid-cell odd cell-size-variable">
+                There are no images to show.
+            </div>
         {% endfor %}
         </div>
 	{% endif %}
+
+    <script type="text/javascript">
+    QU.whenReady(function() {
+        function lazyImageRequested(img) {
+            QU.elSetClass(img.parentNode, 'loaded', false);
+            QU.elSetClass(img.parentNode, 'loading', true);
+        }
+        function lazyImageLoaded(img) {
+            QU.elSetClass(img.parentNode, 'loading', false);
+            QU.elSetClass(img.parentNode, 'loaded', true);
+        }
+        function lazyImageUnloaded(img) {
+            QU.elSetClass(img.parentNode, 'loading', false);
+            QU.elSetClass(img.parentNode, 'loaded', false);
+        }
+        // Lazily loaded images setup
+        if (window.ImageDefer) {
+            ImageDefer.options.onImageRequested = lazyImageRequested;
+            ImageDefer.options.onImageLoaded = lazyImageLoaded;
+            ImageDefer.options.onImageUnloaded = lazyImageUnloaded;
+        }
+    });
+    </script>
 {% endblock %}
