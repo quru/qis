@@ -127,10 +127,12 @@ def portfolio_view(human_id):
             )
         ]
         for fol_img in folio.images:
-            image_attrs = get_portfolio_image_attrs(fol_img, False)
+            image_attrs = get_portfolio_image_attrs(fol_img, False, False)
             image_attrs.apply_dict(web_view_params, True, False, False)
             if len(pre_sized_images) == 0:
                 image_attrs.apply_dict(sizing_view_params, True, False, False)
+            # Here we normalise the attrs only after everything has been applied
+            image_attrs.normalise_values()
             fol_img.url = url_for_image_attrs(image_attrs)
 
         return render_template(

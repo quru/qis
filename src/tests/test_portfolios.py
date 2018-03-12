@@ -526,13 +526,13 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         api_url = '/api/portfolios/' + str(db_folio.id) + '/images/' + str(db_img.id) + '/'
         self.login('foliouser', 'foliouser')
         # Invalid image parameters should fail validation
-        params = {'width': 'badnumber'}
+        params = {'width': {'value': 'badnumber'}}
         rv = self.app.put(api_url, data={
             'image_parameters': json.dumps(params)
         })
         self.assertEqual(rv.status_code, API_CODES.INVALID_PARAM)
         # Valid image parameters should get saved
-        params = {'width': 800, 'format': 'tif'}
+        params = {'width': {'value': 800}, 'format': {'value': 'tif'}}
         rv = self.app.put(api_url, data={
             'image_parameters': json.dumps(params)
         })
@@ -627,7 +627,7 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         db_folio = dm.get_portfolio(human_id='public')
         export = self.publish_portfolio(
             db_folio, 'Test export of public portfolio', originals=False,
-            image_params_dict={'width': 200}
+            image_params_dict={'width': {'value': 200}}
         )
         self.assertGreater(len(export.filename), 0)
         self.assertGreater(export.filesize, 0)
@@ -650,15 +650,15 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         # Set the portfolio files as renamed and resized
         db_folio = dm.get_portfolio(human_id='internal', load_images=True)
         db_folio.images[0].filename = 'image1.jpg'
-        db_folio.images[0].parameters = {'width': 100}
+        db_folio.images[0].parameters = {'width': {'value': 100}}
         dm.save_object(db_folio.images[0])
         db_folio.images[1].filename = 'image2.jpg'
-        db_folio.images[1].parameters = {'width': 100}
+        db_folio.images[1].parameters = {'width': {'value': 100}}
         dm.save_object(db_folio.images[1])
         # Now export the portfolio as PNG files
         export = self.publish_portfolio(
             db_folio, 'Test export of internal portfolio', originals=False,
-            image_params_dict={'format': 'png'}
+            image_params_dict={'format': {'value': 'png'}}
         )
         published_filepath = get_portfolio_export_file_path(export)
         self.assertTrue(path_exists(published_filepath, require_file=True))
