@@ -68,32 +68,29 @@ td.count {
 .grid-cell {
 	display: inline-block;
 	margin: 1em 0.5em 0.8em 1em;
-	width: 200px;   /* expects preview image of 200x200 */
-	height: 240px;  /* plus 40px for filename and info  */
 	padding: 10px;
+	text-align: center;
 	overflow: hidden;
 }
-.grid-cell.single-line {
-	line-height: 230px;
-	text-align: center;
-	vertical-align: middle;
+.grid-cell .image-placeholder,
+.grid-cell .icon-placeholder {
+	margin-bottom: 3px;
 }
-.grid-cell.directory {
-	text-align: center;
+
+.cell-size-thumbnail .grid-cell {
+	width: 200px;   /* expects preview image of 200x200 */
+	height: 240px;  /* plus 40px for filename and info  */
 }
-.grid-cell .image-placeholder {
+.cell-size-thumbnail .image-placeholder {
 	/* For thumbnails that are returned smaller than 200x200 */
 	width: 200px;
 	height: 200px;
 	line-height: 200px;
-	text-align: center;
 	vertical-align: middle;
-	/* For all thumbnails */
-	margin-bottom: 3px;
 }
-.grid-cell .icon-placeholder {
-	/* For icons that are smaller than 200x200 */
-	height: 55px;
+.cell-size-thumbnail .icon-placeholder {
+	/* Vertical centre the icon in 240 height */
+	padding-top: 55px;
 }
 
 .image-placeholder.lazy-load {

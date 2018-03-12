@@ -11,16 +11,18 @@
         <script src="{{ url_for('static', filename='js/image-defer.min.js') }}" type="text/javascript" defer></script>
 
 		<!-- Grid view (marker: the test suite looks for me) -->
-		<div class="grid odd">
+		<div class="grid odd cell-size-thumbnail">
 
 		{# Offer a Back link if this isn't the root directory #}
 		{% if directory_info.parent_name() %}
 			{% set back_url = url_for('browse', path=directory_info.parent_name()) %}
-			<div class="grid-cell border even single-line">
-				<a class="no-underline" href="{{ back_url }}">
-					<img src="{{ url_for('static', filename='images/icon-back.png') }}" alt="Back"/>
-				</a>
-				(<a class="action" href="{{ back_url }}">back to parent folder</a>)
+			<div class="grid-cell border even">
+				<div class="image-placeholder">
+					<a class="no-underline" href="{{ back_url }}">
+						<img src="{{ url_for('static', filename='images/icon-back.png') }}" alt="Back"/>
+					</a>
+					(<a class="action" href="{{ back_url }}">back to parent folder</a>)
+				</div>
 			</div>
 		{% endif %}
 
@@ -32,17 +34,18 @@
 				{% set view_url = url_for('browse', path=sub_folder_path) %}
 				{% set view_permitted = is_folder_permitted(sub_folder_path, FolderPermission.ACCESS_VIEW) %}
 
-				<div id="{{ entry.filename }}" class="grid-cell border even directory">
-					<div class="icon-placeholder"></div>
-					{% if view_permitted %}
-					<a class="no-underline" href="{{ view_url }}">
-						<img src="{{ url_for('static', filename='images/icon-folder-96.png') }}" alt="Folder" />
-					</a>
-					<div><a class="no-underline" href="{{ view_url }}">{{ entry.filename }}</a></div>
-					{% else %}
-					<img {{ vdisabled_attrs }} src="{{ url_for('static', filename='images/icon-folder-96.png') }}" alt="Folder" />
-					<div {{ vdisabled_attrs }}>{{ entry.filename }}</div>
-					{% endif %}
+				<div id="{{ entry.filename }}" class="grid-cell border even">
+					<div class="icon-placeholder">
+						{% if view_permitted %}
+						<a class="no-underline" href="{{ view_url }}">
+							<img src="{{ url_for('static', filename='images/icon-folder-96.png') }}" alt="Folder" />
+						</a>
+						<div><a class="no-underline" href="{{ view_url }}">{{ entry.filename }}</a></div>
+						{% else %}
+						<img {{ vdisabled_attrs }} src="{{ url_for('static', filename='images/icon-folder-96.png') }}" alt="Folder" />
+						<div {{ vdisabled_attrs }}>{{ entry.filename }}</div>
+						{% endif %}
+					</div>
 				</div>
 			{% else %}
 				{% set fpath = (directory_info.name() + pathsep) if directory_info.name() != pathsep else '' %}
@@ -58,7 +61,7 @@
 						     data-defer-src="{{ thumb_url }}" />
 						</a>
 					</div>
-					<div><a class="no-underline" href="{{ view_url }}">{{ entry.filename }}</a></div>
+					<div class="left"><a class="no-underline" href="{{ view_url }}">{{ entry.filename }}</a></div>
 					<div class="float"><a class="no-underline" href="{{ view_url }}">{{ entry.modified|datetimeformat(True) }}</a></div>
 					<div class="rfloat"><a class="no-underline" href="{{ view_url }}">{{ entry.size|filesizeformat }}</a></div>
 				</div>
@@ -67,7 +70,7 @@
 					<div class="image-placeholder">
 						<img src="{{ url_for('static', filename='images/icon-file-96.png') }}" alt="File" />
 					</div>
-					<div>{{ entry.filename }}</div>
+					<div class="left">{{ entry.filename }}</div>
 					<div class="float">{{ entry.modified|datetimeformat(True) }}</div>
 					<div class="rfloat">{{ entry.size|filesizeformat }}</div>
 				</div>
