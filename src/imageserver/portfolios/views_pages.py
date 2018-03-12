@@ -90,6 +90,7 @@ def portfolio_view(human_id):
         )
 
         # Filter out images that the user can't view
+        # so that we don't get broken images in the UI
         checked_folders = {}  # cache folders already checked
         folio_images_1 = folio.images
         folio_images_2 = []
@@ -119,7 +120,7 @@ def portfolio_view(human_id):
             'height': 800,
             'size_fit': True
         }
-        sized_images = [
+        pre_sized_images = [
             fol_img for fol_img in folio.images if fol_img.parameters and (
                 ('width' in fol_img.parameters and fol_img.parameters['width']['value']) or
                 ('height' in fol_img.parameters and fol_img.parameters['height']['value'])
@@ -128,7 +129,7 @@ def portfolio_view(human_id):
         for fol_img in folio.images:
             image_attrs = get_portfolio_image_attrs(fol_img, False)
             image_attrs.apply_dict(web_view_params, True, False, False)
-            if len(sized_images) == 0:
+            if len(pre_sized_images) == 0:
                 image_attrs.apply_dict(sizing_view_params, True, False, False)
             fol_img.url = url_for_image_attrs(image_attrs)
 
