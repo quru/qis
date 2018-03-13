@@ -722,6 +722,7 @@ def _user_api_permission_required(f):
             allow = (
                 request.method in ['GET', 'PUT'] and
                 'user_id' in kwargs and
+                kwargs['user_id'] > 0 and
                 kwargs['user_id'] == get_session_user_id()
             )
             if not allow:
