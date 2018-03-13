@@ -795,7 +795,7 @@ api_add_url_rules(
 )
 
 _dapi_group_views = api_permission_required(GroupAPI.as_view('admin.group'),
-                                            SystemPermissions.PERMIT_ADMIN_USERS)
+                                            required_flag=SystemPermissions.PERMIT_ADMIN_USERS)
 api_add_url_rules(
     [url_version_prefix + '/admin/groups/',
      '/admin/groups/'],
@@ -810,7 +810,7 @@ api_add_url_rules(
 )
 
 _dapi_usergroup_views = api_permission_required(UserGroupAPI.as_view('admin.usergroup'),
-                                                SystemPermissions.PERMIT_ADMIN_USERS)
+                                                required_flag=SystemPermissions.PERMIT_ADMIN_USERS)
 api_add_url_rules(
     [url_version_prefix + '/admin/groups/<int:group_id>/members/',
      '/admin/groups/<int:group_id>/members/'],
@@ -825,7 +825,7 @@ api_add_url_rules(
 )
 
 _dapi_fperm_views = api_permission_required(FolderPermissionAPI.as_view('admin.folderpermission'),
-                                            SystemPermissions.PERMIT_ADMIN_PERMISSIONS)
+                                            required_flag=SystemPermissions.PERMIT_ADMIN_PERMISSIONS)
 api_add_url_rules(
     [url_version_prefix + '/admin/permissions/',
      '/admin/permissions/'],
@@ -854,7 +854,7 @@ api_add_url_rules(
 )
 
 _dapi_property_views = api_permission_required(PropertyAPI.as_view('admin.property'),
-                                               SystemPermissions.PERMIT_SUPER_USER)
+                                               required_flag=SystemPermissions.PERMIT_SUPER_USER)
 api_add_url_rules(
     [url_version_prefix + '/admin/properties/<property_id>/',
      '/admin/properties/<property_id>/'],
