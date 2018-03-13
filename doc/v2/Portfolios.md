@@ -268,7 +268,8 @@ as defined for the existing API.
   * `GET` method only
   * No parameters
   * Requires folio `DOWNLOAD` permission for the requested (human) ID
-  * Returns binary data (content type `application/zip`) as an attachment
+  * Returns binary data (content type `application/zip`) as an attachment on success,
+    returns a non-200 status code and HTML text on error
   * Requires the portfolio to have already been published using the portfolio
     publish API
   * Adds a `foliosaudit` record with a `DOWNLOADED` action

@@ -229,7 +229,8 @@ for the full documentation and list of available parameters.
 
 ### Returns
 Binary image data, with a content type that is determined by the image format
-requested (or otherwise the default image format).
+requested (or otherwise the default image format). On error, returns a non-200
+status code and HTML text containing an error message.
 
 ### Examples
 
@@ -258,6 +259,7 @@ available parameters.
 
 ### Returns
 Binary image data, with a content type that is determined by the file's image format.
+On error, returns a non-200 status code and HTML text containing an error message.
 
 ### Examples
 

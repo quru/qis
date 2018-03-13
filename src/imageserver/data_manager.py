@@ -579,8 +579,7 @@ class DataManager(object):
             #
             db_image = image if _db_session \
                        else db_session.query(Image).get(image.id)
-            db_user  = db_session.query(User).get(user.id) if user is not None \
-                       else None
+            db_user = db_session.query(User).get(user.id) if user is not None else None
 
             # Enforce some limit on the info text
             if action_info is None:
@@ -593,6 +592,33 @@ class DataManager(object):
             if _commit:
                 db_session.commit()
                 db_session.refresh(history, ['id'])  # Avoid DetachedInstanceError after session close
+            return history
+        finally:
+            if not _db_session:
+                db_session.close()
+
+    @db_operation
+    def add_portfolio_history(self, folio, user, action, action_info, _db_session=None, _commit=True):
+        """
+        Creates, stores and returns a new FolioHistory object.
+        The user parameter can be None for recording anonymous or system actions.
+        """
+        db_session = _db_session or self._db.Session()
+        try:
+            # See add_image_history() for why we need to re-get the user object
+            db_user = db_session.query(User).get(user.id) if user is not None else None
+
+            # Enforce some limit on the info text
+            if action_info is None:
+                action_info = ''
+            if len(action_info) > 4096:
+                action_info = action_info[:4093] + '...'
+
+            history = FolioHistory(folio, db_user, action, action_info)
+            db_session.add(history)
+            if _commit:
+                db_session.commit()
+                db_session.refresh(history, ['id'])
             return history
         finally:
             if not _db_session:
