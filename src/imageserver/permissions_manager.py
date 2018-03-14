@@ -186,6 +186,9 @@ class PermissionsManager(object):
                 final_perms.admin_folios = final_perms.admin_folios or group_perms.admin_folios
                 final_perms.admin_permissions = final_perms.admin_permissions or group_perms.admin_permissions
                 final_perms.admin_all = final_perms.admin_all or group_perms.admin_all
+            # admin_folios should incorporate plain folios permission
+            if final_perms.admin_folios:
+                final_perms.folios = True
         return final_perms
 
     def is_portfolio_permitted(self, folio, folio_access, user=None):

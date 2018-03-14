@@ -33,6 +33,7 @@
 #
 
 import os.path
+import uuid
 from datetime import datetime
 
 from sqlalchemy import func
@@ -674,6 +675,21 @@ class Folio(Base, BaseMixin, IDEqualityMixin):
     def __unicode__(self):
         return u'Portfolio: ' + self.human_id
 
+    @staticmethod
+    def create_human_id():
+        """
+        Returns a probably-unique "short URL" type string.
+        """
+        BASE58 = '123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ'
+        LEN_BASE58 = len(BASE58)
+        uid = uuid.uuid1().int >> 64
+        hid = ''
+        while uid >= LEN_BASE58:
+            div, mod = divmod(uid, LEN_BASE58)
+            hid = BASE58[mod] + hid
+            uid = int(div)
+        return BASE58[uid] + hid
+
 
 class FolioImage(Base, BaseMixin, IDEqualityMixin):
     """
@@ -823,3 +839,10 @@ class FolioExport(Base, BaseMixin, IDEqualityMixin):
 
     def __unicode__(self):
         return u'PortfolioExport: ' + (self.filename or 'Pending')
+
+    @staticmethod
+    def create_filename():
+        """
+        Returns a unique and non-guessable filename (without a file extension).
+        """
+        return uuid.uuid4().hex

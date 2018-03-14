@@ -559,6 +559,43 @@ class DataManager(object):
                 db_session.close()
 
     @db_operation
+    def create_portfolio(self, folio, history_user=None, _db_session=None, _commit=True):
+        """
+        Creates a new portfolio from the supplied Folio object and adds the
+        initial creation history. No explicit permissions are set but the
+        portfolio owner and administrators will have access by default.
+        If committing (the default) the object will have its new ID property
+        set on success. Raises an AlreadyExistsError if another portfolio with
+        the same human_id value already exists.
+        """
+        db_session = _db_session or self._db.Session()
+        try:
+            # See add_image_history() for why we need to re-get the user object
+            folio.owner = db_session.query(User).get(folio.owner.id)
+            # If there's no short URL provided, give it one
+            if not folio.human_id:
+                folio.human_id = Folio.create_human_id()
+            db_session.add(folio)
+            folio.history.append(self.add_portfolio_history(
+                folio,
+                history_user,
+                FolioHistory.ACTION_CREATED,
+                '',
+                _db_session=db_session,
+                _commit=False
+            ))
+            if _commit:
+                db_session.commit()
+                db_session.refresh(folio, ['id', 'history'])
+        except IntegrityError as e:
+            raise errors.AlreadyExistsError(
+                'Portfolio \'' + folio.human_id + '\' already exists'
+            ) if self._is_duplicate_key(e) else e
+        finally:
+            if not _db_session:
+                db_session.close()
+
+    @db_operation
     def add_image_history(self, image, user, action, action_info, _db_session=None, _commit=True):
         """
         Creates, stores and returns a new ImageHistory object.
@@ -709,6 +746,35 @@ class DataManager(object):
 
             res_tuples = q.all()
             return [r[0] for r in res_tuples]
+        finally:
+            if not _db_session:
+                db_session.close()
+
+    @db_operation
+    def list_portfolios(self, user, folio_access, _db_session=None):
+        """
+        Returns a list of portfolios that the given user has 'folio_access' to
+        or better. If user is None, the public group access will be checked.
+        """
+        db_session = _db_session or self._db.Session()
+        try:
+            if user is not None and not self.attr_is_loaded(user, 'groups'):
+                user = db_session.query(User).get(user.id)
+
+            groups = user.groups if user is not None else [
+                self.get_group(Group.ID_PUBLIC, _db_session=db_session)
+            ]
+
+            # Use a sub-query to find any good-enough FolioPermission for any of the groups
+            pq = db_session.query(FolioPermission)
+            pq = pq.filter(FolioPermission.folio_id == Folio.id)
+            pq = pq.filter(FolioPermission.group_id.in_([g.id for g in groups]))
+            pq = pq.filter(FolioPermission.access >= folio_access)
+
+            # Return all folios where the sub-query returns something
+            q = db_session.query(Folio)
+            q = q.filter(pq.exists())
+            return q.order_by(Folio.name).all()
         finally:
             if not _db_session:
                 db_session.close()

@@ -50,5 +50,6 @@ def api_add_url_rules(rules, endpoint=None, view_func=None, **options):
 import views_data_api
 import views_files_api
 import views_tasks_api
+import views_portfolios_api
 import views_api
 import views_pages
