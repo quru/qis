@@ -771,9 +771,12 @@ class DataManager(object):
             pq = pq.filter(FolioPermission.group_id.in_([g.id for g in groups]))
             pq = pq.filter(FolioPermission.access >= folio_access)
 
-            # Return all folios where the sub-query returns something
+            # Return all folios owned by the user or where the sub-query returns something
             q = db_session.query(Folio)
-            q = q.filter(pq.exists())
+            if user is None:
+                q = q.filter(pq.exists())
+            else:
+                q = q.filter(or_(Folio.owner_id == user.id, pq.exists()))
             return q.order_by(Folio.name).all()
         finally:
             if not _db_session:
