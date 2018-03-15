@@ -613,7 +613,7 @@ def index_of_word_break(val, from_index, forwards=True):
     return len(val) if forwards else 0
 
 
-_OBJECT_TO_DICT_IGNORE_DEFAULTS = ['password']
+_object_to_dict_ignore_defaults = ['password']
 
 
 def object_to_dict(obj, ignore_attrs=None, _r_stack=None):
@@ -632,7 +632,7 @@ def object_to_dict(obj, ignore_attrs=None, _r_stack=None):
     an __eq__ method.
     """
     if ignore_attrs is None:
-        ignore_attrs = _OBJECT_TO_DICT_IGNORE_DEFAULTS
+        ignore_attrs = _object_to_dict_ignore_defaults
     if _r_stack is None:
         _r_stack = []
 
@@ -653,7 +653,9 @@ def object_to_dict(obj, ignore_attrs=None, _r_stack=None):
     )
     for k, v in attr_dict.iteritems():
         if isinstance(v, list):
+            _r_stack.append(obj)
             attr_dict[k] = object_to_dict_list(v, ignore_attrs, _r_stack)
+            _r_stack.pop()
         elif hasattr(v, '__module__'):
             _r_stack.append(obj)
             attr_dict[k] = object_to_dict(v, ignore_attrs, _r_stack)
