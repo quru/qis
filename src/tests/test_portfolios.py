@@ -196,7 +196,6 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         db_folio = dm.get_portfolio(human_id='public')
         api_url = '/api/portfolios/' + str(db_folio.id) + '/'
         rv = self.app.put(api_url, data={
-            'id': db_folio.id,
             'human_id': '',
             'name': 'Test portfolio',
             'description': 'This is a test portfolio',
@@ -209,7 +208,6 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         self.assertNotEqual(obj['data']['human_id'], 'public')
         # Updates - duplicate human ID should not be allowed
         rv = self.app.put(api_url, data={
-            'id': db_folio.id,
             'human_id': 'private',          # see reset_fixtures()
             'name': 'Test portfolio',
             'description': 'This is a test portfolio',
@@ -584,7 +582,6 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         self.login('folioadmin', 'folioadmin')
         # Edit permission
         rv = self.app.put(api_url, data={
-            'id': db_folio.id,
             'human_id': db_folio.human_id,
             'name': 'Change name',
             'description': 'Change description',
@@ -850,3 +847,91 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         # Check that the audit trail says unpublished
         db_folio = dm.get_portfolio(db_folio.id, load_history=True)
         self.assertEqual(db_folio.history[-1].action, FolioHistory.ACTION_UNPUBLISHED)
+
+    # The "last updated" field is for use with published zips to know when they
+    # might be out of date. This isn't too obvious so test it works correctly.
+    def test_folio_last_updated(self):
+        # Get a starting point
+        db_folio = dm.get_portfolio(human_id='public')
+        prev_date = db_folio.last_updated
+        self.login('foliouser', 'foliouser')
+        # Saving the folio header (e.g. a folio rename) should not change last_updated
+        api_url = '/api/portfolios/' + str(db_folio.id) + '/'
+        rv = self.app.put(api_url, data={
+            'human_id': 'new id',
+            'name': 'Renamed portfolio',
+            'description': 'Renamed portfolio',
+            'internal_access': FolioPermission.ACCESS_VIEW,
+            'public_access': FolioPermission.ACCESS_VIEW
+        })
+        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        db_folio = dm.get_portfolio(db_folio.id)
+        self.assertEqual(db_folio.last_updated, prev_date)
+        # But adding an image should change it
+        db_img = auto_sync_existing_file('test_images/thames.jpg', dm, tm)
+        api_url = '/api/portfolios/' + str(db_folio.id) + '/images/'
+        rv = self.app.post(api_url, data={'image_id': db_img.id})
+        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        db_folio = dm.get_portfolio(db_folio.id)
+        self.assertGreater(db_folio.last_updated, prev_date)
+        prev_date = db_folio.last_updated
+        # Changing image params or setting a filename should change it
+        api_url = '/api/portfolios/' + str(db_folio.id) + '/images/' + str(db_img.id) + '/'
+        test_params = [
+            {'image_parameters': json.dumps({'width': {'value': 800}})},
+            {'filename': 'a river.jpg'},
+        ]
+        for api_params in test_params:
+            rv = self.app.put(api_url, data=api_params)
+            self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+            db_folio = dm.get_portfolio(db_folio.id)
+            self.assertGreater(db_folio.last_updated, prev_date)
+            prev_date = db_folio.last_updated
+        # Whether changing the order of images should count as an update is
+        # debatable. Once extracted from the zip most people are going to see
+        # the files listed in alphanumeric order by their o/s, so we're going
+        # to say that a re-order should NOT change last_updated.
+        api_url = '/api/portfolios/' + str(db_folio.id) + '/images/' + str(db_img.id) + '/'
+        rv = self.app.put(api_url, data={'index': 0})
+        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        db_folio = dm.get_portfolio(db_folio.id)
+        self.assertEqual(db_folio.last_updated, prev_date)
+        api_url = '/api/portfolios/' + str(db_folio.id) + '/images/' + str(db_img.id) + '/position/'
+        rv = self.app.put(api_url, data={'index': 1})
+        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        db_folio = dm.get_portfolio(db_folio.id)
+        self.assertEqual(db_folio.last_updated, prev_date)
+
+    # Tests that user passwords are not exported in objects that contain a user or owner field
+    def test_folio_user_passwords(self):
+        db_public_folio = dm.get_portfolio(human_id='public')
+        api_url = '/api/portfolios/' + str(db_public_folio.id) + '/'
+        rv = self.app.get(api_url)
+        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        obj = json.loads(rv.data)
+        folio = obj['data']
+        # a) Check folio header - owner field
+        self.assertIn('owner', folio)
+        self.assertNotIn('password', folio['owner'])
+        # b) Check folio audit trail - action user
+        self.assertIn('history', folio)
+        self.assertIn('user', folio['history'][0])
+        self.assertNotIn('password', folio['history'][0]['user'])
+        # c) Check that folio permissions don't list group users
+        self.assertIn('permissions', folio)
+        self.assertNotIn('group', folio['permissions'])
+        # Check that the list API does not reveal this same stuff either
+        api_url = '/api/portfolios/'
+        rv = self.app.get(api_url)
+        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        obj = json.loads(rv.data)
+        self.assertEqual(len(obj['data']), 1)
+        folio = obj['data'][0]
+        # a) Check folio header - owner field
+        self.assertIn('owner', folio)
+        self.assertNotIn('password', folio['owner'])
+        # b) Check folio audit trail - not expected from list API
+        self.assertNotIn('history', folio)
+        # c) Check that folio permissions don't list group users
+        self.assertIn('permissions', folio)
+        self.assertNotIn('group', folio['permissions'])
