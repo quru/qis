@@ -267,20 +267,13 @@ class UserAPI(MethodView):
         if user_id is None:
             # List users
             ulist = data_engine.list_users(order_field=User.username)
-            # Do not give out anything password related
-            udictlist = object_to_dict_list(ulist)
-            for user in udictlist:
-                del user['password']
-            return make_api_success_response(udictlist)
+            return make_api_success_response(object_to_dict_list(ulist))
         else:
             # Get single user
             user = data_engine.get_user(user_id)
             if user is None:
                 raise DoesNotExistError(str(user_id))
-            # Do not give out anything password related
-            udict = object_to_dict(user)
-            del udict['password']
-            return make_api_success_response(udict)
+            return make_api_success_response(object_to_dict(user))
 
     @add_api_error_handler
     def post(self):
@@ -298,10 +291,7 @@ class UserAPI(MethodView):
             User.STATUS_ACTIVE
         )
         data_engine.create_user(user)
-        # Do not give out anything password related
-        udict = object_to_dict(user)
-        del udict['password']
-        return make_api_success_response(udict)
+        return make_api_success_response(object_to_dict(user))
 
     @add_api_error_handler
     def put(self, user_id):
@@ -324,10 +314,7 @@ class UserAPI(MethodView):
         data_engine.save_object(user)
         # Reset session caches
         reset_user_sessions(user)
-        # Do not give out anything password related
-        udict = object_to_dict(user)
-        del udict['password']
-        return make_api_success_response(udict)
+        return make_api_success_response(object_to_dict(user))
 
     @add_api_error_handler
     def delete(self, user_id):
@@ -342,10 +329,7 @@ class UserAPI(MethodView):
             log_out()
         # Reset session caches
         reset_user_sessions(user)
-        # Do not give out anything password related
-        udict = object_to_dict(user)
-        del udict['password']
-        return make_api_success_response(udict)
+        return make_api_success_response(object_to_dict(user))
 
     @add_parameter_error_handler
     def _get_validated_object_parameters(self, data_dict, require_password):
@@ -390,11 +374,7 @@ class GroupAPI(MethodView):
             group = data_engine.get_group(group_id=group_id, load_users=True)
             if group is None:
                 raise DoesNotExistError(str(group_id))
-            # Do not give out anything password related
-            gdict = object_to_dict(group)
-            for udict in gdict['users']:
-                del udict['password']
-            return make_api_success_response(gdict)
+            return make_api_success_response(object_to_dict(group))
 
     @add_api_error_handler
     def post(self):
@@ -436,11 +416,7 @@ class GroupAPI(MethodView):
             reset_user_sessions(group.users)
             permissions_engine.reset()
             _check_for_user_lockout(backup_group)
-        # Do not give out anything password related
-        gdict = object_to_dict(group)
-        for udict in gdict['users']:
-            del udict['password']
-        return make_api_success_response(gdict)
+        return make_api_success_response(object_to_dict(group))
 
     @add_api_error_handler
     def delete(self, group_id):
