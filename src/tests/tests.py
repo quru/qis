@@ -131,14 +131,24 @@ def reset_databases():
     admin_user = dm.get_user(username='admin')
     admin_user.set_password('admin')
     dm.save_object(admin_user)
-    # Default the public root folder permissions to allow View + Download
+    # Default the public and internal root folder permissions to allow View + Download
     set_default_public_permission(FolderPermission.ACCESS_DOWNLOAD)
+    set_default_internal_permission(FolderPermission.ACCESS_DOWNLOAD)
     # Set some standard image generation settings
     reset_default_image_template()
 
 
 def set_default_public_permission(access):
     default_fp = dm.get_object(FolderPermission, 1)
+    assert default_fp.group_id == Group.ID_PUBLIC
+    default_fp.access = access
+    dm.save_object(default_fp)
+    pm.reset_folder_permissions()
+
+
+def set_default_internal_permission(access):
+    default_fp = dm.get_object(FolderPermission, 2)
+    assert default_fp.group_id == Group.ID_EVERYONE
     default_fp.access = access
     dm.save_object(default_fp)
     pm.reset_folder_permissions()
@@ -162,7 +172,9 @@ def reset_default_image_template():
     im.reset_templates()
 
 
-# Utility - create/reset and return a test user having a certain system permission
+# Utility - create/reset and return a test user having a certain system permission.
+#           the returned user is a member of the standard "everyone" group and also
+#           a separate group that is used for setting the custom system permission.
 def setup_user_account(login_name, user_type='none', allow_api=False):
     db_session = dm.db_get_session()
     try:
@@ -185,38 +197,39 @@ def setup_user_account(login_name, user_type='none', allow_api=False):
             testuser.allow_api = allow_api
             testuser.status = User.STATUS_ACTIVE
         # Wipe system permissions
-        testgroup = dm.get_group(groupname='Red Dwarf', _db_session=db_session)
-        if not testgroup:
-            testgroup = Group(
+        test_group = dm.get_group(groupname='Red Dwarf', _db_session=db_session)
+        if not test_group:
+            test_group = Group(
                 'Red Dwarf',
                 'Test group',
                 Group.GROUP_TYPE_LOCAL
             )
-            dm.create_group(testgroup, _db_session=db_session)
-        testgroup.permissions = SystemPermissions(
-            testgroup, False, False, False, False, False, False, False
+            dm.create_group(test_group, _db_session=db_session)
+        test_group.permissions = SystemPermissions(
+            test_group, False, False, False, False, False, False, False
         )
         # Wipe folder and folio permissions
-        del testgroup.folder_permissions[:]
-        del testgroup.folio_permissions[:]
+        del test_group.folder_permissions[:]
+        del test_group.folio_permissions[:]
         # Apply permissions for requested test type
         if user_type == 'none':
             pass
         elif user_type == 'admin_users':
-            testgroup.permissions.admin_users = True
+            test_group.permissions.admin_users = True
         elif user_type == 'admin_files':
-            testgroup.permissions.admin_files = True
+            test_group.permissions.admin_files = True
         elif user_type == 'admin_folios':
-            testgroup.permissions.admin_folios = True
+            test_group.permissions.admin_folios = True
         elif user_type == 'admin_permissions':
-            testgroup.permissions.admin_users = True
-            testgroup.permissions.admin_permissions = True
+            test_group.permissions.admin_users = True
+            test_group.permissions.admin_permissions = True
         elif user_type == 'admin_all':
-            testgroup.permissions.admin_all = True
+            test_group.permissions.admin_all = True
         else:
             raise ValueError('Unimplemented test user type ' + user_type)
-        dm.save_object(testgroup, _db_session=db_session)
-        testuser.groups = [testgroup]
+        dm.save_object(test_group, _db_session=db_session)
+        everyone_group = dm.get_group(Group.ID_EVERYONE, _db_session=db_session)
+        testuser.groups = [everyone_group, test_group]
         dm.save_object(testuser, _db_session=db_session)
         db_session.commit()
         return testuser
@@ -2657,8 +2670,9 @@ class ImageServerTestsFast(BaseTestCase):
     def test_folder_permissions_hierarchy(self):
         tempfile = '/rootfile.jpg'
         try:
-            # Reset the default public permission to None
+            # Reset the default permission to None
             set_default_public_permission(FolderPermission.ACCESS_NONE)
+            set_default_internal_permission(FolderPermission.ACCESS_NONE)
             # test_images should not be viewable
             rv = self.app.get('/image?src=test_images/cathedral.jpg')
             assert rv.status_code == API_CODES.UNAUTHORISED
@@ -2709,6 +2723,7 @@ class ImageServerTestsFast(BaseTestCase):
         finally:
             delete_file(tempfile)
             set_default_public_permission(FolderPermission.ACCESS_DOWNLOAD)
+            set_default_internal_permission(FolderPermission.ACCESS_DOWNLOAD)
 
     # Test image and page access (folder permissions)
     def test_folder_permissions(self):
@@ -2740,8 +2755,9 @@ class ImageServerTestsFast(BaseTestCase):
             # Create temp file for uploads
             src_file = get_abs_path('test_images/cathedral.jpg')
             shutil.copy(src_file, temp_file)
-            # Reset the default public permission to None
+            # Reset the default permission to None
             set_default_public_permission(FolderPermission.ACCESS_NONE)
+            set_default_internal_permission(FolderPermission.ACCESS_NONE)
             # Create test user with no permission overrides, log in
             setup_user_account('kryten', 'none')
             self.login('kryten', 'kryten')
@@ -2810,6 +2826,7 @@ class ImageServerTestsFast(BaseTestCase):
             if os.path.exists(temp_file): os.remove(temp_file)
             delete_file(temp_image_path)
             set_default_public_permission(FolderPermission.ACCESS_DOWNLOAD)
+            set_default_internal_permission(FolderPermission.ACCESS_DOWNLOAD)
 
     # Test that overlay obeys the permissions rules
     def test_overlay_permissions(self):

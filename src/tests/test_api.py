@@ -43,7 +43,8 @@ from werkzeug.urls import url_quote_plus
 
 import tests as main_tests
 from tests import (
-    BaseTestCase, setup_user_account, set_default_public_permission
+    BaseTestCase, setup_user_account,
+    set_default_internal_permission, set_default_public_permission
 )
 
 from imageserver.flask_app import app as flask_app
@@ -594,17 +595,19 @@ class ImageServerAPITests(BaseTestCase):
     # #2054 Bug fixes where the current user could lock themselves out
     #       or lock out the admin user
     def test_group_admin_lockout(self):
-        # Log in as a user with full group access
+        # Create and log in as a user with full group access
         setup_user_account('kryten', 'admin_permissions')
         self.login('kryten', 'kryten')
         db_user = dm.get_user(username='kryten', load_groups=True)
-        # These tests require setup_user_account() to set up 1 group
-        self.assertEqual(len(db_user.groups), 1)
+        # setup_user_account() should have set up 1 group with the admin access
+        admin_groups = [g for g in db_user.groups if g.permissions.admin_permissions]
+        self.assertEqual(len(admin_groups), 1)
+        admin_group = admin_groups[0]
         # Removing admin_permission flag from Administrators group would lock out the admin user
         # Removing admin_users flag from a user's only admin group would lock them out
         group_ids = [
-            db_user.groups[0].id,  # Test user locking themselves out
-            Group.ID_ADMINS        # Test user locking out the admin user
+            admin_group.id,  # Test user locking themselves out
+            Group.ID_ADMINS  # Test user locking out the admin user
         ]
         for group_id in group_ids:
             db_group = dm.get_group(group_id)
@@ -636,8 +639,8 @@ class ImageServerAPITests(BaseTestCase):
                              db_group_2.permissions.admin_all)
         # Removing (any) user from their only admin group would lock them out
         user_groups = [
-            (db_user.id, db_user.groups[0].id),  # Test user locking themselves out
-            (1, Group.ID_ADMINS)                 # Test user locking out the admin user
+            (db_user.id, admin_group.id),  # Test user locking themselves out
+            (1, Group.ID_ADMINS)           # Test user locking out the admin user
         ]
         for ug in user_groups:
             rv = self.app.delete('/api/admin/groups/' + str(ug[1]) + '/members/' + str(ug[0]) + '/')
@@ -1308,8 +1311,7 @@ class ImageServerAPITests(BaseTestCase):
         temp_folder  = 'test_images/fp-test_folder'
         temp_folder2 = 'test_images/fp-test_folder_2'
         temp_folder3 = '/fp-test_folder_2'
-        setup_user_account('kryten', 'none')
-        self.login('kryten', 'kryten')
+
         # Helper to change user permissions
         def setup_fp_user(root_access, test_folder_access=None):
             db_group = dm.get_group(groupname='Red Dwarf')
@@ -1333,12 +1335,16 @@ class ImageServerAPITests(BaseTestCase):
             pm.reset_folder_permissions()
             # v1.23 Also clear cached permissions for the task server process
             cm.clear()
+
         try:
             # Create a temp file we can rename, move, delete
             copy_file('test_images/cathedral.jpg', temp_image)
             db_image = auto_sync_existing_file(temp_image, dm, tm)
             # Reset user permissions to None
             set_default_public_permission(FolderPermission.ACCESS_NONE)
+            set_default_internal_permission(FolderPermission.ACCESS_NONE)
+            setup_user_account('kryten', 'none')
+            self.login('kryten', 'kryten')
             setup_fp_user(FolderPermission.ACCESS_NONE)
             # Folder list API requires view permission
             rv = self.app.get('/api/list/?path=test_images')
@@ -1433,6 +1439,7 @@ class ImageServerAPITests(BaseTestCase):
             delete_dir(temp_folder2)
             delete_dir(temp_folder3)
             set_default_public_permission(FolderPermission.ACCESS_DOWNLOAD)
+            set_default_internal_permission(FolderPermission.ACCESS_DOWNLOAD)
 
     # CSRF protection should be active for web sessions but not for API tokens
     def test_csrf(self):
