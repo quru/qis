@@ -40,15 +40,17 @@ from imageserver.filesystem_manager import (
     delete_dir, get_portfolio_directory, get_portfolio_export_file_path
 )
 from imageserver.flask_app import data_engine, permissions_engine
-from imageserver.flask_util import api_permission_required
+from imageserver.flask_util import api_permission_required, external_url_for
 from imageserver.models import (
     Group, SystemPermissions,
     Folio, FolioExport, FolioImage, FolioPermission, FolioHistory
 )
+from imageserver.portfolios.util import get_portfolio_image_attrs
 from imageserver.session_manager import get_session_user, get_session_user_id
 from imageserver.util import object_to_dict, object_to_dict_list
 from imageserver.util import parse_boolean, parse_int
 from imageserver.util import validate_number, validate_string
+from imageserver.views_util import url_for_image_attrs
 
 
 class PortfolioAPI(MethodView):
@@ -72,7 +74,7 @@ class PortfolioAPI(MethodView):
                 get_session_user(),
                 FolioPermission.ACCESS_VIEW
             )
-            folio_list = [self._prep_folio_object(f) for f in folio_list]
+            folio_list = [_prep_folio_object(f) for f in folio_list]
             return make_api_success_response(object_to_dict_list(folio_list))
         else:
             # Get single portfolio
@@ -83,7 +85,7 @@ class PortfolioAPI(MethodView):
             permissions_engine.ensure_portfolio_permitted(
                 folio, FolioPermission.ACCESS_VIEW, get_session_user()
             )
-            folio = self._prep_folio_object(folio)
+            folio = _prep_folio_object(folio)
             return make_api_success_response(object_to_dict(folio))
 
     @add_api_error_handler
@@ -108,7 +110,9 @@ class PortfolioAPI(MethodView):
                 _db_session=db_session,
                 _commit=True  # fail here if human_id not unique
             )
-            folio = self._prep_folio_object(folio, db_session)
+            # Return a clean object the same as for get(id)
+            folio = data_engine.get_portfolio(folio.id, load_images=True, load_history=True)
+            folio = _prep_folio_object(folio)
             return make_api_success_response(object_to_dict(folio))
         finally:
             db_session.close()
@@ -118,9 +122,7 @@ class PortfolioAPI(MethodView):
         db_session = data_engine.db_get_session()
         try:
             # Get portfolio
-            folio = data_engine.get_portfolio(
-                folio_id, load_images=True, load_history=True, _db_session=db_session
-            )
+            folio = data_engine.get_portfolio(folio_id, _db_session=db_session)
             if folio is None:
                 raise DoesNotExistError(str(folio_id))
             # Check permissions
@@ -144,14 +146,14 @@ class PortfolioAPI(MethodView):
             folio.description = params['description']
             # Note: folio.last_updated is only for image changes
             #       (to know when to invalidate the exported zips)
-            folio.history.append(data_engine.add_portfolio_history(
+            data_engine.add_portfolio_history(
                 folio,
                 get_session_user(),
                 FolioHistory.ACTION_EDITED,
                 ', '.join(changes).capitalize(),
                 _db_session=db_session,
                 _commit=False
-            ))
+            )
             data_engine.save_object(
                 folio,
                 _db_session=db_session,
@@ -159,7 +161,9 @@ class PortfolioAPI(MethodView):
             )
             if permissions_changed:
                 permissions_engine.reset_portfolio_permissions()
-            folio = self._prep_folio_object(folio, db_session)
+            # Return a clean object the same as for get(id)
+            folio = data_engine.get_portfolio(folio.id, load_images=True, load_history=True)
+            folio = _prep_folio_object(folio)
             return make_api_success_response(object_to_dict(folio))
         finally:
             db_session.close()
@@ -183,21 +187,6 @@ class PortfolioAPI(MethodView):
         # delete the exported zip files (if any)
         delete_dir(get_portfolio_directory(folio), recursive=True)
         return make_api_success_response()
-
-    def _prep_folio_object(self, folio, db_session=None):
-        """
-        Modifies a Folio object to add calculated fields, remove private fields,
-        and prevent recursion when serializing the object. If the object is loaded
-        into a database session, provide the session so that the object can be
-        detached from it, to prevent the object changes from being persisted.
-        """
-        if db_session:
-            db_session.expunge(folio)
-        # TODO need one of these for each affected model? make staticmethod or move
-        # TODO add url attributes
-        # TODO wipe out user passwords
-        # TODO prevent recursion
-        return folio
 
     def _set_permissions(self, folio, params, db_session):
         """
@@ -266,6 +255,54 @@ class PortfolioAPI(MethodView):
 
 # TODO require login for add/remove/reorder URLs x2
 #      unless this is too inconsistent
+
+
+def _prep_folio_object(folio):
+    """
+    Modifies a Folio object to add calculated fields.
+    """
+    # Add attribute for public viewing URL
+    folio.url = external_url_for('folios.portfolio_view', human_id=folio.human_id)
+    # Add extra fields to the images
+    if data_engine.attr_is_loaded(folio, 'images'):
+        folio.images = [
+            _prep_folioimage_object(fi) for fi in folio.images
+        ]
+    # Add extra fields to the downloads
+    if data_engine.attr_is_loaded(folio, 'downloads'):
+        folio.downloads = [
+            _prep_folioexport_object(folio, fe) for fe in folio.downloads
+        ]
+    return folio
+
+
+def _prep_folioimage_object(folioimage):
+    """
+    Modifies a FolioImage object to add calculated fields.
+    """
+    # Add attribute for the image viewing URL
+    folioimage.url = url_for_image_attrs(
+        get_portfolio_image_attrs(folioimage, validate=False),
+        external=True
+    )
+    return folioimage
+
+
+def _prep_folioexport_object(folio, folioexport):
+    """
+    Modifies a FolioExport object to add calculated fields.
+    """
+    # Add attribute for the download URL
+    if folioexport.filename:
+        folioexport.url = external_url_for(
+            'folios.portfolio_download',
+            human_id=folio.human_id,
+            filename=folioexport.filename
+        )
+    else:
+        folioexport.url = ''
+    return folioexport
+
 
 _papi_portfolio_views = api_permission_required(
     PortfolioAPI.as_view('portfolio'),
