@@ -10,6 +10,9 @@ TESTING = True
 # Test the production code
 DEBUG = False
 
+# Tests run locally
+PUBLIC_HOST_NAME = "localhost"
+
 # Use separate testing databases
 CACHE_DATABASE_CONNECTION = "postgresql+psycopg2:///qis-cache-test"
 CACHE_DATABASE_POOL_SIZE = 2

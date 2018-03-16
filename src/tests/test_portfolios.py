@@ -216,6 +216,7 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         })
         self.assertEqual(rv.status_code, API_CODES.ALREADY_EXISTS)
         # A human ID of all whitespace should be treated the same as a blank
+        api_url = '/api/portfolios/'
         rv = self.app.post(api_url, data={
             'human_id': '  ',
             'name': 'Test portfolio',
@@ -514,7 +515,7 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
             flask_app.config['PREFERRED_URL_SCHEME'] + '://' +
             flask_app.config['PUBLIC_HOST_NAME'] +
             flask_app.config['APPLICATION_ROOT'] +
-            'portfolios/' + db_public_folio['human_id'] + '/'
+            'portfolios/' + db_public_folio.human_id + '/'
         )
 
     # Tests that single-image parameters get stored and get applied
