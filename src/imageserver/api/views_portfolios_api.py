@@ -47,9 +47,10 @@ from imageserver.models import (
 )
 from imageserver.portfolios.util import get_portfolio_image_attrs
 from imageserver.session_manager import get_session_user, get_session_user_id
-from imageserver.util import object_to_dict, object_to_dict_list
-from imageserver.util import parse_boolean, parse_int
-from imageserver.util import validate_number, validate_string
+from imageserver.util import (
+    object_to_dict, object_to_dict_list,
+    parse_boolean, parse_int, validate_number, validate_string
+)
 from imageserver.views_util import url_for_image_attrs
 
 
@@ -235,26 +236,82 @@ class PortfolioAPI(MethodView):
                         FolioPermission.ACCESS_NONE, FolioPermission.ACCESS_DOWNLOAD)
         return params
 
-# API - portfolio headers
-# /api/v1/portfolios/
-# /api/v1/portfolios/[portfolio id]/
 
-# API - portfolio content management
-# /api/v1/portfolios/[portfolio id]/images/
-# /api/v1/portfolios/[portfolio id]/images/[image id]/
-# /api/v1/portfolios/[portfolio id]/images/[image id]/position/
+class PortfolioContentAPI(MethodView):
+    """
+    Provides the REST API to add, remove, and change (e.g. crop) images in a
+    portfolio.
+
+    Required access:
+    - Ownership or View access to the portfolio for GET
+    - Ownership of the portfolio for POST, PUT and DELETE
+    - Or alternatively admin_folios system permission
+
+    Note that portfolios can be made viewable for public users, so unlike most
+    of the "admin" type APIs, several of these URLs have require_login=False.
+    """
+    pass
+    # TODO see reorder code for returning image list
+
+
+class PortfolioReorderAPI(MethodView):
+    """
+    Provides the REST API to reorder the images in a portfolio.
+
+    Required access:
+    - Ownership of the portfolio
+    - Or alternatively admin_folios system permission
+    """
+    @add_api_error_handler
+    def put(self, folio_id, image_id):
+        db_session = data_engine.db_get_session()
+        try:
+            # Get data objects
+            folio = data_engine.get_portfolio(folio_id, _db_session=db_session)
+            if folio is None:
+                raise DoesNotExistError(str(folio_id))
+            image = data_engine.get_image(image_id, _db_session=db_session)
+            if image is None:
+                raise DoesNotExistError(str(image_id))
+            folio_image = data_engine.get_portfolio_image(folio, image, _db_session=db_session)
+            if folio_image is None:
+                raise DoesNotExistError(str(folio_id) + '/' + str(image_id))
+            # Check permissions
+            permissions_engine.ensure_portfolio_permitted(
+                folio, FolioPermission.ACCESS_EDIT, get_session_user()
+            )
+            # Update the portfolio
+            params = self._get_validated_object_parameters(request.form)
+            updated_folio_image = data_engine.reorder_portfolio(folio_image, params['index'])
+            data_engine.add_portfolio_history(
+                folio,
+                get_session_user(),
+                FolioHistory.ACTION_IMAGE_CHANGE,
+                '%s moved to position %d' % (image.src, updated_folio_image.order_num + 1),
+                _db_session=db_session,
+                _commit=True
+            )
+            # Return the updated image list
+            folio = data_engine.get_portfolio(folio_id, load_images=True, _db_session=db_session)
+            image_list = [_prep_folioimage_object(fi) for fi in folio.images]
+            return make_api_success_response(object_to_dict_list(image_list))
+        finally:
+            db_session.close()
+
+    @add_parameter_error_handler
+    def _get_validated_object_parameters(self, data_dict):
+        params = {
+            'index': parse_int(data_dict['index'])
+        }
+        validate_number(params['index'], -999999, 999999)
+        return params
+
 
 # API - portfolio export
 # /api/v1/portfolios/[portfolio id]/exports/
 # /api/v1/portfolios/[portfolio id]/exports/[export id]/
 
 # TODO update last_updated for image changes
-#      add unit tests
-
-# TODO add tests to ensure password not in user fields
-
-# TODO require login for add/remove/reorder URLs x2
-#      unless this is too inconsistent
 
 
 def _prep_folio_object(folio):
@@ -304,11 +361,11 @@ def _prep_folioexport_object(folio, folioexport):
     return folioexport
 
 
+# Define portfolio header API views
 _papi_portfolio_views = api_permission_required(
     PortfolioAPI.as_view('portfolio'),
     require_login=False
 )
-
 api_add_url_rules([
         url_version_prefix + '/portfolios/',
         '/portfolios/'
@@ -322,4 +379,37 @@ api_add_url_rules([
     ],
     view_func=_papi_portfolio_views,
     methods=['GET', 'PUT', 'DELETE']
+)
+
+# Define portfolio header API views
+_papi_portfoliocontent_views = api_permission_required(
+    PortfolioContentAPI.as_view('portfolio.content'),
+    require_login=False
+)
+api_add_url_rules([
+        url_version_prefix + '/portfolios/images/',
+        '/portfolios/images/'
+    ],
+    view_func=_papi_portfoliocontent_views,
+    methods=['GET', 'POST']
+)
+api_add_url_rules([
+        url_version_prefix + '/portfolios/<int:folio_id>/images/<int:image_id>/',
+        '/portfolios/<int:folio_id>/images/<int:image_id>/'
+    ],
+    view_func=_papi_portfoliocontent_views,
+    methods=['GET', 'PUT', 'DELETE']
+)
+
+# Define portfolio reordering API views
+_papi_portfolioreorder_views = api_permission_required(
+    PortfolioReorderAPI.as_view('portfolio.reorder'),
+    require_login=False  # Could be True but would be the only portfolio URL returning HTTP 401
+)
+api_add_url_rules([
+        url_version_prefix + '/portfolios/<int:folio_id>/images/<int:image_id>/position/',
+        '/portfolios/<int:folio_id>/images/<int:image_id>/position/'
+    ],
+    view_func=_papi_portfolioreorder_views,
+    methods=['PUT']
 )

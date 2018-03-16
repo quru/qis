@@ -349,6 +349,8 @@ rather than `/api/v1/admin/portfolios/`.
   * Folio `EDIT` permission required otherwise
   * Returns a list of the portfolio-image objects in the portfolio, a single
     portfolio-image object, or nothing (after a delete)
+  * Returns the newly ordered list of portfolio-image objects in the portfolio
+    after a reorder
   * The optional `filename` value overrides an image's default filename when the
     portfolio is published to a zip file
   * The optional `image_parameters` value will accept JSON in the same structure

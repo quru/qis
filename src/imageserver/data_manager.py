@@ -190,8 +190,8 @@ class DataManager(object):
 
         In addition to the table name, the function requires the name of the
         table's unique ID column. If the ID column name cannot be used for an
-        SQL bind parameter name, use a different name in the data and pass this
-        as the data ID column name.
+        SQL bind parameter name (e.g. it cannot in Postgres), use a different
+        name in the data and pass this as the data ID column name.
 
         E.g. bulk_update('users', 'id', '_id', [
                  {'_id': 1, 'status': 'D'},
@@ -452,8 +452,24 @@ class DataManager(object):
         db_session = _db_session or self._db.Session()
         try:
             q = db_session.query(FolioPermission)
-            q = q.filter(FolioPermission.portfolio == folio)
-            q = q.filter(FolioPermission.group == group)
+            q = q.filter(FolioPermission.folio_id == folio.id)
+            q = q.filter(FolioPermission.group_id == group.id)
+            return q.first()
+        finally:
+            if not _db_session:
+                db_session.close()
+
+    @db_operation
+    def get_portfolio_image(self, folio, image, _db_session=None):
+        """
+        Returns the FolioImage object for the given portfolio and image,
+        or None if there is no exact match in the database.
+        """
+        db_session = _db_session or self._db.Session()
+        try:
+            q = db_session.query(FolioImage)
+            q = q.filter(FolioImage.folio_id == folio.id)
+            q = q.filter(FolioImage.image_id == image.id)
             return q.first()
         finally:
             if not _db_session:
@@ -469,7 +485,7 @@ class DataManager(object):
         db_session = _db_session or self._db.Session()
         try:
             q = db_session.query(FolioPermission)
-            q = q.filter(FolioPermission.portfolio == folio)
+            q = q.filter(FolioPermission.folio_id == folio.id)
             q = q.filter(FolioPermission.group_id.in_([g.id for g in group_list]))
             return q.order_by(desc(FolioPermission.access)).limit(1).first()
         finally:
@@ -1479,6 +1495,64 @@ class DataManager(object):
                 db_session.commit()
         finally:
             if not _db_session:
+                db_session.close()
+
+    @db_operation
+    def reorder_portfolio(self, folio_image, index):
+        """
+        Atomically sets a folio_image object to be at a new zero-based index,
+        updating the position (order_num field) on all the other images in the
+        portfolio. If the value of index is below 0 or more than the length of
+        the image list, it will be adjusted to the nearest valid value.
+        Returns the updated folio_image object with the new (possibly corrected)
+        'order_num' attribute.
+        """
+        db_session = self._db.Session()
+        commited = False
+        try:
+            db_folio_image = self.get_object(FolioImage, folio_image.id, _db_session=db_session)
+            # Get ordered image list
+            db_image_list = db_folio_image.portfolio.images
+            # Limit index value to 0 --> list length
+            insert_index = max(min(index, len(db_image_list)), 0)
+            # Make a copy of the image list minus the folio_image that we'll re-insert
+            image_list = [
+                (fimg.id, fimg.order_num) for fimg in db_image_list
+                if fimg.id != db_folio_image.id
+            ]
+            # Generate a list of new order numbers for the images
+            change_list = []
+            order_num_offset = 0
+            for idx, img_tuple in enumerate(image_list):
+                if idx == insert_index:
+                    order_num_offset = 1  # Leave a hole to re-insert the folio_image
+                new_order_num = idx + order_num_offset
+                if img_tuple[1] != new_order_num:
+                    change_list.append({'_id': img_tuple[0], 'order_num': new_order_num})
+            # Finally apply the new index to our folio_image
+            # If it's moving to the end of the list then insert_index is now 1
+            # too high and we need to reduce it to be len(image_list)
+            insert_index = min(insert_index, len(image_list))
+            if db_folio_image.order_num != insert_index:
+                change_list.append({'_id': db_folio_image.id, 'order_num': insert_index})
+            # Then use bulk update
+            if change_list:
+                self.bulk_update(
+                    'folioimages',
+                    'id',
+                    '_id',
+                    change_list,
+                    _db_session=db_session,
+                    _commit=True
+                )
+            commited = True
+            db_session.refresh(db_folio_image)
+            return db_folio_image
+        finally:
+            try:
+                if not commited:
+                    db_session.rollback()
+            finally:
                 db_session.close()
 
     @db_operation
