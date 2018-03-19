@@ -64,8 +64,8 @@ class PortfolioAPI(MethodView):
     - Ownership of the portfolio for PUT and DELETE
     - Or alternatively admin_folios system permission
 
-    Note that portfolios can be made viewable for public users, so unlike most
-    of the "admin" type APIs, several of these URLs have require_login=False.
+    Note that portfolios can be made viewable for public users, so
+    unlike most of the "admin" type APIs these URLs have require_login=False.
     """
     @add_api_error_handler
     def get(self, folio_id=None):
@@ -247,11 +247,44 @@ class PortfolioContentAPI(MethodView):
     - Ownership of the portfolio for POST, PUT and DELETE
     - Or alternatively admin_folios system permission
 
-    Note that portfolios can be made viewable for public users, so unlike most
-    of the "admin" type APIs, several of these URLs have require_login=False.
+    Note that portfolios can be made viewable for public users, so
+    unlike most of the "admin" type APIs these URLs have require_login=False.
     """
-    pass
-    # TODO see reorder code for returning image list
+    @add_api_error_handler
+    def get(self, folio_id, image_id=None):
+        if image_id is None:
+            # List images in the portfolio
+            folio = data_engine.get_portfolio(folio_id, load_images=True)
+            if folio is None:
+                raise DoesNotExistError(str(folio_id))
+            # Check permissions
+            permissions_engine.ensure_portfolio_permitted(
+                folio, FolioPermission.ACCESS_VIEW, get_session_user()
+            )
+            image_list = [_prep_folioimage_object(fi) for fi in folio.images]
+            return make_api_success_response(object_to_dict_list(image_list))
+        else:
+            # Get a single portfolio-image
+            db_session = data_engine.db_get_session()
+            try:
+                folio = data_engine.get_portfolio(folio_id, _db_session=db_session)
+                if folio is None:
+                    raise DoesNotExistError(str(folio_id))
+                image = data_engine.get_image(image_id, _db_session=db_session)
+                if image is None:
+                    raise DoesNotExistError(str(image_id))
+                folio_image = data_engine.get_portfolio_image(folio, image, _db_session=db_session)
+                if folio_image is None:
+                    raise DoesNotExistError(str(folio_id) + '/' + str(image_id))
+                # Check permissions
+                permissions_engine.ensure_portfolio_permitted(
+                    folio, FolioPermission.ACCESS_VIEW, get_session_user()
+                )
+                return make_api_success_response(object_to_dict(
+                    _prep_folioimage_object(folio_image)
+                ))
+            finally:
+                db_session.close()
 
 
 class PortfolioReorderAPI(MethodView):
@@ -387,8 +420,8 @@ _papi_portfoliocontent_views = api_permission_required(
     require_login=False
 )
 api_add_url_rules([
-        url_version_prefix + '/portfolios/images/',
-        '/portfolios/images/'
+        url_version_prefix + '/portfolios/<int:folio_id>/images/',
+        '/portfolios/<int:folio_id>/images/'
     ],
     view_func=_papi_portfoliocontent_views,
     methods=['GET', 'POST']
