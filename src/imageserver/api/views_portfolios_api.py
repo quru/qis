@@ -48,6 +48,7 @@ from imageserver.models import (
 from imageserver.portfolios.util import get_portfolio_image_attrs
 from imageserver.session_manager import get_session_user, get_session_user_id
 from imageserver.util import (
+    AttrObject,
     object_to_dict, object_to_dict_list,
     parse_boolean, parse_int, validate_number, validate_string
 )
@@ -267,18 +268,15 @@ class PortfolioContentAPI(MethodView):
             # Get a single portfolio-image
             db_session = data_engine.db_get_session()
             try:
-                folio = data_engine.get_portfolio(folio_id, _db_session=db_session)
-                if folio is None:
-                    raise DoesNotExistError(str(folio_id))
-                image = data_engine.get_image(image_id, _db_session=db_session)
-                if image is None:
-                    raise DoesNotExistError(str(image_id))
-                folio_image = data_engine.get_portfolio_image(folio, image, _db_session=db_session)
+                folio_image = data_engine.get_portfolio_image(
+                    AttrObject(id=folio_id), AttrObject(id=image_id),
+                    _db_session=db_session
+                )
                 if folio_image is None:
                     raise DoesNotExistError(str(folio_id) + '/' + str(image_id))
                 # Check permissions
                 permissions_engine.ensure_portfolio_permitted(
-                    folio, FolioPermission.ACCESS_VIEW, get_session_user()
+                    folio_image.portfolio, FolioPermission.ACCESS_VIEW, get_session_user()
                 )
                 return make_api_success_response(object_to_dict(
                     _prep_folioimage_object(folio_image)
@@ -299,28 +297,25 @@ class PortfolioReorderAPI(MethodView):
     def put(self, folio_id, image_id):
         db_session = data_engine.db_get_session()
         try:
-            # Get data objects
-            folio = data_engine.get_portfolio(folio_id, _db_session=db_session)
-            if folio is None:
-                raise DoesNotExistError(str(folio_id))
-            image = data_engine.get_image(image_id, _db_session=db_session)
-            if image is None:
-                raise DoesNotExistError(str(image_id))
-            folio_image = data_engine.get_portfolio_image(folio, image, _db_session=db_session)
+            # Get data
+            folio_image = data_engine.get_portfolio_image(
+                AttrObject(id=folio_id), AttrObject(id=image_id),
+                _db_session=db_session
+            )
             if folio_image is None:
                 raise DoesNotExistError(str(folio_id) + '/' + str(image_id))
             # Check permissions
             permissions_engine.ensure_portfolio_permitted(
-                folio, FolioPermission.ACCESS_EDIT, get_session_user()
+                folio_image.portfolio, FolioPermission.ACCESS_EDIT, get_session_user()
             )
             # Update the portfolio
             params = self._get_validated_object_parameters(request.form)
-            updated_folio_image = data_engine.reorder_portfolio(folio_image, params['index'])
+            chd_folio_image = data_engine.reorder_portfolio(folio_image, params['index'])
             data_engine.add_portfolio_history(
-                folio,
+                folio_image.portfolio,
                 get_session_user(),
                 FolioHistory.ACTION_IMAGE_CHANGE,
-                '%s moved to position %d' % (image.src, updated_folio_image.order_num + 1),
+                '%s moved to position %d' % (folio_image.image.src, chd_folio_image.order_num + 1),
                 _db_session=db_session,
                 _commit=True
             )

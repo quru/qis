@@ -971,3 +971,12 @@ class AsyncHttpRequest(threading.Thread):
         except Exception as e:
             if self.log_fail_fn:
                 self.log_fail_fn('Error calling URL %s: %s' % (self.url, str(e)))
+
+
+class AttrObject(object):
+    """
+    A utility class that provides a neater alternative to using a dictionary.
+    Construct with: o = AttrObject(a=1, b=2) then use: o.a; o.b; etc
+    """
+    def __init__(self, **kwds):
+        self.__dict__.update(kwds)

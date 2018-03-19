@@ -361,7 +361,7 @@ rather than `/api/v1/admin/portfolios/`.
     not change the ordering number on other images in the portfolio. This may
     result in duplicate values, with the order then being determined by which
     image was added to the portfolio first. To ensure that each image has a
-    unique order number, use the _reorder image_ function.
+    unique order number, use the explicit _reorder image_ function.
   * Adds a `foliosaudit` record for change actions
 
 * Portfolio publishing (export) and distribution

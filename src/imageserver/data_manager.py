@@ -1504,8 +1504,9 @@ class DataManager(object):
         updating the position (order_num field) on all the other images in the
         portfolio. If the value of index is below 0 or more than the length of
         the image list, it will be adjusted to the nearest valid value.
-        Returns the updated folio_image object with the new (possibly corrected)
-        'order_num' attribute.
+        Returns the updated folio_image object with the newly assigned 'order_num'
+        attribute, unattached to a database session (as this method closes its
+        own session).
         """
         db_session = self._db.Session()
         commited = False
