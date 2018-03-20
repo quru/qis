@@ -347,6 +347,7 @@ rather than `/api/v1/admin/portfolios/`.
   * Parameter `index` for `PUT` (reorder)
   * Folio `VIEW` permission required for `GET`
   * Folio `EDIT` permission required otherwise
+  * Image `VIEW` permission required to add an image to a portfolio
   * Returns a list of the portfolio-image objects in the portfolio, a single
     portfolio-image object, or nothing (after a delete)
   * Returns the newly ordered list of portfolio-image objects in the portfolio
@@ -370,8 +371,8 @@ rather than `/api/v1/admin/portfolios/`.
   * URL `/api/v1/portfolios/[portfolio id]/exports/[export id]/`
     for `GET` and `DELETE` (unpublish)
   * No parameters for `GET` and `DELETE`
-  * Parameters `description` (optional), `originals`, `image_parameters` (optional
-    JSON, ignored when `originals` is true), `expiry_time` for `POST`
+  * Parameters `description`, `originals`, `image_parameters`
+    (optional JSON, ignored when `originals` is true), `expiry_time` for `POST`
   * Folio `VIEW` permission required for `GET`
   * Folio `EDIT` permission required otherwise
   * Returns a list of the portfolio-exports objects for the portfolio, a single

@@ -28,6 +28,9 @@
 # Date       By    Details
 # =========  ====  ============================================================
 #
+from datetime import datetime
+import json
+import sys
 
 from flask import request
 from flask.views import MethodView
@@ -42,11 +45,12 @@ from imageserver.filesystem_manager import (
 from imageserver.flask_app import data_engine, permissions_engine
 from imageserver.flask_util import api_permission_required, external_url_for
 from imageserver.models import (
-    Group, SystemPermissions,
+    FolderPermission, Group, SystemPermissions,
     Folio, FolioExport, FolioImage, FolioPermission, FolioHistory
 )
 from imageserver.portfolios.util import get_portfolio_image_attrs
 from imageserver.session_manager import get_session_user, get_session_user_id
+from imageserver.template_attrs import TemplateAttrs
 from imageserver.util import (
     AttrObject,
     object_to_dict, object_to_dict_list,
@@ -284,6 +288,181 @@ class PortfolioContentAPI(MethodView):
             finally:
                 db_session.close()
 
+    @add_api_error_handler
+    def post(self, folio_id):
+        db_session = data_engine.db_get_session()
+        try:
+            # Get the portfolio
+            folio = data_engine.get_portfolio(folio_id, _db_session=db_session)
+            if folio is None:
+                raise DoesNotExistError(str(folio_id))
+            # Check portfolio permissions
+            permissions_engine.ensure_portfolio_permitted(
+                folio, FolioPermission.ACCESS_EDIT, get_session_user()
+            )
+            # Get the image
+            params = self._get_validated_object_parameters(request.form, True)
+            image = data_engine.get_image(params['image_id'], _db_session=db_session)
+            if image is None:
+                raise DoesNotExistError(str(params['image_id']))
+            # Check image permissions
+            permissions_engine.ensure_folder_permitted(
+                image.folder,
+                FolderPermission.ACCESS_VIEW,
+                get_session_user(),
+                False
+            )
+            # Add history first so that we only commit once at the end
+            data_engine.add_portfolio_history(
+                folio,
+                get_session_user(),
+                FolioHistory.ACTION_IMAGE_CHANGE,
+                '%s added' % image.src,
+                _db_session=db_session,
+                _commit=False
+            )
+            # Flag that exported zips are now out of date
+            folio.last_updated = datetime.utcnow()
+            # Add the image and commit changes
+            db_folio_image = data_engine.save_object(FolioImage(
+                    folio, image,
+                    params['image_parameters'],
+                    params['filename'],
+                    params['index']
+                ),
+                refresh=True,
+                _db_session=db_session,
+                _commit=True
+            )
+            return make_api_success_response(object_to_dict(
+                _prep_folioimage_object(db_folio_image)
+            ))
+        finally:
+            db_session.close()
+
+    @add_api_error_handler
+    def put(self, folio_id, image_id):
+        db_session = data_engine.db_get_session()
+        try:
+            folio_image = data_engine.get_portfolio_image(
+                AttrObject(id=folio_id), AttrObject(id=image_id),
+                _db_session=db_session
+            )
+            if folio_image is None:
+                raise DoesNotExistError(str(folio_id) + '/' + str(image_id))
+            # Check permissions
+            permissions_engine.ensure_portfolio_permitted(
+                folio_image.portfolio, FolioPermission.ACCESS_EDIT, get_session_user()
+            )
+            # Update the object with any/all parameters that were passed in
+            params = self._get_validated_object_parameters(request.form, False)
+            changes = []
+            affects_zips = False
+            if (
+                params['image_parameters'] is not None and
+                params['image_parameters'] != folio_image.parameters
+            ):
+                folio_image.parameters = params['image_parameters']
+                changes.append('image attributes changed')
+                affects_zips = True
+            if (
+                params['filename'] is not None and
+                params['filename'] != folio_image.filename
+            ):
+                folio_image.filename = params['filename']
+                changes.append('filename changed')
+                affects_zips = True
+            if (
+                params['index'] is not None and
+                params['index'] != folio_image.order_num
+            ):
+                folio_image.order_num = params['index']
+                changes.append('set as position %d' % (params['index'] + 1))
+            if changes:
+                # Flag if exported zips will be out of date
+                if affects_zips:
+                    folio_image.portfolio.last_updated = datetime.utcnow()
+                # Add history and commit changes
+                data_engine.add_portfolio_history(
+                    folio_image.portfolio,
+                    get_session_user(),
+                    FolioHistory.ACTION_IMAGE_CHANGE,
+                    '%s updated: %s' % (folio_image.image.src, ', '.join(changes)),
+                    _db_session=db_session,
+                    _commit=True
+                )
+            return make_api_success_response(object_to_dict(
+                _prep_folioimage_object(folio_image)
+            ))
+        finally:
+            db_session.close()
+
+    @add_api_error_handler
+    def delete(self, folio_id, image_id):
+        db_session = data_engine.db_get_session()
+        try:
+            folio_image = data_engine.get_portfolio_image(
+                AttrObject(id=folio_id), AttrObject(id=image_id),
+                _db_session=db_session
+            )
+            if folio_image is None:
+                raise DoesNotExistError(str(folio_id) + '/' + str(image_id))
+            # Check permissions
+            permissions_engine.ensure_portfolio_permitted(
+                folio_image.portfolio, FolioPermission.ACCESS_EDIT, get_session_user()
+            )
+            # Add history first so that we only commit once at the end
+            folio = folio_image.portfolio
+            data_engine.add_portfolio_history(
+                folio,
+                get_session_user(),
+                FolioHistory.ACTION_IMAGE_CHANGE,
+                '%s removed' % folio_image.image.src,
+                _db_session=db_session,
+                _commit=False
+            )
+            # Flag that exported zips will be out of date
+            folio.last_updated = datetime.utcnow()
+            # Delete the image from the portfolio and commit changes
+            data_engine.delete_object(
+                folio_image,
+                _db_session=db_session,
+                _commit=True
+            )
+            return make_api_success_response()
+        finally:
+            db_session.close()
+
+    @add_parameter_error_handler
+    def _get_validated_object_parameters(self, data_dict, adding):
+        params = {
+            'filename': data_dict.get('filename'),
+            'index': data_dict.get('index'),
+            'image_parameters': data_dict.get('image_parameters')
+        }
+        if adding:
+            # Require image_id, default the others if not set
+            params['image_id'] = parse_int(data_dict['image_id'])
+            validate_number(params['image_id'], 1, sys.maxint)
+            params['filename'] = params['filename'] or ''
+            params['index'] = parse_int(params['index']) if params['index'] else 0
+            params['image_parameters'] = params['image_parameters'] or '{}'
+        else:
+            # All parameters optional, if not supplied we leave the values unchanged
+            if params['index']:
+                params['index'] = parse_int(params['index'])
+
+        if params['filename'] is not None:
+            validate_string(params['filename'], 0, 255)
+        if params['index'] is not None:
+            validate_number(params['index'], -999999, 999999)
+        if params['image_parameters'] is not None:
+            validate_string(params['image_parameters'], 2, 100 * 1024)
+            params['image_parameters'] = _image_params_to_template_dict(
+                params['image_parameters']
+            )
+        return params
+
 
 class PortfolioReorderAPI(MethodView):
     """
@@ -339,7 +518,25 @@ class PortfolioReorderAPI(MethodView):
 # /api/v1/portfolios/[portfolio id]/exports/
 # /api/v1/portfolios/[portfolio id]/exports/[export id]/
 
-# TODO update last_updated for image changes
+
+def _image_params_to_template_dict(json_str):
+    """
+    Parses and validates image parameters JSON, which is expected to be in the
+    same format as defined for image templates, returning the validated values
+    as an image template dictionary.
+
+    Raises a ValueError if the supplied string is not valid JSON, if the JSON
+    does not conform to image template format, or if any of the image parameters
+    have invalid values.
+    """
+    try:
+        image_template_dict = json.loads(json_str)
+    except ValueError as e:
+        raise ValueError('image parameters: ' + str(e))
+    # Validate the JSON data as conforming to image template syntax
+    _ = TemplateAttrs('Portfolio', image_template_dict)
+    # If that worked, the dict is valid
+    return image_template_dict
 
 
 def _prep_folio_object(folio):
@@ -409,7 +606,7 @@ api_add_url_rules([
     methods=['GET', 'PUT', 'DELETE']
 )
 
-# Define portfolio header API views
+# Define portfolio content API views
 _papi_portfoliocontent_views = api_permission_required(
     PortfolioContentAPI.as_view('portfolio.content'),
     require_login=False

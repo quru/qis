@@ -86,10 +86,7 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         db_session.query(Folio).delete()
         db_session.commit()
         # Create private, internal and public test portfolios
-        db_user = main_tests.setup_user_account('foliouser')
-        db_group = db_user.groups[-1]
-        db_group.permissions.folios = True
-        dm.save_object(db_group)
+        db_user = main_tests.setup_user_account('foliouser', user_type='folios')
         self.create_portfolio('private', db_user,
                               FolioPermission.ACCESS_NONE, FolioPermission.ACCESS_NONE)
         self.create_portfolio('internal', db_user,
@@ -140,7 +137,7 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         api_url = '/api/portfolios/'
         # Must be logged in to create
         rv = self.app.post(api_url)
-        self.assertEqual(rv.status_code, API_CODES.REQUIRES_AUTH)
+        self.assertEqual(rv.status_code, API_CODES.UNAUTHORISED)
         # Must have folio permission to create
         main_tests.setup_user_account('testuser')
         self.login('testuser', 'testuser')
@@ -282,12 +279,9 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         rv = self.app.post(api_url, data={
             'image_id': db_img.id
         })
-        self.assertEqual(rv.status_code, API_CODES.REQUIRES_AUTH)
+        self.assertEqual(rv.status_code, API_CODES.UNAUTHORISED)
         # Cannot change another user's portfolio
-        db_user = main_tests.setup_user_account('anotherfoliouser')
-        db_group = db_user.groups[-1]
-        db_group.permissions.folios = True
-        dm.save_object(db_group)
+        main_tests.setup_user_account('anotherfoliouser', user_type='folios')
         self.login('anotherfoliouser', 'anotherfoliouser')
         rv = self.app.post(api_url, data={
             'image_id': db_img.id
@@ -296,8 +290,12 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         # The portfolio owner must have view permission for the image being added
         self.login('foliouser', 'foliouser')
         db_owner = dm.get_user(username='foliouser', load_groups=True)
-        self.assertEqual(len(db_owner.groups), 1)  # Ensure no other group permissions need changing
-        db_group = db_owner.groups[-1]
+        # Set up the test user to belong to only one group
+        db_owner.groups = [g for g in db_owner.groups if g.name == 'foliouser-group']
+        dm.save_object(db_owner)
+        self.assertEqual(len(db_owner.groups), 1)
+        db_user_group = db_owner.groups[0]
+        db_public_group = dm.get_group(Group.ID_PUBLIC)
         unauth_image_dir = '/secret_images'
         unauth_image_path = unauth_image_dir + '/cathedral.jpg'
         try:
@@ -305,10 +303,15 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
             make_dirs(unauth_image_dir)
             copy_file('test_images/cathedral.jpg', unauth_image_path)
             db_folder = auto_sync_folder(unauth_image_dir, dm, tm, False)
-            fp = FolderPermission(db_folder, db_group, FolderPermission.ACCESS_NONE)
-            dm.save_object(fp)
+            dm.save_object(
+                FolderPermission(db_folder, db_public_group, FolderPermission.ACCESS_NONE)
+            )
+            fp = dm.save_object(
+                FolderPermission(db_folder, db_user_group, FolderPermission.ACCESS_NONE),
+                refresh=True
+            )
             pm.reset_folder_permissions()
-            # Now try to add that image
+            # Now try to add that image to a portfolio
             db_img = auto_sync_existing_file(unauth_image_path, dm, tm)
             rv = self.app.post(api_url, data={
                 'image_id': db_img.id
@@ -521,7 +524,7 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
     # Tests that single-image parameters get stored and get applied
     def test_image_parameters(self):
         db_folio = dm.get_portfolio(human_id='private', load_images=True)
-        db_img = db_folio.images[0]
+        db_img = db_folio.images[0].image
         api_url = '/api/portfolios/' + str(db_folio.id) + '/images/' + str(db_img.id) + '/'
         self.login('foliouser', 'foliouser')
         # Invalid image parameters should fail validation
@@ -678,10 +681,7 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         db_folio = dm.get_portfolio(human_id='public')
         api_url = '/api/portfolios/' + str(db_folio.id) + '/exports/'
         # A portfolio user cannot publish another user's portfolio, even a public one
-        db_user = main_tests.setup_user_account('anotherfoliouser')
-        db_group = db_user.groups[-1]
-        db_group.permissions.folios = True
-        dm.save_object(db_group)
+        main_tests.setup_user_account('anotherfoliouser', user_type='folios')
         self.login('anotherfoliouser', 'anotherfoliouser')
         rv = self.app.post(api_url, data={
             'description': 'Test',
