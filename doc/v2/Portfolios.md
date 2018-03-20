@@ -377,7 +377,8 @@ rather than `/api/v1/admin/portfolios/`.
   * Folio `EDIT` permission required otherwise
   * Returns a list of the portfolio-exports objects for the portfolio, a single
     portfolio-export object, or nothing (after a delete)
-  * Includes a calculated download URL field in the returned object(s)
+  * Includes a calculated download URL field in the returned object(s), which
+    will be blank until the background task that creates the zip file has completed
   * The optional `image_parameters` value will accept JSON in the same structure
     as defined for the existing _image templates_ API
   * When a new record is created, the returned `filename` and `filesize` fields
@@ -385,12 +386,12 @@ rather than `/api/v1/admin/portfolios/`.
     set to a value that can be monitored with the _system tasks_ API
   * When the associated background task has completed, the `filename` and
     `filesize` fields will be set, and the `task_id` field blank
-  * If the background task fails, the the `filename` and `filesize` fields will
+  * If the background task fails, the `filename` and `filesize` fields will
     remain blank
   * It will not be possible to change a zip file (`PUT` is not supported)
   * Deleting an export will delete the associated zip file from the filesystem
-  * Deleting an export before the associated task has completed will return an
-    error
+  * Deleting an export before the associated task has completed will return a
+    `503` "server busy, try again later" status
   * Adds a `foliosaudit` record for change actions
 
 ## Future enhancements

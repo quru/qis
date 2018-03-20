@@ -45,10 +45,12 @@ from imageserver.flask_app import permissions_engine as pm
 
 from imageserver.api_util import API_CODES
 from imageserver.filesystem_manager import (
-    copy_file, delete_dir, make_dirs, path_exists, get_abs_path, get_file_info,
-    get_portfolio_export_file_path
+    copy_file, delete_dir, make_dirs, path_exists,
+    get_abs_path, get_file_info, get_portfolio_export_file_path
 )
-from imageserver.filesystem_sync import auto_sync_existing_file, auto_sync_folder
+from imageserver.filesystem_sync import (
+    auto_sync_existing_file, auto_sync_folder
+)
 from imageserver.models import (
     FolderPermission, Group, Task,
     Folio, FolioImage, FolioPermission, FolioHistory, FolioExport
@@ -130,6 +132,7 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         obj = json.loads(rv.data)
         task = tm.wait_for_task(obj['data']['task_id'], 20)
         self.assertIsNotNone(task, 'Portfolio export task was cleaned up')
+        self.assertIsNotNone(task.result, 'Portfolio export task did not return a result')
         return task.result
 
     # Tests portfolio creation and permissions
@@ -680,6 +683,9 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
     def test_publish_permissions(self):
         db_folio = dm.get_portfolio(human_id='public')
         api_url = '/api/portfolios/' + str(db_folio.id) + '/exports/'
+        # Must be logged in
+        rv = self.app.post(api_url)
+        self.assertEqual(rv.status_code, API_CODES.UNAUTHORISED)
         # A portfolio user cannot publish another user's portfolio, even a public one
         main_tests.setup_user_account('anotherfoliouser', user_type='folios')
         self.login('anotherfoliouser', 'anotherfoliouser')

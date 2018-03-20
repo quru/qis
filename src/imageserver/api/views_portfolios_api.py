@@ -38,23 +38,25 @@ from flask.views import MethodView
 from imageserver.api import api_add_url_rules, url_version_prefix
 from imageserver.api_util import add_api_error_handler, add_parameter_error_handler
 from imageserver.api_util import make_api_success_response
-from imageserver.errors import DoesNotExistError
+from imageserver.errors import DoesNotExistError, ParameterError, ServerTooBusyError
 from imageserver.filesystem_manager import (
-    delete_dir, get_portfolio_directory, get_portfolio_export_file_path
+    count_files, delete_file, delete_dir, path_exists,
+    get_portfolio_directory, get_portfolio_export_file_path
 )
-from imageserver.flask_app import data_engine, permissions_engine
+from imageserver.flask_app import data_engine, permissions_engine, task_engine
 from imageserver.flask_util import api_permission_required, external_url_for
 from imageserver.models import (
-    FolderPermission, Group, SystemPermissions,
+    FolderPermission, Group, SystemPermissions, Task,
     Folio, FolioExport, FolioImage, FolioPermission, FolioHistory
 )
 from imageserver.portfolios.util import get_portfolio_image_attrs
-from imageserver.session_manager import get_session_user, get_session_user_id
+from imageserver.session_manager import get_session_user
 from imageserver.template_attrs import TemplateAttrs
 from imageserver.util import (
     AttrObject,
     object_to_dict, object_to_dict_list,
-    parse_boolean, parse_int, validate_number, validate_string
+    parse_boolean, parse_int, parse_iso_date, parse_iso_datetime,
+    validate_number, validate_string
 )
 from imageserver.views_util import url_for_image_attrs
 
@@ -514,9 +516,175 @@ class PortfolioReorderAPI(MethodView):
         return params
 
 
-# API - portfolio export
-# /api/v1/portfolios/[portfolio id]/exports/
-# /api/v1/portfolios/[portfolio id]/exports/[export id]/
+class PortfolioExportAPI(MethodView):
+    """
+    Provides the REST API to publish and unpublish the images in a portfolio.
+
+    Required access:
+    - Ownership or View access to the portfolio for GET
+    - Ownership of the portfolio for POST and DELETE
+    - Or alternatively admin_folios system permission
+
+    Note that portfolios can be made viewable for public users, so
+    unlike most of the "admin" type APIs these URLs have require_login=False.
+    """
+    @add_api_error_handler
+    def get(self, folio_id, export_id=None):
+        # Get the portfolio
+        folio = data_engine.get_portfolio(folio_id)
+        if folio is None:
+            raise DoesNotExistError(str(folio_id))
+        # Check permissions
+        permissions_engine.ensure_portfolio_permitted(
+            folio, FolioPermission.ACCESS_VIEW, get_session_user()
+        )
+        if export_id is None:
+            # List portfolio exports
+            exports_list = [_prep_folioexport_object(folio, fe) for fe in folio.downloads]
+            return make_api_success_response(object_to_dict_list(exports_list))
+        else:
+            # Get a single portfolio-export
+            folio_export = data_engine.get_object(FolioExport, export_id)
+            if folio_export is None:
+                raise DoesNotExistError(str(export_id))
+            if folio_export.folio_id != folio_id:
+                raise ParameterError(
+                    'Export ID %d does not belong to portfolio ID %d' % (export_id, folio_id)
+                )
+            return make_api_success_response(object_to_dict(
+                _prep_folioexport_object(folio, folio_export)
+            ))
+
+    @add_api_error_handler
+    def post(self, folio_id):
+        db_session = data_engine.db_get_session()
+        try:
+            # Get the portfolio
+            folio = data_engine.get_portfolio(folio_id, _db_session=db_session)
+            if folio is None:
+                raise DoesNotExistError(str(folio_id))
+            # Check permissions
+            permissions_engine.ensure_portfolio_permitted(
+                folio, FolioPermission.ACCESS_EDIT, get_session_user()
+            )
+            # Set default values
+            params = self._get_validated_object_parameters(request.form)
+            if not params['description']:
+                if params['originals']:
+                    params['description'] = 'Unmodified original image files'
+                elif not params['image_parameters']:
+                    params['description'] = 'Default image template applied'
+            # Create a folio-export record and start the export as a background task
+            data_engine.add_portfolio_history(
+                folio,
+                get_session_user(),
+                FolioHistory.ACTION_PUBLISHED,
+                params['description'],
+                _db_session=db_session,
+                _commit=False
+            )
+            folio_export = data_engine.save_object(FolioExport(
+                    folio,
+                    params['description'],
+                    params['originals'],
+                    params['image_parameters'],
+                    params['expiry_time']
+                ),
+                refresh=True,
+                _db_session=db_session,
+                _commit=True
+            )
+            export_task = task_engine.add_task(
+                get_session_user(),
+                'Export portfolio %d / export %d' % (folio.id, folio_export.id),
+                'export_portfolio', {
+                    'export_id': folio_export.id
+                },
+                Task.PRIORITY_NORMAL,
+                'info', 'error', 1
+            )
+            # Update and return the folio-export record with the task ID
+            folio_export.task_id = export_task.id
+            data_engine.save_object(folio_export, _db_session=db_session, _commit=True)
+            return make_api_success_response(object_to_dict(
+                _prep_folioexport_object(folio, folio_export)
+            ), task_accepted=True)
+        finally:
+            db_session.close()
+
+    @add_api_error_handler
+    def delete(self, folio_id, export_id):
+        db_session = data_engine.db_get_session()
+        try:
+            # Get the portfolio
+            folio = data_engine.get_portfolio(folio_id, _db_session=db_session)
+            if folio is None:
+                raise DoesNotExistError(str(folio_id))
+            # Check permissions
+            permissions_engine.ensure_portfolio_permitted(
+                folio, FolioPermission.ACCESS_EDIT, get_session_user()
+            )
+            # Get the single portfolio-export
+            folio_export = data_engine.get_object(FolioExport, export_id, _db_session=db_session)
+            if folio_export is None:
+                raise DoesNotExistError(str(export_id))
+            if folio_export.folio_id != folio_id:
+                raise ParameterError(
+                    'Export ID %d does not belong to portfolio ID %d' % (export_id, folio_id)
+                )
+            # Check whether the export task is running
+            if folio_export.task_id:
+                task = task_engine.get_task(folio_export.task_id, _db_session=db_session)
+                if (task and task.status == Task.STATUS_ACTIVE) or (
+                    task and task.status == Task.STATUS_PENDING and
+                    not task_engine.cancel_task(task)
+                ):
+                    raise ServerTooBusyError('The export is currently in progress, try again soon')
+            # Delete
+            data_engine.delete_object(folio_export, _db_session=db_session, _commit=False)
+            data_engine.add_portfolio_history(
+                folio,
+                get_session_user(),
+                FolioHistory.ACTION_UNPUBLISHED,
+                folio_export.description or folio_export.filename,
+                _db_session=db_session,
+                _commit=True
+            )
+            # If we got this far the database delete worked and we now need to
+            # delete the exported zip file
+            zip_rel_path = get_portfolio_export_file_path(folio_export)
+            if folio_export.filename:
+                delete_file(zip_rel_path)
+            # And if the zip directory is now empty, delete the directory too
+            zip_rel_dir = get_portfolio_directory(folio)
+            if path_exists(zip_rel_dir, require_directory=True):
+                zips_count = count_files(zip_rel_dir, recurse=False)
+                if zips_count[0] == 0:
+                    delete_dir(zip_rel_dir)
+            return make_api_success_response()
+        finally:
+            db_session.close()
+
+    @add_parameter_error_handler
+    def _get_validated_object_parameters(self, data_dict):
+        params = {
+            'description': data_dict['description'],
+            'originals': parse_boolean(data_dict['originals']),
+            'image_parameters': data_dict.get('image_parameters', '{}'),
+            'expiry_time': parse_iso_date(data_dict['expiry_time'])
+        }
+        if len(data_dict['expiry_time']) >= 19:
+            # It looks like expiry_time has a time part
+            params['expiry_time'] = parse_iso_datetime(data_dict['expiry_time'])
+
+        validate_string(params['description'], 0, 5 * 1024)
+        validate_string(params['image_parameters'], 2, 100 * 1024)
+        params['image_parameters'] = _image_params_to_template_dict(
+            params['image_parameters']
+        )
+        if params['expiry_time'] < datetime.utcnow():
+            raise ValueError('expiry time has already passed (use UTC)')
+        return params
 
 
 def _image_params_to_template_dict(json_str):
@@ -629,7 +797,7 @@ api_add_url_rules([
 # Define portfolio reordering API views
 _papi_portfolioreorder_views = api_permission_required(
     PortfolioReorderAPI.as_view('portfolio.reorder'),
-    require_login=False  # Could be True but would be the only portfolio URL returning HTTP 401
+    require_login=False  # Could be True but would be the only URL returning HTTP 401
 )
 api_add_url_rules([
         url_version_prefix + '/portfolios/<int:folio_id>/images/<int:image_id>/position/',
@@ -637,4 +805,24 @@ api_add_url_rules([
     ],
     view_func=_papi_portfolioreorder_views,
     methods=['PUT']
+)
+
+# Define portfolio export API views
+_papi_portfolioexport_views = api_permission_required(
+    PortfolioExportAPI.as_view('portfolio.export'),
+    require_login=False
+)
+api_add_url_rules([
+        url_version_prefix + '/portfolios/<int:folio_id>/exports/',
+        '/portfolios/<int:folio_id>/exports/'
+    ],
+    view_func=_papi_portfolioexport_views,
+    methods=['GET', 'POST']
+)
+api_add_url_rules([
+        url_version_prefix + '/portfolios/<int:folio_id>/exports/<int:export_id>/',
+        '/portfolios/<int:folio_id>/exports/<int:export_id>/'
+    ],
+    view_func=_papi_portfolioexport_views,
+    methods=['GET', 'DELETE']
 )
