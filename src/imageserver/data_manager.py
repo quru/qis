@@ -1458,6 +1458,26 @@ class DataManager(object):
             db_session.close()
 
     @db_operation
+    def cancel_task(self, task):
+        """
+        Atomically deletes the given unlocked and still-pending task.
+        Returns True on success, or False if the task was locked and started
+        before the operation could take place.
+        """
+        db_session = self._db.Session()
+        try:
+            task_table = Task.__table__
+            del_op = task_table.delete().\
+                where(Task.id == task.id).\
+                where(Task.status == Task.STATUS_PENDING).\
+                where(Task.lock_id == None)
+            res = db_session.execute(del_op)
+            db_session.commit()
+            return (res.rowcount > 0)
+        finally:
+            db_session.close()
+
+    @db_operation
     def complete_task(self, task, _db_session=None, _commit=True):
         """
         Marks a task as complete, unlocks it, and sets the keep_until date.

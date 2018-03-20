@@ -150,3 +150,18 @@ class TaskServerTests(main_tests.FlaskTestCase):
         self.assertIsInstance(task_obj.result, ValueError)
         self.assertEqual(repr(task_obj.result), repr(ValueError('An error happened')))
         dm.delete_object(task_obj)
+
+    # Tests that new tasks can be cancelled
+    def test_task_cancel(self):
+        task_obj = tm.add_task(
+            None, 'Test task cancelling', 'test_result_task',
+            {'raise_exception': False, 'return_value': None},
+            Task.PRIORITY_LOW, 'info', 'error', 0
+        )
+        self.assertIsNotNone(task_obj)
+        self.assertGreater(task_obj.id, 0)
+        # Yes, this could be a fragile test if the task server gets to it first
+        # It has worked the first 5 times in a row I've tried it, so fingers crossed
+        self.assertTrue(tm.cancel_task(task_obj))
+        task_obj = tm.get_task(task_obj.id)
+        self.assertIsNone(task_obj)

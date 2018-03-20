@@ -118,6 +118,14 @@ class TaskManager(object):
         finally:
             db_session.close()
 
+    def cancel_task(self, task):
+        """
+        Atomically deletes the given unlocked and pending task object.
+        Returns a boolean for success, False if the task no longer exists,
+        has been started or has finished.
+        """
+        return self._data.cancel_task(task)
+
     def get_task(self, task_id, decode_attrs=False, _db_session=None):
         """
         Returns the Task object matching the requested ID, or None if
