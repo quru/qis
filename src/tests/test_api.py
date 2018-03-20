@@ -500,23 +500,23 @@ class ImageServerAPITests(BaseTestCase):
         rv = self.app.delete('/api/admin/groups/' + str(Group.ID_EVERYONE) + '/')
         assert rv.status_code == API_CODES.UNAUTHORISED, rv
         # Updating a group should change the name/description but not the permissions
-        dwarf_group = dm.get_group(groupname='Red Dwarf')
-        assert dwarf_group is not None
+        user_group = dm.get_group(groupname='kryten-group')
+        assert user_group is not None
         change_data = {
-            'name': 'White Dwarf',
-            'description': 'Was Red now White',
+            'name': 'Kryten\'s Group',
+            'description': 'Renamed group desc',
             'group_type': Group.GROUP_TYPE_LOCAL,
             'access_reports': '1',
             'access_admin_files': '1',
             'access_admin_all': '1'
         }
-        rv = self.app.put('/api/admin/groups/' + str(dwarf_group.id) + '/', data=change_data)
+        rv = self.app.put('/api/admin/groups/' + str(user_group.id) + '/', data=change_data)
         assert rv.status_code == API_CODES.SUCCESS
-        rv = self.app.get('/api/admin/groups/' + str(dwarf_group.id) + '/')
+        rv = self.app.get('/api/admin/groups/' + str(user_group.id) + '/')
         assert rv.status_code == API_CODES.SUCCESS
         obj = json.loads(rv.data)
-        assert obj['data']['name'] == 'White Dwarf'                # Changed
-        assert obj['data']['description'] == 'Was Red now White'   # Changed
+        assert obj['data']['name'] == 'Kryten\'s Group'            # Changed
+        assert obj['data']['description'] == 'Renamed group desc'  # Changed
         assert obj['data']['permissions']['reports'] == False      # Unchanged
         assert obj['data']['permissions']['admin_files'] == False
         assert obj['data']['permissions']['admin_all'] == False
@@ -1314,7 +1314,7 @@ class ImageServerAPITests(BaseTestCase):
 
         # Helper to change user permissions
         def setup_fp_user(root_access, test_folder_access=None):
-            db_group = dm.get_group(groupname='Red Dwarf')
+            db_group = dm.get_group(groupname='kryten-group')
             db_folder = dm.get_folder(folder_path='')
             # Set root folder access
             rf_fp = dm.get_folder_permission(db_folder, db_group)

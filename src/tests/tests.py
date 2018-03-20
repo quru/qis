@@ -197,10 +197,10 @@ def setup_user_account(login_name, user_type='none', allow_api=False):
             testuser.allow_api = allow_api
             testuser.status = User.STATUS_ACTIVE
         # Wipe system permissions
-        test_group = dm.get_group(groupname='Red Dwarf', _db_session=db_session)
+        test_group = dm.get_group(groupname=login_name+'-group', _db_session=db_session)
         if not test_group:
             test_group = Group(
-                'Red Dwarf',
+                login_name + '-group',
                 'Test group',
                 Group.GROUP_TYPE_LOCAL
             )
@@ -214,6 +214,8 @@ def setup_user_account(login_name, user_type='none', allow_api=False):
         # Apply permissions for requested test type
         if user_type == 'none':
             pass
+        elif user_type == 'folios':
+            test_group.permissions.folios = True
         elif user_type == 'admin_users':
             test_group.permissions.admin_users = True
         elif user_type == 'admin_files':
@@ -2678,7 +2680,7 @@ class ImageServerTestsFast(BaseTestCase):
             assert rv.status_code == API_CODES.UNAUTHORISED
             # Set a user's group to allow view for root folder
             setup_user_account('kryten', 'none')
-            db_group = dm.get_group(groupname='Red Dwarf')
+            db_group = dm.get_group(groupname='kryten-group')
             db_folder = dm.get_folder(folder_path='')
             dm.save_object(FolderPermission(db_folder, db_group, FolderPermission.ACCESS_VIEW))
             pm.reset_folder_permissions()
@@ -2761,7 +2763,7 @@ class ImageServerTestsFast(BaseTestCase):
             # Create test user with no permission overrides, log in
             setup_user_account('kryten', 'none')
             self.login('kryten', 'kryten')
-            db_group = dm.get_group(groupname='Red Dwarf')
+            db_group = dm.get_group(groupname='kryten-group')
             db_folder = dm.get_folder(folder_path='')
             db_test_folder = dm.get_folder(folder_path='test_images')
             # Run numbered tests - first with no permission
