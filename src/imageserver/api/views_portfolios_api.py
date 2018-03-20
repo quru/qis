@@ -38,18 +38,15 @@ from flask.views import MethodView
 from imageserver.api import api_add_url_rules, url_version_prefix
 from imageserver.api_util import add_api_error_handler, add_parameter_error_handler
 from imageserver.api_util import make_api_success_response
-from imageserver.errors import DoesNotExistError, ParameterError, ServerTooBusyError
-from imageserver.filesystem_manager import (
-    count_files, delete_file, delete_dir, path_exists,
-    get_portfolio_directory, get_portfolio_export_file_path
-)
+from imageserver.errors import DoesNotExistError, ParameterError
+from imageserver.filesystem_manager import delete_dir, get_portfolio_directory
 from imageserver.flask_app import data_engine, permissions_engine, task_engine
 from imageserver.flask_util import api_permission_required, external_url_for
 from imageserver.models import (
     FolderPermission, Group, SystemPermissions, Task,
     Folio, FolioExport, FolioImage, FolioPermission, FolioHistory
 )
-from imageserver.portfolios.util import get_portfolio_image_attrs
+from imageserver.portfolios.util import delete_portfolio_export, get_portfolio_image_attrs
 from imageserver.session_manager import get_session_user
 from imageserver.template_attrs import TemplateAttrs
 from imageserver.util import (
@@ -632,35 +629,13 @@ class PortfolioExportAPI(MethodView):
                 raise ParameterError(
                     'Export ID %d does not belong to portfolio ID %d' % (export_id, folio_id)
                 )
-            # Check whether the export task is running
-            if folio_export.task_id:
-                task = task_engine.get_task(folio_export.task_id, _db_session=db_session)
-                if (task and task.status == Task.STATUS_ACTIVE) or (
-                    task and task.status == Task.STATUS_PENDING and
-                    not task_engine.cancel_task(task)
-                ):
-                    raise ServerTooBusyError('The export is currently in progress, try again soon')
-            # Delete
-            data_engine.delete_object(folio_export, _db_session=db_session, _commit=False)
-            data_engine.add_portfolio_history(
-                folio,
+            # Delete it and the export files
+            delete_portfolio_export(
+                folio_export,
                 get_session_user(),
-                FolioHistory.ACTION_UNPUBLISHED,
                 folio_export.description or folio_export.filename,
-                _db_session=db_session,
-                _commit=True
+                _db_session=db_session
             )
-            # If we got this far the database delete worked and we now need to
-            # delete the exported zip file
-            zip_rel_path = get_portfolio_export_file_path(folio_export)
-            if folio_export.filename:
-                delete_file(zip_rel_path)
-            # And if the zip directory is now empty, delete the directory too
-            zip_rel_dir = get_portfolio_directory(folio)
-            if path_exists(zip_rel_dir, require_directory=True):
-                zips_count = count_files(zip_rel_dir, recurse=False)
-                if zips_count[0] == 0:
-                    delete_dir(zip_rel_dir)
             return make_api_success_response()
         finally:
             db_session.close()

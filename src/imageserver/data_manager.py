@@ -1742,6 +1742,16 @@ class DataManager(object):
         """
         return attr_name in obj.__dict__
 
+    def object_in_session(self, obj, db_session):
+        """
+        Utility to return whether an object is loaded in a database session.
+        When True, lazily-loaded attributes can be accessed, and changes made
+        to the object will be persisted with db_session.commit(). When False,
+        lazily-loaded attributes raise an error when accessed and object
+        changes are not persisted.
+        """
+        return obj in db_session
+
     def _get_id_cache_key(self, src):
         """
         Returns the cache key to use for storing/retrieving a cached image ID.

@@ -29,7 +29,14 @@
 # =========  ====  ============================================================
 #
 
+from imageserver.errors import ServerTooBusyError
+from imageserver.filesystem_manager import (
+    count_files, delete_file, delete_dir, path_exists,
+    get_portfolio_directory, get_portfolio_export_file_path
+)
+from imageserver.flask_app import data_engine, task_engine
 from imageserver.image_attrs import ImageAttrs
+from imageserver.models import FolioHistory, Task, FolioExport
 
 
 def _template_dict_to_kv_dict(template_dict):
@@ -103,3 +110,63 @@ def get_portfolio_export_image_attrs(folio_export, folio_image, normalise=True, 
     if validate:
         image_attrs.validate()
     return image_attrs
+
+
+def delete_portfolio_export(folio_export, history_user, history_info, _db_session=None):
+    """
+    Deletes a portfolio export record and the associated zip file (if it exists),
+    and adds an audit trail entry for the parent portfolio. If you supply a
+    database session it will be committed before the zip file is deleted, so
+    that files are only deleted once the database operations are known to have
+    worked.
+
+    Raises a ServerTooBusyError if the export is still in progress.
+    Raises an OSError if the zip file or directory cannot be deleted.
+    """
+    db_session = _db_session or data_engine.db_get_session()
+    try:
+        # Ensure we can access folio_export.portfolio
+        if not data_engine.object_in_session(folio_export, db_session):
+            folio_export = data_engine.get_object(
+                FolioExport, folio_export.id, _db_session=db_session
+            )
+
+        # Check whether the export task is running
+        if folio_export.task_id:
+            task = task_engine.get_task(folio_export.task_id, _db_session=db_session)
+            if (task and task.status == Task.STATUS_ACTIVE) or (
+                task and task.status == Task.STATUS_PENDING and
+                not task_engine.cancel_task(task)
+            ):
+                raise ServerTooBusyError(
+                    'this export is currently in progress, wait a while then try again'
+                )
+
+        # Delete and add history in one commit
+        data_engine.add_portfolio_history(
+            folio_export.portfolio,
+            history_user,
+            FolioHistory.ACTION_UNPUBLISHED,
+            history_info,
+            _db_session=db_session,
+            _commit=False
+        )
+        data_engine.delete_object(
+            folio_export,
+            _db_session=db_session,
+            _commit=True
+        )
+        # If we got this far the database delete worked and we now need to
+        # delete the exported zip file
+        zip_rel_path = get_portfolio_export_file_path(folio_export)
+        if folio_export.filename:
+            delete_file(zip_rel_path)
+        # And if the zip directory is now empty, delete the directory too
+        zip_rel_dir = get_portfolio_directory(folio_export.portfolio)
+        if path_exists(zip_rel_dir, require_directory=True):
+            zips_count = count_files(zip_rel_dir, recurse=False)
+            if zips_count[0] == 0:
+                delete_dir(zip_rel_dir)
+    finally:
+        if not _db_session:
+            db_session.close()
