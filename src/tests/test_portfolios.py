@@ -689,16 +689,35 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         api_url = '/api/portfolios/' + str(db_folio.id) + '/images/' + str(db_folio.images[0].image_id) + '/'
         self.login('foliouser', 'foliouser')
         bad_filenames = [
-            '/etc/passwdx',
+            '/etc/passwdx',  # Paths are not allowed
             '../etc/passwdx',
             '//etc/passwdx',
-            './../etc/passwdx'
+            './../etc/passwdx',
+            'ütêßt.jpg',     # Only ascii is supported in zips
+            'hellö.jpg'
         ]
         for bf in bad_filenames:
             rv = self.app.put(api_url, data={'filename': bf})
             self.assertEqual(rv.status_code, API_CODES.INVALID_PARAM)
             obj = json.loads(rv.data)
             self.assertIn('filename not allowed', obj['message'])
+
+    # Tests that an empty portfolio cannot be published
+    def test_publish_empty(self):
+        db_folio = dm.get_portfolio(human_id='public', load_images=True)
+        api_url = '/api/portfolios/' + str(db_folio.id) + '/exports/'
+        for f_img in db_folio.images:
+            dm.delete_object(f_img)
+        self.login('foliouser', 'foliouser')
+        rv = self.app.post(api_url, data={
+            'description': 'Test export of empty portfolio',
+            'originals': True,
+            'expiry_time': to_iso_datetime(datetime.utcnow() + timedelta(days=1))
+        })
+        self.assertEqual(rv.status_code, API_CODES.INVALID_PARAM)
+        obj = json.loads(rv.data)
+        self.assertEqual(obj['status_code'], API_CODES.INVALID_PARAM)
+        self.assertIn('portfolio is empty', obj['message'])
 
     # Tests access required for publishing
     def test_publish_permissions(self):

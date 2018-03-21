@@ -34,9 +34,10 @@ from imageserver.filesystem_manager import (
     count_files, delete_file, delete_dir, path_exists,
     get_portfolio_directory, get_portfolio_export_file_path
 )
-from imageserver.flask_app import data_engine, task_engine
+from imageserver.flask_app import data_engine, image_engine, task_engine
 from imageserver.image_attrs import ImageAttrs
 from imageserver.models import FolioHistory, Task, FolioExport
+from imageserver.util import get_file_extension
 
 
 def _template_dict_to_kv_dict(template_dict):
@@ -60,17 +61,24 @@ def _template_dict_to_kv_dict(template_dict):
         raise ValueError('Bad template dictionary format (refer to portfolio image parameters)')
 
 
-def get_portfolio_image_attrs(folio_image, normalise=True, validate=True):
+def get_portfolio_image_attrs(folio_image, normalise=True, validate=True, finalise=False):
     """
-    Creates and returns the ImageAttrs object for a FolioImage object. You can
-    use this to obtain a binary image file (via ImageManager) or the image URL
-    (via views_util.url_for_image_attrs()).
+    Creates and returns the ImageAttrs object for a FolioImage object.
+    You can use this to obtain a binary image file (via ImageManager)
+    or the image URL (via views_util.url_for_image_attrs()).
 
-    If folio_image.parameters is empty, the returned ImageAttrs object
-    will only have the 'filename' attribute set.
+    Pass 'finalise' as True if you will be obtaining a binary image file,
+    in order to apply template values and the system's default image settings.
+    Leave 'finalise' as False if you will be generating an image URL to avoid
+    filling the URL with unnecessary query parameters. The finalise operation
+    includes both normalise and validation.
 
-    Raises a ValueError if validation is requested and folio_image.parameters
-    contains a bad value.
+    If folio_image.parameters is empty the returned ImageAttrs object will only
+    have the 'filename' attribute set (plus the system's default image settings
+    if 'finalise' is True).
+
+    Raises a ValueError if 'finalise' or 'validate' is True and
+    folio_image.parameters contains a bad value.
     """
     image_attrs = ImageAttrs(folio_image.image.src, folio_image.image.id)
     if folio_image.parameters:
@@ -80,24 +88,34 @@ def get_portfolio_image_attrs(folio_image, normalise=True, validate=True):
             validate=validate,
             normalise=normalise
         )
+    if finalise:
+        image_engine.finalise_image_attrs(image_attrs)
     return image_attrs
 
 
-def get_portfolio_export_image_attrs(folio_export, folio_image, normalise=True, validate=True):
+def get_portfolio_export_image_attrs(folio_export, folio_image,
+                                     normalise=True, validate=True, finalise=False):
     """
     Creates and returns the ImageAttrs object for a FolioImage object in the
     context of the given FolioExport. You can use this to obtain a binary image
     file (via ImageManager) or the image URL (via views_util.url_for_image_attrs()).
 
-    The export's image parameters are applied on top of the single image parameters.
+    Pass 'finalise' as True if you will be obtaining a binary image file,
+    in order to apply template values and the system's default image settings.
+    Leave 'finalise' as False if you will be generating an image URL to avoid
+    filling the URL with unnecessary query parameters. The finalise operation
+    includes both normalise and validation.
 
-    Raises a ValueError if validation is requested and either
+    The export's image parameters are applied on top of the single image
+    parameters.
+
+    Raises a ValueError if 'finalise' or 'validate' is True and either
     folio_export.parameters or folio_image.parameters contains a bad value.
     """
     if folio_export.originals:
         return ImageAttrs(folio_image.image.src, folio_image.image.id)
 
-    image_attrs = get_portfolio_image_attrs(folio_image, False, False)
+    image_attrs = get_portfolio_image_attrs(folio_image, False, False, False)
     if folio_export.parameters:
         image_attrs.apply_dict(
             _template_dict_to_kv_dict(folio_export.parameters),
@@ -105,11 +123,34 @@ def get_portfolio_export_image_attrs(folio_export, folio_image, normalise=True, 
             validate=False,
             normalise=False
         )
-    if normalise:
-        image_attrs.normalise_values()
-    if validate:
-        image_attrs.validate()
+    if finalise:
+        image_engine.finalise_image_attrs(image_attrs)
+    else:
+        if normalise:
+            image_attrs.normalise_values()
+        if validate:
+            image_attrs.validate()
     return image_attrs
+
+
+def get_portfolio_export_filename(folio_image, image_attrs):
+    """
+    Returns the final filename to use when exporting a portfolio image.
+    This is determined by the original filename, any filename override inside
+    the portfolio, and the image-level and portfolio-level image parameters
+    that might affect the final file extension.
+
+    The 'image_attrs' parameter should be obtained using
+    get_portfolio_export_image_attrs(finalise=True) so that the finalise
+    operation has already applied template values etc from the portfolio image
+    parameters.
+    """
+    original_filename = image_attrs.filename(with_path=False)
+    use_filename = folio_image.filename or original_filename
+    # Make sure the file extension reflects the final image spec
+    final_format = image_attrs.format_raw() or get_file_extension(original_filename)
+    temp_attrs = ImageAttrs(use_filename, iformat=final_format)
+    return temp_attrs.filename(with_path=False, replace_format=True)
 
 
 def delete_portfolio_export(folio_export, history_user, history_info, _db_session=None):

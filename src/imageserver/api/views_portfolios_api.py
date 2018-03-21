@@ -591,7 +591,8 @@ class PortfolioExportAPI(MethodView):
                 get_session_user(),
                 'Export portfolio %d / export %d' % (folio.id, folio_export.id),
                 'export_portfolio', {
-                    'export_id': folio_export.id
+                    'export_id': folio_export.id,
+                    'ignore_errors': False
                 },
                 Task.PRIORITY_NORMAL,
                 'info', 'error', 1

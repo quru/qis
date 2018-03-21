@@ -1,7 +1,7 @@
 Portfolios
 ==========
 
-Current status: pending
+Current status: phase 1 complete
 
 A portfolio is a hand-curated list of images that can be viewed together, downloaded
 together, or transformed together (e.g. resized to the same dimensions, or having

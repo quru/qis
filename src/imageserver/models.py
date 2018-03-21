@@ -550,6 +550,8 @@ class SystemStats(Base, BaseMixin, IDEqualityMixin):
 class Task(Base, BaseMixin, IDEqualityMixin):
     """
     SQLAlchemy ORM wrapper for a background task record.
+    The model definition allows only one instance of a particular task
+    (the combination of function name + parameters) to exist at once.
     """
     STATUS_PENDING = 0
     STATUS_ACTIVE = 1

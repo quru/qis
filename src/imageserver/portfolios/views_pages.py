@@ -127,7 +127,7 @@ def portfolio_view(human_id):
             )
         ]
         for fol_img in folio.images:
-            image_attrs = get_portfolio_image_attrs(fol_img, False, False)
+            image_attrs = get_portfolio_image_attrs(fol_img, False, False, False)
             image_attrs.apply_dict(web_view_params, True, False, False)
             if len(pre_sized_images) == 0:
                 image_attrs.apply_dict(sizing_view_params, True, False, False)

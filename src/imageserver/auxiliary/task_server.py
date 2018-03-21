@@ -83,6 +83,7 @@ def run_task(thread_id, task, logger, data_engine, debug_mode):
             task_log('Task \'%s\' completed' % task.name)
 
     except Exception as e:
+        # Store the exception as the task result
         task.result = e
         task_error_log(
             'Task ID %d \'%s\' failed with error: %s' % (task.id, task.name, str(e))
