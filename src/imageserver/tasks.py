@@ -475,6 +475,38 @@ def create_image_pyramid(**kwargs):
     )
 
 
+def expire_portfolio_exports(**kwargs):
+    """
+    A task that removes expired portfolio exports.
+    """
+    from flask_app import app
+    from portfolios.util import delete_portfolio_export
+
+    db_session = app.data_engine.db_get_session()
+    try:
+        expired_exports = app.data_engine.get_expired_portfolio_exports(db_session)
+        for folio_export in expired_exports:
+            try:
+                app.log.info(
+                    'Deleting expired export %s from portfolio ID %d' %
+                    (folio_export.filename, folio_export.folio_id)
+                )
+                # This does a db_session.commit()
+                delete_portfolio_export(
+                    folio_export,
+                    None,
+                    'Expired: ' + folio_export.describe(True),
+                    _db_session=db_session
+                )
+            except Exception as e:
+                app.log.error(
+                    'Failed to delete portfolio export %d: %s' % (folio_export.id, str(e))
+                )
+                db_session.rollback()
+    finally:
+        db_session.close()
+
+
 def test_result_task(**kwargs):
     """
     A null task used for testing return values.

@@ -564,29 +564,25 @@ class PortfolioExportAPI(MethodView):
             permissions_engine.ensure_portfolio_permitted(
                 folio, FolioPermission.ACCESS_EDIT, get_session_user()
             )
-            # Set default values
-            params = self._get_validated_object_parameters(request.form)
-            if not params['description']:
-                if params['originals']:
-                    params['description'] = 'Unmodified original image files'
-                elif not params['image_parameters']:
-                    params['description'] = 'Default image template applied'
             # Create a folio-export record and start the export as a background task
+            params = self._get_validated_object_parameters(request.form)
+            folio_export = FolioExport(
+                folio,
+                params['description'],
+                params['originals'],
+                params['image_parameters'],
+                params['expiry_time']
+            )
             data_engine.add_portfolio_history(
                 folio,
                 get_session_user(),
                 FolioHistory.ACTION_PUBLISHED,
-                params['description'],
+                folio_export.describe(True),
                 _db_session=db_session,
                 _commit=False
             )
-            folio_export = data_engine.save_object(FolioExport(
-                    folio,
-                    params['description'],
-                    params['originals'],
-                    params['image_parameters'],
-                    params['expiry_time']
-                ),
+            folio_export = data_engine.save_object(
+                folio_export,
                 refresh=True,
                 _db_session=db_session,
                 _commit=True
@@ -633,7 +629,7 @@ class PortfolioExportAPI(MethodView):
             delete_portfolio_export(
                 folio_export,
                 get_session_user(),
-                folio_export.description or folio_export.filename,
+                'Deleted: ' + folio_export.describe(True),
                 _db_session=db_session
             )
             return make_api_success_response()

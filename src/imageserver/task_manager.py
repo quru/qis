@@ -217,6 +217,13 @@ class TaskManager(object):
             'interval_hours': 24,
             'last_run': None,
             'logging': ('info', 'error')
+        }, {
+            'name': 'Remove expired portfolio exports',
+            'function': 'expire_portfolio_exports',
+            'priority': Task.PRIORITY_NORMAL,
+            'interval_hours': 1,
+            'last_run': None,
+            'logging': ('info', 'error')
         }]
         while (self._hk_running):
             time.sleep(60)

@@ -36,9 +36,9 @@
 #                  (the request.g.user getting into a database session)
 #
 
+from datetime import datetime, timedelta
 from functools import wraps
 import os.path
-import datetime
 import time
 import zlib
 
@@ -1490,8 +1490,7 @@ class DataManager(object):
             task.lock_id = None
             if task.keep_for > 0:
                 task.keep_until = (
-                    datetime.datetime.utcnow() +
-                    datetime.timedelta(seconds=task.keep_for)
+                    datetime.utcnow() + timedelta(seconds=task.keep_for)
                 )
             if _commit:
                 db_session.commit()
@@ -1506,13 +1505,27 @@ class DataManager(object):
         """
         db_session = _db_session or self._db.Session()
         try:
-            dt_now = datetime.datetime.utcnow()
+            dt_now = datetime.utcnow()
             db_session.query(Task).\
                 filter(Task.status == Task.STATUS_COMPLETE).\
                 filter(or_(Task.keep_until == None, Task.keep_until < dt_now)).\
                 delete()
             if _commit:
                 db_session.commit()
+        finally:
+            if not _db_session:
+                db_session.close()
+
+    @db_operation
+    def get_expired_portfolio_exports(self, _db_session=None):
+        """
+        Returns a list of PortfolioExport objects that have passed their expiry time.
+        """
+        db_session = _db_session or self._db.Session()
+        try:
+            q = db_session.query(FolioExport)
+            q = q.filter(FolioExport.keep_until < datetime.utcnow())
+            return q.all()
         finally:
             if not _db_session:
                 db_session.close()

@@ -32,6 +32,7 @@
 # 28Feb2018  Matt  Add portfolios models
 #
 
+import locale
 import os.path
 import uuid
 from datetime import datetime
@@ -839,6 +840,32 @@ class FolioExport(Base, BaseMixin, IDEqualityMixin):
 
     def __unicode__(self):
         return u'PortfolioExport: ' + (self.filename or 'Pending')
+
+    def is_outdated(self):
+        """
+        Returns whether the portfolio has had image modifications made since
+        this export was created.
+        """
+        return self.created < self.portfolio.last_updated
+
+    def describe(self, add_image_info=False):
+        """
+        Returns a description of this export. This will be the 'description'
+        attribute if set, or some other text if not. When add_image_info is
+        True, details about the 'originals' and 'parameters' attributes will
+        be included.
+        """
+        desc = self.description or self.filename or 'Untitled'
+        desc += ' (expires ' + self.keep_until.strftime(locale.nl_langinfo(locale.D_T_FMT)) + ' UTC'
+        if add_image_info:
+            if self.originals:
+                desc += ', images are unmodified originals'
+            elif not self.parameters:
+                desc += ', images use default settings'
+            else:
+                desc += ', images have changes applied'
+        desc += ')'
+        return desc
 
     @staticmethod
     def create_filename():
