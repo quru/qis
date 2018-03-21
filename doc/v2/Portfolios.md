@@ -353,7 +353,8 @@ rather than `/api/v1/admin/portfolios/`.
   * Returns the newly ordered list of portfolio-image objects in the portfolio
     after a reorder
   * The optional `filename` value overrides an image's default filename when the
-    portfolio is published to a zip file
+    portfolio is published to a zip file. It must be a plain ASCII string for
+    zip file compatibility, with no directory or path prefix.
   * The optional `image_parameters` value will accept JSON in the same structure
     as defined for the existing _image templates_ API
   * Includes a calculated view URL field for each image, which will incorporate
@@ -390,6 +391,7 @@ rather than `/api/v1/admin/portfolios/`.
     remain blank
   * It will not be possible to change a zip file (`PUT` is not supported)
   * Deleting an export will delete the associated zip file from the filesystem
+  * Deleting an export before the associated task has started will be allowed
   * Deleting an export before the associated task has completed will return a
     `503` "server busy, try again later" status
   * Adds a `foliosaudit` record for change actions

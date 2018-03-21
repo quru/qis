@@ -133,6 +133,10 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         task = tm.wait_for_task(obj['data']['task_id'], 20)
         self.assertIsNotNone(task, 'Portfolio export task was cleaned up')
         self.assertIsNotNone(task.result, 'Portfolio export task did not return a result')
+        self.assertIsInstance(
+            task.result, FolioExport,
+            'Portfolio export task raised an exception: ' + str(task.result)
+        )
         return task.result
 
     # Tests portfolio creation and permissions
@@ -678,6 +682,23 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
                 self.assertEqual(png_dims[0], 100)
         finally:
             exzip.close()
+
+    # Tests that the filename override can't be used to access or overwrite system files
+    def test_publish_bad_filenames(self):
+        db_folio = dm.get_portfolio(human_id='private', load_images=True)
+        api_url = '/api/portfolios/' + str(db_folio.id) + '/images/' + str(db_folio.images[0].image_id) + '/'
+        self.login('foliouser', 'foliouser')
+        bad_filenames = [
+            '/etc/passwdx',
+            '../etc/passwdx',
+            '//etc/passwdx',
+            './../etc/passwdx'
+        ]
+        for bf in bad_filenames:
+            rv = self.app.put(api_url, data={'filename': bf})
+            self.assertEqual(rv.status_code, API_CODES.INVALID_PARAM)
+            obj = json.loads(rv.data)
+            self.assertIn('filename not allowed', obj['message'])
 
     # Tests access required for publishing
     def test_publish_permissions(self):
