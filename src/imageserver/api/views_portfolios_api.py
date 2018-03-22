@@ -50,10 +50,10 @@ from imageserver.portfolios.util import delete_portfolio_export, get_portfolio_i
 from imageserver.session_manager import get_session_user
 from imageserver.template_attrs import TemplateAttrs
 from imageserver.util import (
-    AttrObject,
     object_to_dict, object_to_dict_list,
     parse_boolean, parse_int, parse_iso_date, parse_iso_datetime,
-    validate_number, validate_string
+    validate_number, validate_string,
+    secure_filename, AttrObject
 )
 from imageserver.views_util import url_for_image_attrs
 
@@ -453,6 +453,13 @@ class PortfolioContentAPI(MethodView):
 
         if params['filename'] is not None:
             validate_string(params['filename'], 0, 255)
+            if params['filename']:
+                # Zips only support ASCII filenames, block directory traversal attempts
+                sec_filename = secure_filename(params['filename'])
+                if sec_filename != params['filename']:
+                    # We could continue with the secured filename, but the caller won't
+                    # expect the filename to change, so be consistent and just fail it
+                    raise ValueError('filename not allowed, try: ' + sec_filename)
         if params['index'] is not None:
             validate_number(params['index'], -999999, 999999)
         if params['image_parameters'] is not None:
@@ -546,7 +553,7 @@ class PortfolioExportAPI(MethodView):
                 raise DoesNotExistError(str(export_id))
             if folio_export.folio_id != folio_id:
                 raise ParameterError(
-                    'Export ID %d does not belong to portfolio ID %d' % (export_id, folio_id)
+                    'export ID %d does not belong to portfolio ID %d' % (export_id, folio_id)
                 )
             return make_api_success_response(object_to_dict(
                 _prep_folioexport_object(folio, folio_export)
@@ -564,6 +571,9 @@ class PortfolioExportAPI(MethodView):
             permissions_engine.ensure_portfolio_permitted(
                 folio, FolioPermission.ACCESS_EDIT, get_session_user()
             )
+            # Block the export now if it would create an empty zip file
+            if len(folio.images) == 0:
+                raise ParameterError('this portfolio is empty and cannot be published')
             # Create a folio-export record and start the export as a background task
             params = self._get_validated_object_parameters(request.form)
             folio_export = FolioExport(
@@ -624,7 +634,7 @@ class PortfolioExportAPI(MethodView):
                 raise DoesNotExistError(str(export_id))
             if folio_export.folio_id != folio_id:
                 raise ParameterError(
-                    'Export ID %d does not belong to portfolio ID %d' % (export_id, folio_id)
+                    'export ID %d does not belong to portfolio ID %d' % (export_id, folio_id)
                 )
             # Delete it and the export files
             delete_portfolio_export(
@@ -655,7 +665,7 @@ class PortfolioExportAPI(MethodView):
             params['image_parameters']
         )
         if params['expiry_time'] < datetime.utcnow():
-            raise ValueError('expiry time has already passed (use UTC)')
+            raise ValueError('expiry time (UTC) has already passed')
         return params
 
 

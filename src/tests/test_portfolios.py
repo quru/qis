@@ -719,7 +719,7 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         })
         self.assertEqual(rv.status_code, API_CODES.INVALID_PARAM)
         obj = json.loads(rv.data)
-        self.assertEqual(obj['status_code'], API_CODES.INVALID_PARAM)
+        self.assertEqual(obj['status'], API_CODES.INVALID_PARAM)
         self.assertIn('portfolio is empty', obj['message'])
 
     # Tests access required for publishing
