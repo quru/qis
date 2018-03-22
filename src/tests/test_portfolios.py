@@ -88,6 +88,7 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         db_session.query(FolioHistory).delete()
         db_session.query(FolioExport).delete()
         db_session.query(Folio).delete()
+        db_session.query(Task).delete()
         db_session.commit()
         # Create private, internal and public test portfolios
         db_user = main_tests.setup_user_account('foliouser', user_type='folios')
