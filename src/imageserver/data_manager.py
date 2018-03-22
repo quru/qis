@@ -619,7 +619,7 @@ class DataManager(object):
         """
         db_session = _db_session or self._db.Session()
         try:
-            # Get clean copies of the related records from session*.
+            # Get clean copies of the related records from session.
             # Otherwise if they are detached (as the user object may well be),
             # SQLAlchemy tries to be clever and insert them, causing dupes.
             #
@@ -628,11 +628,10 @@ class DataManager(object):
             #       request.g, the password field is blanked, and therefore this
             #       would have the side effect of wiping the user's password!
             #
-            # *For image, assume it's attached if a db session is passed in.
-            #
-            db_image = image if _db_session \
-                       else db_session.query(Image).get(image.id)
-            db_user = db_session.query(User).get(user.id) if user is not None else None
+            db_image = image if self.object_in_session(image, db_session) \
+                else db_session.query(Image).get(image.id)
+            db_user = user if user is None or self.object_in_session(user, db_session) \
+                else db_session.query(User).get(user.id)
 
             # Enforce some limit on the info text
             if action_info is None:
@@ -658,8 +657,11 @@ class DataManager(object):
         """
         db_session = _db_session or self._db.Session()
         try:
-            # See add_image_history() for why we need to re-get the user object
-            db_user = db_session.query(User).get(user.id) if user is not None else None
+            # See add_image_history() for why we need to re-get the objects
+            db_folio = folio if self.object_in_session(folio, db_session) \
+                else db_session.query(Folio).get(folio.id)
+            db_user = user if user is None or self.object_in_session(user, db_session) \
+                else db_session.query(User).get(user.id)
 
             # Enforce some limit on the info text
             if action_info is None:
@@ -667,7 +669,7 @@ class DataManager(object):
             if len(action_info) > 4096:
                 action_info = action_info[:4093] + '...'
 
-            history = FolioHistory(folio, db_user, action, action_info)
+            history = FolioHistory(db_folio, db_user, action, action_info)
             db_session.add(history)
             if _commit:
                 db_session.commit()
@@ -775,7 +777,7 @@ class DataManager(object):
         db_session = _db_session or self._db.Session()
         try:
             if user is not None and not self.attr_is_loaded(user, 'groups'):
-                user = db_session.query(User).get(user.id)
+                user = db_session.query(User).options(eagerload('groups')).get(user.id)
 
             groups = user.groups if user is not None else [
                 self.get_group(Group.ID_PUBLIC, _db_session=db_session)

@@ -516,8 +516,8 @@ def export_portfolio(**kwargs):
         # Make a temp dir for assembling the zip, then if anything goes wrong
         # we don't risk polluting the main image repository
         if os.path.exists(temp_dir):
-            shutil.rmtree(temp_dir)
-        os.mkdir(temp_dir)
+            shutil.rmtree(temp_dir, ignore_errors=False)
+        os.makedirs(temp_dir)
 
         # Start a new zip file in temp dir
         zip_filename = FolioExport.create_filename() + '.zip'
@@ -578,7 +578,7 @@ def export_portfolio(**kwargs):
         folio_export.filename = zip_filename
         folio_export.filesize = zip_info['size']
         folio_export.task_id = None
-        app.data_engine.save_object(folio_export)
+        return app.data_engine.save_object(folio_export)
     finally:
         # Close the zip if it's still open (on error)
         if zip_obj:

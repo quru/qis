@@ -65,6 +65,8 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         main_tests.init_tests()
         assert 'test' in flask_app.config['FOLIO_EXPORTS_DIR'], \
             'Testing settings have not been applied, main_tests should do this!'
+        # Preload all the API code as some of these tests need consistent run times
+        flask_app.test_client().get('/api/portfolios/')
 
     def setUp(self):
         super(PortfoliosAPITests, self).setUp()
@@ -112,8 +114,8 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         dm.save_object(FolioPermission(db_folio, db_pub_group, public_access))
         dm.save_object(FolioPermission(db_folio, db_normal_group, internal_access))
 
-    # Publishes a portfolio and waits for the task to finish,
-    # returning the associated FolioExport object
+    # Publishes a portfolio and waits for the task to finish, returning the associated
+    # FolioExport object. Performs a logout before returning.
     def publish_portfolio(self, folio, description, originals=True, image_params_dict=None, expiry_time=None):
         if not image_params_dict:
             image_params_dict = {}
@@ -128,7 +130,7 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
             'image_parameters': json.dumps(image_params_dict),
             'expiry_time': to_iso_datetime(expiry_time)
         })
-        self.assertEqual(rv.status_code, API_CODES.SUCCESS_TASK_ACCEPTED)
+        self.assertEqual(rv.status_code, API_CODES.SUCCESS_TASK_ACCEPTED, str(rv.data))
         obj = json.loads(rv.data)
         task = tm.wait_for_task(obj['data']['task_id'], 20)
         self.assertIsNotNone(task, 'Portfolio export task was cleaned up')
@@ -137,6 +139,7 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
             task.result, FolioExport,
             'Portfolio export task raised an exception: ' + str(task.result)
         )
+        self.logout()
         return task.result
 
     # Tests portfolio creation and permissions
@@ -632,7 +635,7 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
 
     # Tests an export of resized images
     def test_publish_resized(self):
-        db_folio = dm.get_portfolio(human_id='public')
+        db_folio = dm.get_portfolio(human_id='public', load_images=True)
         export = self.publish_portfolio(
             db_folio, 'Test export of public portfolio', originals=False,
             image_params_dict={'width': {'value': 200}}
@@ -779,10 +782,15 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         # Check the audit trail was updated
         db_internal_folio = dm.get_portfolio(db_internal_folio.id, load_history=True)
         self.assertEqual(db_internal_folio.history[-1].action, FolioHistory.ACTION_DOWNLOADED)
-        self.assertIn('emilybronte', db_internal_folio.history[-1].action_info)
+        self.assertEqual('emilybronte', db_internal_folio.history[-1].user.username)
 
     # Tests that the download filename cannot be used to access other files
+    # Note that Flask by default treats %2F as a URL path separator:
+    #   https://github.com/pallets/flask/issues/900
+    # and Apache by default does the same, controlled by AllowEncodedSlashes
     def test_portfolio_download_bad_access(self):
+        def quote(url_path):
+            return url_path.replace('/', '%2F')
         # Get a known working download URL
         db_public_folio = dm.get_portfolio(human_id='public')
         export = self.publish_portfolio(db_public_folio, 'Public export', True)
@@ -790,20 +798,31 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         rv = self.app.get(api_base_url + export.filename)
         self.assertEqual(rv.status_code, API_CODES.SUCCESS)
         # Now try to use this URL to pull down an image file instead
-        rv = self.app.get(api_base_url + '../test_images/cathedral.jpg')
+        rv = self.app.get(api_base_url + quote('../test_images/cathedral.jpg'))
         self.assertEqual(rv.status_code, API_CODES.NOT_FOUND)
         # Try to pull a system file
-        rv = self.app.get(api_base_url + '~root/../../../etc/passwd')
-        self.assertEqual(rv.status_code, API_CODES.UNAUTHORISED)
-        rv = self.app.get(api_base_url + '../../../../../../../../../etc/passwd')
-        self.assertEqual(rv.status_code, API_CODES.UNAUTHORISED)
-        rv = self.app.get(api_base_url + '%2Fetc%2Fpasswd')
+        rv = self.app.get(api_base_url + quote('~root/../../../etc/passwd'))
+        self.assertEqual(rv.status_code, API_CODES.NOT_FOUND)
+        rv = self.app.get(api_base_url + quote('../../../../../../../../../etc/passwd'))
+        self.assertEqual(rv.status_code, API_CODES.NOT_FOUND)
+        rv = self.app.get(api_base_url + quote('/etc/passwd'))
         self.assertEqual(rv.status_code, API_CODES.NOT_FOUND)
         # Also try leading // to see if the code only strips one of them
-        rv = self.app.get(api_base_url + '%2F%2Fetc%2Fpasswd')
+        rv = self.app.get(api_base_url + quote('//etc/passwd'))
         self.assertEqual(rv.status_code, API_CODES.NOT_FOUND)
+        # Also try mixed and double-encoding
         rv = self.app.get(api_base_url + '%2F/etc%2Fpasswd')
         self.assertEqual(rv.status_code, API_CODES.NOT_FOUND)
+        rv = self.app.get(api_base_url + '/%2Fetc%2Fpasswd')
+        self.assertEqual(rv.status_code, API_CODES.NOT_FOUND)
+        rv = self.app.get(api_base_url + '%252Fetc%252Fpasswd')
+        self.assertEqual(rv.status_code, API_CODES.NOT_FOUND)
+        # Check that even if the data has a bad filename that the code
+        # still prevents escape from the images repository
+        export.filename = '../../../etc/passwd'
+        dm.save_object(export)
+        rv = self.app.get(api_base_url + quote(export.filename))
+        self.assertEqual(rv.status_code, API_CODES.UNAUTHORISED)
 
     # Tests that deleting a portfolio deletes the exported files too
     def test_folio_delete_all(self):
@@ -858,10 +877,11 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
 
     # Tests the expiry of exported portfolios
     def test_publish_expiry(self):
-        # Publish the public portfolio with a 1 second TTL
+        # Publish the public portfolio with a few seconds TTL
         db_folio = dm.get_portfolio(human_id='public')
         export = self.publish_portfolio(
-            db_folio, 'Public portfolio export', True, expiry_time=datetime.utcnow() + timedelta(seconds=1)
+            db_folio, 'Public portfolio export', True,
+            expiry_time=datetime.utcnow() + timedelta(seconds=2)
         )
         # Check that the export directory is there
         export_dir = os.path.dirname(get_portfolio_export_file_path(export))
@@ -870,17 +890,18 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         api_url = '/portfolios/public/downloads/' + export.filename
         rv = self.app.get(api_url)
         self.assertEqual(rv.status_code, API_CODES.SUCCESS)
-        # Check that the audit trail says published
+        # Check that the audit trail says published and downloaded 
         db_folio = dm.get_portfolio(db_folio.id, load_history=True)
-        self.assertEqual(db_folio.history[-1].action, FolioHistory.ACTION_PUBLISHED)
+        self.assertEqual(db_folio.history[-2].action, FolioHistory.ACTION_PUBLISHED)
+        self.assertEqual(db_folio.history[-1].action, FolioHistory.ACTION_DOWNLOADED)
         # Wait for expiry
-        time.sleep(1)
+        time.sleep(2)
         # Force the expiry cleanup background job to run
         task_obj = tm.add_task(
             None,
             'Expire portfolio exports',
             'expire_portfolio_exports',
-            Task.PRIORITY_NORMAL,
+            priority=Task.PRIORITY_NORMAL,
             log_level='info',
             error_log_level='error'
         )
