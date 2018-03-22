@@ -55,7 +55,7 @@ from imageserver.models import (
     FolderPermission, Group, Task,
     Folio, FolioImage, FolioPermission, FolioHistory, FolioExport
 )
-from imageserver.util import to_iso_datetime
+from imageserver.util import AttrObject, to_iso_datetime
 
 
 class PortfoliosAPITests(main_tests.BaseTestCase):
@@ -787,16 +787,31 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
     # Tests that the download filename cannot be used to access other files
     # Note that Flask by default treats %2F as a URL path separator:
     #   https://github.com/pallets/flask/issues/900
+    #   https://github.com/pallets/werkzeug/issues/477
+    #   https://github.com/pallets/werkzeug/issues/797
     # and Apache by default does the same, controlled by AllowEncodedSlashes
+    # so that - unless a future release of Flask/Werkzeug changes things -
+    # all these URLs never even get routed to the view function
     def test_portfolio_download_bad_access(self):
         def quote(url_path):
             return url_path.replace('/', '%2F')
+        # Now I just cannot get mock to wrap the portfolio_download view function,
+        # so here is a manual wrapper that counts how many times the view is invoked
+        dl_view_name = 'folios.portfolio_download'
+        dl_view_fn = self.app.application.view_functions[dl_view_name]
+        dl_view_count = AttrObject(n=0)
+        def dl_view_wrapper(*args, **kwargs):
+            dl_view_count.n += 1
+            return dl_view_fn(*args, **kwargs)
+        self.app.application.view_functions[dl_view_name] = dl_view_wrapper
         # Get a known working download URL
         db_public_folio = dm.get_portfolio(human_id='public')
         export = self.publish_portfolio(db_public_folio, 'Public export', True)
         api_base_url = '/portfolios/public/downloads/'
         rv = self.app.get(api_base_url + export.filename)
         self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        # Prove that the view counter works before we rely on it later
+        self.assertEqual(dl_view_count.n, 1)
         # Now try to use this URL to pull down an image file instead
         rv = self.app.get(api_base_url + quote('../test_images/cathedral.jpg'))
         self.assertEqual(rv.status_code, API_CODES.NOT_FOUND)
@@ -821,8 +836,14 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         # still prevents escape from the images repository
         export.filename = '../../../etc/passwd'
         dm.save_object(export)
+        dl_view_count.n = 0
         rv = self.app.get(api_base_url + quote(export.filename))
-        self.assertEqual(rv.status_code, API_CODES.UNAUTHORISED)
+        if dl_view_count.n == 0:
+            # Flask routing did not let it through
+            self.assertEqual(rv.status_code, API_CODES.NOT_FOUND)
+        else:
+            # The view was invoked, our code should block the directory traversal
+            self.assertEqual(rv.status_code, API_CODES.UNAUTHORISED)
 
     # Tests that deleting a portfolio deletes the exported files too
     def test_folio_delete_all(self):
