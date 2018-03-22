@@ -341,7 +341,7 @@ rather than `/api/v1/admin/portfolios/`.
   * URL `/api/v1/portfolios/[portfolio id]/images/[image id]/position/`
     for `PUT` (reorder images)
   * No parameters for `GET` and `DELETE`
-  * Parameter `image_id` plus those below for `POST`
+  * For `POST` (add image) either `image_id` or `image_src` plus the `PUT` parameters
   * Parameters `filename` (optional), `index` (optional), `image_parameters`
     (optional JSON) for `PUT` (change image)
   * Parameter `index` for `PUT` (reorder)

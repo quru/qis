@@ -40,10 +40,11 @@ from imageserver.api_util import add_api_error_handler, add_parameter_error_hand
 from imageserver.api_util import make_api_success_response
 from imageserver.errors import DoesNotExistError, ParameterError
 from imageserver.filesystem_manager import delete_dir, get_portfolio_directory
+from imageserver.filesystem_sync import auto_sync_file
 from imageserver.flask_app import data_engine, permissions_engine, task_engine
 from imageserver.flask_util import api_permission_required, external_url_for
 from imageserver.models import (
-    FolderPermission, Group, SystemPermissions, Task,
+    Image, FolderPermission, Group, SystemPermissions, Task,
     Folio, FolioExport, FolioImage, FolioPermission, FolioHistory
 )
 from imageserver.portfolios.util import delete_portfolio_export, get_portfolio_image_attrs
@@ -299,11 +300,21 @@ class PortfolioContentAPI(MethodView):
             permissions_engine.ensure_portfolio_permitted(
                 folio, FolioPermission.ACCESS_EDIT, get_session_user()
             )
-            # Get the image
+            # Get the image by either ID or src
             params = self._get_validated_object_parameters(request.form, True)
-            image = data_engine.get_image(params['image_id'], _db_session=db_session)
-            if image is None:
-                raise DoesNotExistError(str(params['image_id']))
+            if 'image_id' in params:
+                image = data_engine.get_image(params['image_id'], _db_session=db_session)
+                if image is None:
+                    raise DoesNotExistError(str(params['image_id']))
+            else:
+                image = auto_sync_file(
+                    params['image_src'],
+                    data_engine, task_engine,
+                    anon_history=True, burst_pdf=False,
+                    _db_session=db_session
+                )
+                if image is None or image.status == Image.STATUS_DELETED:
+                    raise DoesNotExistError(params['image_src'])
             # Check image permissions
             permissions_engine.ensure_folder_permitted(
                 image.folder,
@@ -440,9 +451,18 @@ class PortfolioContentAPI(MethodView):
             'image_parameters': data_dict.get('image_parameters')
         }
         if adding:
-            # Require image_id, default the others if not set
-            params['image_id'] = parse_int(data_dict['image_id'])
-            validate_number(params['image_id'], 1, sys.maxint)
+            # Require either image_id or image_src
+            if data_dict.get('image_id') and data_dict.get('image_src'):
+                raise ValueError('specify only one of either image_id or image_src')
+            elif data_dict.get('image_id'):
+                params['image_id'] = parse_int(data_dict['image_id'])
+                validate_number(params['image_id'], 1, sys.maxint)
+            elif data_dict.get('image_src'):
+                params['image_src'] = data_dict['image_src'].strip()
+                validate_string(params['image_src'], 5, 1024)
+            else:
+                raise KeyError('image_id or image_src')
+            # Get or default all the others
             params['filename'] = params['filename'] or ''
             params['index'] = parse_int(params['index']) if params['index'] else 0
             params['image_parameters'] = params['image_parameters'] or '{}'

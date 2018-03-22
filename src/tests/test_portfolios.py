@@ -281,6 +281,37 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         rv = self.app.delete(api_url)
         self.assertEqual(rv.status_code, API_CODES.NOT_FOUND)
 
+    # Tests adding images by src
+    def test_folio_add_remove_image_src(self):
+        db_folio = dm.get_portfolio(human_id='private', load_images=True)
+        start_len = len(db_folio.images)
+        api_url = '/api/portfolios/' + str(db_folio.id) + '/images/'
+        self.login('foliouser', 'foliouser')
+        # Add an image by src
+        rv = self.app.post(api_url, data={
+            'image_src': 'test_images/thames.jpg'
+        })
+        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        # Check it worked
+        db_folio = dm.get_portfolio(db_folio.id, load_images=True)
+        self.assertEqual(len(db_folio.images), start_len + 1)
+        # Check that we can't add a duplicate image src
+        rv = self.app.post(api_url, data={
+            'image_src': 'test_images/thames.jpg'
+        })
+        self.assertEqual(rv.status_code, API_CODES.ALREADY_EXISTS)
+        # A bad src should raise a not-found error
+        rv = self.app.post(api_url, data={
+            'image_src': 'this/does/not/exist.jpg'
+        })
+        self.assertEqual(rv.status_code, API_CODES.NOT_FOUND)
+        # Giving both an ID and a src should return invalid params
+        rv = self.app.post(api_url, data={
+            'image_id': 1,
+            'image_src': 'test_images/thames.jpg'
+        })
+        self.assertEqual(rv.status_code, API_CODES.INVALID_PARAM)
+
     # Tests handling of bad permissions when adding and removing images
     def test_folio_add_remove_image_permissions(self):
         db_folio = dm.get_portfolio(human_id='private')
