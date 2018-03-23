@@ -301,7 +301,7 @@ class PortfolioContentAPI(MethodView):
                     folio_image.portfolio, FolioPermission.ACCESS_VIEW, get_session_user()
                 )
                 return make_api_success_response(object_to_dict(
-                    _prep_folioimage_object(folio_image), _ignore_fields
+                    _prep_folioimage_object(folio_image), _ignore_fields + ['portfolio']
                 ))
             finally:
                 db_session.close()
@@ -363,7 +363,7 @@ class PortfolioContentAPI(MethodView):
                 _commit=True
             )
             return make_api_success_response(object_to_dict(
-                _prep_folioimage_object(db_folio_image), _ignore_fields
+                _prep_folioimage_object(db_folio_image), _ignore_fields + ['portfolio']
             ))
         finally:
             db_session.close()
@@ -420,7 +420,7 @@ class PortfolioContentAPI(MethodView):
                     _commit=True
                 )
             return make_api_success_response(object_to_dict(
-                _prep_folioimage_object(folio_image), _ignore_fields
+                _prep_folioimage_object(folio_image), _ignore_fields + ['portfolio']
             ))
         finally:
             db_session.close()
@@ -546,7 +546,7 @@ class PortfolioReorderAPI(MethodView):
             folio = data_engine.get_portfolio(folio_id, load_images=True, _db_session=db_session)
             image_list = [_prep_folioimage_object(fi) for fi in folio.images]
             return make_api_success_response(
-                object_to_dict_list(image_list, _ignore_fields)
+                object_to_dict_list(image_list, _ignore_fields + ['portfolio'])
             )
         finally:
             db_session.close()
@@ -653,7 +653,7 @@ class PortfolioExportAPI(MethodView):
             folio_export.task_id = export_task.id
             data_engine.save_object(folio_export, _db_session=db_session, _commit=True)
             return make_api_success_response(object_to_dict(
-                _prep_folioexport_object(folio, folio_export), _ignore_fields
+                _prep_folioexport_object(folio, folio_export), _ignore_fields + ['portfolio']
             ), task_accepted=True)
         finally:
             db_session.close()

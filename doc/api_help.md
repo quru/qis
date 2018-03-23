@@ -553,7 +553,6 @@ An array of 0 or more objects ordered by portfolio name.
 	      "last_updated": "2018-03-09T16:54:51.662994Z",
 	      "name": "Admin favourites",
 	      "owner": {
-	        "auth_type": 1,
 	        "email": "",
 	        "first_name": "Administrator",
 	        "id": 1,
@@ -600,7 +599,6 @@ An array of 0 or more objects ordered by portfolio name.
 	      "last_updated": "2018-03-09T16:39:05.342911Z",
 	      "name": "Spring Collection 2018",
 	      "owner": {
-	        "auth_type": 1,
 	        "email": "matt@quru.com",
 	        "first_name": "Matt",
 	        "id": 2,
