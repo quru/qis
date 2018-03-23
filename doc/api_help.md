@@ -679,8 +679,6 @@ The full portfolio as a JSON object.
 	        "folio_id": 3,
 	        "id": 4,
 	        "user": {
-	          "allow_api": true,
-	          "auth_type": 2,
 	          "email": "matt@quru.com",
 	          "first_name": "Matt",
 	          "id": 3,
@@ -697,8 +695,6 @@ The full portfolio as a JSON object.
 	        "folio_id": 3,
 	        "id": 5,
 	        "user": {
-	          "allow_api": true,
-	          "auth_type": 2,
 	          "email": "matt@quru.com",
 	          "first_name": "Matt",
 	          "id": 3,
@@ -715,8 +711,6 @@ The full portfolio as a JSON object.
 	        "folio_id": 3,
 	        "id": 6,
 	        "user": {
-	          "allow_api": true,
-	          "auth_type": 2,
 	          "email": "matt@quru.com",
 	          "first_name": "Matt",
 	          "id": 3,
@@ -733,8 +727,6 @@ The full portfolio as a JSON object.
 	        "folio_id": 3,
 	        "id": 7,
 	        "user": {
-	          "allow_api": true,
-	          "auth_type": 2,
 	          "email": "matt@quru.com",
 	          "first_name": "Matt",
 	          "id": 3,
@@ -751,8 +743,6 @@ The full portfolio as a JSON object.
 	        "folio_id": 3,
 	        "id": 8,
 	        "user": {
-	          "allow_api": true,
-	          "auth_type": 2,
 	          "email": "matt@quru.com",
 	          "first_name": "Matt",
 	          "id": 3,
@@ -769,8 +759,6 @@ The full portfolio as a JSON object.
 	        "folio_id": 3,
 	        "id": 9,
 	        "user": {
-	          "allow_api": true,
-	          "auth_type": 2,
 	          "email": "matt@quru.com",
 	          "first_name": "Matt",
 	          "id": 3,
@@ -866,8 +854,6 @@ The full portfolio as a JSON object.
 	    "last_updated": "2018-03-23T12:29:30.137247Z",
 	    "name": "Spring Collection 2018",
 	    "owner": {
-	      "allow_api": true,
-	      "auth_type": 2,
 	      "email": "matt@quru.com",
 	      "first_name": "Matt",
 	      "id": 3,
