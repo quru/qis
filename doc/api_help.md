@@ -98,7 +98,7 @@ Or to send data to a protected web service:
     var data = 'path=/myfolder';
     request.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded; charset=utf-8');
     
-    // Authentication token - call the "token" function first to get this
+    // Authentication token - call the "token" API function first to get this
     var token = 'abcdef0123456789abcdef0123456789';
     request.setRequestHeader("Authorization", "Basic " + btoa(token + ":blank"));
     
@@ -115,14 +115,14 @@ Or to send data to a protected web service:
     
     request.send(data);
 
-### Calling an API function with cURL
+### Calling an API function with curl
 
-[cURL](http://curl.haxx.se/) is a popular command line utility that allows you to make HTTP calls
+[curl](http://curl.haxx.se/) is a popular command line utility that allows you to make HTTP calls
 without a web browser. It is available for all common operating systems, and allows you to create
 useful scripts and quickly test individual functions.
 
-This document will also use cURL for most of its examples. In these, the `$` represents the
-command line prompt, and is not to be typed. The cURL equivalent of the above HTML example is simply:
+This document will also use curl for most of its examples. In these, the `$` represents the
+command line prompt, and is not to be typed. The curl equivalent of the above HTML example is simply:
 
 	$ curl 'http://images.example.com/api/v1/list/?path=myfolder'
 
@@ -142,10 +142,17 @@ See the rest of the documentation for which methods are supported by which API c
 	<tr class="odd"><td><code>DELETE</code></td><td>Delete an object</td></tr>
 </table>
 
-For the `PUT` and `POST` methods, parameters should be sent using standard form encoding 
-(`application/x-www-form-urlencoded`). An exception to this is if you are performing a file upload, 
-in which case `multipart/form-data` encoding is required. If you are using a JavaScript framework
-such as in the HTML example above, this detail will be taken care of automatically.
+For the `PUT` and `POST` methods, parameters should be sent using standard HTML
+form encoding (`application/x-www-form-urlencoded`). An exception to this is if
+you are performing a file upload, in which case `multipart/form-data` encoding
+is required.
+
+Using form encoding for API parameters is unusual these days, with most modern
+APIs preferring JSON inputs to match JSON outputs. Back in 2011 this choice was
+made so that the image server API could be called directly from a standard HTML
+form. A future release may add support for JSON-encoded parameters, but even in
+back-end code it is trivial to form-encode data using a library such as `libcurl`
+or [python-requests](http://docs.python-requests.org/en/master/user/quickstart/#more-complicated-post-requests).
 
 ### Return values
 
