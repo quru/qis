@@ -13,9 +13,14 @@ most of which return data in the [JSON](http://www.json.org/) format.
 * [Public image services](#api_image_group)
     * [image - retrieve a processed image](#api_image)
     * [original - retrieve an unmodified image file](#api_original)
+* [Public portfolio access](#api_folio_group)
+    * [view - view a portfolio as a web page](#api_folio_view)
+    * [download - download a portfolio as a zip file](#api_folio_download)
 * [Public web services](#api_public)
     * [list - list the files in a folder path](#api_list)
     * [details - retrieve image information by path](#api_details)
+    * [portfolio list - list available portfolios](#api_folio_list)
+    * [portfolio details - retrieve portfolio information](#api_folio_details)
 * [Protected web services](#api_private)
     * [token - obtain an API authentication token](#api_token)
     * [upload - upload an image](#api_upload)
@@ -29,6 +34,9 @@ most of which return data in the [JSON](http://www.json.org/) format.
     * [disk files - manage the file system](#api_disk_files)
     * [disk folders - manage the file system](#api_disk_folders)
     * [system tasks - run background tasks](#api_tasks)
+    * [portfolios - manage portfolios](#api_folios)
+    * [portfolio content - add and remove images in a portfolio](#api_folios_content)
+    * [portfolio publishing - export a portfolio as a zip file](#api_folios_publish)
 
 <a name="json"></a>
 ## About JSON
@@ -273,13 +281,80 @@ On error, returns a non-200 status code and HTML text containing an error messag
     $ curl -o myfile.jpg 'http://images.example.com/original?src=myfolder/myfile.jpg'
 
 
+<a name="api_folio_group"></a>
+# Public portfolio access
+
+These services provide the main way of viewing or downloading an image portfolio,
+returning a web page or a plain zip file without a JSON wrapper. For publicly
+accessible portfolios, the URLs can be used directly in web pages, emails, instant
+messages, or link sharing services.
+
+For non-public portfolios, either an [API token](#api_token) or a QIS web session
+(via the QIS login page) is required. The returned status codes are the same as
+those defined above for the JSON web services.
+
+<a name="api_folio_view"></a>
+## view portfolio
+Views a portfolio of images as a web page. To view the portfolio as JSON data,
+instead use the [portfolio details](#api_folio_details) API function. If the
+caller is not logged in, the portfolio must be publicly viewable.
+
+### URL
+* `/portfolios/[portfolio friendly ID]/`
+
+### Supported methods
+* `GET`
+
+### Parameters
+* None
+
+### Permissions required
+* View permission for the portfolio
+
+### Returns
+A web page as HTML text. On error, returns a non-200 status code and HTML text
+containing an error message.
+
+### Example
+
+	In a web browser, open:
+	http://images.example.com/portfolios/the-spring-collection/
+
+<a name="api_folio_download"></a>
+## download portfolio
+Downloads a portfolio as a zip file. The portfolio must already have been _published_
+by its author in order to create the zip file; see the [portfolio publishing](#api_folios_publish)
+API function for how to do this. If the caller is not logged in, the portfolio
+must be publicly downloadable.
+
+### URL
+* `/portfolios/[portfolio friendly ID]/downloads/[zip filename].zip`
+
+### Supported methods
+* `GET`
+
+### Parameters
+* None
+
+### Permissions required
+* Download permission for the portfolio
+
+### Returns
+A binary zip file, with content type `application/zip`.
+On error, returns a non-200 status code and HTML text containing an error message.
+
+### Example
+
+    $ curl -o myfile.zip 'http://images.example.com/portfolios/the-spring-collection/downloads/a13d7382f1124b59b62618dd4df154ba.zip'
+
+
 <a name="api_public"></a>
 # Public web services
 
-For publicly accessible images, these web services can be called from an anonymous
-(not logged in) session without requiring an [API authentication token](#api_token).
-For images with a [folder permission](#api_data_permissions) in place, a token is
-required however.
+For publicly accessible images and portfolios, these web services can be called
+from an anonymous (not logged in) session without requiring an [API authentication token](#api_token).
+For images with a [folder permission](#api_data_permissions) in place or for
+non-public portfolios, a token is required however.
 
 <a name="api_list"></a>
 ## list
@@ -443,14 +518,393 @@ An object containing image attributes, as shown below.
 	  "status": 200
 	}
 
+<a name="api_folio_list"></a>
+## portfolio list
+Returns the list of portfolios that are allowed to be viewed by the caller.
+Log in as a user with `admin_folios` permission enabled (in one of the user's
+groups) to see the list of all portfolios. The returned portfolio objects do
+not include image information but do include a URL for viewing the portfolio.
+
+### URL
+* `/api/v1/portfolios/`
+
+### Supported methods
+* `GET`
+
+### Parameters
+* None
+
+### Permissions required
+* None, but the results are filtered by portfolios that the caller can view
+
+### Returns
+An array of 0 or more objects ordered by portfolio name.
+
+### Example
+
+	$ curl 'http://images.example.com/api/v1/portfolios/'
+	{
+	  "data": [
+	    {
+	      "description": "The admin user's favourite photos",
+	      "downloads": [],
+	      "human_id": "408eb84f7cb41a8b",
+	      "id": 2,
+	      "last_updated": "2018-03-09T16:54:51.662994Z",
+	      "name": "Admin favourites",
+	      "owner": {
+	        "auth_type": 1,
+	        "email": "",
+	        "first_name": "Administrator",
+	        "id": 1,
+	        "last_name": "",
+	        "status": 1,
+	        "username": "admin"
+	      },
+	      "owner_id": 1,
+	      "permissions": [
+	        {
+	          "access": 10,
+	          "folio_id": 2,
+	          "group_id": 1,
+	          "id": 3
+	        },
+	        {
+	          "access": 10,
+	          "folio_id": 2,
+	          "group_id": 2,
+	          "id": 4
+	        }
+	      ],
+	      "url": "http://images.example.com/portfolios/408eb84f7cb41a8b/"
+	    },
+	    {
+	      "description": "The 2018 Spring Collection",
+	      "downloads": [
+	        {
+	          "created": "2018-03-23T12:38:44.264952Z",
+	          "description": "Originals export",
+	          "filename": "a13d7382f1124b59b62618dd4df154ba.zip",
+	          "filesize": 1330490,
+	          "folio_id": 3,
+	          "id": 2,
+	          "keep_until": "2020-01-01T00:00:00Z",
+	          "originals": true,
+	          "parameters": {},
+	          "task_id": null,
+	          "url": "http://images.example.com/portfolios/the-spring-collection/downloads/a13d7382f1124b59b62618dd4df154ba.zip"
+	        }
+	      ],
+	      "human_id": "the-spring-collection",
+	      "id": 3,
+	      "last_updated": "2018-03-09T16:39:05.342911Z",
+	      "name": "Spring Collection 2018",
+	      "owner": {
+	        "auth_type": 1,
+	        "email": "matt@quru.com",
+	        "first_name": "Matt",
+	        "id": 2,
+	        "last_name": "Fozard",
+	        "status": 1,
+	        "username": "matt"
+	      },
+	      "owner_id": 2,
+	      "permissions": [
+	        {
+	          "access": 10,
+	          "folio_id": 3,
+	          "group_id": 1,
+	          "id": 1
+	        },
+	        {
+	          "access": 10,
+	          "folio_id": 3,
+	          "group_id": 2,
+	          "id": 2
+	        }
+	      ],
+	      "url": "http://images.example.com/portfolios/the-spring-collection/"
+	    }
+	  ],
+	  "message": "OK",
+	  "status": 200
+	}
+
+<a name="api_folio_details"></a>
+## portfolio details
+Retrieves the full details of a portfolio, including its ordered image list,
+audit trail and list of published (and non-expired) zip files available for download.
+
+### URL
+* `/api/v1/portfolios/[portfolio id]/`
+
+### Supported methods
+* `GET`
+
+### Parameters
+* None
+
+### Permissions required
+* View permission for the requested portfolio ID
+
+### Returns
+The full portfolio as a JSON object.
+
+### Example
+
+	$ curl 'http://images.example.com/api/v1/portfolios/3/'
+	{
+	  "data": {
+	    "description": "The 2018 Spring Collection",
+	    "downloads": [
+	      {
+	        "created": "2018-03-23T12:38:44.264952Z",
+	        "description": "Originals export",
+	        "filename": "a13d7382f1124b59b62618dd4df154ba.zip",
+	        "filesize": 1330490,
+	        "folio_id": 3,
+	        "id": 2,
+	        "keep_until": "2020-01-01T00:00:00Z",
+	        "originals": true,
+	        "parameters": {},
+	        "task_id": null,
+	        "url": "http://images.example.com/portfolios/the-spring-collection/downloads/a13d7382f1124b59b62618dd4df154ba.zip"
+	      }
+	    ],
+	    "history": [
+	      {
+	        "action": 1,
+	        "action_info": "",
+	        "action_time": "2018-03-23T12:13:52.214960Z",
+	        "folio_id": 3,
+	        "id": 4,
+	        "user": {
+	          "allow_api": true,
+	          "auth_type": 2,
+	          "email": "matt@quru.com",
+	          "first_name": "Matt",
+	          "id": 3,
+	          "last_name": "Fozard",
+	          "status": 1,
+	          "username": "matt"
+	        },
+	        "user_id": 3
+	      },
+	      {
+	        "action": 3,
+	        "action_info": "products/p1-bags-a0001.jpg added",
+	        "action_time": "2018-03-23T12:24:27.452216Z",
+	        "folio_id": 3,
+	        "id": 5,
+	        "user": {
+	          "allow_api": true,
+	          "auth_type": 2,
+	          "email": "matt@quru.com",
+	          "first_name": "Matt",
+	          "id": 3,
+	          "last_name": "Fozard",
+	          "status": 1,
+	          "username": "matt"
+	        },
+	        "user_id": 3
+	      },
+	      {
+	        "action": 3,
+	        "action_info": "products/p1-bags-a0002.jpg added",
+	        "action_time": "2018-03-23T12:29:22.849761Z",
+	        "folio_id": 3,
+	        "id": 6,
+	        "user": {
+	          "allow_api": true,
+	          "auth_type": 2,
+	          "email": "matt@quru.com",
+	          "first_name": "Matt",
+	          "id": 3,
+	          "last_name": "Fozard",
+	          "status": 1,
+	          "username": "matt"
+	        },
+	        "user_id": 3
+	      },
+	      {
+	        "action": 3,
+	        "action_info": "products/p1-bags-a0003.jpg added",
+	        "action_time": "2018-03-23T12:29:30.137174Z",
+	        "folio_id": 3,
+	        "id": 7,
+	        "user": {
+	          "allow_api": true,
+	          "auth_type": 2,
+	          "email": "matt@quru.com",
+	          "first_name": "Matt",
+	          "id": 3,
+	          "last_name": "Fozard",
+	          "status": 1,
+	          "username": "matt"
+	        },
+	        "user_id": 3
+	      },
+	      {
+	        "action": 3,
+	        "action_info": "products/p1-bags-a0002.jpg moved to position 3",
+	        "action_time": "2018-03-23T12:32:50.556061Z",
+	        "folio_id": 3,
+	        "id": 8,
+	        "user": {
+	          "allow_api": true,
+	          "auth_type": 2,
+	          "email": "matt@quru.com",
+	          "first_name": "Matt",
+	          "id": 3,
+	          "last_name": "Fozard",
+	          "status": 1,
+	          "username": "matt"
+	        },
+	        "user_id": 3
+	      },
+	      {
+	        "action": 4,
+	        "action_info": "Originals export (expires Wed Jan  1 00:00:00 2020 UTC, images are unmodified originals)",
+	        "action_time": "2018-03-23T12:38:44.265397Z",
+	        "folio_id": 3,
+	        "id": 9,
+	        "user": {
+	          "allow_api": true,
+	          "auth_type": 2,
+	          "email": "matt@quru.com",
+	          "first_name": "Matt",
+	          "id": 3,
+	          "last_name": "Fozard",
+	          "status": 1,
+	          "username": "matt"
+	        },
+	        "user_id": 3
+	      }
+	    ],
+	    "human_id": "the-spring-collection",
+	    "id": 3,
+	    "images": [
+	      {
+	        "filename": "",
+	        "folio_id": 3,
+	        "id": 5,
+	        "image": {
+	          "description": "",
+	          "folder": {
+	            "id": 15,
+	            "name": "/products",
+	            "parent_id": 1,
+	            "path": "/products",
+	            "status": 1
+	          },
+	          "folder_id": 15,
+	          "height": 1754,
+	          "id": 85,
+	          "src": "products/p1-bags-a0001.jpg",
+	          "status": 1,
+	          "title": "",
+	          "width": 1239
+	        },
+	        "image_id": 85,
+	        "order_num": 0,
+	        "parameters": {},
+	        "url": "http://images.example.com/image?src=products/p1-bags-a0001.jpg"
+	      },
+	      {
+	        "filename": "",
+	        "folio_id": 3,
+	        "id": 7,
+	        "image": {
+	          "description": "",
+	          "folder": {
+	            "id": 15,
+	            "name": "/products",
+	            "parent_id": 1,
+	            "path": "/products",
+	            "status": 1
+	          },
+	          "folder_id": 15,
+	          "height": 1754,
+	          "id": 86,
+	          "src": "products/p1-bags-a0003.jpg",
+	          "status": 1,
+	          "title": "",
+	          "width": 1239
+	        },
+	        "image_id": 86,
+	        "order_num": 1,
+	        "parameters": {},
+	        "url": "http://images.example.com/image?src=products/p1-bags-a0003.jpg"
+	      },
+	      {
+	        "filename": "",
+	        "folio_id": 3,
+	        "id": 6,
+	        "image": {
+	          "description": "",
+	          "folder": {
+	            "id": 15,
+	            "name": "/products",
+	            "parent_id": 1,
+	            "path": "/products",
+	            "status": 1
+	          },
+	          "folder_id": 15,
+	          "height": 1754,
+	          "id": 84,
+	          "src": "products/p1-bags-a0002.jpg",
+	          "status": 1,
+	          "title": "",
+	          "width": 1239
+	        },
+	        "image_id": 84,
+	        "order_num": 2,
+	        "parameters": {},
+	        "url": "http://images.example.com/image?src=products/p1-bags-a0002.jpg"
+	      }
+	    ],
+	    "last_updated": "2018-03-23T12:29:30.137247Z",
+	    "name": "Spring Collection 2018",
+	    "owner": {
+	      "allow_api": true,
+	      "auth_type": 2,
+	      "email": "matt@quru.com",
+	      "first_name": "Matt",
+	      "id": 3,
+	      "last_name": "Fozard",
+	      "status": 1,
+	      "username": "matt"
+	    },
+	    "owner_id": 3,
+	    "permissions": [
+	      {
+	        "access": 10,
+	        "folio_id": 3,
+	        "group_id": 2,
+	        "id": 6
+	      },
+	      {
+	        "access": 10,
+	        "folio_id": 3,
+	        "group_id": 1,
+	        "id": 5
+	      }
+	    ],
+	    "url": "http://images.example.com/portfolios/the-spring-collection/"
+	  },
+	  "message": "OK",
+	  "status": 200
+	}
+
 
 <a name="api_private"></a>
 # Protected web services
 
-All other web services require the caller to be logged in so that permissions can be
-checked and a username recorded in the audit trail. Since the QIS login web page cannot be
-used alongside the API, to achieve this the caller must first obtain an
-[API authentication token](#api_token) and then provide this along with every function call.
+All other web services require the caller to be logged in so that permissions
+can be checked and a username recorded in the audit trail. Since the QIS login
+web page cannot be used alongside the API, to achieve this the caller must first
+obtain an [API authentication token](#api_token) and then provide this along
+with every function call.
 
 <a name="api_token"></a>
 ## token
@@ -1538,3 +1992,15 @@ Then after a few seconds:
 	  "message": "The requested item was not found (301)",
 	  "status": 404
 	}
+
+<a name="api_folios"></a>
+## portfolios
+TODO
+
+<a name="api_folios_content"></a>
+## portfolio content
+TODO
+
+<a name="api_folios_publish"></a>
+## portfolio publishing
+TODO
