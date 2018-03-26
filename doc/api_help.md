@@ -24,6 +24,9 @@ most of which return data in the [JSON](http://www.json.org/) format.
 * [Protected web services](#api_private)
     * [token - obtain an API authentication token](#api_token)
     * [upload - upload an image](#api_upload)
+    * [portfolios - manage portfolios](#api_folios)
+    * [portfolio content - add and remove images in a portfolio](#api_folios_content)
+    * [portfolio publishing - export a portfolio as a zip file](#api_folios_publish)
 * [Administration web services](#api_admin)
     * [image data - manage image metadata](#api_data_images)
     * [image templates - manage image templates](#api_data_templates)
@@ -34,9 +37,6 @@ most of which return data in the [JSON](http://www.json.org/) format.
     * [disk files - manage the file system](#api_disk_files)
     * [disk folders - manage the file system](#api_disk_folders)
     * [system tasks - run background tasks](#api_tasks)
-    * [portfolios - manage portfolios](#api_folios)
-    * [portfolio content - add and remove images in a portfolio](#api_folios_content)
-    * [portfolio publishing - export a portfolio as a zip file](#api_folios_publish)
 
 <a name="json"></a>
 ## About JSON
@@ -885,9 +885,8 @@ The full portfolio as a JSON object.
 # Protected web services
 
 All other web services require the caller to be logged in so that permissions
-can be checked and a username recorded in the audit trail. Since the QIS login
-web page cannot be used alongside the API, to achieve this the caller must first
-obtain an [API authentication token](#api_token) and then provide this along
+can be checked and a username recorded in the audit trail. To log in using the
+API, obtain an [API authentication token](#api_token) and then provide this along
 with every function call.
 
 <a name="api_token"></a>
@@ -1031,6 +1030,213 @@ But then running the same command again:
 	  "status": 409
 	}
 
+<a name="api_folios"></a>
+## portfolios
+Lists viewable portfolios, or gets, creates, updates, or deletes a single portfolio.
+
+A portfolio is a collection of images that can be viewed together, downloaded
+together, or transformed together (e.g. resized to the same dimensions, or have
+a standard watermark applied). Unlike other objects, portfolios have a concept of
+ownership. Any logged in user with the `folios` system permission can create a
+portfolio and add images to it. They can choose whether the portfolio is visible
+only to them, to other logged in users too, or is public. Separately they can
+choose the same for who is allowed to download the portfolio as a zip file.
+Only the portfolio owner or a user with the `admin_folios` system permission can
+make changes to the portfolio or [publish it](#api_folios_publish) as a zip file.
+
+### URL
+* `/api/v1/portfolios/` for `GET` (list portfolios) and `POST` (create portfolio)
+* `/api/v1/portfolios/[portfolio id]/` for `GET`, `PUT`, and `DELETE`
+
+### Supported methods
+* `GET`
+* `POST`
+* `PUT`
+* `DELETE`
+
+### Parameters
+* None for `GET` or `DELETE`
+* For `POST` and `PUT`:
+	* `human_id` - Optional, text - A unique "friendly" ID that will be used to
+	  identify the portfolio in the [view](#api_folio_view) and [download](#api_folio_download)
+	  URLs. If not supplied or left blank a unique ID will be generated for you.
+	* `name` - Mandatory, text - A name for the portfolio
+	* `description` - Mandatory, text - A description of the portfolio
+	* `internal_access` - Mandatory, integer - The level of access to allow
+	  for other logged in users:
+		* `0` - No access (make the portfolio private)
+		* `10` - View permission
+		* `20` - View and download permission
+	* `public_access` - Mandatory, integer - The level of access to allow
+	  for public (not logged in) users:
+		* `0` - No access (make the portfolio private)
+		* `10` - View permission
+		* `20` - View and download permission
+
+### Permissions required
+* None for `GET` (list portfolios),
+  but the results are filtered by portfolios that the caller can view
+* Portfolio view permission for `GET` (single portfolio)
+* The `folios` system permission for `POST` (create portfolio)
+* Portfolio ownership or the `admin_folios` system permission for `PUT` and `DELETE`
+
+### Returns
+A list of abbreviated portfolio objects (for the list URL), a single portfolio
+object (for most other URLs), or nothing (after a delete).
+
+If the `human_id` parameter is left blank when creating a portfolio, a generated
+ID will be present in the returned object. Each portfolio object includes a URL
+for viewing the portfolio.
+
+### Examples
+
+TODO
+
+<a name="api_folios_content"></a>
+## portfolio content
+Adds and removes images to and from a portfolio, allows re-ordering of the image
+list, and optionally sets portfolio-specific image changes.
+
+The image changes apply only in the context of the portfolio, when the portfolio
+is viewed or downloaded. The feature is intended to allow things like a custom
+crop to be applied to a single image. If image changes are also requested at the
+[publishing](#api_folios_publish) stage, the publishing changes are applied on
+top of the single image changes.
+
+### URL
+* `/api/v1/portfolios/images/` for `GET` (list images) and `POST` (add image)
+* `/api/v1/portfolios/[portfolio id]/images/[image id]/` for `GET`, `PUT`, and `DELETE`
+* `/api/v1/portfolios/[portfolio id]/images/[image id]/position/` for `PUT` (reorder)
+
+### Supported methods
+* `GET`
+* `POST`
+* `PUT`
+* `DELETE`
+
+### Parameters
+* None for `GET` or `DELETE`
+* For reorder `PUT`:
+	* `index` - Mandatory, integer - the new zero-based index to move the image to
+* For add image `POST`:
+	* `image_id` or `image_src` - Mandatory, integer or text - the unique ID or
+	  path (folder and filename) of the image to add into the portfolio
+* For add image and change image `POST` and `PUT`:
+	* `filename` - Optional, text - Sets the filename to use for this image when
+	  the portfolio is published to a zip file. Supports ASCII characters only due
+	  to zip file limitations. Defaults to the image's original filename.
+	* `index` - Optional, integer - Sets the zero-based numeric list index to insert
+	  the image at. Defaults to 0. If all images are at position 0 they are ordered
+	  by the time they were added (oldest first, newest last).
+	* `image_parameters` - Optional, JSON text - A set of field/value-object pairs
+	  that define portfolio-specific imaging operations for this image. The JSON
+	  format is the same as when defining an [image template](#api_data_templates).
+
+Note that setting the `index` parameter during a `POST` (add image) or
+`PUT` (update image) operation will not change the ordering number on other
+images in the portfolio. This may result in multiple images being at the same
+position, with the order then being determined by which image was added to the
+portfolio first. If this order is not what you want, or to ensure that each
+image has a unique ordering number, use the explicit `/position/` reordering
+function.
+
+When using the reordering function, if the value of `index` is too high or too
+low it will be adjusted, so you can simply pass a large number to implement a
+_move to end_ function.
+
+### Permissions required
+* Portfolio view permission for `GET`
+* Portfolio ownership or the `admin_folios` system permission for `POST`, `PUT`,
+  and `DELETE`
+* Folder view permission for the folder of the image being added for `POST`
+
+### Returns
+An ordered list of the images in the portfolio (for the list URL and the reorder
+URL), a single portfolio-image object (for most other URLs), or nothing (after a
+delete).
+
+Each portfolio-image object includes a URL for requesting the image that
+incorporates the operations given in the `image_parameters` parameter (if any).
+
+### Examples
+
+TODO
+
+<a name="api_folios_publish"></a>
+## portfolio publishing
+Creates or deletes a downloadable export of a portfolio as a zip file. A
+portfolio may be exported multiple times with different changes applied. For
+example a zip of the unmodified original files, a zip of resized images all
+saved as `jpg`, and a zip with all images having a colour profile applied.
+
+When single image changes have been defined with the [content function](#api_folios_content),
+the publishing changes (if any) will be applied on top. Note that when the
+portfolio is exported as unmodified original files, both the publishing changes
+and any single image changes are ignored.
+
+Once created, a published zip file is not updated. So if images are added,
+removed or changed in a portfolio, any existing zip files will become out of
+date. If this is a concern, delete the existing exports and re-publish the
+portfolio. Anyone attempting to download a deleted zip file will receive a
+`404 not found` error.
+
+Published zip files also have an expiry date, after which time they will be
+automatically deleted. For zips that only need to be downloaded once you can
+set for example a 7 day expiry date. Or to prevent expiry at all, set a 100 year
+expiry date.
+
+### URL
+* `/api/v1/portfolios/[portfolio id]/exports/` for `GET` (list exports) and `POST`
+* `/api/v1/portfolios/[portfolio id]/images/[export id]/` for `GET` and `DELETE`
+
+### Supported methods
+* `GET`
+* `POST`
+* `DELETE`
+
+### Parameters
+* None for `GET` and `DELETE`
+* For `POST`:
+	* `description` - Mandatory, text - a description of the export
+	  (can be left blank)
+	* `originals` - Mandatory, boolean - whether to export the original unmodified
+	  image files (when true, `image_parameters` will be ignored)
+	* `expiry_time` - Mandatory, text - Date in the format `yyyy-mm-dd`, or a time
+	  in the format `yyyy-mm-ddThh:mm:ss` for when the published zip file should
+	  be automatically deleted. The time is specified in the UTC time zone and the
+	  expiry routine runs hourly.
+	* `image_parameters` - Optional, JSON text - A set of field/value-object pairs
+	  that define any imaging operations required for this export. The JSON
+	  format is the same as when defining an [image template](#api_data_templates).
+
+### Permissions required
+* Portfolio view permission for `GET`
+* Portfolio ownership or the `admin_folios` system permission for `POST` and `DELETE`
+
+### Returns
+A list of published zip files for the portfolio (for the list URL), a single
+portfolio-export object (for most other URLs), or nothing (after a delete).
+
+Zip files are generated as a background task. When creating a new zip file with
+the `POST` action, status `202` is returned, the `filename` and `filesize` fields
+will be blank, and the `task_id` field will be set to a value that can be monitored
+with the [system tasks API](#api_tasks). Once the task has completed, the `filename`
+and `filesize` fields will be set, and the `task_id` field empty. If the task fails,
+the error information can be queried via the system tasks API, where the task
+object will contain an exception in the `result` field instead of the updated
+portfolio-export object.
+
+Each portfolio-export object includes a URL for downloading the zip file. This
+will be empty at first until the background task to create the zip file has
+completed.
+
+Attempting to delete a zip file while the background creation task is still in
+progress will result in a `503 server busy` error.
+
+### Examples
+
+TODO
+
 <a name="api_admin"></a>
 # Administration web services
 
@@ -1153,7 +1359,7 @@ Values are either `null` or excluded from the output if the template does not se
 them. Existing older templates may also be missing fields that have been added in
 more recent versions of the software.
 
-### Example
+### Examples
 
 	$ curl -u <token>:unused 'https://images.example.com/api/v1/admin/templates/1/'
 	{
@@ -1348,13 +1554,14 @@ controls.
 	* `description` - Mandatory, text - a description of the group
 	* `group_type` - Mandatory, integer - set to `1` for required system groups that must not
 	  be deleted, set to `2` for normal, user-defined groups
-	* `access_folios` - Mandatory, boolean - Currently unused
+	* `access_folios` - Mandatory, boolean - Whether the group allows the creation of portfolios
 	* `access_reports` - Mandatory, boolean - Whether the group provides access to reports
 	* `access_admin_users` - Mandatory, boolean - Whether the group provides user administration
 	  permission (and basic group administration)
 	* `access_admin_files` - Mandatory, boolean - Whether the group provides file administration
 	  permission (change and delete any file or folder, regardless of folder permissions)
-	* `access_admin_folios` - Mandatory, boolean - Currently unused
+	* `access_admin_folios` - Mandatory, boolean - Whether the group provides portfolio
+	  administration permission (create, change and delete any user's portfolios)
 	* `access_admin_permissions` - Mandatory, boolean - Whether the group provides permissions
 	  administration (and full group administration)
 	* `access_admin_all` - Mandatory, boolean - Whether the group provides _super user_
@@ -1383,10 +1590,10 @@ or nothing (after a delete).
 	      "permissions": {
 	        "admin_all": true,
 	        "admin_files": true,
-	        "admin_folios": false,
+	        "admin_folios": true,
 	        "admin_permissions": true,
 	        "admin_users": true,
-	        "folios": false,
+	        "folios": true,
 	        "group_id": 3,
 	        "reports": true
 	      }
@@ -1976,15 +2183,3 @@ Then after a few seconds:
 	  "message": "The requested item was not found (301)",
 	  "status": 404
 	}
-
-<a name="api_folios"></a>
-## portfolios
-TODO
-
-<a name="api_folios_content"></a>
-## portfolio content
-TODO
-
-<a name="api_folios_publish"></a>
-## portfolio publishing
-TODO

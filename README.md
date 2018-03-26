@@ -280,6 +280,7 @@ QIS version 2 brings these new features:
   * Download all as a zip file
   * Private, restricted, or public access levels
   * API support currently, user interface support to come in a future release
+  * See also [the portfolios specification](./doc/v2/Portfolios.md)
 
 While still on the to-do list for version 2 is:
 
