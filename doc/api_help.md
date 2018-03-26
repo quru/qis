@@ -1088,9 +1088,67 @@ If the `human_id` parameter is left blank when creating a portfolio, a generated
 ID will be present in the returned object. Each portfolio object includes a URL
 for viewing the portfolio.
 
-### Examples
+### Example
 
-TODO
+	$ curl -X POST -u <token>:unused -F 'human_id=the-spring-collection' \
+	       -F 'name=Spring Collection 2018' -F 'description=The 2018 Spring Collection' \
+	       -F 'internal_access=10' -F 'public_access=10' \
+	       'http://images.example.com/api/v1/portfolios/'
+	{
+	  "data": {
+	    "description": "The 2018 Spring Collection",
+	    "downloads": [],
+	    "history": [
+	      {
+	        "action": 1,
+	        "action_info": "",
+	        "action_time": "2018-03-23T12:13:52.214960Z",
+	        "folio_id": 3,
+	        "id": 4,
+	        "user": {
+	          "email": "matt@quru.com",
+	          "first_name": "Matt",
+	          "id": 3,
+	          "last_name": "Fozard",
+	          "status": 1,
+	          "username": "matt"
+	        },
+	        "user_id": 3
+	      }
+	    ],
+	    "human_id": "the-spring-collection",
+	    "id": 3,
+	    "images": [],
+	    "last_updated": "2018-03-23T12:13:52.206066Z",
+	    "name": "Spring Collection 2018",
+	    "owner": {
+	      "email": "matt@quru.com",
+	      "first_name": "Matt",
+	      "id": 3,
+	      "last_name": "Fozard",
+	      "status": 1,
+	      "username": "matt"
+	    },
+	    "owner_id": 3,
+	    "permissions": [
+	      {
+	        "access": 10,
+	        "folio_id": 3,
+	        "group_id": 1,
+	        "id": 5
+	      },
+	      {
+	        "access": 10,
+	        "folio_id": 3,
+	        "group_id": 2,
+	        "id": 6
+	      }
+	    ],
+	    "url": "http://images.example.com/portfolios/the-spring-collection/"
+	  },
+	  "message": "OK",
+	  "status": 200
+	}
 
 <a name="api_folios_content"></a>
 ## portfolio content
@@ -1160,7 +1218,127 @@ incorporates the operations given in the `image_parameters` parameter (if any).
 
 ### Examples
 
-TODO
+Add an image to a portfolio:
+
+	$ curl -X POST -u <token>:unused -F 'image_id=85' 'http://images.example.com/api/v1/portfolios/3/images/'
+	{
+	  "data": {
+	    "filename": "",
+	    "folio_id": 3,
+	    "id": 5,
+	    "image": {
+	      "description": "",
+	      "folder": {
+	        "id": 15,
+	        "name": "/products",
+	        "parent_id": 1,
+	        "path": "/products",
+	        "status": 1
+	      },
+	      "folder_id": 15,
+	      "height": 1754,
+	      "id": 85,
+	      "src": "products/p1-bags-a0001.jpg",
+	      "status": 1,
+	      "title": "",
+	      "width": 1239
+	    },
+	    "image_id": 85,
+	    "order_num": 0,
+	    "parameters": {},
+	    "url": "http://images.example.com/image?src=products/p1-bags-a0001.jpg"
+	  },
+	  "message": "OK",
+	  "status": 200
+	}
+
+Reorder the portfolio:
+
+	$ curl -X PUT -u <token>:unused -F 'index=2' 'http://images.example.com/api/v1/portfolios/3/images/84/position/'
+	{
+	  "data": [
+	    {
+	      "filename": "",
+	      "folio_id": 3,
+	      "id": 5,
+	      "image": {
+	        "description": "",
+	        "folder": {
+	          "id": 15,
+	          "name": "/products",
+	          "parent_id": 1,
+	          "path": "/products",
+	          "status": 1
+	        },
+	        "folder_id": 15,
+	        "height": 1754,
+	        "id": 85,
+	        "src": "products/p1-bags-a0001.jpg",
+	        "status": 1,
+	        "title": "",
+	        "width": 1239
+	      },
+	      "image_id": 85,
+	      "order_num": 0,
+	      "parameters": {},
+	      "url": "http://images.example.com/image?src=products/p1-bags-a0001.jpg"
+	    },
+	    {
+	      "filename": "",
+	      "folio_id": 3,
+	      "id": 7,
+	      "image": {
+	        "description": "",
+	        "folder": {
+	          "id": 15,
+	          "name": "/products",
+	          "parent_id": 1,
+	          "path": "/products",
+	          "status": 1
+	        },
+	        "folder_id": 15,
+	        "height": 1754,
+	        "id": 86,
+	        "src": "products/p1-bags-a0003.jpg",
+	        "status": 1,
+	        "title": "",
+	        "width": 1239
+	      },
+	      "image_id": 86,
+	      "order_num": 1,
+	      "parameters": {},
+	      "url": "http://images.example.com/image?src=products/p1-bags-a0003.jpg"
+	    },
+	    {
+	      "filename": "",
+	      "folio_id": 3,
+	      "id": 6,
+	      "image": {
+	        "description": "",
+	        "folder": {
+	          "id": 15,
+	          "name": "/products",
+	          "parent_id": 1,
+	          "path": "/products",
+	          "status": 1
+	        },
+	        "folder_id": 15,
+	        "height": 1754,
+	        "id": 84,
+	        "src": "products/p1-bags-a0002.jpg",
+	        "status": 1,
+	        "title": "",
+	        "width": 1239
+	      },
+	      "image_id": 84,
+	      "order_num": 0,
+	      "parameters": {},
+	      "url": "http://images.example.com/image?src=products/p1-bags-a0002.jpg"
+	    }
+	  ],
+	  "message": "OK",
+	  "status": 200
+	}
 
 <a name="api_folios_publish"></a>
 ## portfolio publishing
@@ -1235,7 +1413,79 @@ progress will result in a `503 server busy` error.
 
 ### Examples
 
-TODO
+Publish the portfolio's original unmodified image files:
+
+	$ curl -X POST -u <token>:unused -F 'description=Originals export' \
+	       -F 'originals=1' -F 'expiry_time=2020-01-01' 'http://images.example.com/api/v1/portfolios/3/exports/'
+	{
+	  "data": {
+	    "created": "2018-03-23T12:38:44.264952Z",
+	    "description": "Originals export",
+	    "filename": "",
+	    "filesize": 0,
+	    "folio_id": 3,
+	    "id": 2,
+	    "keep_until": "2020-01-01T00:00:00Z",
+	    "originals": true,
+	    "parameters": {},
+	    "task_id": 548,
+	    "url": ""
+	  },
+	  "message": "OK task accepted",
+	  "status": 202
+	}
+
+After the export task has completed, the filename and URL fields are set:
+
+	$ curl -u <token>:unused 'http://images.example.com/api/v1/portfolios/3/exports/2/'
+	{
+	  "data": {
+	    "created": "2018-03-23T12:38:44.264952Z",
+	    "description": "Originals export",
+	    "filename": "a13d7382f1124b59b62618dd4df154ba.zip",
+	    "filesize": 1330490,
+	    "folio_id": 3,
+	    "id": 2,
+	    "keep_until": "2020-01-01T00:00:00Z",
+	    "originals": true,
+	    "parameters": {},
+	    "task_id": null,
+	    "url": "http://images.example.com/portfolios/the-spring-collection/downloads/a13d7382f1124b59b62618dd4df154ba.zip"
+	  },
+	  "message": "OK",
+	  "status": 200
+	}
+
+Publish the portfolio with all images resized to 500x500:
+
+	$ curl -X POST -u <token>:unused -F 'description=500x500 thumbnails' \
+	       -F 'originals=0' -F 'image_parameters={"width":{"value":500}, "height":{"value":500}}' \
+	       -F 'expiry_time=2020-01-01' 'http://images.example.com/api/v1/portfolios/3/exports/'
+	{
+	  "data": {
+	    "created": "2018-03-26T13:42:40.491120Z",
+	    "description": "500 x 500 thumbnails",
+	    "filename": "",
+	    "filesize": 0,
+	    "folio_id": 3,
+	    "id": 3,
+	    "keep_until": "2020-01-01T00:00:00Z",
+	    "originals": false,
+	    "parameters": {
+	      "height": {
+	        "value": 500
+	      },
+	      "width": {
+	        "value": 500
+	      }
+	    },
+	    "task_id": 590,
+	    "url": ""
+	  },
+	  "message": "OK task accepted",
+	  "status": 202
+	}
+
 
 <a name="api_admin"></a>
 # Administration web services
