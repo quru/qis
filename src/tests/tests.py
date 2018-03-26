@@ -37,7 +37,20 @@
 # 26Aug2016  Matt  Moved web page tests into test_web_pages.py
 #
 
+import binascii
+import json
 import os
+import shutil
+import subprocess
+import tempfile
+import time
+import timeit
+
+import unittest2 as unittest
+
+import mock
+import flask
+from werkzeug.http import http_date
 
 # Do not use the base or any other current environment settings,
 # as we'll be clearing down the database
@@ -53,21 +66,6 @@ IMAGEMAGICK_PATHS = [
 
 print "Importing imageserver libraries"
 
-import binascii
-import json
-import shutil
-import signal
-import subprocess
-import tempfile
-import time
-import timeit
-
-import unittest2 as unittest
-
-import mock
-import flask
-from werkzeug.http import http_date
-
 # Assign global managers, same as the main app uses
 from imageserver.flask_app import app as flask_app
 from imageserver.flask_app import logger as lm
@@ -76,6 +74,7 @@ from imageserver.flask_app import data_engine as dm
 from imageserver.flask_app import image_engine as im
 from imageserver.flask_app import task_engine as tm
 from imageserver.flask_app import permissions_engine as pm
+from imageserver.flask_app import launch_aux_processes
 
 from imageserver.api_util import API_CODES
 from imageserver.errors import AlreadyExistsError
@@ -107,35 +106,23 @@ MAGICK_ROTATION_VERSION = 673
 GS_LINES_VERSION = 914
 
 
-# For nose
-def setup():
-    reset_databases()
+# Module level setUp - run by nose
+def setUp():
+    init_tests()
+
+
+# Utility - resets the database and cache, starts the aux processes
+def init_tests():
     cm.clear()
-
-
-def teardown():
-    # Kill the aux child processes
-    this_pid = os.getpid()
-    p = subprocess.Popen(
-        ['pgrep', '-g', str(this_pid)],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE
-    )
-    output = p.communicate()
-    output = (output[1] or output[0])
-    child_pids = [p for p in output.split() if p != str(this_pid)]
-    for pid in child_pids:
-        try:
-            os.kill(int(pid), signal.SIGTERM)
-        except:
-            print "Failed to kill child process %s" % pid
+    reset_databases()
+    launch_aux_processes()
+    time.sleep(1)  # Allow aux processes to start
 
 
 # Utility - delete and re-create the internal databases
 def reset_databases():
     assert flask_app.config['TESTING'], \
         'Testing settings have not been applied, not clearing the database!'
-
     cm._drop_db()
     dm._drop_db()
     cm._init_db()
@@ -144,17 +131,27 @@ def reset_databases():
     admin_user = dm.get_user(username='admin')
     admin_user.set_password('admin')
     dm.save_object(admin_user)
-    # Default the public root folder permissions to allow View + Download
+    # Default the public and internal root folder permissions to allow View + Download
     set_default_public_permission(FolderPermission.ACCESS_DOWNLOAD)
+    set_default_internal_permission(FolderPermission.ACCESS_DOWNLOAD)
     # Set some standard image generation settings
     reset_default_image_template()
 
 
 def set_default_public_permission(access):
     default_fp = dm.get_object(FolderPermission, 1)
+    assert default_fp.group_id == Group.ID_PUBLIC
     default_fp.access = access
     dm.save_object(default_fp)
-    pm.reset()
+    pm.reset_folder_permissions()
+
+
+def set_default_internal_permission(access):
+    default_fp = dm.get_object(FolderPermission, 2)
+    assert default_fp.group_id == Group.ID_EVERYONE
+    default_fp.access = access
+    dm.save_object(default_fp)
+    pm.reset_folder_permissions()
 
 
 def reset_default_image_template():
@@ -175,18 +172,9 @@ def reset_default_image_template():
     im.reset_templates()
 
 
-# Returns the first of paths+app_name that exists, else app_name
-def get_app_path(app_name, paths):
-    app_path = app_name
-    for p in paths:
-        try_path = os.path.join(p, app_name)
-        if os.path.exists(try_path):
-            app_path = try_path
-            break
-    return app_path
-
-
-# Utility - create/reset a test user having a certain system permission
+# Utility - create/reset and return a test user having a certain system permission.
+#           the returned user is a member of the standard "everyone" group and also
+#           a separate group that is used for setting the custom system permission.
 def setup_user_account(login_name, user_type='none', allow_api=False):
     db_session = dm.db_get_session()
     try:
@@ -209,41 +197,59 @@ def setup_user_account(login_name, user_type='none', allow_api=False):
             testuser.allow_api = allow_api
             testuser.status = User.STATUS_ACTIVE
         # Wipe system permissions
-        testgroup = dm.get_group(groupname='Red Dwarf', _db_session=db_session)
-        if not testgroup:
-            testgroup = Group(
-                'Red Dwarf',
+        test_group = dm.get_group(groupname=login_name+'-group', _db_session=db_session)
+        if not test_group:
+            test_group = Group(
+                login_name + '-group',
                 'Test group',
                 Group.GROUP_TYPE_LOCAL
             )
-            dm.create_group(testgroup, _db_session=db_session)
-        testgroup.permissions = SystemPermissions(
-            testgroup, False, False, False, False, False, False, False
+            dm.create_group(test_group, _db_session=db_session)
+        test_group.permissions = SystemPermissions(
+            test_group, False, False, False, False, False, False, False
         )
-        # Wipe folder permissions
-        del testgroup.folder_permissions[:]
+        # Wipe folder and folio permissions
+        del test_group.folder_permissions[:]
+        del test_group.folio_permissions[:]
         # Apply permissions for requested test type
         if user_type == 'none':
             pass
+        elif user_type == 'folios':
+            test_group.permissions.folios = True
         elif user_type == 'admin_users':
-            testgroup.permissions.admin_users = True
+            test_group.permissions.admin_users = True
         elif user_type == 'admin_files':
-            testgroup.permissions.admin_files = True
+            test_group.permissions.admin_files = True
+        elif user_type == 'admin_folios':
+            test_group.permissions.admin_folios = True
         elif user_type == 'admin_permissions':
-            testgroup.permissions.admin_users = True
-            testgroup.permissions.admin_permissions = True
+            test_group.permissions.admin_users = True
+            test_group.permissions.admin_permissions = True
         elif user_type == 'admin_all':
-            testgroup.permissions.admin_all = True
+            test_group.permissions.admin_all = True
         else:
             raise ValueError('Unimplemented test user type ' + user_type)
-        dm.save_object(testgroup, _db_session=db_session)
-        testuser.groups = [testgroup]
+        dm.save_object(test_group, _db_session=db_session)
+        everyone_group = dm.get_group(Group.ID_EVERYONE, _db_session=db_session)
+        testuser.groups = [everyone_group, test_group]
         dm.save_object(testuser, _db_session=db_session)
         db_session.commit()
+        return testuser
     finally:
         db_session.close()
         # Clear old cached user permissions
         pm.reset()
+
+
+# Returns the first of paths+app_name that exists, else app_name
+def get_app_path(app_name, paths):
+    app_path = app_name
+    for p in paths:
+        try_path = os.path.join(p, app_name)
+        if os.path.exists(try_path):
+            app_path = try_path
+            break
+    return app_path
 
 
 # Utility - invoke ImageMagick convert command, wait for completion,
@@ -366,7 +372,7 @@ class BaseTestCase(FlaskTestCase):
                 raise ValueError('Test image not found: ' + match_file)
         temp_img = '/tmp/qis_img.tmp'
         try:
-            with open(temp_img, 'w') as f:
+            with open(temp_img, 'wb') as f:
                 f.write(img_data)
             psnr = compare_images(temp_img, static_img)
             self.assertGreaterEqual(psnr, tolerance)
@@ -464,7 +470,7 @@ class ImageServerTestsSlow(BaseTestCase):
         temp_env['QIS_SETTINGS'] = TESTING_SETTINGS
         rs_path = 'src/runserver.py' if os.path.exists('src/runserver.py') else 'runserver.py'
         inner_server = subprocess.Popen('python ' + rs_path, cwd='.', shell=True, env=temp_env)
-        time.sleep(10)
+        time.sleep(5)
         # Set the xref base URL so it will get generated if we pass the right thing as width
         flask_app.config['DEBUG'] = True
         flask_app.config['XREF_TRACKING_URL'] = \
@@ -483,12 +489,6 @@ class ImageServerTestsSlow(BaseTestCase):
 
 
 class ImageServerBackgroundTaskTests(BaseTestCase):
-    @classmethod
-    def setUpClass(cls):
-        super(ImageServerBackgroundTaskTests, cls).setUpClass()
-        # Invoke @app.before_first_request to launch the aux servers
-        flask_app.test_client().get('/')
-
     # Similar to test_db_auto_population, but with the emphasis
     # on auto-detecting external changes to the file system
     def test_db_auto_sync(self):
@@ -680,7 +680,7 @@ class ImageServerTestsRegressions(BaseTestCase):
                 )
                 self.assertEqual(png.status_code, 200)
                 self.assertNotEqual(jpg.data, png.data)
-                with open(tempfile, 'w') as f:
+                with open(tempfile, 'wb') as f:
                     f.write(png.data)
                 self.assertImageMatch(jpg.data, tempfile, 1000)
         finally:
@@ -1295,6 +1295,19 @@ class ImageServerTestsFast(BaseTestCase):
         self.assertEqual(rv.status_code, 403)
         rv = self.app.get('/original?src=../../../../../../../../../etc/passwd')
         self.assertEqual(rv.status_code, 403)
+        rv = self.app.get('/image?src=%2Fetc%2Fpasswd')
+        self.assertEqual(rv.status_code, 404)
+        rv = self.app.get('/original?src=%2Fetc%2Fpasswd')
+        self.assertEqual(rv.status_code, 404)
+        # Also try leading // to see if the code only strips one of them
+        rv = self.app.get('/image?src=//etc/passwd')
+        self.assertEqual(rv.status_code, 404)
+        rv = self.app.get('/original?src=//etc/passwd')
+        self.assertEqual(rv.status_code, 404)
+        rv = self.app.get('/image?src=%2F%2Fetc%2Fpasswd')
+        self.assertEqual(rv.status_code, 404)
+        rv = self.app.get('/original?src=%2F%2Fetc%2Fpasswd')
+        self.assertEqual(rv.status_code, 404)
 
     # Test 403 on insecure unicode src param
     def test_unicode_insecure_src(self):
@@ -2630,7 +2643,7 @@ class ImageServerTestsFast(BaseTestCase):
         # Clear out the image caches and permissions caches
         im.reset_image(ImageAttrs(test_image))
         delete_image_ids()
-        pm.reset()
+        pm.reset_folder_permissions()
         # Viewing an image will trigger SQL for the image record and folder permissions reads
         rv = self.app.get('/image?src=' + test_image)
         assert rv.status_code == 200
@@ -2659,17 +2672,18 @@ class ImageServerTestsFast(BaseTestCase):
     def test_folder_permissions_hierarchy(self):
         tempfile = '/rootfile.jpg'
         try:
-            # Reset the default public permission to None
+            # Reset the default permission to None
             set_default_public_permission(FolderPermission.ACCESS_NONE)
+            set_default_internal_permission(FolderPermission.ACCESS_NONE)
             # test_images should not be viewable
             rv = self.app.get('/image?src=test_images/cathedral.jpg')
             assert rv.status_code == API_CODES.UNAUTHORISED
             # Set a user's group to allow view for root folder
             setup_user_account('kryten', 'none')
-            db_group = dm.get_group(groupname='Red Dwarf')
+            db_group = dm.get_group(groupname='kryten-group')
             db_folder = dm.get_folder(folder_path='')
             dm.save_object(FolderPermission(db_folder, db_group, FolderPermission.ACCESS_VIEW))
-            pm.reset()
+            pm.reset_folder_permissions()
             # Log in, test_images should be viewable now
             self.login('kryten', 'kryten')
             rv = self.app.get('/image?src=test_images/cathedral.jpg')
@@ -2680,7 +2694,7 @@ class ImageServerTestsFast(BaseTestCase):
             # Update test group permission to allow download for test_images folder
             db_folder = dm.get_folder(folder_path='test_images')
             dm.save_object(FolderPermission(db_folder, db_group, FolderPermission.ACCESS_DOWNLOAD))
-            pm.reset()
+            pm.reset_folder_permissions()
             # Download should be denied for root, but now allowed for test_images
             copy_file('test_images/cathedral.jpg', tempfile)
             rv = self.app.get('/original?src=' + tempfile)
@@ -2711,6 +2725,7 @@ class ImageServerTestsFast(BaseTestCase):
         finally:
             delete_file(tempfile)
             set_default_public_permission(FolderPermission.ACCESS_DOWNLOAD)
+            set_default_internal_permission(FolderPermission.ACCESS_DOWNLOAD)
 
     # Test image and page access (folder permissions)
     def test_folder_permissions(self):
@@ -2742,18 +2757,19 @@ class ImageServerTestsFast(BaseTestCase):
             # Create temp file for uploads
             src_file = get_abs_path('test_images/cathedral.jpg')
             shutil.copy(src_file, temp_file)
-            # Reset the default public permission to None
+            # Reset the default permission to None
             set_default_public_permission(FolderPermission.ACCESS_NONE)
+            set_default_internal_permission(FolderPermission.ACCESS_NONE)
             # Create test user with no permission overrides, log in
             setup_user_account('kryten', 'none')
             self.login('kryten', 'kryten')
-            db_group = dm.get_group(groupname='Red Dwarf')
+            db_group = dm.get_group(groupname='kryten-group')
             db_folder = dm.get_folder(folder_path='')
             db_test_folder = dm.get_folder(folder_path='test_images')
             # Run numbered tests - first with no permission
             fp = FolderPermission(db_folder, db_group, FolderPermission.ACCESS_NONE)
             fp = dm.save_object(fp, refresh=True)
-            pm.reset()
+            pm.reset_folder_permissions()
             test_pages((False, False, False, False, False, False))
             # Also test permission tracing (ATPT)
             with self.app as this_session:
@@ -2763,7 +2779,7 @@ class ImageServerTestsFast(BaseTestCase):
             # With view permission
             fp.access = FolderPermission.ACCESS_VIEW
             dm.save_object(fp)
-            pm.reset()
+            pm.reset_folder_permissions()
             test_pages((True, True, True, False, False, False))
             # ATPT
             with self.app as this_session:
@@ -2773,7 +2789,7 @@ class ImageServerTestsFast(BaseTestCase):
             # With download permission
             fp.access = FolderPermission.ACCESS_DOWNLOAD
             dm.save_object(fp)
-            pm.reset()
+            pm.reset_folder_permissions()
             test_pages((True, True, True, True, False, False))
             # ATPT
             with self.app as this_session:
@@ -2783,7 +2799,7 @@ class ImageServerTestsFast(BaseTestCase):
             # With edit permission
             fp.access = FolderPermission.ACCESS_EDIT
             dm.save_object(fp)
-            pm.reset()
+            pm.reset_folder_permissions()
             test_pages((True, True, True, True, True, False))
             # ATPT
             with self.app as this_session:
@@ -2793,7 +2809,7 @@ class ImageServerTestsFast(BaseTestCase):
             # With upload permission
             fp.access = FolderPermission.ACCESS_UPLOAD
             dm.save_object(fp)
-            pm.reset()
+            pm.reset_folder_permissions()
             test_pages((True, True, True, True, True, True))
             # ATPT
             with self.app as this_session:
@@ -2812,6 +2828,7 @@ class ImageServerTestsFast(BaseTestCase):
             if os.path.exists(temp_file): os.remove(temp_file)
             delete_file(temp_image_path)
             set_default_public_permission(FolderPermission.ACCESS_DOWNLOAD)
+            set_default_internal_permission(FolderPermission.ACCESS_DOWNLOAD)
 
     # Test that overlay obeys the permissions rules
     def test_overlay_permissions(self):

@@ -45,6 +45,8 @@ to the defined task settings.
 """
 
 from datetime import datetime, timedelta
+import os
+import shutil
 
 import requests
 
@@ -302,7 +304,6 @@ def delete_old_temp_files(**kwargs):
     to be deleted automatically, but ImageMagick sometimes leaves them behind.
     """
     import glob
-    import os
     import stat
     from flask_app import app
 
@@ -473,6 +474,149 @@ def create_image_pyramid(**kwargs):
     app.log.debug(
         'Pyramid created %d image(s) for image ID %d' % (pcount, image_id)
     )
+
+
+def export_portfolio(**kwargs):
+    """
+    A task that exports all the image files that make up a portfolio and stores
+    them in a single zip file.
+    """
+    import zipfile
+    from errors import DoesNotExistError
+    from filesystem_manager import (
+        get_abs_path, get_file_info, get_portfolio_directory, make_dirs, path_exists
+    )
+    from flask_app import app
+    from models import FolioExport
+    from portfolios.util import get_portfolio_export_image_attrs, get_portfolio_export_filename
+
+    export_id, ignore_errors = _extract_parameters(['export_id', 'ignore_errors'], **kwargs)
+
+    # Get and check the export request
+    folio_export = app.data_engine.get_object(FolioExport, export_id)
+    if not folio_export:
+        raise DoesNotExistError('FolioExport ' + str(export_id))
+    if folio_export.filename and folio_export.filesize:
+        app.log.warn(
+            'Portfolio export ID %d has already completed, '
+            'returning the existing export file' % export_id
+        )
+        return folio_export
+
+    # We'll do this without a database session to keep the code simple and
+    # avoid holding onto an idle database connection for a long time
+    folio = app.data_engine.get_portfolio(folio_export.folio_id, load_images=True)
+    if len(folio.images) == 0:
+        app.log.warn('Portfolio ID %d is empty, cannot export it' % folio.id)
+        return folio_export
+
+    temp_dir = os.path.join(app.config['TEMP_DIR'], 'qis_export', str(export_id))
+    zip_obj = None
+    try:
+        # Make a temp dir for assembling the zip, then if anything goes wrong
+        # we don't risk polluting the main image repository
+        if os.path.exists(temp_dir):
+            shutil.rmtree(temp_dir, ignore_errors=False)
+        os.makedirs(temp_dir)
+
+        # Start a new zip file in temp dir
+        zip_filename = FolioExport.create_filename() + '.zip'
+        zip_path = os.path.join(temp_dir, zip_filename)
+        zip_obj = zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_STORED, allowZip64=True)
+
+        # Export all the image files in order
+        for folio_image in folio.images:
+            image_attrs = None
+            try:
+                image_attrs = get_portfolio_export_image_attrs(
+                    folio_export, folio_image, finalise=True
+                )
+                image_filename = get_portfolio_export_filename(
+                    folio_image, image_attrs
+                )
+                # Get the binary image data
+                app.log.debug('Portfolio export ID %d - exporting image %s to %s' % (
+                    folio_export.id, image_attrs.filename(), image_filename
+                ))
+                image_wrapper = (
+                    app.image_engine.get_image_original(image_attrs)
+                    if folio_export.originals else
+                    app.image_engine.get_image(image_attrs)
+                )
+                if image_wrapper is None:
+                    raise DoesNotExistError(image_attrs.filename())
+
+                # Write the binary data directly into the zip
+                zip_obj.writestr(image_filename, image_wrapper.data())
+
+            except (OSError, IOError):
+                # For permissions or IO errors (e.g. disk full) there's no point continuing
+                raise
+            except Exception as e:
+                # For image generation errors we can choose to continue
+                app.log.error('Portfolio export ID %d failed to generate image %s: %s' % (
+                    folio_export.id,
+                    str(image_attrs) if image_attrs else folio_image.image.src,
+                    str(e)
+                ))
+                if not ignore_errors:
+                    raise
+
+        # At this point all the images have been exported, close the zip file
+        zip_obj.close()
+        zip_obj = None
+
+        # Move the zip into its final location
+        rel_final_dir = get_portfolio_directory(folio)
+        if not path_exists(rel_final_dir, require_directory=True):
+            make_dirs(rel_final_dir)
+        rel_final_path = os.path.join(rel_final_dir, zip_filename)
+        shutil.move(zip_path, get_abs_path(rel_final_path))
+
+        # Success - set the zip info and blank out the task ID in the database
+        zip_info = get_file_info(rel_final_path)
+        folio_export.filename = zip_filename
+        folio_export.filesize = zip_info['size']
+        folio_export.task_id = None
+        return app.data_engine.save_object(folio_export)
+    finally:
+        # Close the zip if it's still open (on error)
+        if zip_obj:
+            zip_obj.close()
+        # Clean up the temp files
+        shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+def expire_portfolio_exports(**kwargs):
+    """
+    A task that removes expired portfolio exports.
+    """
+    from flask_app import app
+    from portfolios.util import delete_portfolio_export
+
+    db_session = app.data_engine.db_get_session()
+    try:
+        expired_exports = app.data_engine.get_expired_portfolio_exports(db_session)
+        for folio_export in expired_exports:
+            try:
+                app.log.info(
+                    'Deleting expired export %s from portfolio ID %d' %
+                    (folio_export.filename, folio_export.folio_id)
+                )
+                # This does a db_session.commit()
+                delete_portfolio_export(
+                    folio_export,
+                    None,
+                    'Expired: ' + folio_export.describe(True),
+                    _db_session=db_session
+                )
+            except Exception as e:
+                app.log.error(
+                    'Failed to delete portfolio export %d: %s' % (folio_export.id, str(e))
+                )
+                db_session.rollback()
+    finally:
+        db_session.close()
 
 
 def test_result_task(**kwargs):

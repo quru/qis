@@ -10,6 +10,9 @@ TESTING = True
 # Test the production code
 DEBUG = False
 
+# Tests run locally
+PUBLIC_HOST_NAME = "localhost"
+
 # Use separate testing databases
 CACHE_DATABASE_CONNECTION = "postgresql+psycopg2:///qis-cache-test"
 CACHE_DATABASE_POOL_SIZE = 2
@@ -17,11 +20,14 @@ MGMT_DATABASE_CONNECTION = "postgresql+psycopg2:///qis-mgmt-test"
 MGMT_DATABASE_POOL_SIZE = 2
 
 # Set testing image directories
-INSTALL_DIR = ".."
-DOCS_BASE_DIR = INSTALL_DIR + "/doc/"
-ICC_BASE_DIR = INSTALL_DIR + "/icc/"
-IMAGES_BASE_DIR = INSTALL_DIR + "/images/"
-LOGGING_BASE_DIR = INSTALL_DIR + "/logs/"
+INSTALL_DIR = "../"
+DOCS_BASE_DIR = INSTALL_DIR + "doc/"
+ICC_BASE_DIR = INSTALL_DIR + "icc/"
+IMAGES_BASE_DIR = INSTALL_DIR + "images/"
+LOGGING_BASE_DIR = INSTALL_DIR + "logs/"
+
+# Export portfolios to a separate directory that is safe to delete
+FOLIO_EXPORTS_DIR = '.test_folio_exports'
 
 # Test automatic PDF bursting
 PDF_BURST_TO_PNG = True

@@ -37,7 +37,6 @@ import time
 
 import tests.tests as main_tests
 
-from imageserver.flask_app import app as flask_app
 from imageserver.flask_app import data_engine as dm
 from imageserver.flask_app import task_engine as tm
 from imageserver.models import SystemStats, Task
@@ -47,9 +46,7 @@ class TaskServerTests(main_tests.FlaskTestCase):
     @classmethod
     def setUpClass(cls):
         super(TaskServerTests, cls).setUpClass()
-        main_tests.setup()
-        # Invoke @app.before_first_request to launch the aux servers
-        flask_app.test_client().get('/')
+        main_tests.init_tests()
 
     def test_task_server(self):
         # Create some stats
@@ -96,7 +93,7 @@ class TaskServerTests(main_tests.FlaskTestCase):
         task = tasks[-1]
         self.assertEqual(task.id, task_obj.id)
         # Wait for task completion
-        tm.wait_for_task(task_obj.id, 20)
+        tm.wait_for_task(task_obj.id, 10)
         # We should now have no stats
         t_now = datetime.utcnow()
         sys_stats = dm.search_system_stats(t_now - timedelta(minutes=60), t_now)
@@ -120,7 +117,7 @@ class TaskServerTests(main_tests.FlaskTestCase):
             Task.PRIORITY_NORMAL, 'info', 'error', 5
         )
         self.assertIsNotNone(task_obj)
-        tm.wait_for_task(task_obj.id, 20)
+        tm.wait_for_task(task_obj.id, 10)
         task_obj = tm.get_task(task_obj.id, decode_attrs=True)
         self.assertIsNone(task_obj.result)
         dm.delete_object(task_obj)
@@ -134,7 +131,7 @@ class TaskServerTests(main_tests.FlaskTestCase):
             Task.PRIORITY_NORMAL, 'info', 'error', 5
         )
         self.assertIsNotNone(task_obj)
-        tm.wait_for_task(task_obj.id, 20)
+        tm.wait_for_task(task_obj.id, 10)
         task_obj = tm.get_task(task_obj.id, decode_attrs=True)
         self.assertEqual(task_obj.result, {'my_bool': True})
         dm.delete_object(task_obj)
@@ -148,8 +145,23 @@ class TaskServerTests(main_tests.FlaskTestCase):
             Task.PRIORITY_NORMAL, 'info', 'error', 5
         )
         self.assertIsNotNone(task_obj)
-        tm.wait_for_task(task_obj.id, 20)
+        tm.wait_for_task(task_obj.id, 10)
         task_obj = tm.get_task(task_obj.id, decode_attrs=True)
         self.assertIsInstance(task_obj.result, ValueError)
         self.assertEqual(repr(task_obj.result), repr(ValueError('An error happened')))
         dm.delete_object(task_obj)
+
+    # Tests that new tasks can be cancelled
+    def test_task_cancel(self):
+        task_obj = tm.add_task(
+            None, 'Test task cancelling', 'test_result_task',
+            {'raise_exception': False, 'return_value': None},
+            Task.PRIORITY_LOW, 'info', 'error', 0
+        )
+        self.assertIsNotNone(task_obj)
+        self.assertGreater(task_obj.id, 0)
+        # Yes, this could be a fragile test if the task server gets to it first
+        # It has worked the first 5 times in a row I've tried it, so fingers crossed
+        self.assertTrue(tm.cancel_task(task_obj))
+        task_obj = tm.get_task(task_obj.id)
+        self.assertIsNone(task_obj)

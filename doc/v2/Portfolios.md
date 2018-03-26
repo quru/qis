@@ -1,7 +1,7 @@
 Portfolios
 ==========
 
-Current status: pending
+Current status: phase 1 complete
 
 A portfolio is a hand-curated list of images that can be viewed together, downloaded
 together, or transformed together (e.g. resized to the same dimensions, or having
@@ -47,10 +47,11 @@ gallery and slideshow libraries to display portfolios is also deferred.
 
 Any user in a group with _folio_ permission can create portfolios. They can choose
 whether the portfolio is private (visible only to them), visible to logged-in users,
-or public. Separately they can also choose the same 3 options for who is allowed to
-download a published zip of the whole portfolio. Only the owner or a folio
-administrator can publish or change or delete the portfolio. The owner can add any
-image to the portfolio that they already have permission to view.
+or public. In addition they can also choose the same 3 levels for who is allowed to
+download a published zip of the whole portfolio. Just as for image folders, download
+permission will infer view permission. Only the owner or a folio administrator can
+publish or change or delete the portfolio. The owner can add any image to the
+portfolio that they already have permission to view.
 
 A user in a group with _admin___folios_ permission can see and manage any portfolio.
 This will be required in future so that someone other than the portfolio creator has
@@ -114,7 +115,7 @@ Phase 2
 
 * Add URLs for users to create, publish, manage their own portfolios
   * `/portfolios/`
-  * `/portfolios/<<portfolio human ID>>/`
+  * `/portfolios/<<portfolio human ID>>/edit/`
   * `/portfolios/<<portfolio human ID>>/publish/`
   * `/portfolios/<<portfolio human ID>>/downloads/`
 * Add URLs for administrators to view and manage all portfolios
@@ -188,7 +189,7 @@ Add new database tables as follows:
 	id
 	folio_id - FK to folios
 	user_id - FK to users, optional
-	action - CREATED 1, EDITED 3, PUBLISHED 5, DOWNLOADED 6, PUBLISH_EXPIRED 7
+	action - CREATED 1, EDITED 3, PUBLISHED 5, DOWNLOADED 6, UNPUBLISHED 7
 	action_info
 	action_time - timestamp
 
@@ -267,7 +268,8 @@ as defined for the existing API.
   * `GET` method only
   * No parameters
   * Requires folio `DOWNLOAD` permission for the requested (human) ID
-  * Returns binary data (content type `application/zip`) as an attachment
+  * Returns binary data (content type `application/zip`) as an attachment on success,
+    returns a non-200 status code and HTML text on error
   * Requires the portfolio to have already been published using the portfolio
     publish API
   * Adds a `foliosaudit` record with a `DOWNLOADED` action
@@ -283,15 +285,15 @@ portfolios however, a token is required.
   * `GET` method
   * No parameters
   * Returns a JSON list of portfolios for which the current user has folio `VIEW` permission
-  * Returns portfolio header fields only (no image list and no zip file information)
+  * Returns portfolio header fields only (no image list and no audit trail)
 
 * Portfolio details
   * URL `/api/v1/portfolios/[portfolio id]/`
   * `GET` method
   * No parameters
   * Requires folio `VIEW` permission for the requested ID
-  * Returns a JSON object with full portfolio details, including the image list and
-    list of published (and non-expired) zip files available for download
+  * Returns a JSON object with full portfolio details, including the ordered image list,
+    audit trail and list of published (and non-expired) zip files available for download
 
 ### Protected web services
 
@@ -307,8 +309,8 @@ rather than `/api/v1/admin/portfolios/`.
   * URL `/api/v1/portfolios/` for `GET` (list) and `POST` (create)
   * URL `/api/v1/portfolios/[portfolio id]/` for `GET`, `PUT`, and `DELETE`
   * No parameters for `GET` or `DELETE`
-  * Parameters `human_id` (optional), `name`, `description`, `view_access`
-    (0, 1, or 2), `download_access` (0, 1, or 2) for `POST` and `PUT`
+  * Parameters `human_id` (optional), `name`, `description`, `internal_access`
+    (0, 10, or 20), `public_access` (0, 10, or 20) for `POST` and `PUT`
   * No permissions required for `GET` (list)
     * But the returned list is filtered by `VIEW` permission
   * Folio `VIEW` permission required for `GET` (ID)
@@ -318,11 +320,14 @@ rather than `/api/v1/admin/portfolios/`.
     (after a delete)
   * Note that the 2 `GET` URLs actually implement the 2 "public web services"
     exactly as described above
-  * The `view_access` and `download_access` values will act as shortcuts for which
+  * The `human_id` parameter is a unique value that will be used to identify the
+    portfolio in "friendly" shareable URLs. If no value is given, the application
+    will generate a unique string value.
+  * The `internal_access` and `public_access` values will act as shortcuts for which
     data rows should be present in the `foliopermissions` table. A future release
     of QIS may add new API functions, similar to those existing for
     _folder permissions_, that enable more granular permissions to be set for
-    individual groups.
+    individual groups. If both values are zero, the portfolio will be private.
   * Deleting a portfolio will cascade the delete to the `folioimages`,
     `foliopermissions`, `folioexports` and `folioaudit` tables, and delete
     exported zip files from the filesystem
@@ -336,18 +341,29 @@ rather than `/api/v1/admin/portfolios/`.
   * URL `/api/v1/portfolios/[portfolio id]/images/[image id]/position/`
     for `PUT` (reorder images)
   * No parameters for `GET` and `DELETE`
-  * Parameter `image_id` plus those below for `POST`
+  * For `POST` (add image) either `image_id` or `image_src` plus the `PUT` parameters
   * Parameters `filename` (optional), `index` (optional), `image_parameters`
     (optional JSON) for `PUT` (change image)
   * Parameter `index` for `PUT` (reorder)
   * Folio `VIEW` permission required for `GET`
   * Folio `EDIT` permission required otherwise
+  * Image `VIEW` permission required to add an image to a portfolio
   * Returns a list of the portfolio-image objects in the portfolio, a single
     portfolio-image object, or nothing (after a delete)
+  * Returns the newly ordered list of portfolio-image objects in the portfolio
+    after a reorder
   * The optional `filename` value overrides an image's default filename when the
-    portfolio is published to a zip file
+    portfolio is published to a zip file. It must be a plain ASCII string for
+    zip file compatibility, with no directory or path prefix.
   * The optional `image_parameters` value will accept JSON in the same structure
     as defined for the existing _image templates_ API
+  * Includes a calculated view URL field for each image, which will incorporate
+    the `image_parameters` (if any)
+  * Note that setting the `index` value using the _change image_ function will
+    not change the ordering number on other images in the portfolio. This may
+    result in duplicate values, with the order then being determined by which
+    image was added to the portfolio first. To ensure that each image has a
+    unique order number, use the explicit _reorder image_ function.
   * Adds a `foliosaudit` record for change actions
 
 * Portfolio publishing (export) and distribution
@@ -356,25 +372,28 @@ rather than `/api/v1/admin/portfolios/`.
   * URL `/api/v1/portfolios/[portfolio id]/exports/[export id]/`
     for `GET` and `DELETE` (unpublish)
   * No parameters for `GET` and `DELETE`
-  * Parameters `description` (optional), `originals`, `image_parameters` (optional
-    JSON, ignored when `originals` is true), `expiry_time` for `POST`
+  * Parameters `description`, `originals`, `image_parameters`
+    (optional JSON, ignored when `originals` is true), `expiry_time` for `POST`
   * Folio `VIEW` permission required for `GET`
   * Folio `EDIT` permission required otherwise
   * Returns a list of the portfolio-exports objects for the portfolio, a single
     portfolio-export object, or nothing (after a delete)
-  * Includes a calculated download URL field in the returned object(s)
+  * Includes a calculated download URL field in the returned object(s), which
+    will be blank until the background task that creates the zip file has completed
   * The optional `image_parameters` value will accept JSON in the same structure
     as defined for the existing _image templates_ API
   * When a new record is created, the returned `filename` and `filesize` fields
     will be blank, the status code will be `202`, and the `task_id` field will be
     set to a value that can be monitored with the _system tasks_ API
-  * When the associated background task has completed successfully, the
-    `filename` and `filesize` fields will be set, and the `task_id` field blank
-  * If the background task fails, the `task_id` field will be left in place
+  * When the associated background task has completed, the `filename` and
+    `filesize` fields will be set, and the `task_id` field blank
+  * If the background task fails, the `filename` and `filesize` fields will
+    remain blank
   * It will not be possible to change a zip file (`PUT` is not supported)
   * Deleting an export will delete the associated zip file from the filesystem
-  * Deleting an export before the associated task has completed will return an
-    error
+  * Deleting an export before the associated task has started will be allowed
+  * Deleting an export before the associated task has completed will return a
+    `503` "server busy, try again later" status
   * Adds a `foliosaudit` record for change actions
 
 ## Future enhancements

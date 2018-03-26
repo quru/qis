@@ -118,6 +118,14 @@ class TaskManager(object):
         finally:
             db_session.close()
 
+    def cancel_task(self, task):
+        """
+        Atomically deletes the given unlocked and pending task object.
+        Returns a boolean for success, False if the task no longer exists,
+        has been started or has finished.
+        """
+        return self._data.cancel_task(task)
+
     def get_task(self, task_id, decode_attrs=False, _db_session=None):
         """
         Returns the Task object matching the requested ID, or None if
@@ -207,6 +215,13 @@ class TaskManager(object):
             'function': 'delete_old_temp_files',
             'priority': Task.PRIORITY_NORMAL,
             'interval_hours': 24,
+            'last_run': None,
+            'logging': ('info', 'error')
+        }, {
+            'name': 'Remove expired portfolio exports',
+            'function': 'expire_portfolio_exports',
+            'priority': Task.PRIORITY_NORMAL,
+            'interval_hours': 1,
             'last_run': None,
             'logging': ('info', 'error')
         }]

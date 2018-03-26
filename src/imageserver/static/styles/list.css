@@ -57,6 +57,9 @@ td.count {
 	font-size: 95%;
 	/* Emulate the blank first tr of the list view */
 	margin-top: 2em;
+	/* Pad bottom/right to match grid cell top/left margin */
+	padding-right: 1em;
+	padding-bottom: 1em;
 }
 .grid-row,
 .grid-cell {
@@ -67,33 +70,44 @@ td.count {
 }
 .grid-cell {
 	display: inline-block;
-	margin: 1em 0.5em 0.8em 1em;
-	width: 200px;   /* expects preview image of 200x200 */
-	height: 240px;  /* plus 40px for filename and info  */
+	margin-top: 1em;
+	margin-left: 1em;
 	padding: 10px;
+	text-align: center;
 	overflow: hidden;
 }
-.grid-cell.single-line {
-	line-height: 230px;
-	text-align: center;
-	vertical-align: middle;
+.grid-cell .image-placeholder,
+.grid-cell .icon-placeholder {
+	margin-bottom: 3px;
 }
-.grid-cell.directory {
-	text-align: center;
+
+/* Sizing for a grid of max 200x200 thumbnail images */
+.cell-size-thumbnail .grid-cell {
+	width: 200px;
+	height: 240px;  /* 200 plus 40px for filename and info  */
 }
-.grid-cell .image-placeholder {
-	/* For thumbnails that are returned smaller than 200x200 */
+.cell-size-thumbnail .image-placeholder {
 	width: 200px;
 	height: 200px;
 	line-height: 200px;
-	text-align: center;
 	vertical-align: middle;
-	/* For all thumbnails */
-	margin-bottom: 3px;
 }
-.grid-cell .icon-placeholder {
-	/* For icons that are smaller than 200x200 */
-	height: 55px;
+.cell-size-thumbnail .icon-placeholder {
+	padding-top: 55px;  /* vertically centre an icon in 240 height */
+}
+
+/* Sizing for a grid of variable sized, responsive, but width-limited images */
+.cell-size-variable {
+	text-align: center;
+}
+.cell-size-variable .image-placeholder,
+.cell-size-variable .image-placeholder img {
+	min-width: 120px;  /* space for lazy loading icon */
+	min-height: 120px;
+}
+.cell-size-variable .image-placeholder img {
+	width: 100%;
+	max-width: 800px;
 }
 
 .image-placeholder.lazy-load {

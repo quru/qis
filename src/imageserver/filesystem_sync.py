@@ -78,8 +78,7 @@ def on_image_db_create_anon_history(db_image):
     on_image_db_create(db_image)
     db_image.history.append(ImageHistory(
         db_image, None, ImageHistory.ACTION_CREATED,
-        'File detected: ' + db_image.src,
-        datetime.utcnow()
+        'File detected: ' + db_image.src
     ))
 
 
@@ -852,7 +851,7 @@ def move_folder(db_folder, target_path, user_account, data_manager, permissions_
 
         # Clear folder permissions cache as folder tree has changed
         if success:
-            permissions_manager.reset()
+            permissions_manager.reset_folder_permissions()
 
 
 def delete_folder(db_folder, user_account, data_manager, permissions_manager, logger):

@@ -2,9 +2,9 @@
 # Quru Image Server
 #
 # Document:      __init__.py
-# Date started:  6 Dec 2011
+# Date started:  9 Mar 2018
 # By:            Matt Fozard
-# Purpose:       Image server API blueprint initialiser
+# Purpose:       Image server portfolios blueprint initialiser
 # Requires:      Flask
 # Copyright:     Quru Ltd (www.quru.com)
 # Licence:
@@ -32,24 +32,8 @@
 from flask.blueprints import Blueprint
 
 # Define the API blueprint
-blueprint = Blueprint('api', __name__, static_folder='static', template_folder='templates')
+blueprint = Blueprint('folios', __name__, static_folder='static', template_folder='templates')
 
-# Current API version (for URL routing)
-url_version_prefix = '/v1'
-
-
-# Support definition of multiple URL rules per view (for API versioning)
-def api_add_url_rules(rules, endpoint=None, view_func=None, **options):
-    if isinstance(rules, basestring):
-        rules = [rules]
-    for rule in rules:
-        blueprint.add_url_rule(rule, endpoint, view_func, **options)
-
-
-# Import API views
-import views_data_api
-import views_files_api
-import views_tasks_api
-import views_portfolios_api
-import views_api
+# Import views
+import views
 import views_pages

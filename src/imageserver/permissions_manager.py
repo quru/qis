@@ -28,6 +28,7 @@
 # Date       By    Details
 # =========  ====  ============================================================
 # 05Apr2013  Matt  Allow folder permission checking for non-existent folders-to-be
+# 01Mar2018  Matt  Added portfolio permissions calculation
 #
 
 from datetime import datetime, timedelta
@@ -37,10 +38,18 @@ import zlib
 
 from errors import DoesNotExistError, SecurityError
 from filesystem_sync import auto_sync_folder, _get_nearest_parent_folder
-from models import FolderPermission, Group, Property, SystemPermissions
+from models import FolderPermission, FolioPermission, Group, Property, SystemPermissions
 from util import object_to_dict_dict
 from util import filepath_normalize, strip_seps
 from util import KeyValueCache
+
+FOLIO_ACCESS_TEXT = {
+    FolioPermission.ACCESS_NONE: 'No',
+    FolioPermission.ACCESS_VIEW: 'View',
+    FolioPermission.ACCESS_DOWNLOAD: 'Download',
+    FolioPermission.ACCESS_EDIT: 'Edit',
+    FolioPermission.ACCESS_DELETE: 'Delete'
+}
 
 FOLDER_ACCESS_TEXT = {
     FolderPermission.ACCESS_NONE: 'No',
@@ -55,11 +64,11 @@ FOLDER_ACCESS_TEXT = {
 
 SYS_PERMISSIONS_TEXT = {
     'admin_any': 'Administration',  # Special flag
-    SystemPermissions.PERMIT_FOLIOS: 'Folio',
+    SystemPermissions.PERMIT_FOLIOS: 'Portfolio',
     SystemPermissions.PERMIT_REPORTS: 'Reporting',
     SystemPermissions.PERMIT_ADMIN_USERS: 'User administration',
     SystemPermissions.PERMIT_ADMIN_FILES: 'File administration',
-    SystemPermissions.PERMIT_ADMIN_FOLIOS: 'Folio administration',
+    SystemPermissions.PERMIT_ADMIN_FOLIOS: 'Portfolio administration',
     SystemPermissions.PERMIT_ADMIN_PERMISSIONS: 'Permissions administration',
     SystemPermissions.PERMIT_SUPER_USER: 'Super-user'
 }
@@ -96,7 +105,7 @@ class PermissionsManager(object):
     need to be mirrored in trace_folder_permissions().
     """
     FP_CACHE_SYNC_INTERVAL = 60
-    USER_PERMISSIONS_TIMEOUT = 3600
+    FP_CACHE_TIMEOUT = 3600
 
     def __init__(self, data_manager, cache_manager, task_manager, settings, logger):
         self._db = data_manager
@@ -107,11 +116,16 @@ class PermissionsManager(object):
         # Our current folder permissions data version number.
         # If the database has a newer version we need to re-read it.
         # If a cached item has a lower version we need to discard it.
-        self._fp_data_version = -1
+        self._fp_data_version = 0
         self._fp_last_check = None
-        self._fp_refresh_lock = threading.Lock()
-        # Keep a cache of the public (unknown user) folder permissions
-        self._public_fp_cache = KeyValueCache()
+        self._fp_public_cache = KeyValueCache()      # Public (unknown user) folder permissions
+        # Our current folio permissions data version number.
+        # If the database has a newer version we need to re-read it.
+        self._foliop_data_version = 0
+        self._foliop_last_check = None
+        self._foliop_public_cache = KeyValueCache()  # Public (unknown user) folio permissions
+        # Lock flag for syncing caches
+        self._data_refresh_lock = threading.Lock()
 
     def is_permitted(self, flag, user=None):
         """
@@ -172,7 +186,137 @@ class PermissionsManager(object):
                 final_perms.admin_folios = final_perms.admin_folios or group_perms.admin_folios
                 final_perms.admin_permissions = final_perms.admin_permissions or group_perms.admin_permissions
                 final_perms.admin_all = final_perms.admin_all or group_perms.admin_all
+            # admin_folios should incorporate plain folios permission
+            if final_perms.admin_folios:
+                final_perms.folios = True
         return final_perms
+
+    def is_portfolio_permitted(self, folio, folio_access, user=None):
+        """
+        Returns whether a user has the requested access level for the given
+        portfolio, or alternatively has the folio administration system permission.
+
+        The folio_access parameter should be a FolioPermission.ACCESS constant.
+        If user is None, the anonymous user's permissions are checked.
+
+        This method checks for superuser access automatically.
+
+        Raises a ValueError if folio is None.
+        Raises a DoesNotExistError if a user is provided but is not a valid user.
+        """
+        if folio is None:
+            raise ValueError('Empty portfolio provided for permissions checking')
+
+        # Check portfolio ownership
+        if (user is not None) and (folio.owner_id == user.id):
+            return True
+        # Check system permissions
+        if self.is_permitted(SystemPermissions.PERMIT_ADMIN_FOLIOS, user):
+            return True
+        # Check portfolio permissions
+        level = self.calculate_portfolio_permissions(folio, user)
+        return level >= folio_access
+
+    def ensure_portfolio_permitted(self, folio, folio_access, user=None):
+        """
+        Calls is_portfolio_permitted(), additionally raising a SecurityError if
+        the requested flag is not permitted, otherwise performing no action.
+        """
+        if not self.is_portfolio_permitted(folio, folio_access, user):
+            raise SecurityError(
+                FOLIO_ACCESS_TEXT.get(folio_access, '<Unknown>') +
+                ' permission is required for portfolio ' + folio.human_id
+            )
+
+    def calculate_portfolio_permissions(self, folio, user=None):
+        """
+        Returns an integer indicating the highest access level that is permitted
+        for a portfolio, based on all a user's groups. This value will be returned
+        from cache if possible.
+
+        If user is None, the anonymous user's permissions are checked, using
+        the Public group.
+
+        Raises a ValueError if folio is None.
+        Raises a DoesNotExistError if a user is provided but is not a valid user.
+        """
+        if folio is None:
+            raise ValueError('Empty portfolio provided for permissions checking')
+
+        # Portfolio owners have full access
+        if (user is not None) and (folio.owner_id == user.id):
+            return FolioPermission.ACCESS_ALL
+
+        # Periodically ensure our data is up to date
+        self._check_data_version()
+
+        # Try the cache first (we're only caching public permissions currently)
+        if user is None:
+            cache_val = self._foliop_public_cache.get(folio.id)
+            if cache_val is not None:
+                return cache_val
+
+        # OK let's look at the FolioPermission records
+        db_session = self._db.db_get_session()
+        db_commit = False
+        try:
+            # Get the public group object
+            db_public_group = self._db.get_group(
+                group_id=Group.ID_PUBLIC,
+                load_users=False,
+                _db_session=db_session
+            )
+            if db_public_group is None:
+                raise DoesNotExistError('Public group')
+
+            # Get the Public group access
+            public_permission = self._db.get_portfolio_permission(
+                folio,
+                db_public_group,
+                _db_session=db_session
+            )
+            public_access = public_permission.access if (
+                public_permission is not None
+            ) else FolioPermission.ACCESS_NONE
+
+            if user is None:
+                # Cache and return the public access
+                self._logger.debug(
+                    'Public access to portfolio ' + str(folio) + ' is ' + str(public_access)
+                )
+                self._foliop_public_cache.set(folio.id, public_access)
+                db_commit = True
+                return public_access
+            else:
+                # Get the user's groups
+                db_user = user if self._db.attr_is_loaded(user, 'groups') else \
+                          self._db.get_user(user.id, load_groups=True, _db_session=db_session)
+                if db_user is None:
+                    raise DoesNotExistError('User %d' % user.id)
+
+                # Get the highest permission from the user's groups
+                top_permission = self._db.get_top_portfolio_permission(
+                    folio,
+                    db_user.groups,
+                    _db_session=db_session
+                )
+                final_access = top_permission.access if (
+                    top_permission is not None
+                ) else FolioPermission.ACCESS_NONE
+                final_access = max(public_access, final_access)
+                self._logger.debug(
+                    str(user) + ' access to portfolio ' + str(folio) + ' is ' + str(final_access)
+                )
+                db_commit = True
+                return final_access
+        finally:
+            try:
+                if db_commit:
+                    db_session.commit()
+                else:
+                    db_session.rollback()
+            finally:
+                db_session.close()
 
     def is_folder_permitted(self, folder, folder_access, user=None, folder_must_exist=True):
         """
@@ -242,7 +386,7 @@ class PermissionsManager(object):
 
         # Try the cache first
         if user is None:
-            cache_val = self._public_fp_cache.get(folder_path)
+            cache_val = self._fp_public_cache.get(folder_path)
         else:
             cache_val = self._cache.raw_get(
                 self._get_cache_key(user, folder_path),
@@ -295,7 +439,7 @@ class PermissionsManager(object):
                         ' is ' + str(public_permission)
                     )
                 # Add result to cache and return it
-                self._public_fp_cache.set(
+                self._fp_public_cache.set(
                     folder_path,
                     (public_permission.access, current_version)
                 )
@@ -323,8 +467,7 @@ class PermissionsManager(object):
                         if final_access == FolderPermission.ACCESS_ALL:
                             break
                 # Use the public group access as a fallback
-                if public_permission.access > final_access:
-                    final_access = public_permission.access
+                final_access = max(public_permission.access, final_access)
                 # Debug log only
                 if self._settings['DEBUG']:
                     self._logger.debug(
@@ -335,7 +478,7 @@ class PermissionsManager(object):
                 self._cache.raw_put(
                     self._get_cache_key(user, folder_path),
                     (final_access, current_version),
-                    PermissionsManager.USER_PERMISSIONS_TIMEOUT,
+                    PermissionsManager.FP_CACHE_TIMEOUT,
                     integrity_check=True
                 )
                 db_commit = True
@@ -352,10 +495,30 @@ class PermissionsManager(object):
 
     def reset(self):
         """
+        Shortcut to invalidate both portfolio and folder permissions,
+        in all image server processes.
+        """
+        self.reset_portfolio_permissions()
+        self.reset_folder_permissions()
+
+    def reset_portfolio_permissions(self):
+        """
+        Marks as expired all cached portfolio permissions data, for all image
+        server processes, by incrementing the database data version number.
+        """
+        with self._data_refresh_lock:
+            new_ver = self._db.increment_property(Property.FOLIO_PERMISSION_VERSION)
+        self._foliop_last_check = datetime.min
+        self._logger.info(
+            'Portfolio permissions setting new version ' + new_ver
+        )
+
+    def reset_folder_permissions(self):
+        """
         Marks as expired all cached folder permissions data, for all image
         server processes, by incrementing the database data version number.
         """
-        with self._fp_refresh_lock:
+        with self._data_refresh_lock:
             new_ver = self._db.increment_property(Property.FOLDER_PERMISSION_VERSION)
         self._fp_last_check = datetime.min
         self._logger.info(
@@ -487,36 +650,58 @@ class PermissionsManager(object):
 
     def _check_data_version(self, _force=False):
         """
-        Periodically checks for changes in the permissions data, sets the
-        internal data version number, and resets caches if necessary.
+        Periodically checks for changes in the permissions data,
+        sets the internal data version number and resets caches as necessary.
         Uses an internal lock for thread safety.
         """
         check_secs = PermissionsManager.FP_CACHE_SYNC_INTERVAL
 
-        if (self._fp_data_version < 0) or (self._fp_last_check is None):
-            # Start up
+        # Start up (folder permissions)
+        if (self._fp_data_version == 0) or (self._fp_last_check is None):
             db_ver = self._db.get_object(Property, Property.FOLDER_PERMISSION_VERSION)
             self._fp_data_version = int(db_ver.value)
             self._fp_last_check = datetime.utcnow()
             self._logger.info(
                 'Folder permissions initialising with version ' + str(self._fp_data_version)
             )
-        elif _force or self._fp_last_check < (datetime.utcnow() - timedelta(seconds=check_secs)):
-            # Check for newer data version
-            if self._fp_refresh_lock.acquire(0):  # 0 = nonblocking
+        # Start up (folio permissions)
+        if (self._foliop_data_version == 0) or (self._foliop_last_check is None):
+            db_ver = self._db.get_object(Property, Property.FOLIO_PERMISSION_VERSION)
+            self._foliop_data_version = int(db_ver.value)
+            self._foliop_last_check = datetime.utcnow()
+            self._logger.info(
+                'Portfolio permissions initialising with version ' + str(self._foliop_data_version)
+            )
+        # Check for newer data version (folder permissions)
+        if _force or self._fp_last_check < (datetime.utcnow() - timedelta(seconds=check_secs)):
+            if self._data_refresh_lock.acquire(0):  # 0 = nonblocking
                 try:
-                    old_ver = self._fp_data_version
                     db_ver = self._db.get_object(Property, Property.FOLDER_PERMISSION_VERSION)
-                    if int(db_ver.value) != old_ver:
+                    if int(db_ver.value) != self._fp_data_version:
                         self._fp_data_version = int(db_ver.value)
-                        self._public_fp_cache.clear()
+                        self._fp_public_cache.clear()
                         self._logger.info(
                             'Folder permissions detected new version ' +
                             str(self._fp_data_version)
                         )
                 finally:
                     self._fp_last_check = datetime.utcnow()
-                    self._fp_refresh_lock.release()
+                    self._data_refresh_lock.release()
+        # Check for newer data version (folio permissions)
+        if _force or self._foliop_last_check < (datetime.utcnow() - timedelta(seconds=check_secs)):
+            if self._data_refresh_lock.acquire(0):  # 0 = nonblocking
+                try:
+                    db_ver = self._db.get_object(Property, Property.FOLIO_PERMISSION_VERSION)
+                    if int(db_ver.value) != self._foliop_data_version:
+                        self._foliop_data_version = int(db_ver.value)
+                        self._foliop_public_cache.clear()
+                        self._logger.info(
+                            'Portfolio permissions detected new version ' +
+                            str(self._foliop_data_version)
+                        )
+                finally:
+                    self._foliop_last_check = datetime.utcnow()
+                    self._data_refresh_lock.release()
 
     def _get_cache_key(self, user, path):
         """

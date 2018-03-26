@@ -613,55 +613,75 @@ def index_of_word_break(val, from_index, forwards=True):
     return len(val) if forwards else 0
 
 
-def object_to_dict(obj, _r_stack=None):
+_object_to_dict_ignore_defaults = ['password']
+
+
+def object_to_dict(obj, ignore_attrs=None, _r_stack=None):
     """
     Returns a dictionary of 'public' attributes and their values within an
     object. The function recurses for attribute values that consist of
     lists or user-defined objects.
+
+    ignore_attrs is an optional list or tuple of attribute names to omit from
+    the returned dictionary. By default, 'password' attributes are ignored. If
+    you want 'password' attributes returned, provide an empty list.
 
     Detection of nested objects (to prevent infinite recursion) is handled by
     skipping the attribute if creation of an attribute value for the same object
     has already been started. This requires the objects in question to provide
     an __eq__ method.
     """
+    if ignore_attrs is None:
+        ignore_attrs = _object_to_dict_ignore_defaults
     if _r_stack is None:
         _r_stack = []
-    if obj is None or isinstance(obj, dict):
+
+    if obj is None:
         return obj
+
+    if isinstance(obj, dict):
+        for attr in ignore_attrs:
+            if attr in obj:
+                del obj[attr]
+        return obj
+
     obj_vars = vars(obj)
     attr_dict = dict(
         (k, v) for k, v in obj_vars.iteritems()
-        if not k.startswith('_') and not callable(v) and v not in _r_stack
+        if not k.startswith('_') and k not in ignore_attrs
+        and not callable(v) and v not in _r_stack
     )
     for k, v in attr_dict.iteritems():
         if isinstance(v, list):
-            attr_dict[k] = object_to_dict_list(v, _r_stack)
+            _r_stack.append(obj)
+            attr_dict[k] = object_to_dict_list(v, ignore_attrs, _r_stack)
+            _r_stack.pop()
         elif hasattr(v, '__module__'):
             _r_stack.append(obj)
-            attr_dict[k] = object_to_dict(v, _r_stack)
+            attr_dict[k] = object_to_dict(v, ignore_attrs, _r_stack)
             _r_stack.pop()
     return attr_dict
 
 
-def object_to_dict_list(obj, _r_stack=None):
+def object_to_dict_list(obj, ignore_attrs=None, _r_stack=None):
     """
     Returns a list of dictionaries (created using object_to_dict)
     containing an entry for every item in the provided iterable.
     """
     ret_list = []
     for o in obj:
-        ret_list.append(object_to_dict(o, _r_stack))
+        ret_list.append(object_to_dict(o, ignore_attrs, _r_stack))
     return ret_list
 
 
-def object_to_dict_dict(obj, _r_stack=None):
+def object_to_dict_dict(obj, ignore_attrs=None, _r_stack=None):
     """
     Returns a dictionary of dictionaries (created using object_to_dict)
     containing an entry for every item in the provided dictionary.
     """
     ret_dict = {}
     for o in obj:
-        ret_dict[o] = object_to_dict(obj[o], _r_stack)
+        ret_dict[o] = object_to_dict(obj[o], ignore_attrs, _r_stack)
     return ret_dict
 
 
@@ -951,3 +971,12 @@ class AsyncHttpRequest(threading.Thread):
         except Exception as e:
             if self.log_fail_fn:
                 self.log_fail_fn('Error calling URL %s: %s' % (self.url, str(e)))
+
+
+class AttrObject(object):
+    """
+    A utility class that provides a neater alternative to using a dictionary.
+    Construct with: o = AttrObject(a=1, b=2) then use: o.a; o.b; etc
+    """
+    def __init__(self, **kwds):
+        self.__dict__.update(kwds)

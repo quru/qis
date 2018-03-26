@@ -131,12 +131,16 @@ MAX_CONTENT_LENGTH = 1024 * 1024 * 1024
 # Full paths to the application files.
 # All images must lie within the path given by IMAGES_BASE_DIR. This can
 # point to any path that has read+write access for the application user.
-INSTALL_DIR = "/opt/qis"
+INSTALL_DIR = "/opt/qis/"
 
-DOCS_BASE_DIR = INSTALL_DIR + "/doc/"
-ICC_BASE_DIR = INSTALL_DIR + "/icc/"
-IMAGES_BASE_DIR = INSTALL_DIR + "/images/"
-LOGGING_BASE_DIR = INSTALL_DIR + "/logs/"
+DOCS_BASE_DIR = INSTALL_DIR + "doc/"
+ICC_BASE_DIR = INSTALL_DIR + "icc/"
+IMAGES_BASE_DIR = INSTALL_DIR + "images/"
+LOGGING_BASE_DIR = INSTALL_DIR + "logs/"
+
+# The directory to store published portfolios in, inside IMAGES_BASE_DIR.
+# Prefix the name with a single dot/period to hide it in the admin interface.
+FOLIO_EXPORTS_DIR = ".folio_exports"
 
 # The path where temporary imaging files are stored.
 # Old temporary files will be periodically deleted.
