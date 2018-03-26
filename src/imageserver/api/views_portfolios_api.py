@@ -647,7 +647,7 @@ class PortfolioExportAPI(MethodView):
                     'ignore_errors': False
                 },
                 Task.PRIORITY_NORMAL,
-                'info', 'error', 1
+                'info', 'error', 60
             )
             # Update and return the folio-export record with the task ID
             folio_export.task_id = export_task.id
