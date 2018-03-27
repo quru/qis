@@ -266,11 +266,15 @@ class StatsServerTests(main_tests.FlaskTestCase):
             db_image_copy = dm.get_image(src=IMG_COPY)
             self.assertIsNone(db_image_copy)
             # Wait for new stats to flush
-            time.sleep(65)
+            lres = []
+            waited = 0
+            while not lres and waited < 75:
+                time.sleep(5)
+                waited += 5
+                t_now = datetime.utcnow()
+                lres = dm.search_system_stats(t_then, t_now)
+            self.assertEqual(len(lres), 1, 'Timed out waiting for system stats to flush')
             # See if the system stats line up with the views
-            t_now = datetime.utcnow()
-            lres = dm.search_system_stats(t_then, t_now)
-            self.assertEqual(len(lres), 1)
             res = lres[0]
             self.assertEqual(res.requests, IMG_VIEWS + IMG_VIEWS_COPY + IMG_DOWNLOADS + IMG_VIEWS_NOSTATS + IMG_VIEWS_304)
             self.assertEqual(res.views, IMG_VIEWS + IMG_VIEWS_COPY + IMG_VIEWS_NOSTATS)
