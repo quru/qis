@@ -41,10 +41,10 @@ import os
 import SocketServer
 import signal
 import sys
+import time
 from datetime import date, datetime, timedelta
 from multiprocessing import Process
 from threading import Event, Lock, Thread
-from time import sleep
 
 from flask import current_app as app
 from sqlalchemy import func
@@ -56,7 +56,7 @@ from imageserver.models import ImageStats, SystemStats, Task
 try:
     import psutil
     _have_psutil = True
-except:
+except ImportError:
     _have_psutil = False
 
 
@@ -192,7 +192,7 @@ class StatsSocketServer(SocketServer.ThreadingTCPServer):
         """
         self.logger.info('Stats server running')
         while not self.shutdown_ev.is_set():
-            sleep(60)
+            self._sleep(60)
             self._flush()
         self.logger.info('Stats server exited')
 
@@ -205,7 +205,7 @@ class StatsSocketServer(SocketServer.ThreadingTCPServer):
         self.tidy_last = datetime.utcnow() - timedelta(hours=23)
 
         while not self.shutdown_ev.is_set():
-            sleep(60)
+            self._sleep(60)
             # Run tasks once per day
             if (datetime.utcnow() - self.tidy_last) > timedelta(hours=24):
                 if keep_days < 1:
@@ -253,7 +253,7 @@ class StatsSocketServer(SocketServer.ThreadingTCPServer):
         A thread to detect and handle problems with the flush process.
         """
         while not self.shutdown_ev.is_set():
-            sleep(60)
+            self._sleep(60)
             # Get time since last flush
             with self.sys_cache_lock:
                 dt_last_flush = self.caches_started
@@ -528,6 +528,15 @@ class StatsSocketServer(SocketServer.ThreadingTCPServer):
         t = Thread(target=_shutdown_socket_server, args=(self,))
         t.start()
 
+    def _sleep(self, secs):
+        """
+        A shutdown-friendly sleep function (supports whole seconds only).
+        """
+        for _ in range(secs):
+            if self.shutdown_ev.is_set():
+                break
+            time.sleep(1)
+
 
 def _run_server(debug_mode):
     """
@@ -562,7 +571,7 @@ def _run_server_process_double_fork(*args):
     # Do not kill the stats server process when this process exits
     p.daemon = False
     p.start()
-    sleep(1)
+    time.sleep(1)
     # Force our exit, leaving the stats server process still running.
     # Our parent process can now exit cleanly without waiting to join() the
     # actual stats server process (it can't, since it knows nothing about it).

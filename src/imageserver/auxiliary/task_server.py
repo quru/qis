@@ -34,12 +34,12 @@ import errno
 import os
 import signal
 import sys
+import time
 import threading
 import traceback
 from datetime import datetime, timedelta
 from multiprocessing import Process
 from socket import socket
-from time import sleep
 from threading import Event
 
 from flask import current_app as app
@@ -138,9 +138,16 @@ def _run_server(debug_mode):
             shutdown_ev.set()
         signal.signal(signal.SIGTERM, _shutdown_hook)
 
+        # Use a shutdown-friendly sleep function (whole seconds only)
+        def _sleep(secs):
+            for _ in range(secs):
+                if shutdown_ev.is_set():
+                    break
+                time.sleep(1)
+
         # In case this is a clean restart, wait a while for the other services
         # (logging, stats, ORM, etc) to start up first.
-        sleep(IDLE_WAIT)
+        _sleep(IDLE_WAIT)
 
         # Recover any tasks that weren't completed when we last exited
         if not shutdown_ev.is_set() and last_proc_id:
@@ -199,8 +206,7 @@ def _run_server(debug_mode):
                         next_thread_id = 1
 
             # Wait a while
-            if not shutdown_ev.is_set():
-                sleep(BUSY_WAIT if len(threads) > 0 else IDLE_WAIT)
+            _sleep(BUSY_WAIT if len(threads) > 0 else IDLE_WAIT)
 
             # Periodically run cleanup
             if not shutdown_ev.is_set():
@@ -278,7 +284,7 @@ def _run_server_process_double_fork(*args):
     # Do not kill the task server process when this process exits
     p.daemon = False
     p.start()
-    sleep(1)
+    time.sleep(1)
     # Force our exit, leaving the task server process still running.
     # Our parent process can now exit cleanly without waiting to join() the
     # actual task server process (it can't, since it knows nothing about it).

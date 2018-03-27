@@ -43,6 +43,7 @@ import tests.tests as main_tests
 from imageserver.auxiliary import stats_server
 from imageserver.counter import Counter
 from imageserver.filesystem_manager import copy_file, delete_file
+from imageserver.flask_app import app as flask_app
 from imageserver.flask_app import data_engine as dm
 from imageserver.flask_app import stats_engine as sm
 from imageserver.stats_manager import StatsManager
@@ -215,6 +216,8 @@ class StatsServerTests(main_tests.FlaskTestCase):
         # Reset the connection to the stats server
         sm._client_close()
         sm._client_connect()
+        # Preload all the Flask machinery as these tests need consistent run times
+        flask_app.test_client().get('/')
 
     def test_stats_engine(self):
         # Test constants
