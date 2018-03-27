@@ -36,9 +36,9 @@
 #                  (the request.g.user getting into a database session)
 #
 
+from datetime import datetime, timedelta
 from functools import wraps
 import os.path
-import datetime
 import time
 import zlib
 
@@ -53,6 +53,7 @@ from . import errors
 from .models import Base
 from .models import User, Folder, FolderPermission, Group
 from .models import Image, ImageTemplate, ImageHistory, ImageStats, Property
+from .models import Folio, FolioImage, FolioPermission, FolioHistory, FolioExport
 from .models import SystemPermissions, SystemStats, Task, UserGroup
 from .util import add_sep, strip_sep
 from .util import filepath_components, filepath_parent, filepath_normalize
@@ -98,6 +99,7 @@ class DataManager(object):
                 self._enable_sql_time_logging()
             self._open_db()
             self._init_db()
+            self._upgrade_db()
         except OperationalError as e:
             raise errors.StartupError('Database connection error: ' + str(e))
         except BaseException as e:
@@ -188,8 +190,8 @@ class DataManager(object):
 
         In addition to the table name, the function requires the name of the
         table's unique ID column. If the ID column name cannot be used for an
-        SQL bind parameter name, use a different name in the data and pass this
-        as the data ID column name.
+        SQL bind parameter name (e.g. it cannot in Postgres), use a different
+        name in the data and pass this as the data ID column name.
 
         E.g. bulk_update('users', 'id', '_id', [
                  {'_id': 1, 'status': 'D'},
@@ -418,6 +420,79 @@ class DataManager(object):
                 db_session.close()
 
     @db_operation
+    def get_portfolio(self, folio_id=0, human_id=None,
+                      load_images=False, load_history=False, _db_session=None):
+        """
+        Returns the Folio object with the given ID or human ID,
+        or None if there is no match in the database.
+        """
+        db_session = _db_session or self._db.Session()
+        try:
+            if not folio_id and not human_id:
+                raise ValueError('Portfolio ID or short-code must be provided')
+            q = db_session.query(Folio)
+            if load_images:
+                q = q.options(eagerload('images'))
+            if load_history:
+                q = q.options(eagerload('history'))
+            if folio_id:
+                return q.get(folio_id)
+            else:
+                return q.filter(Folio.human_id == human_id).first()
+        finally:
+            if not _db_session:
+                db_session.close()
+
+    @db_operation
+    def get_portfolio_permission(self, folio, group, _db_session=None):
+        """
+        Returns the FolioPermission object for the given portfolio and group,
+        or None if there is no exact match in the database.
+        """
+        db_session = _db_session or self._db.Session()
+        try:
+            q = db_session.query(FolioPermission)
+            q = q.filter(FolioPermission.folio_id == folio.id)
+            q = q.filter(FolioPermission.group_id == group.id)
+            return q.first()
+        finally:
+            if not _db_session:
+                db_session.close()
+
+    @db_operation
+    def get_portfolio_image(self, folio, image, _db_session=None):
+        """
+        Returns the FolioImage object for the given portfolio and image,
+        or None if there is no exact match in the database.
+        """
+        db_session = _db_session or self._db.Session()
+        try:
+            q = db_session.query(FolioImage)
+            q = q.filter(FolioImage.folio_id == folio.id)
+            q = q.filter(FolioImage.image_id == image.id)
+            return q.first()
+        finally:
+            if not _db_session:
+                db_session.close()
+
+    @db_operation
+    def get_top_portfolio_permission(self, folio, group_list, _db_session=None):
+        """
+        Returns the FolioPermission object with the highest access level for
+        the given portfolio and list of groups, or returns None if there are
+        no permission records for any of the groups.
+        """
+        db_session = _db_session or self._db.Session()
+        try:
+            q = db_session.query(FolioPermission)
+            q = q.filter(FolioPermission.folio_id == folio.id)
+            q = q.filter(FolioPermission.group_id.in_([g.id for g in group_list]))
+            return q.order_by(desc(FolioPermission.access)).limit(1).first()
+        finally:
+            if not _db_session:
+                db_session.close()
+
+    @db_operation
     def create_user(self, user, _db_session=None, _commit=True):
         """
         Creates a new user account from the supplied User object, applies
@@ -500,6 +575,43 @@ class DataManager(object):
                 db_session.close()
 
     @db_operation
+    def create_portfolio(self, folio, history_user=None, _db_session=None, _commit=True):
+        """
+        Creates a new portfolio from the supplied Folio object and adds the
+        initial creation history. No explicit permissions are set but the
+        portfolio owner and administrators will have access by default.
+        If committing (the default) the object will have its new ID property
+        set on success. Raises an AlreadyExistsError if another portfolio with
+        the same human_id value already exists.
+        """
+        db_session = _db_session or self._db.Session()
+        try:
+            # See add_image_history() for why we need to re-get the user object
+            folio.owner = db_session.query(User).get(folio.owner.id)
+            # If there's no short URL provided, give it one
+            if not folio.human_id:
+                folio.human_id = Folio.create_human_id()
+            db_session.add(folio)
+            folio.history.append(self.add_portfolio_history(
+                folio,
+                history_user,
+                FolioHistory.ACTION_CREATED,
+                '',
+                _db_session=db_session,
+                _commit=False
+            ))
+            if _commit:
+                db_session.commit()
+                db_session.refresh(folio, ['id', 'history'])
+        except IntegrityError as e:
+            raise errors.AlreadyExistsError(
+                'Portfolio \'' + folio.human_id + '\' already exists'
+            ) if self._is_duplicate_key(e) else e
+        finally:
+            if not _db_session:
+                db_session.close()
+
+    @db_operation
     def add_image_history(self, image, user, action, action_info, _db_session=None, _commit=True):
         """
         Creates, stores and returns a new ImageHistory object.
@@ -507,7 +619,7 @@ class DataManager(object):
         """
         db_session = _db_session or self._db.Session()
         try:
-            # Get clean copies of the related records from session*.
+            # Get clean copies of the related records from session.
             # Otherwise if they are detached (as the user object may well be),
             # SQLAlchemy tries to be clever and insert them, causing dupes.
             #
@@ -516,12 +628,10 @@ class DataManager(object):
             #       request.g, the password field is blanked, and therefore this
             #       would have the side effect of wiping the user's password!
             #
-            # *For image, assume it's attached if a db session is passed in.
-            #
-            db_image = image if _db_session \
-                       else db_session.query(Image).get(image.id)
-            db_user  = db_session.query(User).get(user.id) if user is not None \
-                       else None
+            db_image = image if self.object_in_session(image, db_session) \
+                else db_session.query(Image).get(image.id)
+            db_user = user if user is None or self.object_in_session(user, db_session) \
+                else db_session.query(User).get(user.id)
 
             # Enforce some limit on the info text
             if action_info is None:
@@ -529,11 +639,41 @@ class DataManager(object):
             if len(action_info) > 4096:
                 action_info = action_info[:4093] + '...'
 
-            history = ImageHistory(db_image, db_user, action, action_info, datetime.datetime.utcnow())
+            history = ImageHistory(db_image, db_user, action, action_info)
             db_session.add(history)
             if _commit:
                 db_session.commit()
                 db_session.refresh(history, ['id'])  # Avoid DetachedInstanceError after session close
+            return history
+        finally:
+            if not _db_session:
+                db_session.close()
+
+    @db_operation
+    def add_portfolio_history(self, folio, user, action, action_info, _db_session=None, _commit=True):
+        """
+        Creates, stores and returns a new FolioHistory object.
+        The user parameter can be None for recording anonymous or system actions.
+        """
+        db_session = _db_session or self._db.Session()
+        try:
+            # See add_image_history() for why we need to re-get the objects
+            db_folio = folio if self.object_in_session(folio, db_session) \
+                else db_session.query(Folio).get(folio.id)
+            db_user = user if user is None or self.object_in_session(user, db_session) \
+                else db_session.query(User).get(user.id)
+
+            # Enforce some limit on the info text
+            if action_info is None:
+                action_info = ''
+            if len(action_info) > 4096:
+                action_info = action_info[:4093] + '...'
+
+            history = FolioHistory(db_folio, db_user, action, action_info)
+            db_session.add(history)
+            if _commit:
+                db_session.commit()
+                db_session.refresh(history, ['id'])
             return history
         finally:
             if not _db_session:
@@ -624,6 +764,38 @@ class DataManager(object):
 
             res_tuples = q.all()
             return [r[0] for r in res_tuples]
+        finally:
+            if not _db_session:
+                db_session.close()
+
+    @db_operation
+    def list_portfolios(self, user, folio_access, _db_session=None):
+        """
+        Returns a list of portfolios that the given user has 'folio_access' to
+        or better. If user is None, the public group access will be checked.
+        """
+        db_session = _db_session or self._db.Session()
+        try:
+            if user is not None and not self.attr_is_loaded(user, 'groups'):
+                user = db_session.query(User).options(eagerload('groups')).get(user.id)
+
+            groups = user.groups if user is not None else [
+                self.get_group(Group.ID_PUBLIC, _db_session=db_session)
+            ]
+
+            # Use a sub-query to find any good-enough FolioPermission for any of the groups
+            pq = db_session.query(FolioPermission)
+            pq = pq.filter(FolioPermission.folio_id == Folio.id)
+            pq = pq.filter(FolioPermission.group_id.in_([g.id for g in groups]))
+            pq = pq.filter(FolioPermission.access >= folio_access)
+
+            # Return all folios owned by the user or where the sub-query returns something
+            q = db_session.query(Folio)
+            if user is None:
+                q = q.filter(pq.exists())
+            else:
+                q = q.filter(or_(Folio.owner_id == user.id, pq.exists()))
+            return q.order_by(Folio.name).all()
         finally:
             if not _db_session:
                 db_session.close()
@@ -843,7 +1015,7 @@ class DataManager(object):
             if db_group.group_type == Group.GROUP_TYPE_LDAP:
                 raise ValueError('Cannot delete LDAP group')
 
-            # Auto cascades system and folder permissions
+            # Auto cascades system and folder and folio permissions
             db_session.delete(db_group)
             if _commit:
                 db_session.commit()
@@ -866,8 +1038,9 @@ class DataManager(object):
         try:
             db_image = db_session.merge(image)
             if purge:
-                # Physically delete (manual cascade of stats, auto cascade of history)
+                # Physically delete (manual cascade of stats and folioimages, auto cascade of history)
                 db_session.query(ImageStats).filter(ImageStats.image_id == db_image.id).delete()
+                db_session.query(FolioImage).filter(FolioImage.image_id == db_image.id).delete()
                 db_session.delete(db_image)
             else:
                 # Flag as deleted
@@ -1285,6 +1458,26 @@ class DataManager(object):
             db_session.close()
 
     @db_operation
+    def cancel_task(self, task):
+        """
+        Atomically deletes the given unlocked and still-pending task.
+        Returns True on success, or False if the task was locked and started
+        before the operation could take place.
+        """
+        db_session = self._db.Session()
+        try:
+            task_table = Task.__table__
+            del_op = task_table.delete().\
+                where(Task.id == task.id).\
+                where(Task.status == Task.STATUS_PENDING).\
+                where(Task.lock_id == None)
+            res = db_session.execute(del_op)
+            db_session.commit()
+            return (res.rowcount > 0)
+        finally:
+            db_session.close()
+
+    @db_operation
     def complete_task(self, task, _db_session=None, _commit=True):
         """
         Marks a task as complete, unlocks it, and sets the keep_until date.
@@ -1297,8 +1490,7 @@ class DataManager(object):
             task.lock_id = None
             if task.keep_for > 0:
                 task.keep_until = (
-                    datetime.datetime.utcnow() +
-                    datetime.timedelta(seconds=task.keep_for)
+                    datetime.utcnow() + timedelta(seconds=task.keep_for)
                 )
             if _commit:
                 db_session.commit()
@@ -1313,7 +1505,7 @@ class DataManager(object):
         """
         db_session = _db_session or self._db.Session()
         try:
-            dt_now = datetime.datetime.utcnow()
+            dt_now = datetime.utcnow()
             db_session.query(Task).\
                 filter(Task.status == Task.STATUS_COMPLETE).\
                 filter(or_(Task.keep_until == None, Task.keep_until < dt_now)).\
@@ -1322,6 +1514,79 @@ class DataManager(object):
                 db_session.commit()
         finally:
             if not _db_session:
+                db_session.close()
+
+    @db_operation
+    def get_expired_portfolio_exports(self, _db_session=None):
+        """
+        Returns a list of PortfolioExport objects that have passed their expiry time.
+        """
+        db_session = _db_session or self._db.Session()
+        try:
+            q = db_session.query(FolioExport)
+            q = q.filter(FolioExport.keep_until < datetime.utcnow())
+            return q.all()
+        finally:
+            if not _db_session:
+                db_session.close()
+
+    @db_operation
+    def reorder_portfolio(self, folio_image, index):
+        """
+        Atomically sets a folio_image object to be at a new zero-based index,
+        updating the position (order_num field) on all the other images in the
+        portfolio. If the value of index is below 0 or more than the length of
+        the image list, it will be adjusted to the nearest valid value.
+        Returns the updated folio_image object with the newly assigned 'order_num'
+        attribute, unattached to a database session (as this method closes its
+        own session).
+        """
+        db_session = self._db.Session()
+        commited = False
+        try:
+            db_folio_image = self.get_object(FolioImage, folio_image.id, _db_session=db_session)
+            # Get ordered image list
+            db_image_list = db_folio_image.portfolio.images
+            # Limit index value to 0 --> list length
+            insert_index = max(min(index, len(db_image_list)), 0)
+            # Make a copy of the image list minus the folio_image that we'll re-insert
+            image_list = [
+                (fimg.id, fimg.order_num) for fimg in db_image_list
+                if fimg.id != db_folio_image.id
+            ]
+            # Generate a list of new order numbers for the images
+            change_list = []
+            order_num_offset = 0
+            for idx, img_tuple in enumerate(image_list):
+                if idx == insert_index:
+                    order_num_offset = 1  # Leave a hole to re-insert the folio_image
+                new_order_num = idx + order_num_offset
+                if img_tuple[1] != new_order_num:
+                    change_list.append({'_id': img_tuple[0], 'order_num': new_order_num})
+            # Finally apply the new index to our folio_image
+            # If it's moving to the end of the list then insert_index is now 1
+            # too high and we need to reduce it to be len(image_list)
+            insert_index = min(insert_index, len(image_list))
+            if db_folio_image.order_num != insert_index:
+                change_list.append({'_id': db_folio_image.id, 'order_num': insert_index})
+            # Then use bulk update
+            if change_list:
+                self.bulk_update(
+                    'folioimages',
+                    'id',
+                    '_id',
+                    change_list,
+                    _db_session=db_session,
+                    _commit=True
+                )
+            commited = True
+            db_session.refresh(db_folio_image)
+            return db_folio_image
+        finally:
+            try:
+                if not commited:
+                    db_session.rollback()
+            finally:
                 db_session.close()
 
     @db_operation
@@ -1490,6 +1755,16 @@ class DataManager(object):
         """
         return attr_name in obj.__dict__
 
+    def object_in_session(self, obj, db_session):
+        """
+        Utility to return whether an object is loaded in a database session.
+        When True, lazily-loaded attributes can be accessed, and changes made
+        to the object will be persisted with db_session.commit(). When False,
+        lazily-loaded attributes raise an error when accessed and object
+        changes are not persisted.
+        """
+        return obj in db_session
+
     def _get_id_cache_key(self, src):
         """
         Returns the cache key to use for storing/retrieving a cached image ID.
@@ -1645,6 +1920,21 @@ class DataManager(object):
                     Property.__table__.create(self._db)
                     create_properties = True
 
+                if not Folio.__table__.exists(self._db):
+                    Folio.__table__.create(self._db)
+
+                if not FolioImage.__table__.exists(self._db):
+                    FolioImage.__table__.create(self._db)
+
+                if not FolioPermission.__table__.exists(self._db):
+                    FolioPermission.__table__.create(self._db)
+
+                if not FolioHistory.__table__.exists(self._db):
+                    FolioHistory.__table__.create(self._db)
+
+                if not FolioExport.__table__.exists(self._db):
+                    FolioExport.__table__.create(self._db)
+
                 # Create system data (needs all tables in place first)
                 if create_default_groups:
                     # Create fixed system groups
@@ -1749,6 +2039,7 @@ class DataManager(object):
 
                 if create_properties:
                     self.save_object(Property(Property.FOLDER_PERMISSION_VERSION, '1'))
+                    self.save_object(Property(Property.FOLIO_PERMISSION_VERSION, '1'))
                     self.save_object(Property(Property.IMAGE_TEMPLATES_VERSION, '1'))
                     self.save_object(Property(Property.DEFAULT_TEMPLATE, 'default'))
 
@@ -1757,3 +2048,45 @@ class DataManager(object):
 
         # Show a startup message on success
         self._logger.info('Management + stats database opened')
+
+    def _upgrade_db(self):
+        """
+        Applies any database migrations required (other than create actions
+        that _init_db already does) to bring the database schema up to date.
+        """
+        # Bump this up whenever you add a new migration
+        FINAL_MIGRATION_VERSION = 1
+
+        db_session = self._db.Session()
+        done = False
+        try:
+            # Get the database starting internal version
+            db_ver = db_session.query(Property).get(Property.DATABASE_MIGRATION_VERSION)
+            ver = int(db_ver.value) if db_ver else 0
+
+            if ver < FINAL_MIGRATION_VERSION:
+                # Run migrations
+                self._migrations(ver, db_session)
+                # Set the database new internal version
+                db_session.merge(Property(
+                    Property.DATABASE_MIGRATION_VERSION,
+                    str(FINAL_MIGRATION_VERSION)
+                ))
+            done = True
+        except Exception as e:
+            self._logger.error('Error upgrading database: ' + str(e))
+        finally:
+            if done:
+                db_session.commit()
+            else:
+                db_session.rollback()
+            db_session.close()
+
+    def _migrations(self, current_number, db_session):
+        """
+        Back end to _upgrade_db, performs the actual database migrations.
+        """
+        if current_number < 1:
+            # v2.7 migration number 1 adds portfolios
+            self._logger.info('Applying database migration number 1')
+            db_session.merge(Property(Property.FOLIO_PERMISSION_VERSION, '1'))

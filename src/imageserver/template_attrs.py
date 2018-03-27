@@ -79,7 +79,7 @@ class TemplateAttrs(object):
         self._memo_values = None
         try:
             # We need to populate our ImageAttrs from a raw key/value dict
-            raw_dict = dict((k, v['value']) for (k, v) in self._template.items())
+            raw_dict = {k: v['value'] for (k, v) in self._template.items()}
         except (KeyError, TypeError):
             raise ValueError('Bad template dictionary format (refer to TemplateAttrs)')
         # Populate our internal ImageAttrs

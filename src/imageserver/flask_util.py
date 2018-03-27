@@ -89,21 +89,21 @@ def ssl_required(f):
     return decorated_function
 
 
-def api_permission_required(f, required_flag=None):
+def api_permission_required(f, require_login=True, required_flag=None):
     """
-    Defines a decorator that can be applied to a view function to require
-    that the user must be logged in and optionally have been granted the
-    specified system permissions flag.
+    Defines a decorator that can be applied to a view function to optionally
+    require that the user be logged in (true by default) and optionally require
+    the specified system permissions flag.
 
     An API JSON response is returned if the user is not logged in or does not
     have the required permission flag.
 
-    This decorator enforces INTERNAL_BROWSING_PORT and INTERNAL_BROWSING_SSL,
+    This decorator also enforces INTERNAL_BROWSING_PORT and INTERNAL_BROWSING_SSL,
     if they are set.
     """
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        res = _check_internal_request(request, session, False, True, required_flag)
+        res = _check_internal_request(request, session, False, require_login, required_flag)
         return res if res else f(*args, **kwargs)
     return decorated_function
 

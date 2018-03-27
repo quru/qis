@@ -41,10 +41,11 @@ import tests.tests as main_tests
 from imageserver.auxiliary import stats_server
 from imageserver.counter import Counter
 from imageserver.filesystem_manager import copy_file, delete_file
-from imageserver.flask_app import app as flask_app
-from imageserver.flask_app import cache_engine as cm
 from imageserver.flask_app import data_engine as dm
+from imageserver.flask_app import stats_engine as sm
 from imageserver.stats_manager import StatsManager
+
+from . import kill_aux_processes
 
 
 class BytesIOConnection(object):
@@ -205,16 +206,15 @@ class StatsServerTests(main_tests.FlaskTestCase):
     @classmethod
     def setUpClass(cls):
         super(StatsServerTests, cls).setUpClass()
-        main_tests.setup()
-        # Invoke @app.before_first_request to launch the aux servers
-        flask_app.test_client().get('/')
+        # Kill stats collection from earlier tests
+        kill_aux_processes(nicely=False)
+        # Wipe the database, restart stats collection
+        main_tests.init_tests()
+        # Reset the connection to the stats server
+        sm._client_close()
+        sm._client_connect()
 
     def test_stats_engine(self):
-        # Clear stats - wait for previous stats to flush then delete all
-        time.sleep(65)
-        dm.delete_system_stats(datetime.utcnow())
-        dm.delete_image_stats(datetime.utcnow())
-        cm.clear()
         # Test constants
         IMG = 'test_images/cathedral.jpg'
         IMG_COPY = 'test_images/stats_test_image.jpg'

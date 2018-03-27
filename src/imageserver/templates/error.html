@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block copyright %}
+<!-- 
+	Document:      error.html
+	Date started:  09 Mar 2018
+	By:            Matt Fozard
+	Purpose:       Quru Image Server generic error page
+	Requires:      
+	Copyright:     Quru Ltd (www.quru.com)
+	
+	Last Changed:  $Date$ $Rev$ by $Author$
+	
+	Notable modifications:
+	Date       By    Details
+	=========  ====  ============================================================
+-->
+{% endblock %}
+
+{% block title %}{{ error.title or ('Error ' + error.code|string if error.code else '') }}{% endblock %}
+
+{% block body %}
+    <h2>{{ error.title or ('Error ' + error.code|string if error.code else '') }}</h2>
+    <p>
+        {{ error.message or 'No further information is available' }}
+    </p>
+{% endblock %}

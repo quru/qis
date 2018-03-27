@@ -43,7 +43,8 @@ from werkzeug.urls import url_quote_plus
 
 from . import tests as main_tests
 from .tests import (
-    BaseTestCase, setup_user_account, set_default_public_permission
+    BaseTestCase, setup_user_account,
+    set_default_internal_permission, set_default_public_permission
 )
 
 from imageserver.flask_app import app as flask_app
@@ -75,7 +76,7 @@ class ImageServerAPITests(BaseTestCase):
     @classmethod
     def setUpClass(cls):
         super(ImageServerAPITests, cls).setUpClass()
-        main_tests.setup()
+        main_tests.init_tests()
 
     # Utility - base64 encode a UTF8 string, returning an ASCII string
     def _base64_encode(self, s):
@@ -503,23 +504,23 @@ class ImageServerAPITests(BaseTestCase):
         rv = self.app.delete('/api/admin/groups/' + str(Group.ID_EVERYONE) + '/')
         assert rv.status_code == API_CODES.UNAUTHORISED, rv
         # Updating a group should change the name/description but not the permissions
-        dwarf_group = dm.get_group(groupname='Red Dwarf')
-        assert dwarf_group is not None
+        user_group = dm.get_group(groupname='kryten-group')
+        assert user_group is not None
         change_data = {
-            'name': 'White Dwarf',
-            'description': 'Was Red now White',
+            'name': 'Kryten\'s Group',
+            'description': 'Renamed group desc',
             'group_type': Group.GROUP_TYPE_LOCAL,
             'access_reports': '1',
             'access_admin_files': '1',
             'access_admin_all': '1'
         }
-        rv = self.app.put('/api/admin/groups/' + str(dwarf_group.id) + '/', data=change_data)
+        rv = self.app.put('/api/admin/groups/' + str(user_group.id) + '/', data=change_data)
         assert rv.status_code == API_CODES.SUCCESS
-        rv = self.app.get('/api/admin/groups/' + str(dwarf_group.id) + '/')
+        rv = self.app.get('/api/admin/groups/' + str(user_group.id) + '/')
         assert rv.status_code == API_CODES.SUCCESS
         obj = json.loads(rv.data.decode('utf8'))
-        assert obj['data']['name'] == 'White Dwarf'                # Changed
-        assert obj['data']['description'] == 'Was Red now White'   # Changed
+        assert obj['data']['name'] == 'Kryten\'s Group'            # Changed
+        assert obj['data']['description'] == 'Renamed group desc'  # Changed
         assert obj['data']['permissions']['reports'] == False      # Unchanged
         assert obj['data']['permissions']['admin_files'] == False
         assert obj['data']['permissions']['admin_all'] == False
@@ -598,17 +599,19 @@ class ImageServerAPITests(BaseTestCase):
     # #2054 Bug fixes where the current user could lock themselves out
     #       or lock out the admin user
     def test_group_admin_lockout(self):
-        # Log in as a user with full group access
+        # Create and log in as a user with full group access
         setup_user_account('kryten', 'admin_permissions')
         self.login('kryten', 'kryten')
         db_user = dm.get_user(username='kryten', load_groups=True)
-        # These tests require setup_user_account() to set up 1 group
-        self.assertEqual(len(db_user.groups), 1)
+        # setup_user_account() should have set up 1 group with the admin access
+        admin_groups = [g for g in db_user.groups if g.permissions.admin_permissions]
+        self.assertEqual(len(admin_groups), 1)
+        admin_group = admin_groups[0]
         # Removing admin_permission flag from Administrators group would lock out the admin user
         # Removing admin_users flag from a user's only admin group would lock them out
         group_ids = [
-            db_user.groups[0].id,  # Test user locking themselves out
-            Group.ID_ADMINS        # Test user locking out the admin user
+            admin_group.id,  # Test user locking themselves out
+            Group.ID_ADMINS  # Test user locking out the admin user
         ]
         for group_id in group_ids:
             db_group = dm.get_group(group_id)
@@ -640,8 +643,8 @@ class ImageServerAPITests(BaseTestCase):
                              db_group_2.permissions.admin_all)
         # Removing (any) user from their only admin group would lock them out
         user_groups = [
-            (db_user.id, db_user.groups[0].id),  # Test user locking themselves out
-            (1, Group.ID_ADMINS)                 # Test user locking out the admin user
+            (db_user.id, admin_group.id),  # Test user locking themselves out
+            (1, Group.ID_ADMINS)           # Test user locking out the admin user
         ]
         for ug in user_groups:
             rv = self.app.delete('/api/admin/groups/' + str(ug[1]) + '/members/' + str(ug[0]) + '/')
@@ -1312,11 +1315,10 @@ class ImageServerAPITests(BaseTestCase):
         temp_folder  = 'test_images/fp-test_folder'
         temp_folder2 = 'test_images/fp-test_folder_2'
         temp_folder3 = '/fp-test_folder_2'
-        setup_user_account('kryten', 'none')
-        self.login('kryten', 'kryten')
+
         # Helper to change user permissions
         def setup_fp_user(root_access, test_folder_access=None):
-            db_group = dm.get_group(groupname='Red Dwarf')
+            db_group = dm.get_group(groupname='kryten-group')
             db_folder = dm.get_folder(folder_path='')
             # Set root folder access
             rf_fp = dm.get_folder_permission(db_folder, db_group)
@@ -1334,15 +1336,19 @@ class ImageServerAPITests(BaseTestCase):
                 db_folder = dm.get_folder(folder_path='test_images')
                 tf_fp = dm.get_folder_permission(db_folder, db_group)
                 if tf_fp is not None: dm.delete_object(tf_fp)
-            pm.reset()
+            pm.reset_folder_permissions()
             # v1.23 Also clear cached permissions for the task server process
             cm.clear()
+
         try:
             # Create a temp file we can rename, move, delete
             copy_file('test_images/cathedral.jpg', temp_image)
             db_image = auto_sync_existing_file(temp_image, dm, tm)
             # Reset user permissions to None
             set_default_public_permission(FolderPermission.ACCESS_NONE)
+            set_default_internal_permission(FolderPermission.ACCESS_NONE)
+            setup_user_account('kryten', 'none')
+            self.login('kryten', 'kryten')
             setup_fp_user(FolderPermission.ACCESS_NONE)
             # Folder list API requires view permission
             rv = self.app.get('/api/list/?path=test_images')
@@ -1437,6 +1443,7 @@ class ImageServerAPITests(BaseTestCase):
             delete_dir(temp_folder2)
             delete_dir(temp_folder3)
             set_default_public_permission(FolderPermission.ACCESS_DOWNLOAD)
+            set_default_internal_permission(FolderPermission.ACCESS_DOWNLOAD)
 
     # CSRF protection should be active for web sessions but not for API tokens
     def test_csrf(self):

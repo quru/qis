@@ -29,6 +29,7 @@
 # =========  ====  ============================================================
 # 29Sep2011  Matt  Changed cache key/hashes to use unique image ID
 # 14May2015  Matt  #2517 Normalize the image src
+# 09Mar2018  Matt  Added to_web_dict() and url_for_image_attrs() utility
 #
 
 import collections
@@ -1015,6 +1016,26 @@ class ImageAttrs():
             self.validate()
         if normalise:
             self.normalise_values()
+
+    def to_web_dict(self):
+        """
+        Returns a dictionary of web parameter names and values represented by this
+        object. These can be used to build a URL that generates the image, via the
+        API: /image?key1=value1&key2=value2...
+
+        This function differs from to_dict() in that unset values are not returned
+        and some of the web parameter names are different from their internal names.
+
+        Before calling this, you will probably want to call normalise_values() and
+        validate(), to remove redundant parameters and ensure all values are valid
+        respectively.
+        """
+        dct = {}
+        for attr, _, web_attr in ImageAttrs.validators_flat():
+            value = getattr(self, "_" + attr)
+            if value is not None:
+                dct[web_attr] = value
+        return dct
 
     def normalise_values(self):
         """

@@ -39,7 +39,7 @@ __author__ = "Quru Ltd"
 __email__ = "info@quru.com"
 
 __license__ = "GNU Affero General Public License"
-__copyright__ = "Copyright \xa9 2011 - 2017 Quru Ltd"
+__copyright__ = "Copyright \xa9 2011 - 2018 Quru Ltd"
 
 
 # Support running this from the command line to get version info

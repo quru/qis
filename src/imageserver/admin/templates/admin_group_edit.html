@@ -59,33 +59,29 @@
 				{% if not allow_perms %}
 				<div class="disabled">
 				{% endif %}
-{#
 				<div>
 					<label>System permissions</label>
 					<input type="checkbox" name="access_folios" value="true"
 					       {{ checked if group and group.permissions.folios }}
-					       {{ disabled if not allow_perms }} /> Allow creation of folios
+					       {{ disabled if not allow_perms }} /> Allow creation of portfolios
 				</div>
-#}
 				<div>
-					<label>System permissions</label>
+					<label></label>
 					<input type="checkbox" name="access_reports" value="true"
 					       {{ checked if group and group.permissions.reports }}
 					       {{ disabled if not allow_perms }} /> Allow access to reports
 				</div>
-{#
 				<div>
 					<label>Administration</label>
 					<input type="checkbox" name="access_admin_folios" value="true"
 					       {{ checked if group and group.permissions.admin_folios }}
 					       {{ disabled if not allow_perms }} />
-					       <span class="highlight" title="View and delete any user's folios">
-					       Folio administration
+					       <span class="highlight" title="View, change and delete any user's portfolios">
+					       Portfolio administration
 					       </span>
 				</div>
-#}
 				<div>
-					<label>Administration</label>
+					<label></label>
 					<input type="checkbox" name="access_admin_files" value="true"
 					       {{ checked if group and group.permissions.admin_files }}
 					       {{ disabled if not allow_perms }} />

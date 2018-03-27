@@ -45,6 +45,7 @@ from threading import Event
 from flask import current_app as app
 
 from imageserver.models import Task
+from imageserver.util import get_computer_hostname
 import imageserver.tasks as tasks
 
 
@@ -82,6 +83,7 @@ def run_task(thread_id, task, logger, data_engine, debug_mode):
             task_log('Task \'%s\' completed' % task.name)
 
     except Exception as e:
+        # Store the exception as the task result
         task.result = e
         task_error_log(
             'Task ID %d \'%s\' failed with error: %s' % (task.id, task.name, str(e))
@@ -104,8 +106,8 @@ def _run_server(debug_mode):
     The task serving main function.
     This function does not return until the process is killed.
     """
-    BUSY_WAIT = 5       #
-    IDLE_WAIT = 10      # All in seconds
+    BUSY_WAIT = 2       #
+    IDLE_WAIT = 5       # All in seconds
     CLEANUP_EVERY = 10  #
 
     try:
@@ -119,12 +121,17 @@ def _run_server(debug_mode):
         dummy = socket()
         dummy.bind((app.config['TASK_SERVER'], app.config['TASK_SERVER_PORT']))
 
-        # If here, we opened the port so we're the only task server running.
+        # If here, we opened the port so we're the only task server running locally
         shutdown_ev = Event()
         logger = app.log
         data_engine = app.data_engine
         logger.set_name('tasks_' + str(os.getpid()))
         logger.info('Task server running')
+
+        # Get the previous and the new process ID
+        last_proc_id = _get_pid()
+        proc_id = str(os.getpid())
+        _store_pid(proc_id)
 
         # Close nicely
         def _shutdown_hook(signum, frame):
@@ -136,15 +143,15 @@ def _run_server(debug_mode):
         sleep(IDLE_WAIT)
 
         # Recover any tasks that weren't completed when we last exited
-        if not shutdown_ev.is_set():
+        if not shutdown_ev.is_set() and last_proc_id:
             data_engine.delete_completed_tasks()
-            peek_tasks = data_engine.list_objects(
-                Task,
-                order_field=Task.id,
-                limit=num_threads
-            )
+            peek_tasks = data_engine.list_objects(Task, order_field=Task.id)
             for t in peek_tasks:
-                if t.status == Task.STATUS_ACTIVE:
+                if (
+                    t.lock_id and
+                    t.lock_id.startswith(last_proc_id + '_') and
+                    t.status == Task.STATUS_ACTIVE
+                ):
                     logger.warn('Resetting interrupted task ID %d \'%s\'' % (t.id, t.name))
                     t.status = Task.STATUS_PENDING
                     t.lock_id = None
@@ -152,7 +159,6 @@ def _run_server(debug_mode):
 
         # Main task dispatching loop
         threads = []
-        proc_id = os.getpid()
         next_thread_id = 1
         last_cleanup = datetime.utcnow()
         while not shutdown_ev.is_set():
@@ -220,6 +226,47 @@ def _run_server(debug_mode):
         else:
             print("Task server exited: " + str(e))
     sys.exit()
+
+
+def _store_pid(val):
+    """
+    Writes the current process ID to a hidden file in the image server file system.
+    Logs any error but does not raise it.
+    """
+    try:
+        pid_dir = os.path.dirname(_get_pidfile_path())
+        if not os.path.exists(pid_dir):
+            os.mkdir(pid_dir)
+        with open(_get_pidfile_path(), 'wt', buffering=0) as f:
+            f.write(val)
+    except Exception as e:
+        app.log.error('Failed to write task server PID file: ' + str(e))
+
+
+def _get_pid():
+    """
+    Returns the last value written by _store_pid() as a string,
+    or an empty string on failure or if _store_pid() has not been called before.
+    """
+    try:
+        if os.path.exists(_get_pidfile_path()):
+            with open(_get_pidfile_path(), 'rt') as f:
+                return f.read()
+    except Exception as e:
+        app.log.error('Failed to read task server PID file: ' + str(e))
+    return ''
+
+
+def _get_pidfile_path():
+    """
+    Returns a path for a PID file, incorporating this computer's host name
+    for the case when multiple servers are sharing the same back-end file system.
+    """
+    return os.path.join(
+        app.config['IMAGES_BASE_DIR'],
+        '.meta',
+        get_computer_hostname() + '.tasks.pid'
+    )
 
 
 def _run_server_process_double_fork(*args):

@@ -13,12 +13,20 @@ most of which return data in the [JSON](http://www.json.org/) format.
 * [Public image services](#api_image_group)
     * [image - retrieve a processed image](#api_image)
     * [original - retrieve an unmodified image file](#api_original)
+* [Public portfolio access](#api_folio_group)
+    * [view - view a portfolio as a web page](#api_folio_view)
+    * [download - download a portfolio as a zip file](#api_folio_download)
 * [Public web services](#api_public)
     * [list - list the files in a folder path](#api_list)
     * [details - retrieve image information by path](#api_details)
+    * [portfolio list - list available portfolios](#api_folio_list)
+    * [portfolio details - retrieve portfolio information](#api_folio_details)
 * [Protected web services](#api_private)
     * [token - obtain an API authentication token](#api_token)
     * [upload - upload an image](#api_upload)
+    * [portfolios - manage portfolios](#api_folios)
+    * [portfolio content - add and remove images in a portfolio](#api_folios_content)
+    * [portfolio publishing - export a portfolio as a zip file](#api_folios_publish)
 * [Administration web services](#api_admin)
     * [image data - manage image metadata](#api_data_images)
     * [image templates - manage image templates](#api_data_templates)
@@ -98,7 +106,7 @@ Or to send data to a protected web service:
     var data = 'path=/myfolder';
     request.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded; charset=utf-8');
     
-    // Authentication token - call the "token" function first to get this
+    // Authentication token - call the "token" API function first to get this
     var token = 'abcdef0123456789abcdef0123456789';
     request.setRequestHeader("Authorization", "Basic " + btoa(token + ":blank"));
     
@@ -115,14 +123,14 @@ Or to send data to a protected web service:
     
     request.send(data);
 
-### Calling an API function with cURL
+### Calling an API function with curl
 
-[cURL](http://curl.haxx.se/) is a popular command line utility that allows you to make HTTP calls
+[curl](http://curl.haxx.se/) is a popular command line utility that allows you to make HTTP calls
 without a web browser. It is available for all common operating systems, and allows you to create
 useful scripts and quickly test individual functions.
 
-This document will also use cURL for most of its examples. In these, the `$` represents the
-command line prompt, and is not to be typed. The cURL equivalent of the above HTML example is simply:
+This document will also use curl for most of its examples. In these, the `$` represents the
+command line prompt, and is not to be typed. The curl equivalent of the above HTML example is simply:
 
 	$ curl 'http://images.example.com/api/v1/list/?path=myfolder'
 
@@ -142,10 +150,17 @@ See the rest of the documentation for which methods are supported by which API c
 	<tr class="odd"><td><code>DELETE</code></td><td>Delete an object</td></tr>
 </table>
 
-For the `PUT` and `POST` methods, parameters should be sent using standard form encoding 
-(`application/x-www-form-urlencoded`). An exception to this is if you are performing a file upload, 
-in which case `multipart/form-data` encoding is required. If you are using a JavaScript framework
-such as in the HTML example above, this detail will be taken care of automatically.
+For the `PUT` and `POST` methods, parameters should be sent using standard HTML
+form encoding (`application/x-www-form-urlencoded`). An exception to this is if
+you are performing a file upload, in which case `multipart/form-data` encoding
+is required.
+
+Using form encoding for API parameters is unusual these days, with most modern
+APIs preferring JSON inputs to match JSON outputs. Back in 2011 this choice was
+made so that the image server API could be called directly from a standard HTML
+form. A future release may add support for JSON-encoded parameters, but even in
+back-end code it is trivial to form-encode data using a library such as `libcurl`
+or [python-requests](http://docs.python-requests.org/en/master/user/quickstart/#more-complicated-post-requests).
 
 ### Return values
 
@@ -229,7 +244,8 @@ for the full documentation and list of available parameters.
 
 ### Returns
 Binary image data, with a content type that is determined by the image format
-requested (or otherwise the default image format).
+requested (or otherwise the default image format). On error, returns a non-200
+status code and HTML text containing an error message.
 
 ### Examples
 
@@ -258,19 +274,87 @@ available parameters.
 
 ### Returns
 Binary image data, with a content type that is determined by the file's image format.
+On error, returns a non-200 status code and HTML text containing an error message.
 
 ### Examples
 
     $ curl -o myfile.jpg 'http://images.example.com/original?src=myfolder/myfile.jpg'
 
 
+<a name="api_folio_group"></a>
+# Public portfolio access
+
+These services provide the main way of viewing or downloading an image portfolio,
+returning a web page or a plain zip file without a JSON wrapper. For publicly
+accessible portfolios, the URLs can be used directly in web pages, emails, instant
+messages, or link sharing services.
+
+For non-public portfolios, either an [API token](#api_token) or a QIS web session
+(via the QIS login page) is required. The returned status codes are the same as
+those defined above for the JSON web services.
+
+<a name="api_folio_view"></a>
+## view portfolio
+Views a portfolio of images as a web page. To view the portfolio as JSON data,
+instead use the [portfolio details](#api_folio_details) API function. If the
+caller is not logged in, the portfolio must be publicly viewable.
+
+### URL
+* `/portfolios/[portfolio friendly ID]/`
+
+### Supported methods
+* `GET`
+
+### Parameters
+* None
+
+### Permissions required
+* View permission for the portfolio
+
+### Returns
+A web page as HTML text. On error, returns a non-200 status code and HTML text
+containing an error message.
+
+### Example
+
+	In a web browser, open:
+	http://images.example.com/portfolios/the-spring-collection/
+
+<a name="api_folio_download"></a>
+## download portfolio
+Downloads a portfolio as a zip file. The portfolio must already have been _published_
+by its author in order to create the zip file; see the [portfolio publishing](#api_folios_publish)
+API function for how to do this. If the caller is not logged in, the portfolio
+must be publicly downloadable.
+
+### URL
+* `/portfolios/[portfolio friendly ID]/downloads/[zip filename].zip`
+
+### Supported methods
+* `GET`
+
+### Parameters
+* None
+
+### Permissions required
+* Download permission for the portfolio
+
+### Returns
+A binary zip file, with content type `application/zip`.
+On error, returns a non-200 status code and HTML text containing an error message.
+
+### Example
+
+    $ curl -o myfile.zip 'http://images.example.com/portfolios/the-spring-collection/downloads/a13d7382f1124b59b62618dd4df154ba.zip'
+
+
 <a name="api_public"></a>
 # Public web services
 
-For publicly accessible images, these web services can be called from an anonymous
-(not logged in) session without requiring an [API authentication token](#api_token).
-For images with a [folder permission](#api_data_permissions) in place, a token is
-required however.
+For publicly accessible images and portfolios, these web services can be called
+from an anonymous (not logged in) session without requiring an [API authentication token](#api_token).
+For images with a [folder permission](#api_data_permissions) in place or for
+non-public portfolios, a token is required however.
 
 <a name="api_list"></a>
 ## list
@@ -434,14 +518,376 @@ An object containing image attributes, as shown below.
 	  "status": 200
 	}
 
+<a name="api_folio_list"></a>
+## portfolio list
+Returns the list of portfolios that are allowed to be viewed by the caller.
+Log in as a user with `admin_folios` permission enabled (in one of the user's
+groups) to see the list of all portfolios. The returned portfolio objects do
+not include image information but do include a URL for viewing the portfolio.
+
+### URL
+* `/api/v1/portfolios/`
+
+### Supported methods
+* `GET`
+
+### Parameters
+* None
+
+### Permissions required
+* None, but the results are filtered by portfolios that the caller can view
+
+### Returns
+An array of 0 or more objects ordered by portfolio name.
+
+### Example
+
+	$ curl 'http://images.example.com/api/v1/portfolios/'
+	{
+	  "data": [
+	    {
+	      "description": "The admin user's favourite photos",
+	      "downloads": [],
+	      "human_id": "408eb84f7cb41a8b",
+	      "id": 2,
+	      "last_updated": "2018-03-09T16:54:51.662994Z",
+	      "name": "Admin favourites",
+	      "owner": {
+	        "email": "",
+	        "first_name": "Administrator",
+	        "id": 1,
+	        "last_name": "",
+	        "status": 1,
+	        "username": "admin"
+	      },
+	      "owner_id": 1,
+	      "permissions": [
+	        {
+	          "access": 10,
+	          "folio_id": 2,
+	          "group_id": 1,
+	          "id": 3
+	        },
+	        {
+	          "access": 10,
+	          "folio_id": 2,
+	          "group_id": 2,
+	          "id": 4
+	        }
+	      ],
+	      "url": "http://images.example.com/portfolios/408eb84f7cb41a8b/"
+	    },
+	    {
+	      "description": "The 2018 Spring Collection",
+	      "downloads": [
+	        {
+	          "created": "2018-03-23T12:38:44.264952Z",
+	          "description": "Originals export",
+	          "filename": "a13d7382f1124b59b62618dd4df154ba.zip",
+	          "filesize": 1330490,
+	          "folio_id": 3,
+	          "id": 2,
+	          "keep_until": "2020-01-01T00:00:00Z",
+	          "originals": true,
+	          "parameters": {},
+	          "task_id": null,
+	          "url": "http://images.example.com/portfolios/the-spring-collection/downloads/a13d7382f1124b59b62618dd4df154ba.zip"
+	        }
+	      ],
+	      "human_id": "the-spring-collection",
+	      "id": 3,
+	      "last_updated": "2018-03-09T16:39:05.342911Z",
+	      "name": "Spring Collection 2018",
+	      "owner": {
+	        "email": "matt@quru.com",
+	        "first_name": "Matt",
+	        "id": 2,
+	        "last_name": "Fozard",
+	        "status": 1,
+	        "username": "matt"
+	      },
+	      "owner_id": 2,
+	      "permissions": [
+	        {
+	          "access": 10,
+	          "folio_id": 3,
+	          "group_id": 1,
+	          "id": 1
+	        },
+	        {
+	          "access": 10,
+	          "folio_id": 3,
+	          "group_id": 2,
+	          "id": 2
+	        }
+	      ],
+	      "url": "http://images.example.com/portfolios/the-spring-collection/"
+	    }
+	  ],
+	  "message": "OK",
+	  "status": 200
+	}
+
+<a name="api_folio_details"></a>
+## portfolio details
+Retrieves the full details of a portfolio, including its ordered image list,
+audit trail and list of published (and non-expired) zip files available for download.
+
+### URL
+* `/api/v1/portfolios/[portfolio id]/`
+
+### Supported methods
+* `GET`
+
+### Parameters
+* None
+
+### Permissions required
+* View permission for the requested portfolio ID
+
+### Returns
+The full portfolio as a JSON object.
+
+### Example
+
+	$ curl 'http://images.example.com/api/v1/portfolios/3/'
+	{
+	  "data": {
+	    "description": "The 2018 Spring Collection",
+	    "downloads": [
+	      {
+	        "created": "2018-03-23T12:38:44.264952Z",
+	        "description": "Originals export",
+	        "filename": "a13d7382f1124b59b62618dd4df154ba.zip",
+	        "filesize": 1330490,
+	        "folio_id": 3,
+	        "id": 2,
+	        "keep_until": "2020-01-01T00:00:00Z",
+	        "originals": true,
+	        "parameters": {},
+	        "task_id": null,
+	        "url": "http://images.example.com/portfolios/the-spring-collection/downloads/a13d7382f1124b59b62618dd4df154ba.zip"
+	      }
+	    ],
+	    "history": [
+	      {
+	        "action": 1,
+	        "action_info": "",
+	        "action_time": "2018-03-23T12:13:52.214960Z",
+	        "folio_id": 3,
+	        "id": 4,
+	        "user": {
+	          "email": "matt@quru.com",
+	          "first_name": "Matt",
+	          "id": 3,
+	          "last_name": "Fozard",
+	          "status": 1,
+	          "username": "matt"
+	        },
+	        "user_id": 3
+	      },
+	      {
+	        "action": 3,
+	        "action_info": "products/p1-bags-a0001.jpg added",
+	        "action_time": "2018-03-23T12:24:27.452216Z",
+	        "folio_id": 3,
+	        "id": 5,
+	        "user": {
+	          "email": "matt@quru.com",
+	          "first_name": "Matt",
+	          "id": 3,
+	          "last_name": "Fozard",
+	          "status": 1,
+	          "username": "matt"
+	        },
+	        "user_id": 3
+	      },
+	      {
+	        "action": 3,
+	        "action_info": "products/p1-bags-a0002.jpg added",
+	        "action_time": "2018-03-23T12:29:22.849761Z",
+	        "folio_id": 3,
+	        "id": 6,
+	        "user": {
+	          "email": "matt@quru.com",
+	          "first_name": "Matt",
+	          "id": 3,
+	          "last_name": "Fozard",
+	          "status": 1,
+	          "username": "matt"
+	        },
+	        "user_id": 3
+	      },
+	      {
+	        "action": 3,
+	        "action_info": "products/p1-bags-a0003.jpg added",
+	        "action_time": "2018-03-23T12:29:30.137174Z",
+	        "folio_id": 3,
+	        "id": 7,
+	        "user": {
+	          "email": "matt@quru.com",
+	          "first_name": "Matt",
+	          "id": 3,
+	          "last_name": "Fozard",
+	          "status": 1,
+	          "username": "matt"
+	        },
+	        "user_id": 3
+	      },
+	      {
+	        "action": 3,
+	        "action_info": "products/p1-bags-a0002.jpg moved to position 3",
+	        "action_time": "2018-03-23T12:32:50.556061Z",
+	        "folio_id": 3,
+	        "id": 8,
+	        "user": {
+	          "email": "matt@quru.com",
+	          "first_name": "Matt",
+	          "id": 3,
+	          "last_name": "Fozard",
+	          "status": 1,
+	          "username": "matt"
+	        },
+	        "user_id": 3
+	      },
+	      {
+	        "action": 4,
+	        "action_info": "Originals export (expires Wed Jan  1 00:00:00 2020 UTC, images are unmodified originals)",
+	        "action_time": "2018-03-23T12:38:44.265397Z",
+	        "folio_id": 3,
+	        "id": 9,
+	        "user": {
+	          "email": "matt@quru.com",
+	          "first_name": "Matt",
+	          "id": 3,
+	          "last_name": "Fozard",
+	          "status": 1,
+	          "username": "matt"
+	        },
+	        "user_id": 3
+	      }
+	    ],
+	    "human_id": "the-spring-collection",
+	    "id": 3,
+	    "images": [
+	      {
+	        "filename": "",
+	        "folio_id": 3,
+	        "id": 5,
+	        "image": {
+	          "description": "",
+	          "folder": {
+	            "id": 15,
+	            "name": "/products",
+	            "parent_id": 1,
+	            "path": "/products",
+	            "status": 1
+	          },
+	          "folder_id": 15,
+	          "height": 1754,
+	          "id": 85,
+	          "src": "products/p1-bags-a0001.jpg",
+	          "status": 1,
+	          "title": "",
+	          "width": 1239
+	        },
+	        "image_id": 85,
+	        "order_num": 0,
+	        "parameters": {},
+	        "url": "http://images.example.com/image?src=products/p1-bags-a0001.jpg"
+	      },
+	      {
+	        "filename": "",
+	        "folio_id": 3,
+	        "id": 7,
+	        "image": {
+	          "description": "",
+	          "folder": {
+	            "id": 15,
+	            "name": "/products",
+	            "parent_id": 1,
+	            "path": "/products",
+	            "status": 1
+	          },
+	          "folder_id": 15,
+	          "height": 1754,
+	          "id": 86,
+	          "src": "products/p1-bags-a0003.jpg",
+	          "status": 1,
+	          "title": "",
+	          "width": 1239
+	        },
+	        "image_id": 86,
+	        "order_num": 1,
+	        "parameters": {},
+	        "url": "http://images.example.com/image?src=products/p1-bags-a0003.jpg"
+	      },
+	      {
+	        "filename": "",
+	        "folio_id": 3,
+	        "id": 6,
+	        "image": {
+	          "description": "",
+	          "folder": {
+	            "id": 15,
+	            "name": "/products",
+	            "parent_id": 1,
+	            "path": "/products",
+	            "status": 1
+	          },
+	          "folder_id": 15,
+	          "height": 1754,
+	          "id": 84,
+	          "src": "products/p1-bags-a0002.jpg",
+	          "status": 1,
+	          "title": "",
+	          "width": 1239
+	        },
+	        "image_id": 84,
+	        "order_num": 2,
+	        "parameters": {},
+	        "url": "http://images.example.com/image?src=products/p1-bags-a0002.jpg"
+	      }
+	    ],
+	    "last_updated": "2018-03-23T12:29:30.137247Z",
+	    "name": "Spring Collection 2018",
+	    "owner": {
+	      "email": "matt@quru.com",
+	      "first_name": "Matt",
+	      "id": 3,
+	      "last_name": "Fozard",
+	      "status": 1,
+	      "username": "matt"
+	    },
+	    "owner_id": 3,
+	    "permissions": [
+	      {
+	        "access": 10,
+	        "folio_id": 3,
+	        "group_id": 2,
+	        "id": 6
+	      },
+	      {
+	        "access": 10,
+	        "folio_id": 3,
+	        "group_id": 1,
+	        "id": 5
+	      }
+	    ],
+	    "url": "http://images.example.com/portfolios/the-spring-collection/"
+	  },
+	  "message": "OK",
+	  "status": 200
+	}
+
 
 <a name="api_private"></a>
 # Protected web services
 
-All other web services require the caller to be logged in so that permissions can be
-checked and a username recorded in the audit trail. Since the QIS login web page cannot be
-used alongside the API, to achieve this the caller must first obtain an
-[API authentication token](#api_token) and then provide this along with every function call.
+All other web services require the caller to be logged in so that permissions
+can be checked and a username recorded in the audit trail. To log in using the
+API, obtain an [API authentication token](#api_token) and then provide this along
+with every function call.
 
 <a name="api_token"></a>
 ## token
@@ -584,6 +1030,463 @@ But then running the same command again:
 	  "status": 409
 	}
 
+<a name="api_folios"></a>
+## portfolios
+Lists viewable portfolios, or gets, creates, updates, or deletes a single portfolio.
+
+A portfolio is a collection of images that can be viewed together, downloaded
+together, or transformed together (e.g. resized to the same dimensions, or have
+a standard watermark applied). Unlike other objects, portfolios have a concept of
+ownership. Any logged in user with the `folios` system permission can create a
+portfolio and add images to it. They can choose whether the portfolio is visible
+only to them, to other logged in users too, or is public. Separately they can
+choose the same for who is allowed to download the portfolio as a zip file.
+Only the portfolio owner or a user with the `admin_folios` system permission can
+make changes to the portfolio or [publish it](#api_folios_publish) as a zip file.
+
+### URL
+* `/api/v1/portfolios/` for `GET` (list portfolios) and `POST` (create portfolio)
+* `/api/v1/portfolios/[portfolio id]/` for `GET`, `PUT`, and `DELETE`
+
+### Supported methods
+* `GET`
+* `POST`
+* `PUT`
+* `DELETE`
+
+### Parameters
+* None for `GET` or `DELETE`
+* For `POST` and `PUT`:
+	* `human_id` - Optional, text - A unique "friendly" ID that will be used to
+	  identify the portfolio in the [view](#api_folio_view) and [download](#api_folio_download)
+	  URLs. If not supplied or left blank a unique ID will be generated for you.
+	* `name` - Mandatory, text - A name for the portfolio
+	* `description` - Mandatory, text - A description of the portfolio
+	* `internal_access` - Mandatory, integer - The level of access to allow
+	  for other logged in users:
+		* `0` - No access (make the portfolio private)
+		* `10` - View permission
+		* `20` - View and download permission
+	* `public_access` - Mandatory, integer - The level of access to allow
+	  for public (not logged in) users:
+		* `0` - No access (make the portfolio private)
+		* `10` - View permission
+		* `20` - View and download permission
+
+### Permissions required
+* None for `GET` (list portfolios),
+  but the results are filtered by portfolios that the caller can view
+* Portfolio view permission for `GET` (single portfolio)
+* The `folios` system permission for `POST` (create portfolio)
+* Portfolio ownership or the `admin_folios` system permission for `PUT` and `DELETE`
+
+### Returns
+A list of abbreviated portfolio objects (for the list URL), a single portfolio
+object (for most other URLs), or nothing (after a delete).
+
+If the `human_id` parameter is left blank when creating a portfolio, a generated
+ID will be present in the returned object. Each portfolio object includes a URL
+for viewing the portfolio.
+
+### Example
+
+	$ curl -X POST -u <token>:unused -F 'human_id=the-spring-collection' \
+	       -F 'name=Spring Collection 2018' -F 'description=The 2018 Spring Collection' \
+	       -F 'internal_access=10' -F 'public_access=10' \
+	       'http://images.example.com/api/v1/portfolios/'
+	{
+	  "data": {
+	    "description": "The 2018 Spring Collection",
+	    "downloads": [],
+	    "history": [
+	      {
+	        "action": 1,
+	        "action_info": "",
+	        "action_time": "2018-03-23T12:13:52.214960Z",
+	        "folio_id": 3,
+	        "id": 4,
+	        "user": {
+	          "email": "matt@quru.com",
+	          "first_name": "Matt",
+	          "id": 3,
+	          "last_name": "Fozard",
+	          "status": 1,
+	          "username": "matt"
+	        },
+	        "user_id": 3
+	      }
+	    ],
+	    "human_id": "the-spring-collection",
+	    "id": 3,
+	    "images": [],
+	    "last_updated": "2018-03-23T12:13:52.206066Z",
+	    "name": "Spring Collection 2018",
+	    "owner": {
+	      "email": "matt@quru.com",
+	      "first_name": "Matt",
+	      "id": 3,
+	      "last_name": "Fozard",
+	      "status": 1,
+	      "username": "matt"
+	    },
+	    "owner_id": 3,
+	    "permissions": [
+	      {
+	        "access": 10,
+	        "folio_id": 3,
+	        "group_id": 1,
+	        "id": 5
+	      },
+	      {
+	        "access": 10,
+	        "folio_id": 3,
+	        "group_id": 2,
+	        "id": 6
+	      }
+	    ],
+	    "url": "http://images.example.com/portfolios/the-spring-collection/"
+	  },
+	  "message": "OK",
+	  "status": 200
+	}
+
+<a name="api_folios_content"></a>
+## portfolio content
+Adds and removes images to and from a portfolio, allows re-ordering of the image
+list, and optionally sets portfolio-specific image changes.
+
+The image changes apply only in the context of the portfolio, when the portfolio
+is viewed or downloaded. The feature is intended to allow things like a custom
+crop to be applied to a single image. If image changes are also requested at the
+[publishing](#api_folios_publish) stage, the publishing changes are applied on
+top of the single image changes.
+
+### URL
+* `/api/v1/portfolios/images/` for `GET` (list images) and `POST` (add image)
+* `/api/v1/portfolios/[portfolio id]/images/[image id]/` for `GET`, `PUT`, and `DELETE`
+* `/api/v1/portfolios/[portfolio id]/images/[image id]/position/` for `PUT` (reorder)
+
+### Supported methods
+* `GET`
+* `POST`
+* `PUT`
+* `DELETE`
+
+### Parameters
+* None for `GET` or `DELETE`
+* For reorder `PUT`:
+	* `index` - Mandatory, integer - the new zero-based index to move the image to
+* For add image `POST`:
+	* `image_id` or `image_src` - Mandatory, integer or text - the unique ID or
+	  path (folder and filename) of the image to add into the portfolio
+* For add image and change image `POST` and `PUT`:
+	* `filename` - Optional, text - Sets the filename to use for this image when
+	  the portfolio is published to a zip file. Supports ASCII characters only due
+	  to zip file limitations. Defaults to the image's original filename.
+	* `index` - Optional, integer - Sets the zero-based numeric list index to insert
+	  the image at. Defaults to 0. If all images are at position 0 they are ordered
+	  by the time they were added (oldest first, newest last).
+	* `image_parameters` - Optional, JSON text - A set of field/value-object pairs
+	  that define portfolio-specific imaging operations for this image. The JSON
+	  format is the same as when defining an [image template](#api_data_templates).
+
+Note that setting the `index` parameter during a `POST` (add image) or
+`PUT` (update image) operation will not change the ordering number on other
+images in the portfolio. This may result in multiple images being at the same
+position, with the order then being determined by which image was added to the
+portfolio first. If this order is not what you want, or to ensure that each
+image has a unique ordering number, use the explicit `/position/` reordering
+function.
+
+When using the reordering function, if the value of `index` is too high or too
+low it will be adjusted, so you can simply pass a large number to implement a
+_move to end_ function.
+
+### Permissions required
+* Portfolio view permission for `GET`
+* Portfolio ownership or the `admin_folios` system permission for `POST`, `PUT`,
+  and `DELETE`
+* Folder view permission for the folder of the image being added for `POST`
+
+### Returns
+An ordered list of the images in the portfolio (for the list URL and the reorder
+URL), a single portfolio-image object (for most other URLs), or nothing (after a
+delete).
+
+Each portfolio-image object includes a URL for requesting the image that
+incorporates the operations given in the `image_parameters` parameter (if any).
+
+### Examples
+
+Add an image to a portfolio:
+
+	$ curl -X POST -u <token>:unused -F 'image_id=85' 'http://images.example.com/api/v1/portfolios/3/images/'
+	{
+	  "data": {
+	    "filename": "",
+	    "folio_id": 3,
+	    "id": 5,
+	    "image": {
+	      "description": "",
+	      "folder": {
+	        "id": 15,
+	        "name": "/products",
+	        "parent_id": 1,
+	        "path": "/products",
+	        "status": 1
+	      },
+	      "folder_id": 15,
+	      "height": 1754,
+	      "id": 85,
+	      "src": "products/p1-bags-a0001.jpg",
+	      "status": 1,
+	      "title": "",
+	      "width": 1239
+	    },
+	    "image_id": 85,
+	    "order_num": 0,
+	    "parameters": {},
+	    "url": "http://images.example.com/image?src=products/p1-bags-a0001.jpg"
+	  },
+	  "message": "OK",
+	  "status": 200
+	}
+
+Reorder the portfolio:
+
+	$ curl -X PUT -u <token>:unused -F 'index=2' 'http://images.example.com/api/v1/portfolios/3/images/84/position/'
+	{
+	  "data": [
+	    {
+	      "filename": "",
+	      "folio_id": 3,
+	      "id": 5,
+	      "image": {
+	        "description": "",
+	        "folder": {
+	          "id": 15,
+	          "name": "/products",
+	          "parent_id": 1,
+	          "path": "/products",
+	          "status": 1
+	        },
+	        "folder_id": 15,
+	        "height": 1754,
+	        "id": 85,
+	        "src": "products/p1-bags-a0001.jpg",
+	        "status": 1,
+	        "title": "",
+	        "width": 1239
+	      },
+	      "image_id": 85,
+	      "order_num": 0,
+	      "parameters": {},
+	      "url": "http://images.example.com/image?src=products/p1-bags-a0001.jpg"
+	    },
+	    {
+	      "filename": "",
+	      "folio_id": 3,
+	      "id": 7,
+	      "image": {
+	        "description": "",
+	        "folder": {
+	          "id": 15,
+	          "name": "/products",
+	          "parent_id": 1,
+	          "path": "/products",
+	          "status": 1
+	        },
+	        "folder_id": 15,
+	        "height": 1754,
+	        "id": 86,
+	        "src": "products/p1-bags-a0003.jpg",
+	        "status": 1,
+	        "title": "",
+	        "width": 1239
+	      },
+	      "image_id": 86,
+	      "order_num": 1,
+	      "parameters": {},
+	      "url": "http://images.example.com/image?src=products/p1-bags-a0003.jpg"
+	    },
+	    {
+	      "filename": "",
+	      "folio_id": 3,
+	      "id": 6,
+	      "image": {
+	        "description": "",
+	        "folder": {
+	          "id": 15,
+	          "name": "/products",
+	          "parent_id": 1,
+	          "path": "/products",
+	          "status": 1
+	        },
+	        "folder_id": 15,
+	        "height": 1754,
+	        "id": 84,
+	        "src": "products/p1-bags-a0002.jpg",
+	        "status": 1,
+	        "title": "",
+	        "width": 1239
+	      },
+	      "image_id": 84,
+	      "order_num": 0,
+	      "parameters": {},
+	      "url": "http://images.example.com/image?src=products/p1-bags-a0002.jpg"
+	    }
+	  ],
+	  "message": "OK",
+	  "status": 200
+	}
+
+<a name="api_folios_publish"></a>
+## portfolio publishing
+Creates or deletes a downloadable export of a portfolio as a zip file. A
+portfolio may be exported multiple times with different changes applied. For
+example a zip of the unmodified original files, a zip of resized images all
+saved as `jpg`, and a zip with all images having a colour profile applied.
+
+When single image changes have been defined with the [content function](#api_folios_content),
+the publishing changes (if any) will be applied on top. Note that when the
+portfolio is exported as unmodified original files, both the publishing changes
+and any single image changes are ignored.
+
+Once created, a published zip file is not updated. So if images are added,
+removed or changed in a portfolio, any existing zip files will become out of
+date. If this is a concern, delete the existing exports and re-publish the
+portfolio. Anyone attempting to download a deleted zip file will receive a
+`404 not found` error.
+
+Published zip files also have an expiry date, after which time they will be
+automatically deleted. For zips that only need to be downloaded once you can
+set for example a 7 day expiry date. Or to prevent expiry at all, set a 100 year
+expiry date.
+
+### URL
+* `/api/v1/portfolios/[portfolio id]/exports/` for `GET` (list exports) and `POST`
+* `/api/v1/portfolios/[portfolio id]/images/[export id]/` for `GET` and `DELETE`
+
+### Supported methods
+* `GET`
+* `POST`
+* `DELETE`
+
+### Parameters
+* None for `GET` and `DELETE`
+* For `POST`:
+	* `description` - Mandatory, text - a description of the export
+	  (can be left blank)
+	* `originals` - Mandatory, boolean - whether to export the original unmodified
+	  image files (when true, `image_parameters` will be ignored)
+	* `expiry_time` - Mandatory, text - Date in the format `yyyy-mm-dd`, or a time
+	  in the format `yyyy-mm-ddThh:mm:ss` for when the published zip file should
+	  be automatically deleted. The time is specified in the UTC time zone and the
+	  expiry routine runs hourly.
+	* `image_parameters` - Optional, JSON text - A set of field/value-object pairs
+	  that define any imaging operations required for this export. The JSON
+	  format is the same as when defining an [image template](#api_data_templates).
+
+### Permissions required
+* Portfolio view permission for `GET`
+* Portfolio ownership or the `admin_folios` system permission for `POST` and `DELETE`
+
+### Returns
+A list of published zip files for the portfolio (for the list URL), a single
+portfolio-export object (for most other URLs), or nothing (after a delete).
+
+Zip files are generated as a background task. When creating a new zip file with
+the `POST` action, status `202` is returned, the `filename` and `filesize` fields
+will be blank, and the `task_id` field will be set to a value that can be monitored
+with the [system tasks API](#api_tasks). Once the task has completed, the `filename`
+and `filesize` fields will be set, and the `task_id` field empty. If the task fails,
+the error information can be queried via the system tasks API, where the task
+object will contain an exception in the `result` field instead of the updated
+portfolio-export object.
+
+Each portfolio-export object includes a URL for downloading the zip file. This
+will be empty at first until the background task to create the zip file has
+completed.
+
+Attempting to delete a zip file while the background creation task is still in
+progress will result in a `503 server busy` error.
+
+### Examples
+
+Publish the portfolio's original unmodified image files:
+
+	$ curl -X POST -u <token>:unused -F 'description=Originals export' \
+	       -F 'originals=1' -F 'expiry_time=2020-01-01' 'http://images.example.com/api/v1/portfolios/3/exports/'
+	{
+	  "data": {
+	    "created": "2018-03-23T12:38:44.264952Z",
+	    "description": "Originals export",
+	    "filename": "",
+	    "filesize": 0,
+	    "folio_id": 3,
+	    "id": 2,
+	    "keep_until": "2020-01-01T00:00:00Z",
+	    "originals": true,
+	    "parameters": {},
+	    "task_id": 548,
+	    "url": ""
+	  },
+	  "message": "OK task accepted",
+	  "status": 202
+	}
+
+After the export task has completed, the filename and URL fields are set:
+
+	$ curl -u <token>:unused 'http://images.example.com/api/v1/portfolios/3/exports/2/'
+	{
+	  "data": {
+	    "created": "2018-03-23T12:38:44.264952Z",
+	    "description": "Originals export",
+	    "filename": "a13d7382f1124b59b62618dd4df154ba.zip",
+	    "filesize": 1330490,
+	    "folio_id": 3,
+	    "id": 2,
+	    "keep_until": "2020-01-01T00:00:00Z",
+	    "originals": true,
+	    "parameters": {},
+	    "task_id": null,
+	    "url": "http://images.example.com/portfolios/the-spring-collection/downloads/a13d7382f1124b59b62618dd4df154ba.zip"
+	  },
+	  "message": "OK",
+	  "status": 200
+	}
+
+Publish the portfolio with all images resized to 500x500:
+
+	$ curl -X POST -u <token>:unused -F 'description=500x500 thumbnails' \
+	       -F 'originals=0' -F 'image_parameters={"width":{"value":500}, "height":{"value":500}}' \
+	       -F 'expiry_time=2020-01-01' 'http://images.example.com/api/v1/portfolios/3/exports/'
+	{
+	  "data": {
+	    "created": "2018-03-26T13:42:40.491120Z",
+	    "description": "500 x 500 thumbnails",
+	    "filename": "",
+	    "filesize": 0,
+	    "folio_id": 3,
+	    "id": 3,
+	    "keep_until": "2020-01-01T00:00:00Z",
+	    "originals": false,
+	    "parameters": {
+	      "height": {
+	        "value": 500
+	      },
+	      "width": {
+	        "value": 500
+	      }
+	    },
+	    "task_id": 590,
+	    "url": ""
+	  },
+	  "message": "OK task accepted",
+	  "status": 202
+	}
+
+
 <a name="api_admin"></a>
 # Administration web services
 
@@ -706,7 +1609,7 @@ Values are either `null` or excluded from the output if the template does not se
 them. Existing older templates may also be missing fields that have been added in
 more recent versions of the software.
 
-### Example
+### Examples
 
 	$ curl -u <token>:unused 'https://images.example.com/api/v1/admin/templates/1/'
 	{
@@ -901,13 +1804,14 @@ controls.
 	* `description` - Mandatory, text - a description of the group
 	* `group_type` - Mandatory, integer - set to `1` for required system groups that must not
 	  be deleted, set to `2` for normal, user-defined groups
-	* `access_folios` - Mandatory, boolean - Currently unused
+	* `access_folios` - Mandatory, boolean - Whether the group allows the creation of portfolios
 	* `access_reports` - Mandatory, boolean - Whether the group provides access to reports
 	* `access_admin_users` - Mandatory, boolean - Whether the group provides user administration
 	  permission (and basic group administration)
 	* `access_admin_files` - Mandatory, boolean - Whether the group provides file administration
 	  permission (change and delete any file or folder, regardless of folder permissions)
-	* `access_admin_folios` - Mandatory, boolean - Currently unused
+	* `access_admin_folios` - Mandatory, boolean - Whether the group provides portfolio
+	  administration permission (create, change and delete any user's portfolios)
 	* `access_admin_permissions` - Mandatory, boolean - Whether the group provides permissions
 	  administration (and full group administration)
 	* `access_admin_all` - Mandatory, boolean - Whether the group provides _super user_
@@ -936,10 +1840,10 @@ or nothing (after a delete).
 	      "permissions": {
 	        "admin_all": true,
 	        "admin_files": true,
-	        "admin_folios": false,
+	        "admin_folios": true,
 	        "admin_permissions": true,
 	        "admin_users": true,
-	        "folios": false,
+	        "folios": true,
 	        "group_id": 3,
 	        "reports": true
 	      }

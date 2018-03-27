@@ -66,11 +66,7 @@ class TaskAPI(MethodView):
                 permissions_engine.ensure_permitted(
                     SystemPermissions.PERMIT_SUPER_USER, get_session_user()
                 )
-            tdict = object_to_dict(db_task)
-            if tdict.get('user') is not None:
-                # Do not give out anything password related
-                del tdict['user']['password']
-            return make_api_success_response(tdict)
+            return make_api_success_response(object_to_dict(db_task))
 
     @add_api_error_handler
     def post(self, function_name):
@@ -104,11 +100,7 @@ class TaskAPI(MethodView):
             raise AlreadyExistsError('Task is already running')
         # Decode the params before returning
         db_task.params = pickle.loads(db_task.params)
-        tdict = object_to_dict(db_task)
-        if tdict.get('user') is not None:
-            # Do not give out anything password related
-            del tdict['user']['password']
-        return make_api_success_response(tdict)
+        return make_api_success_response(object_to_dict(db_task))
 
     @add_parameter_error_handler
     def _get_task_data(self, function_name, api_params):

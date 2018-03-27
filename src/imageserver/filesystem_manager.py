@@ -203,6 +203,31 @@ def get_burst_path(rel_path):
     return rel_path + '.d'
 
 
+def get_portfolio_directory(folio):
+    """
+    Returns the relative path to the directory where a portfolio's export
+    files will be placed.
+    """
+    return os.path.join(
+        app.config['FOLIO_EXPORTS_DIR'],
+        str(folio.id)
+    )
+
+
+def get_portfolio_export_file_path(folio_export):
+    """
+    Returns the relative path to a portfolio export (zip) file,
+    or an empty string if the export has not completed.
+    """
+    if folio_export.filename:
+        return os.path.join(
+            app.config['FOLIO_EXPORTS_DIR'],
+            str(folio_export.folio_id),
+            folio_export.filename
+        )
+    return ''
+
+
 def get_upload_directory(dir_index):
     """
     Returns a tuple of (display name, relative path) for a given index into

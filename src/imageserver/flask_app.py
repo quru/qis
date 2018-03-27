@@ -214,6 +214,9 @@ with app.app_context():
         from . import reports
         app.register_blueprint(reports.blueprint, url_prefix='/reports')
 
+        from . import portfolios
+        app.register_blueprint(portfolios.blueprint, url_prefix='/portfolios')
+
         # Import global template functions
         views_util.register_template_funcs()
 
@@ -225,19 +228,41 @@ with app.app_context():
         raise
 
 
+# Auto-start the aux processes when web requests come in. When this module is
+# imported from other places (e.g. unit tests, the aux processes themselves),
+# call launch_aux_processes() as required.
 @app.before_first_request
+def on_first_request():
+    _launch_aux_processes(['stats', 'tasks'])  # logs already started above
+
+
+# Manually starts the aux processes outside of a web server context
 def launch_aux_processes():
+    with app.app_context():
+        _launch_aux_processes()
+
+
+def _launch_aux_processes(service_list='all'):
     # Close any open server connections before forking and...
     app.data_engine._reset_pool()
     app.cache_engine._reset_pool()
-    # ...spawn the remaining services
-    StatsManager.run_server(
-        app.config['STATS_SERVER'],
-        app.config['STATS_SERVER_PORT'],
-        app.config['DEBUG']
-    )
-    TaskManager.run_server(
-        app.config['TASK_SERVER'],
-        app.config['TASK_SERVER_PORT'],
-        app.config['DEBUG']
-    )
+    # ...spawn the requested services
+    if (service_list == 'all') or ('logs' in service_list):
+        LogManager.run_server(
+            app.config['LOGGING_SERVER'],
+            app.config['LOGGING_SERVER_PORT'],
+            __about__.__tag__.lower() + '.log',
+            app.config['DEBUG']
+        )
+    if (service_list == 'all') or ('stats' in service_list):
+        StatsManager.run_server(
+            app.config['STATS_SERVER'],
+            app.config['STATS_SERVER_PORT'],
+            app.config['DEBUG']
+        )
+    if (service_list == 'all') or ('tasks' in service_list):
+        TaskManager.run_server(
+            app.config['TASK_SERVER'],
+            app.config['TASK_SERVER_PORT'],
+            app.config['DEBUG']
+        )
