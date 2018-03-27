@@ -43,13 +43,13 @@ import signal
 import sys
 import time
 from datetime import date, datetime, timedelta
-from multiprocessing import Process
 from threading import Event, Lock, Thread
 
 from flask import current_app as app
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 
+from imageserver.auxiliary import util
 from imageserver.counter import Counter
 from imageserver.models import ImageStats, SystemStats, Task
 
@@ -136,9 +136,12 @@ class StatsSocketServer(SocketServer.ThreadingTCPServer):
             (app.config['STATS_SERVER'], app.config['STATS_SERVER_PORT']),
             StatsRequestHandler
         )
+        # Note down PID for process control
+        proc_id = str(os.getpid())
+        util.store_pid('stats', proc_id)
 
         self.logger = app.log
-        self.logger.set_name('stats_' + str(os.getpid()))
+        self.logger.set_name('stats_' + proc_id)
         self.database = app.data_engine
         self.tasks = app.task_engine
         self.data_cache = app.cache_engine
@@ -562,22 +565,6 @@ def _run_server(debug_mode):
     sys.exit()
 
 
-def _run_server_process_double_fork(*args):
-    p = Process(
-        target=_run_server,
-        name='stats_server',
-        args=args
-    )
-    # Do not kill the stats server process when this process exits
-    p.daemon = False
-    p.start()
-    time.sleep(1)
-    # Force our exit, leaving the stats server process still running.
-    # Our parent process can now exit cleanly without waiting to join() the
-    # actual stats server process (it can't, since it knows nothing about it).
-    os._exit(0)
-
-
 def run_server_process(debug_mode):
     """
     Starts a stats server as a separate process, to receive stats messages over
@@ -585,15 +572,7 @@ def run_server_process(debug_mode):
     settings module. If the TCP/IP port is already in use or cannot be opened,
     the server process simply exits.
     """
-    # Double fork, otherwise we cannot exit until the server process has
-    # completed
-    p = Process(
-        target=_run_server_process_double_fork,
-        args=(debug_mode, )
-    )
-    # Start and wait for the double_fork process to complete (which is quickly)
-    p.start()
-    p.join()
+    util.double_fork('stats_server', _run_server, (debug_mode, ))
 
 
 # Allow the server to be run from the command line

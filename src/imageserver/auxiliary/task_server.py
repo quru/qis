@@ -38,14 +38,13 @@ import time
 import threading
 import traceback
 from datetime import datetime, timedelta
-from multiprocessing import Process
 from socket import socket
 from threading import Event
 
 from flask import current_app as app
 
+from imageserver.auxiliary import util
 from imageserver.models import Task
-from imageserver.util import get_computer_hostname
 import imageserver.tasks as tasks
 
 
@@ -129,9 +128,9 @@ def _run_server(debug_mode):
         logger.info('Task server running')
 
         # Get the previous and the new process ID
-        last_proc_id = _get_pid()
+        last_proc_id = util.get_pid('tasks')
         proc_id = str(os.getpid())
-        _store_pid(proc_id)
+        util.store_pid('tasks', proc_id)
 
         # Close nicely
         def _shutdown_hook(signum, frame):
@@ -234,77 +233,13 @@ def _run_server(debug_mode):
     sys.exit()
 
 
-def _store_pid(val):
-    """
-    Writes the current process ID to a hidden file in the image server file system.
-    Logs any error but does not raise it.
-    """
-    try:
-        pid_dir = os.path.dirname(_get_pidfile_path())
-        if not os.path.exists(pid_dir):
-            os.mkdir(pid_dir)
-        with open(_get_pidfile_path(), 'wt', buffering=0) as f:
-            f.write(val)
-    except Exception as e:
-        app.log.error('Failed to write task server PID file: ' + str(e))
-
-
-def _get_pid():
-    """
-    Returns the last value written by _store_pid() as a string,
-    or an empty string on failure or if _store_pid() has not been called before.
-    """
-    try:
-        if os.path.exists(_get_pidfile_path()):
-            with open(_get_pidfile_path(), 'rt') as f:
-                return f.read()
-    except Exception as e:
-        app.log.error('Failed to read task server PID file: ' + str(e))
-    return ''
-
-
-def _get_pidfile_path():
-    """
-    Returns a path for a PID file, incorporating this computer's host name
-    for the case when multiple servers are sharing the same back-end file system.
-    """
-    return os.path.join(
-        app.config['IMAGES_BASE_DIR'],
-        '.meta',
-        get_computer_hostname() + '.tasks.pid'
-    )
-
-
-def _run_server_process_double_fork(*args):
-    p = Process(
-        target=_run_server,
-        name='task_server',
-        args=args
-    )
-    # Do not kill the task server process when this process exits
-    p.daemon = False
-    p.start()
-    time.sleep(1)
-    # Force our exit, leaving the task server process still running.
-    # Our parent process can now exit cleanly without waiting to join() the
-    # actual task server process (it can't, since it knows nothing about it).
-    os._exit(0)
-
-
 def run_server_process(debug_mode):
     """
     Starts a task server as a separate process. The database connection and
     other settings are loaded from the imageserver settings module.
     If a task server is already running, the server process simply exits.
     """
-    # Double fork, otherwise we cannot exit until the server process has completed
-    p = Process(
-        target=_run_server_process_double_fork,
-        args=(debug_mode, )
-    )
-    # Start and wait for the double_fork process to complete (which is quickly)
-    p.start()
-    p.join()
+    util.double_fork('task_server', _run_server, (debug_mode, ))
 
 
 # Allow the server to be run from the command line

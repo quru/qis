@@ -38,11 +38,11 @@ import SocketServer
 import signal
 import struct
 import sys
-from multiprocessing import Process
 from threading import Thread
-from time import sleep
 
 from flask import current_app as app
+
+from imageserver.auxiliary import util
 
 
 class LogRecordStreamHandler(SocketServer.StreamRequestHandler):
@@ -92,6 +92,8 @@ class LogRecordSocketReceiver(SocketServer.ThreadingTCPServer):
             (bind_addr, bind_port),
             LogRecordStreamHandler
         )
+        # Note down PID for process control
+        util.store_pid('logging', str(os.getpid()))
         # Set up logging destination to file
         logging_engine = logging.getLogger('')
         logging_format = logging.Formatter('%(asctime)s %(name)-10s %(levelname)-8s %(message)s')
@@ -148,22 +150,6 @@ def _run_server(log_filename, stdout_echo):
     sys.exit()
 
 
-def _run_server_process_double_fork(*args):
-    p = Process(
-        target=_run_server,
-        name='log_server',
-        args=args
-    )
-    # Do not kill the log server process when this process exits
-    p.daemon = False
-    p.start()
-    sleep(1)
-    # Force our exit, leaving the log server process still running.
-    # Our parent process can now exit cleanly without waiting to join() the
-    # actual log server process (it can't, since it knows nothing about it).
-    os._exit(0)
-
-
 def run_server_process(log_filename, stdout_echo):
     """
     Starts a logging server as a separate process, to receive logs over TCP/IP.
@@ -171,14 +157,7 @@ def run_server_process(log_filename, stdout_echo):
     module. If the TCP/IP port is already in use or cannot be opened, the
     server process simply exits.
     """
-    # Double fork, otherwise we cannot exit until the log server process has completed
-    p = Process(
-        target=_run_server_process_double_fork,
-        args=(log_filename, stdout_echo)
-    )
-    # Start and wait for the double_fork process to complete (which is quickly)
-    p.start()
-    p.join()
+    util.double_fork('log_server', _run_server, (log_filename, stdout_echo))
 
 
 # Allow the server to be run from the command line
