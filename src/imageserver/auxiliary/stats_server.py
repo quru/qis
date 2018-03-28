@@ -267,13 +267,19 @@ class StatsSocketServer(SocketServer.ThreadingTCPServer):
             # false spike in the data.
             caches_age = datetime.utcnow() - dt_last_flush
             if caches_age >= timedelta(minutes=self.frequency):
-                self.logger.error((
+                self.logger.error(
                     'Stats have not been flushed for %s minutes. '
-                    'Discarding old data to begin a new stats period.'
-                ) % self.frequency)
-                with self.sys_cache_lock:
-                    with self.img_cache_lock:
-                        self._reset_caches()
+                    'Discarding old data to begin a new stats period.' % self.frequency
+                )
+                self._lock_reset_caches()
+
+    def _lock_reset_caches(self):
+        """
+        Acquires the cache locks, clears the current image and system stats caches.
+        """
+        with self.sys_cache_lock:
+            with self.img_cache_lock:
+                self._reset_caches()
 
     def _reset_caches(self):
         """
@@ -522,7 +528,16 @@ class StatsSocketServer(SocketServer.ThreadingTCPServer):
         latest_cache = self.hw_cache['cache'][-1]
         return (avg_cpu, avg_ram, latest_cache)
 
+    def _sigusr1(self, signum, frame):
+        """
+        Handles the SIGUSR1 signal.
+        """
+        self._lock_reset_caches()
+
     def _shutdown(self, signum, frame):
+        """
+        Handles the SIGTERM signal.
+        """
         def _shutdown_socket_server(svr):
             # "must be called while serve_forever() is running in another thread"
             svr.shutdown()
@@ -549,6 +564,7 @@ def _run_server(debug_mode):
     try:
         svr = StatsSocketServer(debug_mode)
         signal.signal(signal.SIGTERM, svr._shutdown)
+        signal.signal(signal.SIGUSR1, svr._sigusr1)
         svr.serve_forever()
         print 'Stats server shutdown'
 

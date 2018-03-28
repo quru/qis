@@ -35,20 +35,19 @@ from __future__ import absolute_import
 from collections import defaultdict
 from cStringIO import StringIO
 from datetime import datetime
+import os
+import signal
 import time
 
 import mock
 import tests.tests as main_tests
 
 from imageserver.auxiliary import stats_server
+from imageserver.auxiliary.util import get_pid
 from imageserver.counter import Counter
 from imageserver.filesystem_manager import copy_file, delete_file
-from imageserver.flask_app import app as flask_app
 from imageserver.flask_app import data_engine as dm
-from imageserver.flask_app import stats_engine as sm
 from imageserver.stats_manager import StatsManager
-
-from tests import kill_aux_processes
 
 
 class StringIOConnection(object):
@@ -209,15 +208,20 @@ class StatsServerTests(main_tests.FlaskTestCase):
     @classmethod
     def setUpClass(cls):
         super(StatsServerTests, cls).setUpClass()
-        # Kill stats collection from earlier tests
-        kill_aux_processes(nicely=False)
-        # Wipe the database, restart stats collection
+        StatsServerTests.purge_stats()
         main_tests.init_tests()
-        # Reset the connection to the stats server
-        sm._client_close()
-        sm._client_connect()
-        # Preload all the Flask machinery as these tests need consistent run times
-        flask_app.test_client().get('/')
+
+    # Utility - delete any stats (from earlier tests) that haven't been written
+    #           to the database yet
+    @staticmethod
+    def purge_stats():
+        try:
+            stats_proc_pid = get_pid('stats')
+            if stats_proc_pid:
+                os.kill(int(stats_proc_pid), signal.SIGUSR1)
+        except OSError as e:
+            if e.errno != 3:  # 3 == no such process
+                raise
 
     def test_stats_engine(self):
         # Test constants
