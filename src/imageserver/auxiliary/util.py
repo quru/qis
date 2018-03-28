@@ -34,37 +34,31 @@ import os
 import time
 from multiprocessing import Process
 
-from flask import current_app as app
-
+from imageserver.filesystem_manager import get_abs_path
 from imageserver.util import get_computer_hostname
 
 
 def store_pid(proc_name, pid_val):
     """
     Writes the current process ID to a hidden file in the image server file system.
-    Logs any error but does not raise it.
+    Raises an IOError or OSError if the pid file cannot be written.
     """
-    try:
-        pid_dir = os.path.dirname(_get_pidfile_path(proc_name))
-        if not os.path.exists(pid_dir):
-            os.mkdir(pid_dir)
-        with open(_get_pidfile_path(proc_name), 'wt', buffering=0) as f:
-            f.write(pid_val)
-    except Exception as e:
-        app.log.error('Failed to write %s PID file: %s' % (proc_name, str(e)))
+    pid_dir = os.path.dirname(_get_pidfile_path(proc_name))
+    if not os.path.exists(pid_dir):
+        os.mkdir(pid_dir)
+    with open(_get_pidfile_path(proc_name), 'wt', buffering=0) as f:
+        f.write(pid_val)
 
 
 def get_pid(proc_name):
     """
     Returns the last value written by _store_pid() as a string,
-    or an empty string on failure or if _store_pid() has not been called before.
+    or an empty string if _store_pid() has not been called before.
+    Raises an IOError or OSError if the pid file exists but cannot be read.
     """
-    try:
-        if os.path.exists(_get_pidfile_path(proc_name)):
-            with open(_get_pidfile_path(proc_name), 'rt') as f:
-                return f.read()
-    except Exception as e:
-        app.log.error('Failed to read %s PID file: %s' % (proc_name, str(e)))
+    if os.path.exists(_get_pidfile_path(proc_name)):
+        with open(_get_pidfile_path(proc_name), 'rt') as f:
+            return f.read()
     return ''
 
 
@@ -75,8 +69,8 @@ def _get_pidfile_path(proc_name):
     back-end file system).
     """
     return os.path.join(
-        app.config['IMAGES_BASE_DIR'],
-        '.meta',
+        get_abs_path('/'),
+        '.metadata',
         get_computer_hostname() + '.' + proc_name + '.pid'
     )
 
