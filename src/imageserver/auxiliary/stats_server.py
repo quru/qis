@@ -392,10 +392,7 @@ class StatsSocketServer(SocketServer.ThreadingTCPServer):
         Flushes the current cache state to the database and resets the caches.
         """
         if not self.flush_lock.acquire(0):
-            self.logger.warn(
-                'A stats flush is already in progress, '
-                'abandoning this run.'
-            )
+            self.logger.warn('A stats flush is already in progress, abandoning this run.')
             return
 
         start_time = datetime.utcnow()
@@ -446,16 +443,13 @@ class StatsSocketServer(SocketServer.ThreadingTCPServer):
         flush_delta = (end_time - start_time)
         if flush_delta.seconds > 10:
             self.logger.warn(
-                'Statistics flush took ' + str(flush_delta.seconds) +
-                ' seconds, check server load and database'
+                'Statistics flush took %s seconds, '
+                'check server load and database' % str(flush_delta.seconds)
             )
         else:
-            self.logger.debug(
-                'Statistics flush took ' + str(
-                    (flush_delta.seconds * 1000) +
-                    (flush_delta.microseconds / 1000)
-                ) + ' milliseconds'
-            )
+            self.logger.debug('Statistics flush took %s milliseconds' % str(
+                (flush_delta.seconds * 1000) + (flush_delta.microseconds / 1000)
+            ))
 
     def _fix_insert_list(self, insert_list, db_session):
         """
