@@ -33,19 +33,19 @@
 from collections import defaultdict
 from io import BytesIO
 from datetime import datetime
+import os
+import signal
 import time
 
 import mock
 import tests.tests as main_tests
 
 from imageserver.auxiliary import stats_server
+from imageserver.auxiliary.util import get_pid
 from imageserver.counter import Counter
 from imageserver.filesystem_manager import copy_file, delete_file
 from imageserver.flask_app import data_engine as dm
-from imageserver.flask_app import stats_engine as sm
 from imageserver.stats_manager import StatsManager
-
-from . import kill_aux_processes
 
 
 class BytesIOConnection(object):
@@ -206,13 +206,20 @@ class StatsServerTests(main_tests.FlaskTestCase):
     @classmethod
     def setUpClass(cls):
         super(StatsServerTests, cls).setUpClass()
-        # Kill stats collection from earlier tests
-        kill_aux_processes(nicely=False)
-        # Wipe the database, restart stats collection
+        StatsServerTests.purge_stats()
         main_tests.init_tests()
-        # Reset the connection to the stats server
-        sm._client_close()
-        sm._client_connect()
+
+    # Utility - delete any stats (from earlier tests) that haven't been written
+    #           to the database yet
+    @staticmethod
+    def purge_stats():
+        try:
+            stats_proc_pid = get_pid('stats')
+            if stats_proc_pid:
+                os.kill(int(stats_proc_pid), signal.SIGUSR1)
+        except OSError as e:
+            if e.errno != 3:  # 3 == no such process
+                raise
 
     def test_stats_engine(self):
         # Test constants
@@ -261,11 +268,15 @@ class StatsServerTests(main_tests.FlaskTestCase):
             db_image_copy = dm.get_image(src=IMG_COPY)
             self.assertIsNone(db_image_copy)
             # Wait for new stats to flush
-            time.sleep(65)
+            lres = []
+            waited = 0
+            while not lres and waited < 75:
+                time.sleep(5)
+                waited += 5
+                t_now = datetime.utcnow()
+                lres = dm.search_system_stats(t_then, t_now)
+            self.assertEqual(len(lres), 1, 'Timed out waiting for system stats to flush')
             # See if the system stats line up with the views
-            t_now = datetime.utcnow()
-            lres = dm.search_system_stats(t_then, t_now)
-            self.assertEqual(len(lres), 1)
             res = lres[0]
             self.assertEqual(res.requests, IMG_VIEWS + IMG_VIEWS_COPY + IMG_DOWNLOADS + IMG_VIEWS_NOSTATS + IMG_VIEWS_304)
             self.assertEqual(res.views, IMG_VIEWS + IMG_VIEWS_COPY + IMG_VIEWS_NOSTATS)

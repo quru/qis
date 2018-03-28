@@ -1257,6 +1257,8 @@ class ImageServerAPITests(BaseTestCase):
             self.login('taskuser', 'taskuser')
             rv = self.app.get(task_url + str(user_task.id) + '/')
             self.assertEqual(rv.status_code, API_CODES.UNAUTHORISED)
+            # Prevent this task running during some later test
+            tm.cancel_task(user_task)
 
             # Logged in as superuser - task should launch with API
             setup_user_account('kryten', 'admin_all')

@@ -41,22 +41,22 @@ import os
 import socketserver
 import signal
 import sys
+import time
 from datetime import date, datetime, timedelta
-from multiprocessing import Process
 from threading import Event, Lock, Thread
-from time import sleep
 
 from flask import current_app as app
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 
+from imageserver.auxiliary import util
 from imageserver.counter import Counter
 from imageserver.models import ImageStats, SystemStats, Task
 
 try:
     import psutil
     _have_psutil = True
-except:
+except ImportError:
     _have_psutil = False
 
 
@@ -136,9 +136,12 @@ class StatsSocketServer(socketserver.ThreadingTCPServer):
             (app.config['STATS_SERVER'], app.config['STATS_SERVER_PORT']),
             StatsRequestHandler
         )
+        # Note down PID for process control
+        proc_id = str(os.getpid())
+        util.store_pid('stats', proc_id)
 
         self.logger = app.log
-        self.logger.set_name('stats_' + str(os.getpid()))
+        self.logger.set_name('stats_' + proc_id)
         self.database = app.data_engine
         self.tasks = app.task_engine
         self.data_cache = app.cache_engine
@@ -192,7 +195,7 @@ class StatsSocketServer(socketserver.ThreadingTCPServer):
         """
         self.logger.info('Stats server running')
         while not self.shutdown_ev.is_set():
-            sleep(60)
+            self._sleep(60)
             self._flush()
         self.logger.info('Stats server exited')
 
@@ -205,7 +208,7 @@ class StatsSocketServer(socketserver.ThreadingTCPServer):
         self.tidy_last = datetime.utcnow() - timedelta(hours=23)
 
         while not self.shutdown_ev.is_set():
-            sleep(60)
+            self._sleep(60)
             # Run tasks once per day
             if (datetime.utcnow() - self.tidy_last) > timedelta(hours=24):
                 if keep_days < 1:
@@ -253,7 +256,7 @@ class StatsSocketServer(socketserver.ThreadingTCPServer):
         A thread to detect and handle problems with the flush process.
         """
         while not self.shutdown_ev.is_set():
-            sleep(60)
+            self._sleep(60)
             # Get time since last flush
             with self.sys_cache_lock:
                 dt_last_flush = self.caches_started
@@ -264,13 +267,19 @@ class StatsSocketServer(socketserver.ThreadingTCPServer):
             # false spike in the data.
             caches_age = datetime.utcnow() - dt_last_flush
             if caches_age >= timedelta(minutes=self.frequency):
-                self.logger.error((
+                self.logger.error(
                     'Stats have not been flushed for %s minutes. '
-                    'Discarding old data to begin a new stats period.'
-                ) % self.frequency)
-                with self.sys_cache_lock:
-                    with self.img_cache_lock:
-                        self._reset_caches()
+                    'Discarding old data to begin a new stats period.' % self.frequency
+                )
+                self._lock_reset_caches()
+
+    def _lock_reset_caches(self):
+        """
+        Acquires the cache locks, clears the current image and system stats caches.
+        """
+        with self.sys_cache_lock:
+            with self.img_cache_lock:
+                self._reset_caches()
 
     def _reset_caches(self):
         """
@@ -383,10 +392,7 @@ class StatsSocketServer(socketserver.ThreadingTCPServer):
         Flushes the current cache state to the database and resets the caches.
         """
         if not self.flush_lock.acquire(0):
-            self.logger.warn(
-                'A stats flush is already in progress, '
-                'abandoning this run.'
-            )
+            self.logger.warn('A stats flush is already in progress, abandoning this run.')
             return
 
         start_time = datetime.utcnow()
@@ -437,16 +443,13 @@ class StatsSocketServer(socketserver.ThreadingTCPServer):
         flush_delta = (end_time - start_time)
         if flush_delta.seconds > 10:
             self.logger.warn(
-                'Statistics flush took ' + str(flush_delta.seconds) +
-                ' seconds, check server load and database'
+                'Statistics flush took %s seconds, '
+                'check server load and database' % str(flush_delta.seconds)
             )
         else:
-            self.logger.debug(
-                'Statistics flush took ' + str(
-                    (flush_delta.seconds * 1000) +
-                    (flush_delta.microseconds // 1000)
-                ) + ' milliseconds'
-            )
+            self.logger.debug('Statistics flush took %s milliseconds' % str(
+                (flush_delta.seconds * 1000) + (flush_delta.microseconds // 1000)
+            ))
 
     def _fix_insert_list(self, insert_list, db_session):
         """
@@ -519,7 +522,16 @@ class StatsSocketServer(socketserver.ThreadingTCPServer):
         latest_cache = self.hw_cache['cache'][-1]
         return (avg_cpu, avg_ram, latest_cache)
 
+    def _sigusr1(self, signum, frame):
+        """
+        Handles the SIGUSR1 signal.
+        """
+        self._lock_reset_caches()
+
     def _shutdown(self, signum, frame):
+        """
+        Handles the SIGTERM signal.
+        """
         def _shutdown_socket_server(svr):
             # "must be called while serve_forever() is running in another thread"
             svr.shutdown()
@@ -527,6 +539,15 @@ class StatsSocketServer(socketserver.ThreadingTCPServer):
         self.shutdown_ev.set()
         t = Thread(target=_shutdown_socket_server, args=(self,))
         t.start()
+
+    def _sleep(self, secs):
+        """
+        A shutdown-friendly sleep function (supports whole seconds only).
+        """
+        for _ in range(secs):
+            if self.shutdown_ev.is_set():
+                break
+            time.sleep(1)
 
 
 def _run_server(debug_mode):
@@ -537,6 +558,7 @@ def _run_server(debug_mode):
     try:
         svr = StatsSocketServer(debug_mode)
         signal.signal(signal.SIGTERM, svr._shutdown)
+        signal.signal(signal.SIGUSR1, svr._sigusr1)
         svr.serve_forever()
         print('Stats server shutdown')
 
@@ -553,22 +575,6 @@ def _run_server(debug_mode):
     sys.exit()
 
 
-def _run_server_process_double_fork(*args):
-    p = Process(
-        target=_run_server,
-        name='stats_server',
-        args=args
-    )
-    # Do not kill the stats server process when this process exits
-    p.daemon = False
-    p.start()
-    sleep(1)
-    # Force our exit, leaving the stats server process still running.
-    # Our parent process can now exit cleanly without waiting to join() the
-    # actual stats server process (it can't, since it knows nothing about it).
-    os._exit(0)
-
-
 def run_server_process(debug_mode):
     """
     Starts a stats server as a separate process, to receive stats messages over
@@ -576,15 +582,7 @@ def run_server_process(debug_mode):
     settings module. If the TCP/IP port is already in use or cannot be opened,
     the server process simply exits.
     """
-    # Double fork, otherwise we cannot exit until the server process has
-    # completed
-    p = Process(
-        target=_run_server_process_double_fork,
-        args=(debug_mode, )
-    )
-    # Start and wait for the double_fork process to complete (which is quickly)
-    p.start()
-    p.join()
+    util.double_fork('stats_server', _run_server, (debug_mode, ))
 
 
 # Allow the server to be run from the command line

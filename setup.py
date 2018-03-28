@@ -30,7 +30,7 @@ setup(
         "pyldap==2.4.45",
         "pylibmc==1.5.2",
         "psycopg2==2.6.2",
-        "SQLAlchemy==1.1.15",
+        "SQLAlchemy==1.1.18",
         "requests==2.18.4",
         "psutil==5.4.1",
         "itsdangerous==0.24",
