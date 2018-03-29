@@ -46,7 +46,7 @@ def store_pid(proc_name, pid_val):
     pid_dir = os.path.dirname(_get_pidfile_path(proc_name))
     if not os.path.exists(pid_dir):
         os.mkdir(pid_dir)
-    with open(_get_pidfile_path(proc_name), 'wt', buffering=0) as f:
+    with open(_get_pidfile_path(proc_name), 'wt', encoding='utf8') as f:
         f.write(pid_val)
 
 
@@ -57,7 +57,7 @@ def get_pid(proc_name):
     Raises an IOError or OSError if the pid file exists but cannot be read.
     """
     if os.path.exists(_get_pidfile_path(proc_name)):
-        with open(_get_pidfile_path(proc_name), 'rt') as f:
+        with open(_get_pidfile_path(proc_name), 'rt', encoding='utf8') as f:
             return f.read()
     return ''
 
