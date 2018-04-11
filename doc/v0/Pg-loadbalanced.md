@@ -1,5 +1,6 @@
-Installation of load balancing services for QIS on RHEL 6 and friends
-==========
+# The use of multiple Postgres databases with QIS on RHEL/CentOS 6
+
+Current status: unmaintained since 2013
 
 ## Introduction
 
@@ -122,6 +123,3 @@ Then you will need to start up pgpool. However, it is likely that the service sc
     
     $ sudo ln -s /etc/pgpool-II-84/ /etc/pgpool-II
     $ sudo service pgpool-II-84 start
-    
-
-    

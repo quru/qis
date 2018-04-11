@@ -1,5 +1,7 @@
 # QIS on Amazon AWS
 
+Current status: unmaintained since 2015
+
 When complete, notes on how to install QIS at Amazon (EC2, ECS, EBS, and all
 the elastics) will go here.
 

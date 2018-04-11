@@ -76,9 +76,9 @@ RUN cd /tmp && \
     cp -r logs $QIS_INSTALL_DIR && \
     rm -rf src/tests src/*.sh src/runserver.py && \
     cp -r src $QIS_INSTALL_DIR && \
-    cp deploy/ubuntu14/wsgi.conf /etc/apache2/sites-available/qis-wsgi.conf && \
-    cp deploy/ubuntu14/httpd.conf.sample /etc/apache2/sites-available/001-qis.conf && \
-    cp deploy/ubuntu14/httpd-ssl.conf.sample /etc/apache2/sites-available/002-qis-ssl.conf && \
+    cp deploy/ubuntu16/wsgi.conf /etc/apache2/sites-available/qis-wsgi.conf && \
+    cp deploy/ubuntu16/httpd.conf.sample /etc/apache2/sites-available/001-qis.conf && \
+    cp deploy/ubuntu16/httpd-ssl.conf.sample /etc/apache2/sites-available/002-qis-ssl.conf && \
     cd - && \
     rm -rf /tmp/* && \
     chown -R $QIS_USER:$QIS_USER $QIS_INSTALL_DIR

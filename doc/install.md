@@ -322,7 +322,7 @@ errors on a busy web server. To check these limits, run:
 
 ### With systemd
 
-On recent systems such as CentOS 7 that use systemd, system limits are controlled
+On systems such as CentOS 7 that use systemd, system limits are controlled
 at the service level. Do not edit the main service file, instead install a
 service override file to raise the limits:
 

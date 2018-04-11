@@ -116,8 +116,8 @@ Web interface - image publisher
 QIS depends on the following open source tools and applications:
 
 * Linux operating system
-* Python 2.6 or 2.7 - to run the QIS application code
-* Apache 2.2 or 2.4 - the web server
+* Python 3.4 or above - to run the QIS application code
+* Apache 2.4 - the web server
 * mod_wsgi Apache module - to run the QIS Python application inside Apache
 * ImageMagick - to provide the image processing capabilities
 * Memcached - for caching generated images and frequently accessed data
@@ -157,16 +157,16 @@ PostgreSQL though, can also be clustered and replicated.
 ## Developing, building and running
 
 To run QIS in a development environment, you will need either local or remote
-Memcached and PostgreSQL servers, ImageMagick installed locally, Python 2.6 or
-Python 2.7, and Python development tools `pip`, `setuptools`, `wheel`, and
-`virtualenv`. Development is possible on Linux or on Mac OS X.
+Memcached and PostgreSQL servers, ImageMagick installed locally, Python 3.4 or
+above, and Python development tools `pip`, `wheel`, and `virtualenv`.
+Development is possible on Linux or on Mac OS X.
 
 ### Operating system packages
 
 See the [install guide](doc/install.md) for the required system packages.
 
-The following development packages (on a Fedora-based system) are also required
-in order to build and install the Python libraries:
+The following development packages (here on a Fedora-based system) are also
+required in order to build and install the Python libraries:
 
 	$ sudo yum install gcc gcc-c++ git curl wget make tar zip unzip \
 	                   python-devel openldap-devel postgresql-devel libmemcached-devel
@@ -252,7 +252,7 @@ See the [docker-compose](deploy/docker/docker-compose.yml) script and the
 
 ## Version 2
 
-QIS version 2 brings these new features:
+QIS version 2 brought these new features:
 
 * Image templates are now stored in the database and managed from the web
   interface inside QIS
@@ -282,38 +282,39 @@ QIS version 2 brings these new features:
   * API support currently, user interface support to come in a future release
   * See also [the portfolios specification](./doc/v2/Portfolios.md)
 
-While still on the to-do list for version 2 is:
+## Version 3
 
-* Improve the image generation architecture for more consistent performance under load
-* Optional long image URL to tiny URL conversion
-  * New checkbox in the image publisher
-  * Add to REST API
-  * Tiny URL admin pages in the web interface
-* Image portfolios user interface
-  * Addition of "add to basket" while image browsing in the admin interface
-  * Addition of portfolios administration to the admin interface
-  * Portfolio publishing (to zip) from the admin interface
-  * Viewing a portfolio from the gallery and slideshow viewers
+QIS v3 is a port of QIS v2.7 to run on Python 3 only. It contains a few tidy-ups,
+slightly better performance thanks to Python 3 improvements, but otherwise no
+new features.
 
-An upgrade script is provided to migrate v1 installations to v2, including the
-import of image templates from flat files into the database. For more information
-on how to upgrade, see the [upgrading guide](./doc/upgrading.md).
+Migrating to v3 is essentially a case of installing new packages and re-installing
+the application, but for more information see the [upgrading guide](./doc/upgrading.md).
 
 ## Roadmap
 
 Under consideration for future versions:
 
-* Convert the code base to Python 3
+* Image portfolios user interface
+  * Addition of "add to basket" while image browsing in the admin interface
+  * Addition of portfolios administration to the admin interface
+  * Portfolio publishing (to zip) from the admin interface
+  * Viewing a portfolio from the gallery and slideshow viewers
+* Improve the image generation architecture for more consistent performance under load
+* Optional long image URL to tiny URL conversion
+  * New checkbox in the image publisher
+  * Add to REST API
+  * Tiny URL admin pages in the web interface
 * Prevent certain image attributes (width, height, overlay) from being overridden
-* Image search and results
-* Modernise the public JavaScript APIs / viewers
-  * Use HTML5 `data-` attributes for automatic initialisation
-  * Reduce the number of included files
+* Image search and search results
 * Image tags
   * System-defined e.g. assignment of an image category
   * User-defined
   * Tagging a zone or location on an image
   * Searching by tag
+* Modernise the public JavaScript APIs / viewers
+  * Use HTML5 `data-` attributes for automatic initialisation
+  * Reduce the number of included files
 * The ability to use an object store (e.g. Amazon S3) for back-end image storage
 * New imaging operations
   * Automatic crop to target dimensions
@@ -323,4 +324,5 @@ Under consideration for future versions:
 * Support for new image formats
   * BPG, JPEG XR, WEBP
   * Wide colour / Display P3 profiles
+* Cloud storage integration (Dropbox, Google Drive, ...)
 * Social media integration (Instagram, Flickr, Pinterest, ...)
