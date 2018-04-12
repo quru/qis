@@ -1,4 +1,5 @@
-PYTHON_VER := $(shell python -c 'import platform; print(platform.python_version()[:3])')
+PYTHON_BIN := $(shell which python3 || which python3.5 || which python3.6)
+PYTHON_VER := $(shell ${PYTHON_BIN} -c 'import platform; print(platform.python_version()[:3])')
 PYTHON := python${PYTHON_VER}
 VENV_PATH := .
 VENV_ACTIVATE := . ${VENV_PATH}/bin/activate
