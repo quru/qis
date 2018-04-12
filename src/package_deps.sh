@@ -5,7 +5,7 @@
 # Creates an empty virtualenv, installs all requirements, then creates a
 # tarball.gz of the resulting lib (incorporating site-packages) directory.
 #
-# Usage: src/package_deps.sh <python2.6 | python2.7>
+# Usage: src/package_deps.sh <python3 | python3.n>
 #
 # Outputs: $DIST_DIR/QIS-libs.tar.gz
 #
@@ -19,7 +19,7 @@ CACHE_DIR=$BUILD_DIR/cache
 QISMAGICK_DIR=$HOME/qis-build/qismagick
 
 if [ "$PYTHON_VER" = "" ]; then
-	echo "You must specify which python version to use, e.g. package_deps.sh python2.7"
+	echo "You must specify which python version to use, e.g. package_deps.sh python3.5"
 	exit 1
 fi
 
@@ -40,16 +40,8 @@ virtualenv --python=$PYTHON_VER $VENV
 . $VENV/bin/activate
 cd ..
 
-# Upgrade or downgrade setuptools for known bugs or issues
 echo -e '\nUpgrading pip and setuptools'
-if [ "$PYTHON_VER" = "python2.6" ]; then
-    pip install -U "pip<10"
-    pip install -U "setuptools<37"
-    pip install -U "wheel<0.30"
-else
-    pip install setuptools
-    pip install wheel
-fi
+pip install --upgrade pip setuptools wheel
 
 # Download and cache the sdists for everything
 echo -e '\nDownloading requirements'
