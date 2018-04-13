@@ -38,7 +38,7 @@ venv: ${VENV_PATH}/bin/activate setup.py doc/requirements.txt ${QISMAGICK_SO}
 	${VENV_ACTIVATE} ; pip install --upgrade -r doc/requirements.txt
 
 ${QISMAGICK_SO}: setup.py doc/requirements.txt
-	${VENV_ACTIVATE} ; pip install --upgrade --no-index --find-links file://$(QISMAGICK_WHEEL_DIR) qismagick
+	${VENV_ACTIVATE} ; pip install --upgrade --no-index --find-links file://$(QISMAGICK_WHEEL_DIR) qismagick || echo "Warning: qismagick.so was not installed"
 
 ${VENV_PATH}/bin/activate:
 	virtualenv --python=${PYTHON} ${VENV_PATH}

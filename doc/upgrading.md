@@ -4,7 +4,79 @@ Most releases only require replacement application files and a restart of the
 web server, as described in the [change log](changelog.md). Occasionally however
 a more involved upgrade is required; these releases will be documented here.
 
-## v2.n to v2.6
+## v2.x to v3.0
+
+Version 3 supports only Python 3. There are no changes to the QIS database or
+directory structure, so most of the work involves configuration changes to install
+and use Python 3.
+
+From Quru you will need the latest ImageMagick interface for your platform, which
+has been re-compiled for the Python 3, e.g. `qismagick-3.0.0-cp35-cp35m-linux_x86_64.whl`.
+
+### Ubuntu 16
+
+Install new packages:
+
+	$ sudp apt-get remove libapache2-mod-wsgi
+	$ sudo apt-get install -y python3 libapache2-mod-wsgi-py3 python3-pip
+
+### CentOS 7
+
+Install the EPEL and IUS repositories:
+
+	$ sudo yum install -y epel-release
+	$ sudo yum install -y https://centos$(rpm -E '%{rhel}').iuscommunity.org/ius-release.rpm
+
+Install new packages:
+
+	$ sudo yum erase mod_wsgi
+	$ sudo yum install -y python35u python35u-mod_wsgi python35u-pip
+
+### Red Hat Enterprise Linux 7
+
+Install the EPEL and IUS repositories:
+
+	$ sudo yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-$(rpm -E '%{rhel}').noarch.rpm
+	$ sudo yum install -y https://rhel$(rpm -E '%{rhel}').iuscommunity.org/ius-release.rpm
+
+Install new packages:
+
+	$ sudo yum erase mod_wsgi
+	$ sudo yum install -y python35u python35u-mod_wsgi python35u-pip
+
+### Upgrading
+
+Backup the previous version (excluding images):
+
+    $ mkdir qis-backup && cd qis-backup
+    $ sudo rsync -a --exclude images /opt/qis/* .
+
+Extract the latest files:
+
+    $ cd /opt/qis
+    $ sudo -u qis tar -xvf /path/to/QIS-libs.tar.gz
+    $ sudo -u qis tar --strip-components=1 -xvf /path/to/Quru\ Image\ Server-3.0.0.tar.gz
+    $ sudo -u qis pip3 install --prefix /opt/qis /path/to/qismagick-3.0.0-cp35-cp35m-linux_x86_64.whl
+
+Remove the old Python 2.x libraries:
+
+    $ cd /opt/qis
+	$ sudo rm -rf lib/python2*
+
+Update the Apache configuration to change `python2.x` directory paths to `python3.x`,
+test the Apache configuration and restart Apache.
+
+On CentOS/RHEL:
+
+	$ sudo sed -i -e 's|python2.7|python3.5|g' /etc/httpd/conf.d/*qis*
+    $ sudo apachectl -t && sudo systemctl restart httpd
+
+On Ubuntu:
+
+	$ sudo sed -i -e 's|python2.7|python3.5|g' /etc/apache2/sites-available/*qis*
+    $ sudo apachectl -t && sudo systemctl restart apache2
+
+## v2.x to v2.6
 
 This release contains a number of potentially breaking changes, though only
 users of Internet Explorer 8 and below should be affected

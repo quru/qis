@@ -12,7 +12,7 @@ is made available here under the
 **Please note that at present, one of the required runtime packages -
 `qismagick` - is not open source, and must be requested from Quru Ltd.**
 This is due to some licencing restrictions which we are working on resolving.
-To contact us, please send an email to info@quru.com
+To request a copy, please send an email to info@quru.com
 
 Quru also offers commercial support for the image server.
 
@@ -163,13 +163,17 @@ Development is possible on Linux or on Mac OS X.
 
 ### Operating system packages
 
-See the [install guide](doc/install.md) for the required system packages.
+See the [install guide](doc/install.md) for the required system package
+repositories and packages.
 
 The following development packages (here on a Fedora-based system) are also
 required in order to build and install the Python libraries:
 
-	$ sudo yum install gcc gcc-c++ git curl wget make tar zip unzip \
-	                   python-devel openldap-devel postgresql-devel libmemcached-devel
+	$ sudo yum install -y gcc gcc-c++ git curl wget make tar zip unzip which \
+	                   postgresql-devel openldap-devel openssl-devel libmemcached-devel \
+	                   python35u-devel python35u-pip python35u-setuptools
+	$ sudo pip3.5 install --upgrade pip setuptools
+	$ sudo pip3.5 install virtualenv
 
 ### Starting development
 
@@ -183,7 +187,7 @@ You will need to [request a copy of the `qismagick` package](#qismagick.so)
 for your development platform, and install it:
 
 	$ . bin/activate
-	$ pip install qismagick-2.1.0-cp27-none-macosx_10_12_intel.whl
+	$ pip install qismagick-3.0.0-cp35-cp35m-linux_x86_64.whl
 
 Create 2 empty Postgres databases, `qis-cache` and `qis-mgmt`.
 Create a `local_settings.py` file in the `conf` folder, and add settings:
@@ -202,7 +206,7 @@ Then run the server in development mode with:
 	...
 	[checks/installs Python libraries]
 	...
-	2017-03-06 16:11:39,932 qis_37720  INFO     Quru Image Server v2.4.0 engine startup
+	2017-03-06 16:11:39,932 qis_37720  INFO     Quru Image Server v3.0.0 engine startup
 	2017-03-06 16:11:39,934 qis_37720  INFO     Using settings base_settings + local_settings.py
 	...
 	 * Running on http://127.0.0.1:5000/ (Press CTRL+C to quit)
@@ -221,14 +225,14 @@ when `DEBUG` is `False`, run:
 
 To run QIS in production, you will need files:
 
-* `Quru Image Server-2.xx.tar.gz` - the main QIS Python web application
+* `Quru Image Server-3.xx.tar.gz` - the main QIS Python web application
 * `QIS-libs.tar.gz` - the application's Python dependencies,
   including compiled C extensions as platform-specific binaries
 * and unless your `QIS-libs.tar.gz` was supplied by Quru, you will also need
   to [request a copy of the `qismagick` package](#qismagick.so) for your
   production platform
 
-To generate these from the development project, run:
+To generate these files from the development project, run:
 
 	$ make distribute
 	...
@@ -236,7 +240,7 @@ To generate these from the development project, run:
 	...
 	$ ls -l dist/
 	-rw-r--r--  1 matt  staff   5798089  5 Feb 10:19 QIS-libs.tar.gz
-	-rw-r--r--  1 matt  staff  54698387  5 Feb 10:19 Quru Image Server-2.6.5.tar.gz
+	-rw-r--r--  1 matt  staff  54698387  5 Feb 10:19 Quru Image Server-3.0.0.tar.gz
 
 With these files prepared you should then follow the [install guide](doc/install.md).
 
@@ -252,7 +256,7 @@ See the [docker-compose](deploy/docker/docker-compose.yml) script and the
 
 ## Version 2
 
-QIS version 2 brought these new features:
+QIS version 2 brought these new features in 2017:
 
 * Image templates are now stored in the database and managed from the web
   interface inside QIS
