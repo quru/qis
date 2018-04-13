@@ -285,11 +285,15 @@ QIS version 2 brought these new features in 2017:
   * API support currently, user interface support to come in a future release
   * See also [the portfolios specification](./doc/v2/Portfolios.md)
 
+Since the release of QIS v3, the v2 code (which supports Python 2.6 and 2.7),
+documentation and build scripts, can be found in the [v2 branch](https://github.com/quru/qis/tree/v2.x)
+but will not receive any new features.
+
 ## Version 3
 
 QIS v3 is a port of QIS v2.7 to run on Python 3 only. It contains a few tidy-ups,
-slightly better performance thanks to Python 3 improvements, but otherwise no
-new features.
+slightly better performance thanks to improvements in Python 3, but otherwise no
+major new features.
 
 Migrating to v3 is essentially a case of installing new packages and re-installing
 the application, but for more information see the [upgrading guide](./doc/upgrading.md).
