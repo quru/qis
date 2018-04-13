@@ -7,7 +7,7 @@ MAINTAINER Matt Fozard <matt@quru.com>
 
 # Add extra o/s tools
 RUN apt-get install -y man git make gcc \
-            python-dev libpq-dev libmagickwand-6.q16-dev && \
+            python3-dev libpq-dev libmagickwand-6.q16-dev && \
     apt-get clean
 
 # Add libmagickwand env vars

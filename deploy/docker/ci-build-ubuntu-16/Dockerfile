@@ -15,18 +15,18 @@ ARG AUTHORIZED_KEY
 # Add extra o/s tools
 RUN apt-get update && \
     apt-get install -y apt-utils sudo curl wget pwgen tar zip unzip \
-            vim man git make gcc python2.7 python2.7-dev \
+            vim man git make gcc \
             libldap2-dev libsasl2-dev libssl-dev \
             libpq-dev libmemcached-dev \
             openssl postgresql-client-9.5 \
             ghostscript imagemagick-6.q16 imagemagick-common libmagickwand-6.q16-dev \
-            apache2 apache2-utils logrotate libapache2-mod-wsgi \
-            python-letsencrypt-apache python-pip python-virtualenv \
+            apache2 apache2-utils logrotate libapache2-mod-wsgi-py3 \
+            python3-dev python3-pip \
             openssh-server && \
     apt-get clean
 
 # Use latest Python tools
-RUN pip install -U pip virtualenv
+RUN pip3 install --upgrade pip setuptools wheel virtualenv
 
 # Add libmagickwand env vars
 RUN echo "export C_INCLUDE_PATH=$C_INCLUDE_PATH:/usr/include/x86_64-linux-gnu/ImageMagick-6:/usr/include/ImageMagick-6" >> /etc/profile.d/libmagickwand-dev.sh

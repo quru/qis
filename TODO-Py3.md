@@ -1,7 +1,6 @@
 # Python 3 TODO
 
-* Update documentation
-* Update deployment config files
-  * Drop RHEL 6 support
-* Update Dockerfiles
-* Update README
+* Branch QIS master as v2.x
+* Merge python3 into master
+* Delete this file
+* Release v3.0.0

@@ -56,7 +56,7 @@ Extract the latest files:
     $ cd /opt/qis
     $ sudo -u qis tar -xvf /path/to/QIS-libs.tar.gz
     $ sudo -u qis tar --strip-components=1 -xvf /path/to/Quru\ Image\ Server-3.0.0.tar.gz
-    $ sudo -u qis pip3 install --prefix /opt/qis /path/to/qismagick-3.0.0-cp35-cp35m-linux_x86_64.whl
+    $ sudo -u qis pip3.5 install --prefix /opt/qis /path/to/qismagick-3.0.0-cp35-cp35m-linux_x86_64.whl
 
 Remove the old Python 2.x libraries:
 

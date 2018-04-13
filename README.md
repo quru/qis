@@ -171,9 +171,8 @@ required in order to build and install the Python libraries:
 
 	$ sudo yum install -y gcc gcc-c++ git curl wget make tar zip unzip which \
 	                   postgresql-devel openldap-devel openssl-devel libmemcached-devel \
-	                   python35u-devel python35u-pip python35u-setuptools
-	$ sudo pip3.5 install --upgrade pip setuptools
-	$ sudo pip3.5 install virtualenv
+	                   python35u-devel python35u-pip
+	$ sudo pip3.5 install --upgrade pip setuptools wheel virtualenv
 
 ### Starting development
 

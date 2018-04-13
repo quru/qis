@@ -13,17 +13,17 @@ ARG IM_VERSION=6.9.9-25
 # allowed to log in via SSH. Pass this in as a build argument.
 ARG AUTHORIZED_KEY
 
-# Install the EPEL repo
+# Install the EPEL and IUS repos
 RUN yum -y install epel-release
+RUN yum -y install https://centos$(rpm -E '%{rhel}').iuscommunity.org/ius-release.rpm
 
 # Add extra o/s tools
 RUN yum install -y sudo curl wget man git make gcc gcc-c++ sed mlocate \
                    postgresql-devel openldap-devel openssl-devel libmemcached-devel \
-                   python-devel python-setuptools \
+                   python35u-devel python35u-pip \
                    openssh-server openssh-clients && \
     yum clean all
-RUN easy_install pip
-RUN pip install virtualenv && pip install wheel
+RUN pip3.5 install --upgrade pip setuptools wheel virtualenv
 
 # Install ImageMagick devel from RPMs (as the CentOS 7 package is a buggy release)
 RUN wget -P /tmp "https://quru.com/static2/imagemagick/ImageMagick-$IM_VERSION.x86_64.rpm" && \

@@ -14,7 +14,8 @@ RUN subscription-manager register --username=$RH_SUBS_USER --password=$RH_SUBS_P
 # Update the system, ignoring the unusual repos
 RUN yum update -y --disablerepo=*-eus-* --disablerepo=*-htb-* --disablerepo=*sjis* \
                   --disablerepo=*-ha-* --disablerepo=*-rt-* --disablerepo=*-lb-* \
-                  --disablerepo=*-rs-* --disablerepo=*-sap-*
+                  --disablerepo=*-rs-* --disablerepo=*-sap-* && \
+    yum clean all
 
 # Disable the unusual repos
 RUN yum-config-manager --disable *-eus-* *-htb-* *-ha-* *-rt-* *-lb-* \
@@ -23,8 +24,9 @@ RUN yum-config-manager --disable *-eus-* *-htb-* *-ha-* *-rt-* *-lb-* \
 # Enable optional RPMs
 RUN yum-config-manager --enable rhel-7-server-optional-rpms
 
-# Install the EPEL repo
+# Install the EPEL and IUS repos
 RUN yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-$(rpm -E '%{rhel}').noarch.rpm
+RUN yum -y install https://rhel$(rpm -E '%{rhel}').iuscommunity.org/ius-release.rpm
 
 # Start again with a standard build script
 FROM registered_system
@@ -41,11 +43,10 @@ ARG AUTHORIZED_KEY
 # Add extra o/s tools
 RUN yum install -y sudo curl wget man git make gcc gcc-c++ sed mlocate \
                    postgresql-devel openldap-devel openssl-devel libmemcached-devel \
-                   python-devel python-setuptools \
+                   python35u-devel python35u-pip \
                    openssh-server openssh-clients && \
     yum clean all
-RUN easy_install pip
-RUN pip install virtualenv && pip install wheel
+RUN pip3.5 install --upgrade pip setuptools wheel virtualenv
 
 # Install ImageMagick devel from RPMs (as the RHEL 7 package is a buggy release)
 RUN wget -P /tmp "https://quru.com/static2/imagemagick/ImageMagick-$IM_VERSION.x86_64.rpm" && \

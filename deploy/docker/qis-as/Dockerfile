@@ -19,24 +19,24 @@ MAINTAINER Matt Fozard <matt@quru.com>
 # Base o/s + app layer
 RUN apt-get update && \
     apt-get install -y apt-utils curl wget pwgen tar zip unzip vim \
-            python-dev libldap2-dev libsasl2-dev libssl-dev \
+            libldap2-dev libsasl2-dev libssl-dev \
             libpq-dev libmemcached-dev \
             openssl postgresql-client-9.5 \
-            python2.7 ghostscript imagemagick-6.q16 imagemagick-common \
-            apache2 apache2-utils logrotate libapache2-mod-wsgi \
-            python-letsencrypt-apache python-pip python-virtualenv && \
+            ghostscript imagemagick-6.q16 imagemagick-common libmagickwand-6.q16-2 \
+            apache2 apache2-utils logrotate libapache2-mod-wsgi-py3 \
+            python3-dev python3-pip && \
     apt-get clean
 RUN locale-gen en_GB.UTF-8 && update-locale LANG=en_GB.UTF-8 LC_ALL=en_GB.UTF-8
 
 # Use latest Python tools
-RUN pip install -U pip virtualenv
+RUN pip3 install --upgrade pip setuptools wheel virtualenv
 
 # Build variables
 ARG QIS_VERSION=3.0.0
 ARG QIS_USER=qis
 ARG QIS_INSTALL_DIR=/opt/qis
 ARG WEB_USER=www-data
-ARG PYTHON_VERSION=python2.7
+ARG PYTHON_VERSION=python3
 
 # Ports
 EXPOSE 80 443
