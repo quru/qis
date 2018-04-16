@@ -54,7 +54,7 @@ cp *.whl $WHEELS_DIR
 find . -type f -name '*.zip' -exec unzip -o {} \;
 find . -type f -name '*.tar.gz' -exec tar -zxf {} \;
 find . -type f -name '*.tar.bz2' -exec tar -jxf {} \;
-find . -type f -name 'setup.py' -execdir python -c "import setuptools; execfile('setup.py', {'__file__': './setup.py', '__name__': '__main__'})" bdist_wheel --dist-dir $WHEELS_DIR \;
+find . -type f -name 'setup.py' -execdir python -c "import setuptools; exec(open('setup.py').read(), {'__file__': './setup.py', '__name__': '__main__'})" bdist_wheel --dist-dir $WHEELS_DIR \;
 cd ../..
 
 # Add in the qismagick wheel, if present
