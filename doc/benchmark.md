@@ -13,8 +13,8 @@ in parallel to simulate multiple clients. The requests include:
 * API calls
 
 The script - `src/imageserver/scripts/bench.py` - has no dependencies other
-than Python 2.6 or 2.7, so you can copy it to wherever you want to run the test
-from.
+than Python 3.4 or above, so you can copy it to wherever you want to run the
+test from.
 
 ## Set up
 
@@ -43,7 +43,7 @@ machines across the internet.
 
 Run the script without any parameters to see the available options:
 
-	$ python bench.py
+	$ python3 bench.py
 	
 	Runs a benchmarking test against an image server by requesting a series
 	of sample image URLs. The test can be tuned by adjusting the number of
@@ -52,7 +52,7 @@ Run the script without any parameters to see the available options:
 	will generate the same set of requests so that timings can be compared.
 	
 	Usage:
-	       python bench.py [options] server_url [num_requests] [cache_percent] [num_clients]
+	       python3 bench.py [options] server_url [num_requests] [cache_percent] [num_clients]
 	
 	Where:
 	       server_url is e.g. http://images.example.com/
@@ -66,8 +66,8 @@ Run the script without any parameters to see the available options:
 	       --skip-warm to skip the cache warming and run the tests immediately
 	
 	Examples:
-	       python bench.py http://images.example.com/
-	       python bench.py --verbose http://images.example.com/ 5000 80 10
+	       python3 bench.py http://images.example.com/
+	       python3 bench.py --verbose http://images.example.com/ 5000 80 10
 	
 	Notes:
 	Set cache_percent to 0 to re-generate every image every time. This is very
@@ -81,7 +81,7 @@ Run the script without any parameters to see the available options:
 To test the best possible server performance, request 100% of images to come
 from the server's cache:
 
-	$ python bench.py http://images.example.com/ 15000 100 8
+	$ python3 bench.py http://images.example.com/ 15000 100 8
 	LOG   9986 - Checking connectivity to http://images.example.com/
 	LOG   9986 - Building request list
 	LOG   9986 - Pre-warming the image cache
@@ -105,7 +105,7 @@ API calls and original image downloads are not currently cached on the server si
 To test a more realistic workload, request 80 to 90% of images to come from
 the server's cache:
 
-	$ python bench.py http://images.example.com/ 15000 80 8
+	$ python3 bench.py http://images.example.com/ 15000 80 8
 	LOG   10093 - Checking connectivity to http://images.example.com/
 	LOG   10093 - Building request list
 	LOG   10093 - Pre-warming the image cache
@@ -237,11 +237,11 @@ remains the same).
 Machine and software spec:
 
 * 2012 MacBook Pro 2.9 GHz Intel Core i7, 16 GB 1600 MHz DDR3
-* Python 2.7.10
+* Python 3.4.4
 * ImageMagick 6.8.8-10 Q16 x86_64
 * Memcached 1.4.34
 * PostgreSQL 9.5.2
-* QIS v2.40
+* QIS v3.0.0
 
 Setup (folder permissions):
 
@@ -259,69 +259,69 @@ Setup (every time):
 
 Default test:
 
-	$ python src/imageserver/scripts/bench.py http://localhost:5000/ 1000 90 1
-	LOG   36477 - Checking connectivity to http://localhost:5000/
-	LOG   36477 - Building request list
-	LOG   36477 - Pre-warming the image cache
-	LOG   36477 - Creating clients, running tests
-	LOG   36477 - Complete
+	$ python3 src/imageserver/scripts/bench.py http://127.0.0.1:5000/ 1000 90 1
+	LOG   36180 - Checking connectivity to http://127.0.0.1:5000/
+	LOG   36180 - Building request list
+	LOG   36180 - Pre-warming the image cache
+	LOG   36180 - Creating clients, running tests
+	LOG   36180 - Complete
 	
 	Results
 	=======
 	1000 successful requests, 0 errors.
-	Run time 44.987094 seconds = 22.228597 requests/sec.
+	Run time 45.782942 seconds = 21.842196 requests/sec.
 	
-	Average response 0.044842 seconds
+	Average response 0.045620 seconds
 	  * 189 non-cached responses
-	      * Average app time 0.217741 seconds
-	      * Average response 0.220187 seconds
-	      * Worst response 1.308162 seconds
+	      * Average app time 0.226146 seconds
+	      * Average response 0.227909 seconds
+	      * Worst response 1.336114 seconds
 	  * 811 cached responses
-	      * Average app time 0.001573 seconds
-	      * Average response 0.003978 seconds
-	      * Worst response 0.014360 seconds
+	      * Average app time 0.001535 seconds
+	      * Average response 0.003139 seconds
+	      * Worst response 0.004765 seconds
 
 All cached test:
 
-	$ python src/imageserver/scripts/bench.py http://localhost:5000/ 1000 100 1
-	LOG   36572 - Checking connectivity to http://localhost:5000/
-	LOG   36572 - Building request list
-	LOG   36572 - Pre-warming the image cache
-	LOG   36572 - Creating clients, running tests
-	LOG   36572 - Complete
+	$ python3 src/imageserver/scripts/bench.py http://127.0.0.1:5000/ 1000 100 1
+	LOG   36213 - Checking connectivity to http://127.0.0.1:5000/
+	LOG   36213 - Building request list
+	LOG   36213 - Pre-warming the image cache
+	LOG   36213 - Creating clients, running tests
+	LOG   36213 - Complete
 	
 	Results
 	=======
 	1000 successful requests, 0 errors.
-	Run time 4.174397 seconds = 239.555558 requests/sec.
+	Run time 3.457407 seconds = 289.234100 requests/sec.
 	
-	Average response 0.004039 seconds
+	Average response 0.003285 seconds
 	  * 98 non-cached responses
-	      * Average app time 0.003053 seconds
-	      * Average response 0.005385 seconds
-	      * Worst response 0.008140 seconds
+	      * Average app time 0.002930 seconds
+	      * Average response 0.004567 seconds
+	      * Worst response 0.009750 seconds
 	  * 902 cached responses
-	      * Average app time 0.001547 seconds
-	      * Average response 0.003893 seconds
-	      * Worst response 0.006872 seconds
+	      * Average app time 0.001540 seconds
+	      * Average response 0.003146 seconds
+	      * Worst response 0.013970 seconds
 
 Heavy processing test:
 
-	$ python src/imageserver/scripts/bench.py http://localhost:5000/ 100 0 1
-	LOG   36607 - Checking connectivity to http://localhost:5000/
-	LOG   36607 - Building request list
-	LOG   36607 - NOTE! You need to manually clear your image cache if you have previously run these tests.
-	LOG   36607 - Creating clients, running tests
-	LOG   36607 - Complete
+	$ python3 src/imageserver/scripts/bench.py http://127.0.0.1:5000/ 100 0 1
+	LOG   36302 - Checking connectivity to http://127.0.0.1:5000/
+	LOG   36302 - Building request list
+	LOG   36302 - NOTE! You need to manually clear your image cache if you have previously run these tests.
+	LOG   36302 - Creating clients, running tests
+	LOG   36302 - Complete
 	
 	Results
 	=======
 	100 successful requests, 0 errors.
-	Run time 38.117027 seconds = 2.623499 requests/sec.
+	Run time 40.146712 seconds = 2.490864 requests/sec.
 	
-	Average response 0.380507 seconds
+	Average response 0.401155 seconds
 	  * 100 non-cached responses
-	      * Average app time 0.377900 seconds
-	      * Average response 0.380507 seconds
-	      * Worst response 0.957323 seconds
+	      * Average app time 0.399180 seconds
+	      * Average response 0.401155 seconds
+	      * Worst response 0.989410 seconds
 	  * 0 from cache
