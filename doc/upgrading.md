@@ -66,15 +66,15 @@ Remove the old Python 2.x libraries:
 Update the Apache configuration to change `python2.x` directory paths to `python3.x`,
 test the Apache configuration and restart Apache.
 
-On CentOS/RHEL:
-
-	$ sudo sed -i -e 's|python2.7|python3.5|g' /etc/httpd/conf.d/*qis*
-    $ sudo apachectl -t && sudo systemctl restart httpd
-
 On Ubuntu:
 
 	$ sudo sed -i -e 's|python2.7|python3.5|g' /etc/apache2/sites-available/*qis*
-    $ sudo apachectl -t && sudo systemctl restart apache2
+	$ sudo apachectl -t && sudo systemctl restart apache2
+
+On CentOS/RHEL:
+
+	$ sudo sed -i -e 's|python2.7|python3.5|g' /etc/httpd/conf.d/*qis*
+	$ sudo apachectl -t && sudo systemctl restart httpd
 
 ## v2.x to v2.6
 
