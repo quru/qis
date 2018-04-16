@@ -6,7 +6,8 @@ FROM quru/qis-as
 MAINTAINER Matt Fozard <matt@quru.com>
 
 # Add extra o/s tools
-RUN apt-get install -y man git make gcc \
+RUN apt-get install -y man git make gcc g++ \
+            openjdk-8-jre-headless \
             python3-dev libpq-dev libmagickwand-6.q16-dev && \
     apt-get clean
 

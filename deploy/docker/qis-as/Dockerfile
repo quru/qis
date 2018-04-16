@@ -19,7 +19,7 @@ MAINTAINER Matt Fozard <matt@quru.com>
 # Base o/s + app layer
 RUN apt-get update && \
     apt-get install -y apt-utils curl wget pwgen tar zip unzip vim \
-            libldap2-dev libsasl2-dev libssl-dev \
+            libldap2-dev libssl-dev \
             libpq-dev libmemcached-dev \
             openssl postgresql-client-9.5 \
             ghostscript imagemagick-6.q16 imagemagick-common libmagickwand-6.q16-2 \

@@ -18,7 +18,8 @@ RUN yum -y install epel-release
 RUN yum -y install https://centos$(rpm -E '%{rhel}').iuscommunity.org/ius-release.rpm
 
 # Add extra o/s tools
-RUN yum install -y sudo curl wget man git make gcc gcc-c++ sed mlocate \
+RUN yum install -y sudo curl wget man git make gcc gcc-c++ sed mlocate tar zip unzip which \
+                   java-1.8.0-openjdk-headless \
                    postgresql-devel openldap-devel openssl-devel libmemcached-devel \
                    python35u-devel python35u-pip \
                    openssh-server openssh-clients && \

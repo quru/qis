@@ -15,8 +15,9 @@ ARG AUTHORIZED_KEY
 # Add extra o/s tools
 RUN apt-get update && \
     apt-get install -y apt-utils sudo curl wget pwgen tar zip unzip \
-            vim man git make gcc \
-            libldap2-dev libsasl2-dev libssl-dev \
+            vim man git make gcc g++ \
+            openjdk-8-jre-headless \
+            libldap2-dev libssl-dev \
             libpq-dev libmemcached-dev \
             openssl postgresql-client-9.5 \
             ghostscript imagemagick-6.q16 imagemagick-common libmagickwand-6.q16-dev \

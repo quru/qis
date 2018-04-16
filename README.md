@@ -170,6 +170,7 @@ The following development packages (here on a Fedora-based system) are also
 required in order to build and install the Python libraries:
 
 	$ sudo yum install -y gcc gcc-c++ git curl wget make tar zip unzip which \
+	                   java-1.8.0-openjdk-headless \
 	                   postgresql-devel openldap-devel openssl-devel libmemcached-devel \
 	                   python35u-devel python35u-pip
 	$ sudo pip3.5 install --upgrade pip setuptools wheel virtualenv
