@@ -38,7 +38,7 @@ from collections import defaultdict
 import errno
 import json
 import os
-import SocketServer
+import socketserver
 import signal
 import sys
 import time
@@ -60,7 +60,7 @@ except ImportError:
     _have_psutil = False
 
 
-class StatsRequestHandler(SocketServer.StreamRequestHandler):
+class StatsRequestHandler(socketserver.StreamRequestHandler):
     """
     Handler to receive stats parcels sent from the image server stats client.
     """
@@ -83,8 +83,8 @@ class StatsRequestHandler(SocketServer.StreamRequestHandler):
         if not data:
             raise StopIteration()
 
-        stats_dict = json.loads(data)
-        for image_key, stats_obj in stats_dict.iteritems():
+        stats_dict = json.loads(data.decode('utf8'))
+        for image_key, stats_obj in stats_dict.items():
             image_id = int(image_key)
             self._sys_cache(stats_obj)
             if image_id:
@@ -117,7 +117,7 @@ class StatsRequestHandler(SocketServer.StreamRequestHandler):
                 )
 
 
-class StatsSocketServer(SocketServer.ThreadingTCPServer):
+class StatsSocketServer(socketserver.ThreadingTCPServer):
     """
     A multi-threaded TCP server for receiving and processing stats messages.
 
@@ -131,7 +131,7 @@ class StatsSocketServer(SocketServer.ThreadingTCPServer):
     daemon_threads = True
 
     def __init__(self, debug_mode):
-        SocketServer.ThreadingTCPServer.__init__(
+        socketserver.ThreadingTCPServer.__init__(
             self,
             (app.config['STATS_SERVER'], app.config['STATS_SERVER_PORT']),
             StatsRequestHandler
@@ -339,7 +339,7 @@ class StatsSocketServer(SocketServer.ThreadingTCPServer):
     def _flush_img_stats_bucket(self, db_session, dt_period_start, dt_now, stats):
         inserts = []
         model = ImageStats
-        for image_id, istats in stats.iteritems():
+        for image_id, istats in stats.items():
             rcount = istats['requests']
             vcount = istats['views']
             cvcount = istats['cached_views']
@@ -448,7 +448,7 @@ class StatsSocketServer(SocketServer.ThreadingTCPServer):
             )
         else:
             self.logger.debug('Statistics flush took %s milliseconds' % str(
-                (flush_delta.seconds * 1000) + (flush_delta.microseconds / 1000)
+                (flush_delta.seconds * 1000) + (flush_delta.microseconds // 1000)
             ))
 
     def _fix_insert_list(self, insert_list, db_session):
@@ -517,8 +517,8 @@ class StatsSocketServer(SocketServer.ThreadingTCPServer):
         self.hw_cache['ram'].append(current_ram)
         self.hw_cache['cache'].append(current_cache)
 
-        avg_cpu = sum(self.hw_cache['cpu']) / len(self.hw_cache['cpu'])
-        avg_ram = sum(self.hw_cache['ram']) / len(self.hw_cache['ram'])
+        avg_cpu = sum(self.hw_cache['cpu']) // len(self.hw_cache['cpu'])
+        avg_ram = sum(self.hw_cache['ram']) // len(self.hw_cache['ram'])
         latest_cache = self.hw_cache['cache'][-1]
         return (avg_cpu, avg_ram, latest_cache)
 
@@ -560,18 +560,18 @@ def _run_server(debug_mode):
         signal.signal(signal.SIGTERM, svr._shutdown)
         signal.signal(signal.SIGUSR1, svr._sigusr1)
         svr.serve_forever()
-        print 'Stats server shutdown'
+        print('Stats server shutdown')
 
     except IOError as e:
         if e.errno == errno.EADDRINUSE:
-            print "A stats server is already running."
+            print("A stats server is already running.")
         else:
-            print "Stats server exited: " + str(e)
+            print("Stats server exited: " + str(e))
     except BaseException as e:
         if (len(e.args) > 0 and e.args[0] == errno.EINTR) or not str(e):
-            print "Stats server exited"
+            print("Stats server exited")
         else:
-            print "Stats server exited: " + str(e)
+            print("Stats server exited: " + str(e))
     sys.exit()
 
 
@@ -588,9 +588,9 @@ def run_server_process(debug_mode):
 # Allow the server to be run from the command line
 if __name__ == '__main__':
     if len(sys.argv) != 2:
-        print "Use: stats_server <debug mode>\n"
-        print "E.g. export PYTHONPATH=."
-        print "     python imageserver/auxiliary/stats_server.py false\n"
+        print("Use: stats_server <debug mode>\n")
+        print("E.g. export PYTHONPATH=.")
+        print("     python imageserver/auxiliary/stats_server.py false\n")
     else:
         from imageserver.flask_app import app as init_app
         with init_app.app_context():

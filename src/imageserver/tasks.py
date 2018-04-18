@@ -50,7 +50,7 @@ import shutil
 
 import requests
 
-from errors import ParameterError
+from .errors import ParameterError
 
 
 def move_folder(**kwargs):
@@ -62,10 +62,10 @@ def move_folder(**kwargs):
 
     See filesystem_sync.move_folder() for possible exceptions.
     """
-    from flask_app import app
-    from filesystem_sync import move_folder
-    from errors import DoesNotExistError
-    from models import Task
+    from .flask_app import app
+    from .filesystem_sync import move_folder
+    from .errors import DoesNotExistError
+    from .models import Task
 
     (folder_id, target_path) = _extract_parameters(['folder_id', 'path'], **kwargs)
     this_task = _get_task(**kwargs)
@@ -118,10 +118,10 @@ def delete_folder(**kwargs):
 
     See filesystem_sync.delete_folder() for possible exceptions.
     """
-    from flask_app import app
-    from filesystem_sync import delete_folder
-    from errors import DoesNotExistError
-    from models import Task
+    from .flask_app import app
+    from .filesystem_sync import delete_folder
+    from .errors import DoesNotExistError
+    from .models import Task
 
     (folder_id, ) = _extract_parameters(['folder_id'], **kwargs)
     this_task = _get_task(**kwargs)
@@ -177,8 +177,8 @@ def delete_folder_data(**kwargs):
     Raises an AssertionError if the folder still exists on disk
     Raises a DBError for database errors.
     """
-    from flask_app import app
-    from filesystem_manager import path_exists
+    from .flask_app import app
+    from .filesystem_manager import path_exists
 
     (folder_id, purge, history_user, history_info) = _extract_parameters(
         ['folder_id', 'purge', 'history_user', 'history_info'],
@@ -209,9 +209,9 @@ def upload_usage_stats(**kwargs):
     """
     import hashlib
     import json
-    from __about__ import __tag__, __version__
-    from flask_app import app
-    from util import get_computer_id, to_iso_datetime
+    from .__about__ import __tag__, __version__
+    from .flask_app import app
+    from .util import get_computer_id, to_iso_datetime
 
     report_url = app.config.get('USAGE_DATA_URL')
     if report_url:
@@ -221,11 +221,11 @@ def upload_usage_stats(**kwargs):
         host_id = get_computer_id()
         sysdata = app.data_engine.summarise_system_stats(from_time, to_time)
         stats = {
-            'requests': long(sysdata[0]) if sysdata[0] else 0,
-            'views': long(sysdata[1]) if sysdata[1] else 0,
-            'cached_views': long(sysdata[2]) if sysdata[2] else 0,
-            'downloads': long(sysdata[3]) if sysdata[3] else 0,
-            'bytes': long(sysdata[4]) if sysdata[4] else 0,
+            'requests': int(sysdata[0]) if sysdata[0] else 0,
+            'views': int(sysdata[1]) if sysdata[1] else 0,
+            'cached_views': int(sysdata[2]) if sysdata[2] else 0,
+            'downloads': int(sysdata[3]) if sysdata[3] else 0,
+            'bytes': int(sysdata[4]) if sysdata[4] else 0,
             'sum_seconds': round(float(sysdata[5]), 3) if sysdata[5] else 0,
             'max_seconds': round(float(sysdata[6]), 3) if sysdata[6] else 0
         }
@@ -236,12 +236,12 @@ def upload_usage_stats(**kwargs):
             'time': to_iso_datetime(to_time),
             'stats': stats
         }
-        h = hashlib.sha256(__tag__ + '_usage_stats')
-        h.update(payload['version'])
-        h.update(payload['host_id'])
-        h.update(payload['time'])
-        h.update(str(payload['stats']['requests']))
-        h.update(str(payload['stats']['bytes']))
+        h = hashlib.sha256(bytes(__tag__ + '_usage_stats', 'utf8'))
+        h.update(bytes(payload['version'], 'utf8'))
+        h.update(bytes(payload['host_id'], 'utf8'))
+        h.update(bytes(payload['time'], 'utf8'))
+        h.update(bytes(str(payload['stats']['requests']), 'utf8'))
+        h.update(bytes(str(payload['stats']['bytes']), 'utf8'))
         payload['hash'] = h.hexdigest()
         sent = requests.post(
             report_url,
@@ -259,7 +259,7 @@ def purge_system_stats(**kwargs):
     A task to delete all system statistics that are older than the
     given UTC datetime. Raises a DBError for database errors.
     """
-    from flask_app import app
+    from .flask_app import app
 
     (before_time, ) = _extract_parameters(['before_time'], **kwargs)
 
@@ -272,7 +272,7 @@ def purge_image_stats(**kwargs):
     A task to delete all image statistics that are older than the
     given UTC datetime. Raises a DBError for database errors.
     """
-    from flask_app import app
+    from .flask_app import app
 
     (before_time, ) = _extract_parameters(['before_time'], **kwargs)
 
@@ -286,7 +286,7 @@ def purge_deleted_folder_data(**kwargs):
     a particular folder. Specify the root folder to purge all deleted images
     and folders in the database. Raises a DBError for database errors.
     """
-    from flask_app import app
+    from .flask_app import app
 
     (folder_id, ) = _extract_parameters(['folder_id'], **kwargs)
 
@@ -305,7 +305,7 @@ def delete_old_temp_files(**kwargs):
     """
     import glob
     import stat
-    from flask_app import app
+    from .flask_app import app
 
     temp_file_patterns = ['magick*', 'libpdf*', 'libraw*']
     delete_before_time = datetime.now() - timedelta(days=1)
@@ -313,9 +313,7 @@ def delete_old_temp_files(**kwargs):
     tf_removed = 0
     tf_errors = 0
     for pattern in temp_file_patterns:
-        temp_files = glob.glob(unicode(
-            os.path.join(app.config['TEMP_DIR'], pattern)
-        ))
+        temp_files = glob.glob(os.path.join(app.config['TEMP_DIR'], pattern))
         for temp_file in temp_files:
             try:
                 tf_count += 1
@@ -337,7 +335,7 @@ def uncache_image(**kwargs):
     """
     A task to delete all cached images for a particular image ID.
     """
-    from flask_app import app
+    from .flask_app import app
 
     (image_id, ) = _extract_parameters(['image_id'], **kwargs)
     app.image_engine._uncache_image_id(image_id)
@@ -348,7 +346,7 @@ def uncache_folder_images(**kwargs):
     A task to delete all cached active images in a particular folder,
     optionally recursively.
     """
-    from flask_app import app
+    from .flask_app import app
 
     folder_id, recursive = _extract_parameters(
         ['folder_id', 'recursive'],
@@ -370,13 +368,13 @@ def burst_pdf(**kwargs):
     A task that creates a sub-folder next to a PDF file and extracts all
     pages from the PDF as PNG files into the sub-folder.
     """
-    from flask_app import app
-    from filesystem_manager import get_abs_path, get_burst_path, get_file_data
-    from filesystem_manager import delete_dir, make_dirs, path_exists
-    from filesystem_sync import delete_folder
-    from imagemagick import imagemagick_burst_pdf
-    from models import Folder
-    from util import get_file_extension
+    from .flask_app import app
+    from .filesystem_manager import get_abs_path, get_burst_path, get_file_data
+    from .filesystem_manager import delete_dir, make_dirs, path_exists
+    from .filesystem_sync import delete_folder
+    from .imagemagick import imagemagick_burst_pdf
+    from .models import Folder
+    from .util import get_file_extension
 
     (src, ) = _extract_parameters(['src'], **kwargs)
     burst_folder_rel = get_burst_path(src)
@@ -419,8 +417,8 @@ def create_image_pyramid(**kwargs):
     size by 50% until a target size is achieved. These are stored in the image
     cache (which must be running).
     """
-    from flask_app import app
-    from imageserver.image_attrs import ImageAttrs
+    from .flask_app import app
+    from .image_attrs import ImageAttrs
 
     # Parameter notes:
     # page, format, colorspace can be None
@@ -434,8 +432,8 @@ def create_image_pyramid(**kwargs):
     app.log.debug(
         'Starting pyramid images for image ID %d, start %d MP, target %d MP' % (
             image_id,
-            (start_width * start_height) / 1000000,
-            target_pixels / 1000000
+            (start_width * start_height) // 1000000,
+            target_pixels // 1000000
         )
     )
     assert app.cache_engine.connected(), \
@@ -482,13 +480,13 @@ def export_portfolio(**kwargs):
     them in a single zip file.
     """
     import zipfile
-    from errors import DoesNotExistError
-    from filesystem_manager import (
+    from .errors import DoesNotExistError
+    from .filesystem_manager import (
         get_abs_path, get_file_info, get_portfolio_directory, make_dirs, path_exists
     )
-    from flask_app import app
-    from models import FolioExport
-    from portfolios.util import get_portfolio_export_image_attrs, get_portfolio_export_filename
+    from .flask_app import app
+    from .models import FolioExport
+    from .portfolios.util import get_portfolio_export_image_attrs, get_portfolio_export_filename
 
     export_id, ignore_errors = _extract_parameters(['export_id', 'ignore_errors'], **kwargs)
 
@@ -591,8 +589,8 @@ def expire_portfolio_exports(**kwargs):
     """
     A task that removes expired portfolio exports.
     """
-    from flask_app import app
-    from portfolios.util import delete_portfolio_export
+    from .flask_app import app
+    from .portfolios.util import delete_portfolio_export
 
     db_session = app.data_engine.db_get_session()
     try:

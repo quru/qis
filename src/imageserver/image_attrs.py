@@ -32,14 +32,14 @@
 # 09Mar2018  Matt  Added to_web_dict() and url_for_image_attrs() utility
 #
 
+import collections
 import re
 import threading
 
-from flask_app import app
+from .flask_app import app
 
-from util import (
-    filepath_filename, filepath_parent, filepath_normalize,
-    get_file_extension, unicode_to_ascii,
+from .util import (
+    filepath_filename, filepath_parent, filepath_normalize, get_file_extension,
     validate_number, validate_tile_spec
 )
 
@@ -110,10 +110,10 @@ class IntegerValidator(RangeValidator):
 
 class TypeValidator(AttributeValidator):
     def __call__(self, value):
-        if type(value) != self.valid_type:
+        if not isinstance(value, self.valid_type):
             raise ValueError(
-                "Value %r had type %r, not %r" %
-                (value, type(value), self.valid_type)
+                "Value %r had type %s, but expected %s" %
+                (value, type(value).__name__, self.valid_type.__name__)
             )
         return True
 
@@ -128,7 +128,7 @@ class ChoiceValidator(AttributeValidator):
 
     @property
     def choices(self):
-        return self._choices() if callable(self._choices) else self._choices
+        return self._choices() if isinstance(self._choices, collections.Callable) else self._choices
 
     def __call__(self, value):
         if value not in self.choices:
@@ -225,14 +225,11 @@ class ImageAttrs():
         self._normalise_floats()
 
     def __str__(self):
-        filename = unicode_to_ascii(self.filename(with_path=False))
+        filename = self.filename(with_path=False)
         if self._db_id > 0:
             return filename + ' ' + self.get_cache_key()
         else:
             return filename
-
-    def __unicode__(self):
-        return unicode(self.__str__())
 
     def filename(self, with_path=True, append_format=False, replace_format=False):
         """

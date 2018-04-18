@@ -29,7 +29,7 @@
 # =========  ====  ============================================================
 #
 
-import cPickle
+import pickle
 import errno
 import os
 import signal
@@ -66,7 +66,7 @@ def run_task(thread_id, task, logger, data_engine, debug_mode):
         task_log('Task \'%s\' starting on thread %d' % (task.name, thread_id))
 
         # Decode function parameters
-        params_dict = cPickle.loads(task.params) if task.params else None
+        params_dict = pickle.loads(task.params) if task.params else None
         if params_dict is None:
             params_dict = dict()
         # Give the function access to its own task record
@@ -92,11 +92,11 @@ def run_task(thread_id, task, logger, data_engine, debug_mode):
     finally:
         try:
             # Always mark the task as finished
-            task.result = cPickle.dumps(task.result, protocol=cPickle.HIGHEST_PROTOCOL)
+            task.result = pickle.dumps(task.result, protocol=pickle.HIGHEST_PROTOCOL)
             data_engine.complete_task(task)
         except Exception as e:
             logger.error('Failed to set as complete task %d \'%s\': %s' % (
-                task.id, task.name, unicode(e)
+                task.id, task.name, str(e)
             ))
 
 
@@ -215,21 +215,21 @@ def _run_server(debug_mode):
 
         # Shutdown
         if threads:
-            print 'Task server shutdown, waiting on %d task(s)' % len(threads)
+            print('Task server shutdown, waiting on %d task(s)' % len(threads))
             for t in threads:
                 t.join()
-        print "Task server shutdown"
+        print("Task server shutdown")
 
     except IOError as e:
         if e.errno == errno.EADDRINUSE:
-            print "A task server is already running."
+            print("A task server is already running.")
         else:
-            print "Task server exited: " + str(e)
+            print("Task server exited: " + str(e))
     except BaseException as e:
         if (len(e.args) > 0 and e.args[0] == errno.EINTR) or not str(e):
-            print "Task server exited"
+            print("Task server exited")
         else:
-            print "Task server exited: " + str(e)
+            print("Task server exited: " + str(e))
     sys.exit()
 
 
@@ -245,9 +245,9 @@ def run_server_process(debug_mode):
 # Allow the server to be run from the command line
 if __name__ == '__main__':
     if len(sys.argv) != 2:
-        print "Use: task_server <debug mode>\n"
-        print "E.g. export PYTHONPATH=."
-        print "     python imageserver/auxiliary/task_server.py false\n"
+        print("Use: task_server <debug mode>\n")
+        print("E.g. export PYTHONPATH=.")
+        print("     python imageserver/auxiliary/task_server.py false\n")
     else:
         from imageserver.flask_app import app as init_app
         with init_app.app_context():

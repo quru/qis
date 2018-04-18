@@ -37,12 +37,12 @@ from flask import jsonify, make_response, redirect, request, session, url_for
 from flask import render_template as f_render_template
 from werkzeug.urls import url_encode
 
-import __about__
-from api_util import make_api_error_response
-from flask_app import app, permissions_engine
-from errors import AuthenticationError, SecurityError
-from session_manager import get_session_user, logged_in
-from util import parse_int
+from . import __about__
+from .api_util import make_api_error_response
+from .flask_app import app, permissions_engine
+from .errors import AuthenticationError, SecurityError
+from .session_manager import get_session_user, logged_in
+from .util import parse_int
 
 
 def login_point(from_web):

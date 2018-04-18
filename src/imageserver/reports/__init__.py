@@ -46,5 +46,5 @@ def reports_login_required():
     return _check_internal_request(request, session, True, True, SystemPermissions.PERMIT_REPORTS)
 
 # Import reports views
-import views
-import views_pages
+from . import views
+from . import views_pages

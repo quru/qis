@@ -57,15 +57,13 @@
 
 ### Python
 
-* Python 2.6.5 or above, or 2.7
-	* Prefer 2.7
-	* We are affected by a deadlock bug in < 2.6.5
+* Python 3.4 or above
 
 ### Python libraries
 
 See `doc/requirements.txt` for the Python library versions currently required.
 
-* Flask dependency Jinja2 - requires v2.5.5 or 2.7 or above
+* Flask dependency Jinja2 - requires v2.7 or above
 	* v2.6.x has a bug with filesizefilter
 
 * Flask dependency Werkzeug - require v0.9 or above

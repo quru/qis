@@ -33,27 +33,22 @@
 
 from calendar import timegm
 from datetime import datetime
+from unicodedata import normalize
 import difflib
 import hashlib
 import os.path
 import random
 import re
 import unicodedata
-import urllib
-import urlparse
+import urllib.parse
 import uuid
 import socket
 import string
-import sys
 import threading
 import time
 
-from UserDict import DictMixin
-
 import requests
 
-
-PY2 = sys.version_info[0] == 2
 
 # These are borrowed from Werkzeug/utils.py for our version of secure_filename()
 __sf_chars_strip = r'[^\w &@{}\[\],;$=!#()%+~.-]'  # more liberal than Werkzeug
@@ -65,11 +60,12 @@ _windows_device_files = ('CON', 'AUX', 'COM1', 'COM2', 'COM3', 'COM4', 'LPT1',
 
 def etag(*vals):
     """
-    Make an ETag that obscures the underlying content.
+    Make an ETag from a number of strings (or byte buffers),
+    obscuring the underlying content.
     """
     h = hashlib.sha1()
     for v in vals:
-        h.update(v)
+        h.update(v if isinstance(v, bytes) else v.encode('utf8'))
     return h.hexdigest()
 
 
@@ -132,9 +128,9 @@ def get_computer_id():
     # 48-bit number with its eighth bit set to 1 as recommended in RFC 4122
     if (mac >> 40) % 2:
         mac = 123456789012345  # We don't want a random number
-    h = hashlib.sha1('cid')
-    h.update(repr(mac))
-    h.update(get_computer_hostname())
+    h = hashlib.sha1(bytes('cid', 'utf8'))
+    h.update(bytes(repr(mac), 'utf8'))
+    h.update(bytes(get_computer_hostname(), 'utf8'))
     return h.hexdigest()
 
 
@@ -168,7 +164,7 @@ def generate_password(length=10):
     """
     Returns a random string suitable for use as a password.
     """
-    return ''.join([random.choice(string.letters + string.digits) for _ in range(length)])
+    return ''.join([random.choice(string.ascii_letters + string.digits) for _ in range(length)])
 
 
 def parse_int(strval):
@@ -186,7 +182,7 @@ def parse_long(strval):
     string is None or has 0 length.
     Raises a ValueError if the value cannot be parsed as a long.
     """
-    return long(strval) if strval else 0L
+    return int(strval) if strval else 0
 
 
 def parse_float(strval):
@@ -267,7 +263,7 @@ def to_iso_datetime(utc_val):
     Converts either a UTC datetime instance or a time supplied as UTC seconds
     into a string with ISO 8601 format "yyyy-mm-ddThh:mm:ssZ".
     """
-    secs = timegm(utc_val.timetuple()) if type(utc_val) == datetime else utc_val
+    secs = timegm(utc_val.timetuple()) if isinstance(utc_val, datetime) else utc_val
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(secs))
 
 
@@ -275,7 +271,7 @@ def validate_boolean(val):
     """
     Raises a ValueError if val is not a boolean, otherwise does nothing.
     """
-    if type(val) != bool:
+    if not isinstance(val, bool):
         raise ValueError('Value is not a boolean')
 
 
@@ -284,10 +280,11 @@ def validate_number(val, min_val, max_val):
     Raises a ValueError if val is not a number, or is below min_val
     or above max_val, otherwise does nothing.
     """
-    if type(val) != int and type(val) != long and type(val) != float:
+    is_bool = isinstance(val, bool)  # Python bools are ints :(
+    if is_bool or (not isinstance(val, int) and not isinstance(val, float)):
         raise ValueError('Value is not a number')
     if val < min_val or val > max_val:
-        fmt = '%0.2f' if type(val) == float else '%d'
+        fmt = '%0.2f' if isinstance(val, float) else '%d'
         raise ValueError((fmt + ' is out of range') % val)
 
 
@@ -300,7 +297,7 @@ def validate_string(val, min_length, max_length):
         if min_length > 0:
             raise ValueError('No value specified')
     else:
-        if type(val) != str and type(val) != unicode:
+        if not isinstance(val, str):
             raise ValueError('Value is not a string')
         if len(val) < min_length:
             raise ValueError('Value is too short (min %d)' % min_length)
@@ -326,7 +323,7 @@ def validate_tile_spec(val, max_tiles):
     above the grid size) or if the tile spec grid size is invalid (below 1 or
     above max_tiles), otherwise does nothing.
     """
-    if type(val) != tuple or len(val) != 2:
+    if not isinstance(val, tuple) or len(val) != 2:
         raise ValueError('Tile is not a 2-tuple')
     if val[1] < 1 or val[1] > max_tiles:
         raise ValueError('Tile grid size is out of range')
@@ -493,7 +490,7 @@ def adjust_query_string(qs, add_update_params=None, del_params=None):
     if del_params is None:
         del_params = []
 
-    qs_items = urlparse.parse_qsl(qs, True)
+    qs_items = urllib.parse.parse_qsl(qs, True)
     # Update existing list entries (to preserve existing order)
     updated_keys = []
     for idx, (k, _) in enumerate(qs_items):
@@ -507,7 +504,7 @@ def adjust_query_string(qs, add_update_params=None, del_params=None):
     # Delete list entries
     qs_items = [(k, v) for (k, v) in qs_items if k not in del_params]
     # Return re-constituted query string
-    return urllib.urlencode(qs_items)
+    return urllib.parse.urlencode(qs_items)
 
 
 def get_string_changes(str1, str2, delimeter=' * ', char_limit=-1, return_words=True):
@@ -640,18 +637,19 @@ def object_to_dict(obj, ignore_attrs=None, _r_stack=None):
         return obj
 
     if isinstance(obj, dict):
+        obj2 = dict(obj)
         for attr in ignore_attrs:
-            if attr in obj:
-                del obj[attr]
-        return obj
+            if attr in obj2:
+                del obj2[attr]
+        return obj2
 
     obj_vars = vars(obj)
     attr_dict = dict(
-        (k, v) for k, v in obj_vars.iteritems()
+        (k, v) for k, v in obj_vars.items()
         if not k.startswith('_') and k not in ignore_attrs
         and not callable(v) and v not in _r_stack
     )
-    for k, v in attr_dict.iteritems():
+    for k, v in attr_dict.items():
         if isinstance(v, list):
             _r_stack.append(obj)
             attr_dict[k] = object_to_dict_list(v, ignore_attrs, _r_stack)
@@ -691,11 +689,7 @@ def unicode_to_ascii(ustr):
     converted to their nearest ascii equivalent, other characters may simply be
     discarded. Callers should be wary of this data loss and that note the same
     ascii string can be returned for very different unicode inputs.
-
-    Returns ustr unchanged if it is not unicode.
     """
-    if isinstance(ustr, str):
-        return ustr
     # Make an effort to retain some useful characters that would otherwise be lost
     replace_dict = {
         0x2010: 0x2D, 0x2011: 0x2D, 0x2012: 0x2D,  # -
@@ -709,9 +703,9 @@ def unicode_to_ascii(ustr):
             ustr_chars.append(chr(replace_dict[ord(c)]))
         except KeyError:
             ustr_chars.append(c)
-    ustr2 = u''.join(ustr_chars)
+    ustr2 = ''.join(ustr_chars)
     # Convert to ascii, ignoring errors
-    return unicodedata.normalize('NFKD', ustr2).encode('ascii', 'ignore')
+    return unicodedata.normalize('NFKD', ustr2).encode('ascii', 'ignore').decode('ascii')
 
 
 def unicode_to_utf8(ustr):
@@ -720,17 +714,13 @@ def unicode_to_utf8(ustr):
     converted to their nearest equivalent, other characters may simply be
     discarded. Callers should be wary of this data loss, though it only affects
     the more unusual characters.
-
-    Returns ustr unchanged if it is not unicode.
     """
-    if isinstance(ustr, str):
-        return ustr
     # Convert to UTF8, ignoring errors
-    return unicodedata.normalize('NFKD', ustr).encode('utf8', 'ignore')
+    return unicodedata.normalize('NFKD', ustr).encode('utf8', 'ignore').decode('utf8')
 
 
 def secure_filename(filename, keep_unicode=False):
-    ur"""
+    r"""
     Pass a filename and this will return a secure version of it. This filename
     can then safely be stored on a regular file system and passed os.path.join.
 
@@ -759,16 +749,12 @@ def secure_filename(filename, keep_unicode=False):
 
     Raises a ValueError if the function would return an empty filename.
     """
-    if isinstance(filename, unicode):
-        from unicodedata import normalize
-        if keep_unicode:
-            # normalize to give a better chance of the strip stage doing the right thing
-            filename = normalize('NFC', filename)
-        else:
-            # normalize to ascii
-            filename = normalize('NFKD', filename).encode('ascii', 'ignore')
-            if not PY2:
-                filename = filename.decode('ascii')
+    if keep_unicode:
+        # normalize to give a better chance of the strip stage doing the right thing
+        filename = normalize('NFC', filename)
+    else:
+        # normalize to ascii
+        filename = normalize('NFKD', filename).encode('ascii', 'ignore').decode('ascii')
     # replace path seps
     for sep in os.path.sep, os.path.altsep:
         if sep:
@@ -800,81 +786,9 @@ def timefunc(f):
         start = time.time()
         result = f(*args, **kwargs)
         end = time.time()
-        print f.__name__, 'took', round((end - start) * 1000, 3), 'millis'
+        print(f.__name__, 'took', round((end - start) * 1000, 3), 'millis')
         return result
     return f_timer
-
-
-class SimpleODict(DictMixin):
-    """
-    A dictionary-like class (suitable for simple dictionary use cases) that
-    preserves the order of items contained within. Python 2.7 introduces an
-    OrderedDict class to better solve this problem.
-
-    http://code.activestate.com/recipes/496761-a-more-clean-implementation-for-ordered-dictionary/
-    """
-    def __init__(self, data=None, **kwdata):
-        self._keys = []
-        self._data = {}
-        if data is not None:
-                if hasattr(data, 'items'):
-                    items = data.items()
-                else:
-                    items = list(data)
-                for i in xrange(len(items)):
-                    length = len(items[i])
-                    if length != 2:
-                        raise ValueError(
-                            'dictionary update sequence element '
-                            '#%d has length %d; 2 is required' % (i, length)
-                        )
-                    self._keys.append(items[i][0])
-                    self._data[items[i][0]] = items[i][1]
-        if kwdata:
-            self._merge_keys(kwdata.iterkeys())
-            self.update(kwdata)
-
-    def __repr__(self):
-        result = []
-        for key in self._keys:
-            result.append('(%s, %s)' % (repr(key), repr(self._data[key])))
-        return ''.join(['SimpleODict', '([', ', '.join(result), '])'])
-
-    def __setitem__(self, key, value):
-        if key not in self._data:
-            self._keys.append(key)
-        self._data[key] = value
-
-    def __getitem__(self, key):
-        return self._data[key]
-
-    def __delitem__(self, key):
-        del self._data[key]
-        self._keys.remove(key)
-
-    def _merge_keys(self, keys):
-        self._keys.extend(keys)
-        newkeys = {}
-        self._keys = [
-            newkeys.setdefault(x, x) for x in self._keys if x not in newkeys
-        ]
-
-    def update(self, data):
-        if data is not None:
-            if hasattr(data, 'iterkeys'):
-                self._merge_keys(data.iterkeys())
-            else:
-                self._merge_keys(data.keys())
-            self._data.update(data)
-
-    def keys(self):
-        return list(self._keys)
-
-    def copy(self):
-        copyDict = SimpleODict()
-        copyDict._data = self._data.copy()
-        copyDict._keys = self._keys[:]
-        return copyDict
 
 
 class KeyValueCache(object):
@@ -916,7 +830,7 @@ class KeyValueCache(object):
         In a multi-threaded environment this list may be immediately obsolete.
         """
         with self._lock:
-            keys = self._cache.keys()
+            keys = list(self._cache.keys())
         return keys
 
     def values(self):
@@ -925,7 +839,7 @@ class KeyValueCache(object):
         In a multi-threaded environment this list may be immediately obsolete.
         """
         with self._lock:
-            values = self._cache.values()
+            values = list(self._cache.values())
         return values
 
     def clear(self):

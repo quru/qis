@@ -19,24 +19,18 @@ MAINTAINER Matt Fozard <matt@quru.com>
 # Base o/s + app layer
 RUN apt-get update && \
     apt-get install -y apt-utils curl wget pwgen tar zip unzip vim \
-            python-dev libldap2-dev libsasl2-dev libssl-dev \
-            libpq-dev libmemcached-dev \
-            openssl postgresql-client-9.5 \
-            python2.7 ghostscript imagemagick-6.q16 imagemagick-common \
-            apache2 apache2-utils logrotate libapache2-mod-wsgi \
-            python-letsencrypt-apache python-pip python-virtualenv && \
+            locales openssl ldap-utils libmemcached11 python3 \
+            postgresql-client-9.5 ghostscript \
+            imagemagick-6.q16 imagemagick-common libmagickwand-6.q16-2 \
+            apache2 apache2-utils logrotate libapache2-mod-wsgi-py3 && \
     apt-get clean
 RUN locale-gen en_GB.UTF-8 && update-locale LANG=en_GB.UTF-8 LC_ALL=en_GB.UTF-8
 
-# Use latest Python tools
-RUN pip install -U pip virtualenv
-
 # Build variables
-ARG QIS_VERSION=2.6.4
+ARG QIS_VERSION=3.0.0
 ARG QIS_USER=qis
 ARG QIS_INSTALL_DIR=/opt/qis
 ARG WEB_USER=www-data
-ARG PYTHON_VERSION=python2.7
 
 # Ports
 EXPOSE 80 443
@@ -76,25 +70,23 @@ RUN cd /tmp && \
     cp -r logs $QIS_INSTALL_DIR && \
     rm -rf src/tests src/*.sh src/runserver.py && \
     cp -r src $QIS_INSTALL_DIR && \
-    cp deploy/ubuntu14/wsgi.conf /etc/apache2/sites-available/qis-wsgi.conf && \
-    cp deploy/ubuntu14/httpd.conf.sample /etc/apache2/sites-available/001-qis.conf && \
-    cp deploy/ubuntu14/httpd-ssl.conf.sample /etc/apache2/sites-available/002-qis-ssl.conf && \
+    cp deploy/ubuntu16/wsgi.conf /etc/apache2/sites-available/qis-wsgi.conf && \
+    cp deploy/ubuntu16/httpd.conf.sample /etc/apache2/sites-available/001-qis.conf && \
+    cp deploy/ubuntu16/httpd-ssl.conf.sample /etc/apache2/sites-available/002-qis-ssl.conf && \
     cd - && \
     rm -rf /tmp/* && \
     chown -R $QIS_USER:$QIS_USER $QIS_INSTALL_DIR
 
 # Download and install Python libs
-USER $QIS_USER
 WORKDIR $QIS_INSTALL_DIR
-RUN virtualenv --python=$PYTHON_VERSION . && \
-    rm -rf local && \
-    . bin/activate && \
-    pip install --no-cache-dir -r doc/requirements.txt
+RUN curl -L "https://github.com/quru/qis/releases/download/v$QIS_VERSION/QIS-libs-ubuntu-16-py35-x86_64.tar.gz" -o /tmp/qis-libs.tar.gz && \
+    tar -zxvf /tmp/qis-libs.tar.gz && \
+    rm /tmp/qis-libs.tar.gz && \
+    chown -R $QIS_USER:$QIS_USER lib
 
-# TODO Install qismagick package
+# TODO Install qismagick.so package
 
 # Configure Apache
-USER root
 RUN ln -s /etc/apache2/mods-available/ssl.load /etc/apache2/mods-enabled/ssl.load && \
     ln -s /etc/apache2/mods-available/ssl.conf /etc/apache2/mods-enabled/ssl.conf && \
     ln -s /etc/apache2/mods-available/socache_shmcb.load /etc/apache2/mods-enabled/socache_shmcb.load && \

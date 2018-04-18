@@ -30,6 +30,7 @@
 # 03 Mar 12  Matt  Apply custom file permissions for uploaded images
 # 19 Mar 13  Matt  Bug fixes to support unicode paths
 # 17 Jul 14  Matt  Handle possible os.chmod error when overwriting files
+# 13 Dec 17  Matt  Python 3, remove unicode handling
 #
 
 import errno
@@ -40,9 +41,9 @@ import time
 
 from datetime import datetime, timedelta
 
-from errors import AlreadyExistsError, DoesNotExistError, SecurityError
-from flask_app import app
-from util import filepath_parent
+from .errors import AlreadyExistsError, DoesNotExistError, SecurityError
+from .flask_app import app
+from .util import filepath_parent
 
 
 def path_exists(rel_path, require_file=False, require_directory=False):
@@ -54,7 +55,7 @@ def path_exists(rel_path, require_file=False, require_directory=False):
     Raises a SecurityError if the requested path and filename evaluates
     to a location outside of IMAGES_BASE_DIR.
     """
-    abs_path = unicode(get_abs_path(rel_path))
+    abs_path = get_abs_path(rel_path)
     if not os.path.exists(abs_path):
         return False
     if (require_file and not os.path.isfile(abs_path)):
@@ -77,13 +78,13 @@ def ensure_path_exists(rel_path, require_file=False, require_directory=False):
 
     Returns with no action if the path does exist and is of the required type.
     """
-    abs_path = unicode(get_abs_path(rel_path))
+    abs_path = get_abs_path(rel_path)
     if not os.path.exists(abs_path):
-        raise DoesNotExistError(u'Path \'' + rel_path + '\' does not exist')
+        raise DoesNotExistError('Path \'' + rel_path + '\' does not exist')
     if (require_file and not os.path.isfile(abs_path)):
-        raise DoesNotExistError(u'Path \'' + rel_path + '\' is not a file')
+        raise DoesNotExistError('Path \'' + rel_path + '\' is not a file')
     if (require_directory and not os.path.isdir(abs_path)):
-        raise DoesNotExistError(u'Path \'' + rel_path + '\' is not a directory')
+        raise DoesNotExistError('Path \'' + rel_path + '\' is not a directory')
 
 
 def get_abs_path(rel_path):
@@ -101,7 +102,7 @@ def get_abs_path(rel_path):
     abs_path_base = os.path.abspath(app.config['IMAGES_BASE_DIR'])
     abs_path = os.path.abspath(os.path.join(abs_path_base, rel_path))
     if not abs_path.startswith(abs_path_base):
-        raise SecurityError(u'Requested path \'' + rel_path + '\' lies outside of IMAGES_BASE_DIR')
+        raise SecurityError('Requested path \'' + rel_path + '\' lies outside of IMAGES_BASE_DIR')
     return abs_path
 
 
@@ -125,13 +126,13 @@ def put_file_data(file_wrapper, dest_path, filename, create_path=False, overwrit
         if create_path:
             make_dirs(dest_path)
         else:
-            raise DoesNotExistError(u'Path \'' + dest_path + '\' does not exist')
+            raise DoesNotExistError('Path \'' + dest_path + '\' does not exist')
     # Get (and security check) the absolute file path
-    abs_path = unicode(get_abs_path(os.path.join(dest_path, filename)))
+    abs_path = get_abs_path(os.path.join(dest_path, filename))
     # Check for file existence
     if os.path.exists(abs_path) and not overwrite_existing:
         raise AlreadyExistsError(
-            u'File \'' + filename + '\' already exists at this location on the server'
+            'File \'' + filename + '\' already exists at this location on the server'
         )
     # Save the file
     file_wrapper.save(abs_path, 65536)
@@ -180,7 +181,7 @@ def get_file_info(rel_path):
     """
     try:
         # Security check, get actual path
-        abs_path = unicode(get_abs_path(rel_path))
+        abs_path = get_abs_path(rel_path)
         # Check that the file exists and is a file
         if not os.path.exists(abs_path) or os.path.isdir(abs_path):
             return None
@@ -269,7 +270,7 @@ def get_directory_listing(rel_path, include_folders=False, sort=0, start=0, limi
     Raises a SecurityError if the supplied relative path is outside IMAGES_BASE_DIR.
     """
     # Security check, get actual path
-    abs_dir = unicode(get_abs_path(rel_path))
+    abs_dir = get_abs_path(rel_path)
     # Check if the directory exists
     if not os.path.exists(abs_dir) or not os.path.isdir(abs_dir):
         return DirectoryInfo(rel_path, exists=False)
@@ -319,7 +320,7 @@ def get_directory_subdirs(rel_path, sort=0):
     Raises a SecurityError if the requested path is outside IMAGES_BASE_DIR.
     """
     ensure_path_exists(rel_path, require_directory=True)
-    abs_dir = unicode(get_abs_path(rel_path))
+    abs_dir = get_abs_path(rel_path)
     subdirs = [
         sf for sf in os.listdir(abs_dir)
         if not sf.startswith('.') and os.path.isdir(os.path.join(abs_dir, sf))
@@ -347,10 +348,10 @@ def count_files(rel_path, recurse=True, recurse_timeout_secs=0):
     Raises a SecurityError if the requested path is outside IMAGES_BASE_DIR.
     """
     ensure_path_exists(rel_path, require_directory=True)
-    abs_dir = unicode(get_abs_path(rel_path))
+    abs_dir = get_abs_path(rel_path)
     timed_out = False
     timeout_at = None
-    total = 0L
+    total = 0
     if recurse:
         if recurse_timeout_secs > 0:
             timeout_at = datetime.utcnow() + timedelta(seconds=recurse_timeout_secs)
@@ -376,7 +377,7 @@ def make_dirs(rel_path):
     outside of IMAGES_BASE_DIR. Raises an OSError if the directory path cannot
     be created due to e.g. a permissions error.
     """
-    abs_dir = unicode(get_abs_path(rel_path))
+    abs_dir = get_abs_path(rel_path)
     old_umask = os.umask(0)
     try:
         os.makedirs(abs_dir, app.config['IMAGES_DIR_MODE'])
@@ -405,7 +406,7 @@ def copy_file(rel_src, rel_dst):
         abs_dst = get_abs_path(rel_dst)
         shutil.copy2(abs_src, abs_dst)
     except shutil.Error as e:
-        raise OSError(unicode(e))
+        raise OSError(str(e))
 
 
 def delete_file(rel_path):
@@ -446,7 +447,7 @@ def delete_dir(rel_path, recursive=False):
             else:
                 os.rmdir(abs_dir)
     except shutil.Error as e:
-        raise OSError(unicode(e))
+        raise OSError(str(e))
 
 
 def move(rel_src, rel_dst):
@@ -465,7 +466,7 @@ def move(rel_src, rel_dst):
         abs_dst = get_abs_path(rel_dst)
         shutil.move(abs_src, abs_dst)
     except shutil.Error as e:
-        raise OSError(unicode(e))
+        raise OSError(str(e))
 
 
 class DirectoryInfo(object):

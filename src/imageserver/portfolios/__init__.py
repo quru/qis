@@ -35,5 +35,5 @@ from flask.blueprints import Blueprint
 blueprint = Blueprint('folios', __name__, static_folder='static', template_folder='templates')
 
 # Import views
-import views
-import views_pages
+from . import views
+from . import views_pages

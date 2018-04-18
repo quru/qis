@@ -55,8 +55,7 @@ def _template_dict_to_kv_dict(template_dict):
     perform a ton of extra wasted work that we don't need to do here.
     """
     try:
-        # TODO Use a dictionary comprehension in the python3 branch (here and in TemplateAttrs)
-        return dict((k, template_dict[k]['value']) for k in template_dict)
+        return {k: template_dict[k]['value'] for k in template_dict}
     except (KeyError, TypeError):
         raise ValueError('Bad template dictionary format (refer to portfolio image parameters)')
 

@@ -31,4 +31,4 @@ def kill_aux_processes(nicely=True):
         try:
             os.kill(int(pid), signal.SIGTERM if nicely else signal.SIGKILL)
         except Exception as e:
-            print "Failed to kill child process %s: %s" % (pid, str(e))
+            print("Failed to kill child process %s: %s" % (pid, str(e)))

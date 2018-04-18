@@ -31,15 +31,15 @@
 
 import os
 import flask
-import __about__
+from . import __about__
 
 
 def extend_app(app):
     """
     Applies custom extensions and middleware to the Flask app.
     """
-    import csrf
-    import flask_ext
+    from . import csrf
+    from . import flask_ext
     # Add proxy server support, if required
     if app.config['PROXY_SERVERS'] > 0:
         flask_ext.add_proxy_server_support(app, app.config['PROXY_SERVERS'])
@@ -109,13 +109,13 @@ configure_app(app)
 extend_app(app)
 
 with app.app_context():
-    from cache_manager import CacheManager
-    from data_manager import DataManager
-    from image_manager import ImageManager
-    from log_manager import LogManager
-    from permissions_manager import PermissionsManager
-    from stats_manager import StatsManager
-    from task_manager import TaskManager
+    from .cache_manager import CacheManager
+    from .data_manager import DataManager
+    from .image_manager import ImageManager
+    from .log_manager import LogManager
+    from .permissions_manager import PermissionsManager
+    from .stats_manager import StatsManager
+    from .task_manager import TaskManager
 
     logger = None
     try:
@@ -200,21 +200,21 @@ with app.app_context():
         app.image_engine = image_engine
 
         # Import app views and template filters
-        import views                                      # @UnusedImport
-        import views_util                                 # @UnusedImport
-        import views_pages                                # @UnusedImport
+        from . import views                                      # @UnusedImport
+        from . import views_util                                 # @UnusedImport
+        from . import views_pages                                # @UnusedImport
 
         # Import blueprints
-        import api
+        from . import api
         app.register_blueprint(api.blueprint, url_prefix='/api')
 
-        import admin
+        from . import admin
         app.register_blueprint(admin.blueprint, url_prefix='/admin')
 
-        import reports
+        from . import reports
         app.register_blueprint(reports.blueprint, url_prefix='/reports')
 
-        import portfolios
+        from . import portfolios
         app.register_blueprint(portfolios.blueprint, url_prefix='/portfolios')
 
         # Import global template functions

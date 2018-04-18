@@ -177,14 +177,15 @@ class TimedTokenBasicAuthentication(BaseHttpAuthentication):
     def generate_auth_token(self, auth_obj):
         """
         Generates a new encrypted authentication token that embeds token_obj
-        and is valid for API_TOKEN_EXPIRY_TIME seconds.
+        and is valid for API_TOKEN_EXPIRY_TIME seconds. The token is returned
+        as a string.
         """
         s = Serializer(
             self.secret_key,
             salt='auth_token',
             expires_in=self.expiry_seconds
         )
-        return s.dumps(auth_obj)
+        return s.dumps(auth_obj).decode('ascii')
 
     def decode_auth_token(self, token):
         """
@@ -196,6 +197,8 @@ class TimedTokenBasicAuthentication(BaseHttpAuthentication):
             salt='auth_token'
         )
         try:
+            if isinstance(token, str):
+                token = bytes(token, 'ascii')
             return s.loads(token)
         except SignatureExpired:
             return None
@@ -299,7 +302,7 @@ class IncludeMarkdownExtension(Extension):
         super(IncludeMarkdownExtension, self).__init__(environment)
 
     def parse(self, parser):
-        line_no = parser.stream.next().lineno
+        line_no = next(parser.stream).lineno
         tag_args = [parser.parse_expression()]
 
         # If there is a comma, the user provided a text substitutions dict
@@ -318,13 +321,16 @@ class IncludeMarkdownExtension(Extension):
             with open(
                 os.path.join(self.environment.markdown_base_dir, md_path), 'rb'
             ) as f:
-                md_text = f.read()
+                md_bytes = f.read()
         except:
             raise TemplateNotFound(md_path)
 
+        # Convert bytes to string
+        md_text = md_bytes.decode('utf8')
+
         # Text substitutions
         if subs_dict:
-            for fnd, repl in subs_dict.iteritems():
+            for fnd, repl in subs_dict.items():
                 md_text = md_text.replace(fnd, repl)
 
         # MD to HTML

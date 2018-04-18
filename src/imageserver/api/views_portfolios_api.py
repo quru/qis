@@ -474,7 +474,7 @@ class PortfolioContentAPI(MethodView):
                 raise ValueError('specify only one of either image_id or image_src')
             elif data_dict.get('image_id'):
                 params['image_id'] = parse_int(data_dict['image_id'])
-                validate_number(params['image_id'], 1, sys.maxint)
+                validate_number(params['image_id'], 1, sys.maxsize)
             elif data_dict.get('image_src'):
                 params['image_src'] = data_dict['image_src'].strip()
                 validate_string(params['image_src'], 5, 1024)

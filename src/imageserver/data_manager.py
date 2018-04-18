@@ -49,15 +49,15 @@ from sqlalchemy.exc import IntegrityError, OperationalError, SQLAlchemyError
 from sqlalchemy.orm import eagerload, sessionmaker
 from sqlalchemy.sql.expression import bindparam, func
 
-import errors
-from models import Base
-from models import User, Folder, FolderPermission, Group
-from models import Image, ImageTemplate, ImageHistory, ImageStats, Property
-from models import SystemPermissions, SystemStats, Task, UserGroup
-from models import Folio, FolioImage, FolioPermission, FolioHistory, FolioExport
-from util import add_sep, strip_sep
-from util import filepath_components, filepath_parent, filepath_normalize
-from util import generate_password
+from . import errors
+from .models import Base
+from .models import User, Folder, FolderPermission, Group
+from .models import Image, ImageTemplate, ImageHistory, ImageStats, Property
+from .models import Folio, FolioImage, FolioPermission, FolioHistory, FolioExport
+from .models import SystemPermissions, SystemStats, Task, UserGroup
+from .util import add_sep, strip_sep
+from .util import filepath_components, filepath_parent, filepath_normalize
+from .util import generate_password
 
 
 def db_operation(f):
@@ -827,11 +827,9 @@ class DataManager(object):
         src = self._normalize_image_path(src)
         # Try cache
         cache_key = self._get_id_cache_key(src)
-        cache_obj = self._cache.raw_get(cache_key, integrity_check=True)
+        cache_obj = self._cache.raw_get(cache_key)
         # #1589 Check this really is a database ID
-        if cache_obj is not None and not (
-            isinstance(cache_obj, int) or isinstance(cache_obj, long)
-        ):
+        if cache_obj is not None and not isinstance(cache_obj, int):
             self._logger.error('Cached ID is unexpected type: ' + str(type(cache_obj)))
             cache_obj = None
 
@@ -844,7 +842,7 @@ class DataManager(object):
                 return -1
             if db_obj.status == Image.STATUS_DELETED and not return_deleted:
                 return 0
-            self._cache.raw_put(cache_key, db_obj.id, integrity_check=True)
+            self._cache.raw_put(cache_key, db_obj.id)
             return db_obj.id
 
     @db_operation
@@ -1823,7 +1821,7 @@ class DataManager(object):
         """
         Returns whether an IntegrityError is a duplicate key error.
         """
-        return u'duplicate' in unicode(exception)
+        return 'duplicate' in str(exception)
 
     def _enable_sql_time_logging(self):
         """

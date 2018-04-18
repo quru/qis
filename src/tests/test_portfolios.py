@@ -36,7 +36,7 @@ import time
 import zipfile
 from datetime import datetime, timedelta
 
-import tests as main_tests
+from . import tests as main_tests
 
 from imageserver.flask_app import app as flask_app
 from imageserver.flask_app import data_engine as dm
@@ -132,7 +132,7 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
             'expiry_time': to_iso_datetime(expiry_time)
         })
         self.assertEqual(rv.status_code, API_CODES.SUCCESS_TASK_ACCEPTED, str(rv.data))
-        obj = json.loads(rv.data)
+        obj = json.loads(rv.data.decode('utf8'))
         task = tm.wait_for_task(obj['data']['task_id'], 20)
         self.assertIsNotNone(task, 'Portfolio export task was cleaned up')
         self.assertIsNotNone(task.result, 'Portfolio export task did not return a result')
@@ -165,7 +165,7 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
             'public_access': FolioPermission.ACCESS_NONE
         })
         self.assertEqual(rv.status_code, API_CODES.SUCCESS)
-        obj = json.loads(rv.data)
+        obj = json.loads(rv.data.decode('utf8'))
         self.assertGreater(obj['data']['id'], 0)
         self.assertEqual(obj['data']['human_id'], 'mypf1')
         self.assertEqual(obj['data']['description'], 'This is a test portfolio')
@@ -189,7 +189,7 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
             'public_access': FolioPermission.ACCESS_NONE
         })
         self.assertEqual(rv.status_code, API_CODES.SUCCESS)
-        obj = json.loads(rv.data)
+        obj = json.loads(rv.data.decode('utf8'))
         self.assertGreater(len(obj['data']['human_id']), 0)
         # Creation - duplicate human ID should not be allowed
         rv = self.app.post(api_url, data={
@@ -211,7 +211,7 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
             'public_access': FolioPermission.ACCESS_NONE
         })
         self.assertEqual(rv.status_code, API_CODES.SUCCESS)
-        obj = json.loads(rv.data)
+        obj = json.loads(rv.data.decode('utf8'))
         self.assertGreater(len(obj['data']['human_id']), 0)
         self.assertNotEqual(obj['data']['human_id'], 'public')
         # Updates - duplicate human ID should not be allowed
@@ -233,7 +233,7 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
             'public_access': FolioPermission.ACCESS_NONE
         })
         self.assertEqual(rv.status_code, API_CODES.SUCCESS)
-        obj = json.loads(rv.data)
+        obj = json.loads(rv.data.decode('utf8'))
         self.assertGreater(len(obj['data']['human_id']), 0)
         self.assertNotEqual(obj['data']['human_id'].strip(), '')
 
@@ -246,7 +246,7 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         # Get the initial image list
         rv = self.app.get(api_url)
         self.assertEqual(rv.status_code, API_CODES.SUCCESS)
-        obj = json.loads(rv.data)
+        obj = json.loads(rv.data.decode('utf8'))
         self.assertEqual(len(obj['data']), 2)  # see reset_fixtures()
         # Add another image
         rv = self.app.post(api_url, data={
@@ -433,7 +433,7 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         # Public users should only see public portfolios
         rv = self.app.get(api_url)
         self.assertEqual(rv.status_code, API_CODES.SUCCESS)
-        obj = json.loads(rv.data)
+        obj = json.loads(rv.data.decode('utf8'))
         hids = [folio['human_id'] for folio in obj['data']]
         self.assertEqual(len(hids), 1)
         self.assertEqual(hids[0], 'public')
@@ -442,7 +442,7 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         self.login('janeaustin', 'janeaustin')
         rv = self.app.get(api_url)
         self.assertEqual(rv.status_code, API_CODES.SUCCESS)
-        obj = json.loads(rv.data)
+        obj = json.loads(rv.data.decode('utf8'))
         hids = [folio['human_id'] for folio in obj['data']]
         self.assertEqual(len(hids), 2)
         self.assertIn('public', hids)
@@ -451,7 +451,7 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         self.login('foliouser', 'foliouser')
         rv = self.app.get(api_url)
         self.assertEqual(rv.status_code, API_CODES.SUCCESS)
-        obj = json.loads(rv.data)
+        obj = json.loads(rv.data.decode('utf8'))
         hids = [folio['human_id'] for folio in obj['data']]
         self.assertEqual(len(hids), 3)
         self.assertIn('public', hids)
@@ -463,7 +463,7 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         api_url = '/api/portfolios/'
         rv = self.app.get(api_url)
         self.assertEqual(rv.status_code, API_CODES.SUCCESS)
-        obj = json.loads(rv.data)
+        obj = json.loads(rv.data.decode('utf8'))
         self.assertGreater(len(obj['data']), 0)
         folio = obj['data'][0]
         # Check that the viewing URL is included
@@ -547,7 +547,7 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         api_url = '/api/portfolios/' + str(db_public_folio.id) + '/'
         rv = self.app.get(api_url)
         self.assertEqual(rv.status_code, API_CODES.SUCCESS)
-        obj = json.loads(rv.data)
+        obj = json.loads(rv.data.decode('utf8'))
         folio = obj['data']
         self.assertTrue('owner' in folio)
         self.assertGreater(len(folio['images']), 0)
@@ -585,7 +585,7 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         api_url = '/api/portfolios/' + str(db_folio.id) + '/'
         rv = self.app.get(api_url)
         self.assertEqual(rv.status_code, API_CODES.SUCCESS)
-        obj = json.loads(rv.data)
+        obj = json.loads(rv.data.decode('utf8'))
         folio = obj['data']
         self.assertTrue('url' in folio['images'][0])
         self.assertIn('width=800', folio['images'][0]['url'])
@@ -594,7 +594,7 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         api_url = '/api/portfolios/' + str(db_folio.id) + '/images/'
         rv = self.app.get(api_url)
         self.assertEqual(rv.status_code, API_CODES.SUCCESS)
-        obj = json.loads(rv.data)
+        obj = json.loads(rv.data.decode('utf8'))
         image_list = obj['data']
         self.assertTrue('url' in image_list[0])
         self.assertIn('width=800', image_list[0]['url'])
@@ -734,7 +734,7 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         for bf in bad_filenames:
             rv = self.app.put(api_url, data={'filename': bf})
             self.assertEqual(rv.status_code, API_CODES.INVALID_PARAM)
-            obj = json.loads(rv.data)
+            obj = json.loads(rv.data.decode('utf8'))
             self.assertIn('filename not allowed', obj['message'])
 
     # Tests that an empty portfolio cannot be published
@@ -750,7 +750,7 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
             'expiry_time': to_iso_datetime(datetime.utcnow() + timedelta(days=1))
         })
         self.assertEqual(rv.status_code, API_CODES.INVALID_PARAM)
-        obj = json.loads(rv.data)
+        obj = json.loads(rv.data.decode('utf8'))
         self.assertEqual(obj['status'], API_CODES.INVALID_PARAM)
         self.assertIn('portfolio is empty', obj['message'])
 
@@ -905,13 +905,13 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         api_url = '/api/portfolios/' + str(db_folio.id) + '/'
         rv = self.app.get(api_url)
         self.assertEqual(rv.status_code, API_CODES.SUCCESS)
-        obj = json.loads(rv.data)
+        obj = json.loads(rv.data.decode('utf8'))
         self.assertEqual(len(obj['data']['downloads']), 2)
         # And again for the .../exports/ endpoint
         api_url = '/api/portfolios/' + str(db_folio.id) + '/exports/'
         rv = self.app.get(api_url)
         self.assertEqual(rv.status_code, API_CODES.SUCCESS)
-        obj = json.loads(rv.data)
+        obj = json.loads(rv.data.decode('utf8'))
         self.assertEqual(len(obj['data']), 2)
         # Unpublish both exports
         api_url = '/api/portfolios/' + str(db_folio.id) + '/exports/' + str(export1.id) + '/'
@@ -1029,7 +1029,7 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         api_url = '/api/portfolios/' + str(db_public_folio.id) + '/'
         rv = self.app.get(api_url)
         self.assertEqual(rv.status_code, API_CODES.SUCCESS)
-        obj = json.loads(rv.data)
+        obj = json.loads(rv.data.decode('utf8'))
         folio = obj['data']
         # a) Check folio header - owner field
         self.assertIn('owner', folio)
@@ -1045,7 +1045,7 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         api_url = '/api/portfolios/'
         rv = self.app.get(api_url)
         self.assertEqual(rv.status_code, API_CODES.SUCCESS)
-        obj = json.loads(rv.data)
+        obj = json.loads(rv.data.decode('utf8'))
         self.assertEqual(len(obj['data']), 1)
         folio = obj['data'][0]
         # a) Check folio header - owner field

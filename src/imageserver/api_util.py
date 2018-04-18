@@ -34,9 +34,9 @@ import traceback
 
 from flask import jsonify, request
 
-import errors
-from flask_app import logger
-from util import unicode_to_utf8
+from . import errors
+from .flask_app import logger
+from .util import unicode_to_utf8
 
 
 # Define JSON API return codes and default messages
@@ -139,7 +139,7 @@ def create_api_error_dict(exc):
     the response's data value, otherwise the data value will be None.
     """
     err_no = API_CODES.INTERNAL_ERROR
-    exc_val = '(none)' if exc is None else unicode_to_utf8(unicode(exc))
+    exc_val = '(none)' if exc is None else unicode_to_utf8(str(exc))
 
     if isinstance(exc, errors.ParameterError):
         err_no = API_CODES.INVALID_PARAM

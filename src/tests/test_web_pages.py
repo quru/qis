@@ -34,8 +34,8 @@
 import os
 import shutil
 
-import tests as main_tests
-from tests import BaseTestCase, setup_user_account
+from . import tests as main_tests
+from .tests import BaseTestCase, setup_user_account
 
 from imageserver.flask_app import data_engine as dm
 from imageserver.flask_app import cache_engine as cm
@@ -67,7 +67,7 @@ class ImageServerTestsWebPages(BaseTestCase):
         rv = self.app.get(url)
         self.assertEqual(rv.status_code, required_status)
         if required_text:
-            self.assertIn(required_text, rv.data)
+            self.assertIn(required_text, rv.data.decode('utf8'))
         return rv
 
     # Login page
@@ -90,7 +90,7 @@ class ImageServerTestsWebPages(BaseTestCase):
         self.assertEqual(rv.status_code, 200)
         self.assertIn(
             __about__.__title__ + ' v' + __about__.__version__,
-            rv.data
+            rv.data.decode('utf8')
         )
 
     # Help page
@@ -119,10 +119,14 @@ class ImageServerTestsWebPages(BaseTestCase):
             # Test upload complete page
             rv = self.app.get('/uploadcomplete/')
             self.assertEqual(rv.status_code, 200)
-            self.assertIn('1 image was uploaded successfully.', rv.data)
+            page_text = rv.data.decode('utf8')
+            self.assertIn('1 image was uploaded successfully.', page_text)
             # #2575 The thumbnail needs to set "&format=jpg" otherwise it breaks for
             #       browser-unsupported types e.g. TIF, PDF files
-            self.assertIn('src=test_images/tmp_qis_uploadfile.jpg&amp;format=jpg', rv.data)
+            start_idx = page_text.index('<img class')
+            end_idx = page_text.index('>', start_idx)
+            self.assertIn('src=test_images/tmp_qis_uploadfile.jpg', page_text[start_idx:end_idx])
+            self.assertIn('format=jpg', page_text[start_idx:end_idx])
         finally:
             # Remove the test files and data
             os.remove(dst_file)
@@ -187,27 +191,27 @@ class ImageServerTestsWebPages(BaseTestCase):
         self.login('webuser', 'webuser')
         rv = self.app.get('/list/?view=list')
         self.assertEqual(rv.status_code, 200)
-        self.assertIn('-- List view', rv.data)
+        self.assertIn('-- List view', rv.data.decode('utf8'))
         rv = self.app.get('/list/?view=grid')
         self.assertEqual(rv.status_code, 200)
-        self.assertIn('-- Grid view', rv.data)
+        self.assertIn('-- Grid view', rv.data.decode('utf8'))
         # Last view should be remembered
         rv = self.app.get('/list/')
         self.assertEqual(rv.status_code, 200)
-        self.assertIn('-- Grid view', rv.data)
+        self.assertIn('-- Grid view', rv.data.decode('utf8'))
 
     # #2475 Browse folder page, error reading directory should still be OK
     #       (OK as in returning a nice error rather than the HTTP 500 it used to)
     def test_browse_folder_page_bad_folder(self):
         self.call_page_requiring_login(
             '/list/?path=/test_images\x00uh oh&view=list',
-            required_text='must be encoded string without NULL bytes'
+            required_text='embedded NUL character'
         )
 
     def test_browse_folder_page_bad_folder_grid(self):
         self.call_page_requiring_login(
             '/list/?path=/test_images\x00uh oh&view=grid',
-            required_text='must be encoded string without NULL bytes'
+            required_text='embedded NUL character'
         )
 
     # Image detail page
@@ -232,7 +236,7 @@ class ImageServerTestsWebPages(BaseTestCase):
             '/list/navigate/?src=/test_images/blue bells.jpg&dir=back',
             required_status=302
         )
-        self.assertIn('bear.jpg', rv.data)
+        self.assertIn('bear.jpg', rv.data.decode('utf8'))
 
     # Image detail page - go forwards
     def test_image_detail_navigate_forward(self):
@@ -240,7 +244,7 @@ class ImageServerTestsWebPages(BaseTestCase):
             '/list/navigate/?src=/test_images/blue bells.jpg&dir=fwd',
             required_status=302
         )
-        self.assertIn('book-ecirgb.jpg', rv.data)
+        self.assertIn('book-ecirgb.jpg', rv.data.decode('utf8'))
 
     # Image detail page - go backwards from first image
     def test_image_detail_navigate_back_first(self):
@@ -267,7 +271,7 @@ class ImageServerTestsWebPages(BaseTestCase):
                 required_status=302
             )
             # We should get a redirect to the next file not the folder
-            self.assertIn('book-ecirgb.jpg', rv.data)
+            self.assertIn('book-ecirgb.jpg', rv.data.decode('utf8'))
         finally:
             delete_dir(test_folder)
 
@@ -321,17 +325,17 @@ class ImageServerTestsWebPages(BaseTestCase):
         self.login('lister', 'lister')
         rv = self.app.get('/admin/templates/')
         self.assertEqual(rv.status_code, 200)
-        self.assertNotIn('delete', rv.data)
+        self.assertNotIn('delete', rv.data.decode('utf8'))
         rv = self.app.get('/admin/templates/1/')
         self.assertEqual(rv.status_code, 200)
-        self.assertIn('''id="submit" disabled="disabled"''', rv.data)
+        self.assertIn('''id="submit" disabled="disabled"''', rv.data.decode('utf8'))
         self.login('admin', 'admin')
         rv = self.app.get('/admin/templates/')
         self.assertEqual(rv.status_code, 200)
-        self.assertIn('delete', rv.data)
+        self.assertIn('delete', rv.data.decode('utf8'))
         rv = self.app.get('/admin/templates/1/')
         self.assertEqual(rv.status_code, 200)
-        self.assertNotIn('''id="submit" disabled="disabled"''', rv.data)
+        self.assertNotIn('''id="submit" disabled="disabled"''', rv.data.decode('utf8'))
 
     # Test that the markdown rendering is working
     def test_markdown_support(self):
@@ -354,24 +358,24 @@ class ImageServerTestsWebPages(BaseTestCase):
         rv = self.app.get('/help/')
         self.assertEqual(rv.status_code, 200)
         # Image help - subs //images.example.com/
-        self.assertNotIn('//images.example.com/', rv.data)
-        self.assertIn('//localhost/', rv.data)
+        self.assertNotIn('//images.example.com/', rv.data.decode('utf8'))
+        self.assertIn('//localhost/', rv.data.decode('utf8'))
         # Image help - subs buildings
-        self.assertNotIn('buildings', rv.data)
-        self.assertIn('test_images', rv.data)
+        self.assertNotIn('buildings', rv.data.decode('utf8'))
+        self.assertIn('test_images', rv.data.decode('utf8'))
         # Image help - subs quru.png
-        self.assertNotIn('quru.png', rv.data)
-        self.assertIn('quru110.png', rv.data)
+        self.assertNotIn('quru.png', rv.data.decode('utf8'))
+        self.assertIn('quru110.png', rv.data.decode('utf8'))
         # Image help - subs quru-padded.png
-        self.assertNotIn('quru-padded.png', rv.data)
-        self.assertIn('quru470.png', rv.data)
+        self.assertNotIn('quru-padded.png', rv.data.decode('utf8'))
+        self.assertIn('quru470.png', rv.data.decode('utf8'))
         # Image help - subs logos
-        self.assertNotIn('logos', rv.data)
-        self.assertIn('test_images', rv.data)
+        self.assertNotIn('logos', rv.data.decode('utf8'))
+        self.assertIn('test_images', rv.data.decode('utf8'))
         # Image help - subs the server-specific settings placeholder text
         self.assertNotIn('View this page from within QIS to see the default '
-                         'image settings for your server.', rv.data)
-        self.assertIn('The following settings are active on your server.', rv.data)
+                         'image settings for your server.', rv.data.decode('utf8'))
+        self.assertIn('The following settings are active on your server.', rv.data.decode('utf8'))
 
     # The simple viewer help + demo
     def test_simple_viewer_page(self):

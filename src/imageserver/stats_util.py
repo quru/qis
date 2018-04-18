@@ -31,7 +31,7 @@
 
 from datetime import datetime, timedelta
 
-from models import ImageStats, SystemStats
+from .models import ImageStats, SystemStats
 
 
 def add_zero_stats(dt_list_from, dt_list_to, frequency_mins, stats_list, stats_model):
@@ -66,7 +66,7 @@ def add_zero_stats(dt_list_from, dt_list_to, frequency_mins, stats_list, stats_m
     # The normal time between data records is STATS_FREQUENCY plus a bit
     # (the bit == time taken to flush the stats to the db)
     normal_gap = timedelta(minutes=frequency_mins)
-    max_gap = normal_gap + (normal_gap / 2)
+    max_gap = normal_gap + (normal_gap // 2)
 
     # Convert 'from' stats times to 'to' stats times
     dt_list_from += normal_gap

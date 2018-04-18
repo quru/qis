@@ -29,12 +29,12 @@
 # =========  ====  ============================================================
 #
 
-import ldap_client
+from . import ldap_client
 
-from errors import AuthenticationError
-from flask_app import app
-from models import User
-from util import generate_password
+from .errors import AuthenticationError
+from .flask_app import app
+from .models import User
+from .util import generate_password
 
 
 def authenticate_user(username, password, data_engine, logger):

@@ -32,16 +32,16 @@
 import os
 from datetime import datetime
 
-import filesystem_manager
+from . import filesystem_manager
 
-from errors import AlreadyExistsError, DBError, DoesNotExistError
-from filesystem_manager import get_burst_path, path_exists, ensure_path_exists
-from flask_app import app
-from models import Folder, Image, ImageHistory, Task
-from models import FolderPermission
-from util import add_sep, strip_sep, strip_seps
-from util import filepath_components, filepath_filename, filepath_parent, filepath_normalize
-from util import get_file_extension, secure_filename, validate_filename
+from .errors import AlreadyExistsError, DBError, DoesNotExistError
+from .filesystem_manager import get_burst_path, path_exists, ensure_path_exists
+from .flask_app import app
+from .models import Folder, Image, ImageHistory, Task
+from .models import FolderPermission
+from .util import add_sep, strip_sep, strip_seps
+from .util import filepath_components, filepath_filename, filepath_parent, filepath_normalize
+from .util import get_file_extension, secure_filename, validate_filename
 
 
 def on_folder_db_create(db_folder):
@@ -87,7 +87,7 @@ def set_image_properties(db_image):
     Sets image properties (width and height) in the database record db_image
     by reading the image file on disk.
     """
-    from image_manager import ImageManager
+    from .image_manager import ImageManager
     (w, h) = ImageManager.get_image_dimensions(db_image.src)
     db_image.width = w
     db_image.height = h
@@ -1006,6 +1006,6 @@ def _secure_folder_path(folderpath, skip_existing, keep_unicode):
                 try:
                     component = secure_filename(component, keep_unicode)
                 except ValueError as e:
-                    raise ValueError(unicode(e) + u': ' + component)
+                    raise ValueError(str(e) + ': ' + component)
             built_path = os.path.join(built_path, component)
     return built_path

@@ -25,17 +25,16 @@ setup(
     packages=find_packages(package_dir, exclude=["tests", "tests.*"]),
 
     install_requires=[
-        "qismagick>=2.2.0",
+        "qismagick>=3.0.0",
         "Flask==0.12.2",
-        "python-ldap==2.4.45",
+        "pyldap==2.4.45",
         "pylibmc==1.5.2",
         "psycopg2==2.6.2",
-        "SQLAlchemy==1.1.18",  # 1.1.x is last support for Python 2.6
+        "SQLAlchemy==1.1.18",
         "requests==2.18.4",
         "psutil==5.4.1",
         "itsdangerous==0.24",
-        "importlib",           # Only for Python 2.6
-        "markdown==2.6.2"      # 2.6.2 is last support for Python 2.6
+        "markdown==2.6.10"
     ],
 
     setup_requires=[
@@ -44,7 +43,6 @@ setup(
     ],
 
     tests_require=[
-        "unittest2",
         "mock",
         "coverage"
     ],

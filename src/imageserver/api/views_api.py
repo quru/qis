@@ -90,7 +90,7 @@ def token():
         user = authenticate_user(username, password, data_engine, logger)
     except AuthenticationError as e:
         # Return 500 rather than 401 for authentication runtime errors
-        raise Exception(unicode(e))
+        raise Exception(str(e))
 
     if user is not None:
         if not user.allow_api:
@@ -131,16 +131,12 @@ def imagelist():
     except ValueError as e:
         raise ParameterError(e)
 
-    # Get extra parameters for image URL construction
+    # Get extra parameters for image URL construction, remove API parameters
     image_params = request.args.to_dict()
-    if 'path' in image_params:
-        del image_params['path']
-    if 'attributes' in image_params:
-        del image_params['attributes']
-    if 'start' in image_params:
-        del image_params['start']
-    if 'limit' in image_params:
-        del image_params['limit']
+    image_params.pop('path', None)
+    image_params.pop('attributes', None)
+    image_params.pop('start', None)
+    image_params.pop('limit', None)
 
     # Get directory listing
     directory_info = get_directory_listing(from_path, False, 2, start, limit)
@@ -319,7 +315,7 @@ def upload():
     except Exception as e:
         # put_image returns ValueError for parameter errors
         if type(e) is ValueError:
-            e = ParameterError(unicode(e))
+            e = ParameterError(str(e))
         # Attach whatever data we have to return with the error
         # Caller can then decide whether to continue if some files worked
         e.api_data = ret_dict
@@ -329,8 +325,7 @@ def upload():
         cache_engine.raw_put(
             'UPLOAD_API:' + str(current_user.id),
             ret_dict,
-            expiry_secs=(60 * 60 * 24 * 7),
-            integrity_check=True
+            expiry_secs=(60 * 60 * 24 * 7)
         )
 
     # If here, all files were uploaded successfully

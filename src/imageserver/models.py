@@ -54,11 +54,8 @@ class BaseMixin(object):
     """
     Base mixin for all our database models.
     """
-    def __unicode__(self):
-        return unicode(self.__class__.__name__)
-
     def __str__(self):
-        return self.__unicode__().encode('UTF-8')
+        return self.__class__.__name__
 
 
 class IDEqualityMixin(object):
@@ -67,7 +64,7 @@ class IDEqualityMixin(object):
     for any class defining a unique 'id' attribute.
     """
     def __eq__(self, other):
-        if type(other) is type(self):
+        if isinstance(other, type(self)):
             return self.id == other.id if self.id > 0 else object.__eq__(self, other)
         return False
 
@@ -151,7 +148,7 @@ class User(Base, BaseMixin, IDEqualityMixin):
         self.allow_api = allow_api
         self.status = status
 
-    def __unicode__(self):
+    def __str__(self):
         return self.get_full_name()
 
     def set_password(self, pwd):
@@ -215,7 +212,7 @@ class Group(Base, BaseMixin, IDEqualityMixin):
         self.description = description
         self.group_type = group_type
 
-    def __unicode__(self):
+    def __str__(self):
         return self.name
 
 
@@ -269,8 +266,8 @@ class SystemPermissions(Base, BaseMixin):
         self.admin_permissions = admin_permissions
         self.admin_all = admin_all
 
-    def __unicode__(self):
-        return u'SystemPermissions: Group ' + str(self.group_id)
+    def __str__(self):
+        return 'SystemPermissions: Group ' + str(self.group_id)
 
 
 class Folder(Base, BaseMixin, IDEqualityMixin):
@@ -306,7 +303,7 @@ class Folder(Base, BaseMixin, IDEqualityMixin):
         self.parent = parent
         self.status = status
 
-    def __unicode__(self):
+    def __str__(self):
         return self.path
 
     def is_root(self):
@@ -348,8 +345,8 @@ class FolderPermission(Base, BaseMixin, IDEqualityMixin):
         self.group = group
         self.access = access
 
-    def __unicode__(self):
-        return u'FolderPermission: Folder %d + Group %d = %d' % (
+    def __str__(self):
+        return 'FolderPermission: Folder %d + Group %d = %d' % (
             self.folder_id, self.group_id, self.access
         )
 
@@ -393,7 +390,7 @@ class Image(Base, BaseMixin, IDEqualityMixin):
         self.height = height
         self.status = status
 
-    def __unicode__(self):
+    def __str__(self):
         return self.src + ' [' + str(self.width) + ',' + str(self.height) + ']'
 
 
@@ -417,7 +414,7 @@ class ImageTemplate(Base, BaseMixin, IDEqualityMixin):
         self.description = description
         self.template = template_dict
 
-    def __unicode__(self):
+    def __str__(self):
         return self.name
 
 
@@ -456,8 +453,8 @@ class ImageHistory(Base, BaseMixin, IDEqualityMixin):
         self.action_info = action_info
         self.action_time = datetime.utcnow()
 
-    def __unicode__(self):
-        return u'Image ' + str(self.image_id) + ': Action ' + \
+    def __str__(self):
+        return 'Image ' + str(self.image_id) + ': Action ' + \
                str(self.action) + ' at ' + str(self.action_time)
 
 
@@ -497,8 +494,8 @@ class ImageStats(Base, BaseMixin, IDEqualityMixin):
         self.from_time = from_time
         self.to_time = to_time
 
-    def __unicode__(self):
-        return u'ImageStats: ' + str(self.image_id) + ' v=' + str(self.views) + \
+    def __str__(self):
+        return 'ImageStats: ' + str(self.image_id) + ' v=' + str(self.views) + \
                ', d=' + str(self.downloads) + ' at ' + str(self.to_time)
 
 
@@ -543,8 +540,8 @@ class SystemStats(Base, BaseMixin, IDEqualityMixin):
         self.from_time = from_time
         self.to_time = to_time
 
-    def __unicode__(self):
-        return u'SystemStats: To ' + str(self.to_time)
+    def __str__(self):
+        return 'SystemStats: To ' + str(self.to_time)
 
 
 class Task(Base, BaseMixin, IDEqualityMixin):
@@ -598,8 +595,8 @@ class Task(Base, BaseMixin, IDEqualityMixin):
         self.keep_for = keep_for
         self.keep_until = None
 
-    def __unicode__(self):
-        return u'Task: ' + self.name
+    def __str__(self):
+        return 'Task: ' + self.name
 
 
 class Property(Base, BaseMixin):
@@ -621,8 +618,8 @@ class Property(Base, BaseMixin):
         self.key = key
         self.value = value
 
-    def __unicode__(self):
-        return u'Property: ' + self.key + '=' + str(self.value)
+    def __str__(self):
+        return 'Property: ' + self.key + '=' + str(self.value)
 
 
 class Folio(Base, BaseMixin, IDEqualityMixin):
@@ -675,8 +672,8 @@ class Folio(Base, BaseMixin, IDEqualityMixin):
         self.owner = owner
         self.last_updated = datetime.utcnow()
 
-    def __unicode__(self):
-        return u'Portfolio: ' + self.human_id
+    def __str__(self):
+        return 'Portfolio: ' + self.human_id
 
     @staticmethod
     def create_human_id():
@@ -721,8 +718,8 @@ class FolioImage(Base, BaseMixin, IDEqualityMixin):
         self.filename = image_filename
         self.order_num = order_num
 
-    def __unicode__(self):
-        return u'PortfolioImage: Portfolio %d + Image %d' % (
+    def __str__(self):
+        return 'PortfolioImage: Portfolio %d + Image %d' % (
             self.folio_id, self.image_id
         )
 
@@ -757,8 +754,8 @@ class FolioPermission(Base, BaseMixin, IDEqualityMixin):
         self.group = group
         self.access = access
 
-    def __unicode__(self):
-        return u'PortfolioPermission: Portfolio %d + Group %d = %d' % (
+    def __str__(self):
+        return 'PortfolioPermission: Portfolio %d + Group %d = %d' % (
             self.folio_id, self.group_id, self.access
         )
 
@@ -799,8 +796,8 @@ class FolioHistory(Base, BaseMixin, IDEqualityMixin):
         self.action_info = action_info
         self.action_time = datetime.utcnow()
 
-    def __unicode__(self):
-        return u'Portfolio ' + str(self.folio_id) + ': Action ' + \
+    def __str__(self):
+        return 'Portfolio ' + str(self.folio_id) + ': Action ' + \
                str(self.action) + ' at ' + str(self.action_time)
 
 
@@ -840,8 +837,8 @@ class FolioExport(Base, BaseMixin, IDEqualityMixin):
         self.created = datetime.utcnow()
         self.keep_until = keep_until or datetime(2099, 12, 31)
 
-    def __unicode__(self):
-        return u'PortfolioExport: ' + (self.filename or 'Pending')
+    def __str__(self):
+        return 'PortfolioExport: ' + (self.filename or 'Pending')
 
     def is_outdated(self):
         """

@@ -31,15 +31,15 @@
 # 27Feb2013  Matt  Add background housekeeping thread to perform routine tasks
 #
 
-import cPickle
+import pickle
 import time
 from datetime import datetime, timedelta
 from threading import Thread
 
 import imageserver.auxiliary.task_server as task_server
-from errors import AlreadyExistsError, DBError, TimeoutError
-from models import Task
-from util import this_is_computer
+from .errors import AlreadyExistsError, DBError, TimeoutError
+from .models import Task
+from .util import this_is_computer
 
 
 class TaskManager(object):
@@ -88,7 +88,7 @@ class TaskManager(object):
         try:
             if params_dict is None:
                 params_dict = {}
-            params_data = cPickle.dumps(params_dict, protocol=cPickle.HIGHEST_PROTOCOL)
+            params_data = pickle.dumps(params_dict, protocol=pickle.HIGHEST_PROTOCOL)
 
             log_str = log_level if log_level else ''
             err_log_str = error_log_level if error_log_level else ''
@@ -142,9 +142,9 @@ class TaskManager(object):
                 if _db_session is not None:
                     # Don't re-save the task object when db session is closed
                     _db_session.expunge(t)
-                t.params = cPickle.loads(t.params)
+                t.params = pickle.loads(t.params)
                 if t.result is not None:
-                    t.result = cPickle.loads(t.result)
+                    t.result = pickle.loads(t.result)
         return t
 
     def get_task_status(self, task_id, _db_session=None):

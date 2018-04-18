@@ -32,36 +32,31 @@
 # 25 Mar 15  Matt  v1.27 Raise HTTP 503 for unresponsive image requests
 #
 
-try:
-    import cStringIO as StringIO
-except:
-    import StringIO
-
+import io
 import time
 
 import flask
 from flask import make_response, request, send_file
 import werkzeug.exceptions as httpexc
 
-from errors import DBError, DoesNotExistError, ImageError, SecurityError, ServerTooBusyError
-from filesystem_manager import path_exists
-from filesystem_sync import on_image_db_create_anon_history
-from flask_app import app
-from flask_app import logger
-from flask_app import data_engine, image_engine, permissions_engine, stats_engine
-from image_attrs import ImageAttrs
-from models import FolderPermission
-from session_manager import get_session_user
-from session_manager import logged_in as session_logged_in
-from util import filepath_parent, invoke_http_async, validate_string
-from util import parse_boolean, parse_colour, parse_float, parse_int, parse_tile_spec
-from util import default_value, etag, unicode_to_utf8
-from views_util import log_security_error
+from .errors import DBError, DoesNotExistError, ImageError, SecurityError, ServerTooBusyError
+from .filesystem_manager import path_exists
+from .filesystem_sync import on_image_db_create_anon_history
+from .flask_app import app
+from .flask_app import logger
+from .flask_app import data_engine, image_engine, permissions_engine, stats_engine
+from .image_attrs import ImageAttrs
+from .models import FolderPermission
+from .session_manager import get_session_user
+from .session_manager import logged_in as session_logged_in
+from .util import filepath_parent, invoke_http_async, validate_string
+from .util import parse_boolean, parse_colour, parse_float, parse_int, parse_tile_spec
+from .util import default_value, etag, unicode_to_utf8
+from .views_util import log_security_error
 
 
-# Requires "EnableSendfile On" in the Apache conf, but hasn't (yet) been seen
-# to deliver any performance improvement. Also the use of StringIO to create
-# a "file" is something of a hack. Cleaner would be Python 3's BytesIO.
+# Requires "EnableSendfile On" in the Apache conf,
+# but hasn't (yet) been seen to deliver any performance improvement.
 _USE_SENDFILE = False
 
 
@@ -185,7 +180,7 @@ def image():
             if recache is not None:
                 recache = parse_boolean(recache)
         except (ValueError, TypeError) as e:
-            raise httpexc.BadRequest(unicode(e))
+            raise httpexc.BadRequest(str(e))
 
         # Package and validate the parameters
         try:
@@ -205,7 +200,7 @@ def image():
                                      colorspace, strip, dpi, tile)
             image_engine.finalise_image_attrs(image_attrs)
         except ValueError as e:
-            raise httpexc.BadRequest(unicode(e))
+            raise httpexc.BadRequest(str(e))
 
         # Get/create the database ID (from cache, validating path on create)
         image_id = data_engine.get_or_create_image_id(
@@ -264,7 +259,7 @@ def image():
                     image_wrapper.attrs().format()
                 )
             except ValueError as e:
-                raise httpexc.BadRequest(unicode(e))  # As for the pre-check
+                raise httpexc.BadRequest(str(e))  # As for the pre-check
 
         # Success HTTP 200
         return make_image_response(image_wrapper, False, stats, attach, xref)
@@ -272,11 +267,11 @@ def image():
         # Pass through HTTP 4xx and 5xx
         raise
     except ServerTooBusyError:
-        logger.warn(u'503 Too busy for ' + request.url)
+        logger.warn('503 Too busy for ' + request.url)
         raise httpexc.ServiceUnavailable()
     except ImageError as e:
-        logger.warn(u'415 Invalid image file \'' + src + '\' : ' + unicode(e))
-        raise httpexc.UnsupportedMediaType(unicode(e))
+        logger.warn('415 Invalid image file \'' + src + '\' : ' + str(e))
+        raise httpexc.UnsupportedMediaType(str(e))
     except SecurityError as e:
         if app.config['DEBUG']:
             raise
@@ -287,13 +282,13 @@ def image():
         # won't but we should check whether the disk file now exists.
         if image_attrs.database_id() > 0 or path_exists(image_attrs.filename(), require_file=True):
             image_engine.reset_image(image_attrs)
-        logger.warn(u'404 Not found: ' + unicode(e))
-        raise httpexc.NotFound(unicode(e))
+        logger.warn('404 Not found: ' + str(e))
+        raise httpexc.NotFound(str(e))
     except Exception as e:
         if app.config['DEBUG']:
             raise
-        logger.error(u'500 Error for ' + request.url + '\n' + unicode(e))
-        raise httpexc.InternalServerError(unicode(e))
+        logger.error('500 Error for ' + request.url + '\n' + str(e))
+        raise httpexc.InternalServerError(str(e))
 
 
 # Raw image serving - return the original unaltered image
@@ -320,7 +315,7 @@ def original():
             image_attrs = ImageAttrs(src)
             image_attrs.validate()
         except ValueError as e:
-            raise httpexc.BadRequest(unicode(e))
+            raise httpexc.BadRequest(str(e))
 
         # Get/create the database ID (from cache, validating path on create)
         image_id = data_engine.get_or_create_image_id(
@@ -365,11 +360,11 @@ def original():
         # Pass through HTTP 4xx and 5xx
         raise
     except ServerTooBusyError:
-        logger.warn(u'503 Too busy for ' + request.url)
+        logger.warn('503 Too busy for ' + request.url)
         raise httpexc.ServiceUnavailable()
     except ImageError as e:
-        logger.warn(u'415 Invalid image file \'' + src + '\' : ' + unicode(e))
-        raise httpexc.UnsupportedMediaType(unicode(e))
+        logger.warn('415 Invalid image file \'' + src + '\' : ' + str(e))
+        raise httpexc.UnsupportedMediaType(str(e))
     except SecurityError as e:
         if app.config['DEBUG']:
             raise
@@ -380,13 +375,13 @@ def original():
         # won't but we should check whether the disk file now exists.
         if image_attrs.database_id() > 0 or path_exists(image_attrs.filename(), require_file=True):
             image_engine.reset_image(image_attrs)
-        logger.warn(u'404 Not found: ' + src)
+        logger.warn('404 Not found: ' + src)
         raise httpexc.NotFound(src)
     except Exception as e:
         if app.config['DEBUG']:
             raise
-        logger.error(u'500 Error for ' + request.url + '\n' + unicode(e))
-        raise httpexc.InternalServerError(unicode(e))
+        logger.error('500 Error for ' + request.url + '\n' + str(e))
+        raise httpexc.InternalServerError(str(e))
 
 
 def erez_params_compat(src):
@@ -441,7 +436,7 @@ def make_image_response(image_wrapper, is_original, stats=None, as_attachment=No
     # Create the HTTP response
     if _USE_SENDFILE:
         response = send_file(
-            StringIO.StringIO(image_wrapper.data()),
+            io.BytesIO(image_wrapper.data()),
             image_attrs.mime_type()
         )
     else:

@@ -38,7 +38,7 @@ from imageserver.portfolios import blueprint
 from imageserver.session_manager import get_session_user
 from imageserver.views_util import url_for_image_attrs
 
-from util import get_portfolio_image_attrs
+from .util import get_portfolio_image_attrs
 
 
 # Portfolios listing/home page

@@ -35,12 +35,13 @@
 # Usage: sudo -u qis python v2_upgrade.py
 #
 
-import ConfigParser
+import configparser
 import glob
 import os
 import signal
 import site
 import shutil
+import sys
 
 
 # Utility to allow no value for a config file option
@@ -62,7 +63,7 @@ def upgrade_cache_table():
         cache_engine._create_db_schema()
         log('Cache tracking database table upgraded OK')
     except Exception as e:
-        log('Warning: failed to upgrade cache database table: ' + unicode(e))
+        log('Warning: failed to upgrade cache database table: ' + str(e))
 
 
 def import_templates():
@@ -80,12 +81,12 @@ def import_templates():
         'TEMPLATES_BASE_DIR',
         os.path.join(app.config['INSTALL_DIR'], 'templates')
     )
-    cfg_files = glob.glob(unicode(os.path.join(template_dir_path, '*.cfg')))
+    cfg_files = glob.glob(os.path.join(template_dir_path, '*.cfg'))
     log('Starting image templates import')
 
     merge_def_settings = False
     if cfg_files:
-        merge_conf = raw_input(
+        merge_conf = input(
             '\nQIS v2 removes the system settings for default image format, '
             'quality, DPI, strip, colorspace, and expiry time. These values '
             'now need to be defined in your image templates instead. '
@@ -99,7 +100,7 @@ def import_templates():
         (template_name, _) = os.path.splitext(filepath_filename(cfg_file_path))
         try:
             # Read config file
-            cp = ConfigParser.RawConfigParser()
+            cp = configparser.RawConfigParser()
             cp.read(cfg_file_path)
 
             # Get image values and put them in an ImageAttrs object
@@ -156,7 +157,7 @@ def import_templates():
             }
             ia_dict = t_image_attrs.to_dict()
             template_dict.update(dict(
-                (k, {'value': v}) for k, v in ia_dict.iteritems()
+                (k, {'value': v}) for k, v in ia_dict.items()
                 if k not in ['filename', 'template']
             ))
             # Apply the obsolete default image settings to it
@@ -211,7 +212,7 @@ def import_templates():
 
     deleted = False
     if num_errors == 0 and os.path.exists(template_dir_path):
-        conf = raw_input('\nThe old template files are no longer required. ' +
+        conf = input('\nThe old template files are no longer required. ' +
                          'Do you want to remove them now? Y/N\n')
         if conf in ['y', 'Y']:
             log('Removing directory ' + template_dir_path)
@@ -220,7 +221,7 @@ def import_templates():
                 log('Old templates removed OK')
                 deleted = True
             except Exception as e:
-                log('Warning: failed to delete directory: ' + unicode(e))
+                log('Warning: failed to delete directory: ' + str(e))
 
     if num_files > 0 and not deleted:
         log('Info: Old template files remain in ' + template_dir_path)
@@ -266,39 +267,39 @@ def create_default_template():
 
 
 def log(astr):
-    print astr
+    print(astr)
 
 
 if __name__ == '__main__':
     try:
+        pver = sys.version_info
         # Pythonpath - escape sub-folder and add custom libs
         site.addsitedir('../..')
-        site.addsitedir('../../../lib/python2.6/site-packages')
-        site.addsitedir('../../../lib/python2.7/site-packages')
+        site.addsitedir('../../../lib/python%d.%d/site-packages' % (pver.major, pver.minor))
         # Get confirmation
-        print 'This utility will upgrade your QIS v1.x installation to v2.'
-        conf = raw_input('To proceed, type Y and press [Enter].\n')
+        print('This utility will upgrade your QIS v1.x installation to v2.')
+        conf = input('To proceed, type Y and press [Enter].\n')
         if conf not in ['y', 'Y']:
-            print 'Cancelled'
+            print('Cancelled')
             exit(1)
         # Go
         upgrade_cache_table()
         import_templates()
         create_default_template()
-        print 'Upgrade complete. Review the messages above for any errors, ' + \
-              'warnings, or manual changes required.'
+        print('Upgrade complete. Review the messages above for any errors, ' + \
+              'warnings, or manual changes required.')
         exit(0)
 
     except KeyboardInterrupt:
-        print '\nCancelled'
+        print('\nCancelled')
         exit(1)
     except Exception as e:
-        print 'Utility exited with error:\n' + unicode(e)
-        print 'Common issues:'
-        print 'Are you running as the qis user?'
-        print 'Do you need to set the QIS_SETTINGS environment variable?'
+        print('Utility exited with error:\n' + str(e))
+        print('Common issues:')
+        print('Are you running as the qis user?')
+        print('Do you need to set the QIS_SETTINGS environment variable?')
     finally:
         # Also stop any background processes we started
         signal.signal(signal.SIGTERM, lambda a, b: None)
         os.killpg(os.getpgid(0), signal.SIGTERM)
-        print ''
+        print('')

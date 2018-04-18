@@ -73,7 +73,7 @@ class StatsManager(object):
         Re-connects the connection to the server, if it is not connected
         and RECONNECT_WAIT_SECS seconds have passed since the last attempt.
         """
-        now_secs = long(time.time())
+        now_secs = int(time.time())
         if (now_secs - self._sock_last_connect >= RECONNECT_WAIT_SECS):
             self._sock_last_connect = now_secs
             try:
@@ -113,7 +113,7 @@ class StatsManager(object):
                     return False
 
             with self._sock_lock:
-                self._sock.send(json.dumps(data) + "\r\n")
+                self._sock.send(bytes(json.dumps(data) + "\r\n", "utf8"))
             return True
 
         except Exception as e:

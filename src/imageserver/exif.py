@@ -41,7 +41,7 @@
 
 import re
 
-from util import parse_float, parse_int, parse_long
+from .util import parse_float, parse_int, parse_long
 
 
 def _safe_string(seq):
@@ -51,7 +51,7 @@ def _safe_string(seq):
     """
     sstr = ''
     all_zero = True
-    is_string = (type(seq) != list)
+    is_string = not isinstance(seq, list)
     for c in seq:
         c = ord(c) if is_string else c
         if c != 0:
@@ -82,7 +82,7 @@ def _parse_user_comment(val):
     encoding_char_1 = val[0:1]
     val = val[8:]
     # Decode the rest
-    if (type(val) != list):
+    if not isinstance(val, list):
         # val was already a string
         return val
     else:
@@ -93,10 +93,10 @@ def _parse_user_comment(val):
             return _safe_string(val)
         elif encoding_char_1 == 'J':
             # JIS
-            return unicode(str(bytearray(val)), 'SJIS')
+            return str(bytearray(val), 'SJIS')
         else:
             # Unicode
-            return unicode(str(bytearray(val)))
+            return str(bytearray(val))
 
 
 def _ratio_to_float_string(rstr, places=1):
@@ -516,8 +516,8 @@ class Ratio:
     def reduce(self):
         div = self.gcd(self.num, self.den)
         if div > 1:
-            self.num = self.num / div
-            self.den = self.den / div
+            self.num = self.num // div
+            self.den = self.den // div
 
     def gcd(self, a, b):
         if b == 0:

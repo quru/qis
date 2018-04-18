@@ -45,8 +45,7 @@ import subprocess
 import tempfile
 import time
 import timeit
-
-import unittest2 as unittest
+import unittest
 
 import mock
 import flask
@@ -64,7 +63,7 @@ IMAGEMAGICK_PATHS = [
     ""                        # Default / first found in the PATH
 ]
 
-print "Importing imageserver libraries"
+print("Importing imageserver libraries")
 
 # Assign global managers, same as the main app uses
 from imageserver.flask_app import app as flask_app
@@ -338,7 +337,7 @@ def get_login_error(html):
 
 # Utility - returns a tuple of (width, height) of a PNG image
 def get_png_dimensions(png_data):
-    if png_data[1:6] != 'PNG\r\n':
+    if png_data[1:6] != b'PNG\r\n':
         raise ValueError('Provided data is not a PNG image')
     wbin = png_data[16:20]
     hbin = png_data[20:24]
@@ -391,7 +390,7 @@ class BaseTestCase(FlaskTestCase):
             'password': pwd
         })
         # 302 = success redirect, 200 = login page with error message
-        self.assertEqual(rv.status_code, 302, 'Login failed with response: ' + rv.data)
+        self.assertEqual(rv.status_code, 302, 'Login failed with response: ' + rv.data.decode('utf8'))
 
     # Utility - gets an API token
     def api_login(self, usr, pwd):
@@ -401,7 +400,7 @@ class BaseTestCase(FlaskTestCase):
         })
         # 200 = success, other = error
         self.assertEqual(rv.status_code, 200)
-        obj = json.loads(rv.data)
+        obj = json.loads(rv.data.decode('utf8'))
         return obj['data']['token']
 
     # Utility - perform a log out
@@ -415,7 +414,7 @@ class BaseTestCase(FlaskTestCase):
     # the filename with slashes converted to underscores.
     # Returns the app.post() return value.
     def file_upload(self, app, src_file_path, dest_folder, overwrite=1):
-        with open(src_file_path) as infile:
+        with open(src_file_path, 'rb') as infile:
             rv = app.post('/api/upload/', data={
                 'files': infile,
                 'path': dest_folder,
@@ -446,7 +445,7 @@ class BaseTestCase(FlaskTestCase):
         assert im_fn(magick_params), 'ImageMagick call failed'
         # Generate the same with the image server
         rv = self.app.get(img_url)
-        assert rv.status_code == 200, 'Failed to generate image: ' + rv.data
+        assert rv.status_code == 200, 'Failed to generate image: ' + rv.data.decode('utf8')
         self.assertImageMatch(rv.data, tempfile)
         if os.path.exists(tempfile):
             os.remove(tempfile)
@@ -643,7 +642,7 @@ class ImageServerBackgroundTaskTests(BaseTestCase):
             # Check page 27 dimensions in the database
             rv = self.app.get('/api/details/?src=' + burst_path + '/page-00027.png')
             assert rv.status_code == API_CODES.SUCCESS
-            obj = json.loads(rv.data)
+            obj = json.loads(rv.data.decode('utf8'))
             assert obj['data']['width'] == expect[0]
             assert obj['data']['height'] == expect[1]
         finally:
@@ -732,11 +731,11 @@ class ImageServerTestsFast(BaseTestCase):
         # Requesting large version of image should be denied
         rv = self.app.get('/image?src=test_images/cathedral.jpg&format=png&width=900')
         self.assertEqual(rv.status_code, 400)
-        self.assertIn('exceeds', rv.data)
+        self.assertIn('exceeds', rv.data.decode('utf8'))
         # height 680 --> width of 907 (so deny)
         rv = self.app.get('/image?src=test_images/cathedral.jpg&format=png&height=680')
         self.assertEqual(rv.status_code, 400)
-        self.assertIn('exceeds', rv.data)
+        self.assertIn('exceeds', rv.data.decode('utf8'))
         # rotated 90 deg, height 680 --> width 510 (allowed)
         rv = self.app.get('/image?src=test_images/cathedral.jpg&format=png&height=680&angle=90')
         self.assertEqual(rv.status_code, 200)
@@ -1333,10 +1332,10 @@ class ImageServerTestsFast(BaseTestCase):
     def test_unicode_404_src(self):
         rv = self.app.get('/image?src=swëdish/dørset.jpg')
         self.assertEqual(rv.status_code, 404)
-        self.assertIn('swëdish/dørset.jpg', rv.data)
+        self.assertIn('swëdish/dørset.jpg', rv.data.decode('utf8'))
         rv = self.app.get('/original?src=swëdish/dørset.jpg')
         self.assertEqual(rv.status_code, 404)
-        self.assertIn('swëdish/dørset.jpg', rv.data)
+        self.assertIn('swëdish/dørset.jpg', rv.data.decode('utf8'))
 
     # #2517 Test that a/b.jpg is /a/b.jpg is /a//b.jpg
     # #2517 Test that /a/b/c.jpg is /a//b/c.jpg is /a///b/c.jpg
@@ -1380,7 +1379,7 @@ class ImageServerTestsFast(BaseTestCase):
                     self.assertEqual(rv.status_code, 200)
                     rv = self.app.get('/api/v1/details/?src=' + image_src)
                     self.assertEqual(rv.status_code, 200)
-                    obj = json.loads(rv.data)
+                    obj = json.loads(rv.data.decode('utf8'))
                     image_ids.append(obj['data']['id'])
                 for folder_path in test_case['try_folders']:
                     db_folder = dm.get_folder(folder_path=folder_path)
@@ -1401,75 +1400,104 @@ class ImageServerTestsFast(BaseTestCase):
     def test_overflow_params(self):
         buf = 'a' * 1025
         rv = self.app.get('/image?src=' + buf)
-        assert rv.status_code == 400 and 'out of range' in rv.data
+        self.assertEqual(rv.status_code, 400)
+        self.assertIn('out of range', rv.data.decode('utf8'))
         rv = self.app.get('/original?src=' + buf)
-        assert rv.status_code == 400 and 'out of range' in rv.data
+        self.assertEqual(rv.status_code, 400)
+        self.assertIn('out of range', rv.data.decode('utf8'))
         rv = self.app.get('/image?src=test_images/test.jpg&overlay=' + buf)
-        assert rv.status_code == 400 and 'out of range' in rv.data
+        self.assertEqual(rv.status_code, 400)
+        self.assertIn('out of range', rv.data.decode('utf8'))
         buf = 'a' * 257
         rv = self.app.get('/image?src=test_images/test.jpg&format=' + buf)
-        assert rv.status_code == 400 and 'not a valid choice' in rv.data
+        self.assertEqual(rv.status_code, 400)
+        self.assertIn('not a valid choice', rv.data.decode('utf8'))
         rv = self.app.get('/image?src=test_images/test.jpg&tmp=' + buf)
-        assert rv.status_code == 400 and 'not a valid choice' in rv.data
+        self.assertEqual(rv.status_code, 400)
+        self.assertIn('not a valid choice', rv.data.decode('utf8'))
         rv = self.app.get('/image?src=test_images/test.jpg&angle=1&fill=' + buf)
-        assert rv.status_code == 400 and 'out of range' in rv.data
+        self.assertEqual(rv.status_code, 400)
+        self.assertIn('out of range', rv.data.decode('utf8'))
         rv = self.app.get('/image?src=test_images/test.jpg&icc=' + buf)
-        assert rv.status_code == 400 and 'not a valid choice' in rv.data
+        self.assertEqual(rv.status_code, 400)
+        self.assertIn('not a valid choice', rv.data.decode('utf8'))
         rv = self.app.get('/image?src=test_images/test.jpg&ovpos=' + buf)
-        assert rv.status_code == 400 and 'not a valid choice' in rv.data
+        self.assertEqual(rv.status_code, 400)
+        self.assertIn('not a valid choice', rv.data.decode('utf8'))
 
     # #1864 Test buffer overflow protection on unicode string params (thanks script kiddies)
     def test_unicode_overflow_params(self):
         buf = 'ø' * 1025
         rv = self.app.get('/image?src=' + buf)
-        assert rv.status_code == 400 and 'out of range' in rv.data
+        self.assertEqual(rv.status_code, 400)
+        self.assertIn('out of range', rv.data.decode('utf8'))
         rv = self.app.get('/original?src=' + buf)
-        assert rv.status_code == 400 and 'out of range' in rv.data
+        self.assertEqual(rv.status_code, 400)
+        self.assertIn('out of range', rv.data.decode('utf8'))
         rv = self.app.get('/image?src=test_images/test.jpg&overlay=' + buf)
-        assert rv.status_code == 400 and 'out of range' in rv.data
+        self.assertEqual(rv.status_code, 400)
+        self.assertIn('out of range', rv.data.decode('utf8'))
 
     # Test bad params
     def test_bad_params(self):
         rv = self.app.get('/image?src=test_images/test.jpg&width=99999')
-        assert rv.status_code == 400 and 'out of range' in rv.data
+        self.assertEqual(rv.status_code, 400)
+        self.assertIn('out of range', rv.data.decode('utf8'))
         rv = self.app.get('/image?src=test_images/test.jpg&height=-10')
-        assert rv.status_code == 400 and 'out of range' in rv.data
+        self.assertEqual(rv.status_code, 400)
+        self.assertIn('out of range', rv.data.decode('utf8'))
         rv = self.app.get('/image?src=test_images/test.jpg&top=1.1')
-        assert rv.status_code == 400 and 'out of range' in rv.data
+        self.assertEqual(rv.status_code, 400)
+        self.assertIn('out of range', rv.data.decode('utf8'))
         rv = self.app.get('/image?src=test_images/test.jpg&bottom=-0.5')
-        assert rv.status_code == 400 and 'out of range' in rv.data
+        self.assertEqual(rv.status_code, 400)
+        self.assertIn('out of range', rv.data.decode('utf8'))
         rv = self.app.get('/image?src=test_images/cathedral.jpg&format=eggs')
-        assert rv.status_code == 400 and 'not a valid choice' in rv.data
+        self.assertEqual(rv.status_code, 400)
+        self.assertIn('not a valid choice', rv.data.decode('utf8'))
         rv = self.app.get('/image?src=test_images/cathedral.jpg&width=500&height=500&fill=spam')
-        assert rv.status_code == 415 and 'unsupported fill colour' in rv.data
+        self.assertEqual(rv.status_code, 415)
+        self.assertIn('unsupported fill colour', rv.data.decode('utf8'))
         rv = self.app.get('/image?src=test_images/cathedral.jpg&tmp=eggs_and_spam')
-        assert rv.status_code == 400
+        self.assertEqual(rv.status_code, 400)
         rv = self.app.get('/image?src=test_images/cathedral.jpg&icc=eggs_and_spam')
-        assert rv.status_code == 400
+        self.assertEqual(rv.status_code, 400)
         rv = self.app.get('/image?src=test_images/cathedral.jpg&overlay=eggs_and_spam')
-        assert rv.status_code == 404 and 'not found' in rv.data
+        self.assertEqual(rv.status_code, 404)
+        self.assertIn('not found', rv.data.decode('utf8'))
         rv = self.app.get('/image?src=test_images/cathedral.jpg&ovopacity=1.1')
-        assert rv.status_code == 400 and 'out of range' in rv.data
+        self.assertEqual(rv.status_code, 400)
+        self.assertIn('out of range', rv.data.decode('utf8'))
         rv = self.app.get('/image?src=test_images/cathedral.jpg&ovsize=-0.5')
-        assert rv.status_code == 400 and 'out of range' in rv.data
+        self.assertEqual(rv.status_code, 400)
+        self.assertIn('out of range', rv.data.decode('utf8'))
         rv = self.app.get('/image?src=test_images/cathedral.jpg&icc=AdobeRGB1998&intent=perceptive')
-        assert rv.status_code == 400 and 'not a valid choice' in rv.data
+        self.assertEqual(rv.status_code, 400)
+        self.assertIn('not a valid choice', rv.data.decode('utf8'))
         rv = self.app.get('/image?src=test_images/cathedral.jpg&tile=5')
-        assert rv.status_code == 400 and 'invalid format' in rv.data
+        self.assertEqual(rv.status_code, 400)
+        self.assertIn('invalid format', rv.data.decode('utf8'))
         rv = self.app.get('/image?src=test_images/cathedral.jpg&tile=1:400')
-        assert rv.status_code == 400 and 'out of range' in rv.data
+        self.assertEqual(rv.status_code, 400)
+        self.assertIn('out of range', rv.data.decode('utf8'))
         rv = self.app.get('/image?src=test_images/cathedral.jpg&tile=1:12')
-        assert rv.status_code == 400 and 'not square' in rv.data
+        self.assertEqual(rv.status_code, 400)
+        self.assertIn('not square', rv.data.decode('utf8'))
         rv = self.app.get('/image?src=test_images/cathedral.jpg&tile=0:9')
-        assert rv.status_code == 400 and 'out of range' in rv.data
+        self.assertEqual(rv.status_code, 400)
+        self.assertIn('out of range', rv.data.decode('utf8'))
         rv = self.app.get('/image?src=test_images/cathedral.jpg&tile=10:9')
-        assert rv.status_code == 400 and 'out of range' in rv.data
+        self.assertEqual(rv.status_code, 400)
+        self.assertIn('out of range', rv.data.decode('utf8'))
         rv = self.app.get('/image?src=test_images/cathedral.jpg&page=-1')
-        assert rv.status_code == 400 and 'out of range' in rv.data
+        self.assertEqual(rv.status_code, 400)
+        self.assertIn('out of range', rv.data.decode('utf8'))
         rv = self.app.get('/image?src=test_images/cathedral.jpg&page=1024768')
-        assert rv.status_code == 400 and 'out of range' in rv.data
+        self.assertEqual(rv.status_code, 400)
+        self.assertIn('out of range', rv.data.decode('utf8'))
         rv = self.app.get('/image?src=test_images/cathedral.jpg&flip=x')
-        assert rv.status_code == 400 and 'not a valid choice' in rv.data
+        self.assertEqual(rv.status_code, 400)
+        self.assertIn('not a valid choice', rv.data.decode('utf8'))
 
     # #2590 Some clients request "x=1&amp;y=2" instead of "x=1&y=2"
     def test_bad_query_string(self):
@@ -2010,7 +2038,7 @@ class ImageServerTestsFast(BaseTestCase):
     def test_overlays_no_pdf(self):
         rv = self.app.get('/image?src=test_images/dorset.jpg&format=png&quality=75&overlay=test_images/pdftest.pdf')
         self.assertEqual(rv.status_code, 415)
-        self.assertIn('not supported', rv.data)
+        self.assertIn('not supported', rv.data.decode('utf8'))
 
     # Test watermarks, overlays - default overlay should be opaque, fit width, centered
     def test_overlays_default(self):
@@ -2218,7 +2246,7 @@ class ImageServerTestsFast(BaseTestCase):
             assert call_im_convert(magick_params), 'ImageMagick convert failed'
             # Generate the same with the image server
             rv = self.app.get(img_url)
-            assert rv.status_code == 200, 'Failed to generate ICC image: ' + rv.data
+            assert rv.status_code == 200, 'Failed to generate ICC image: ' + rv.data.decode('utf8')
             assert 'image/jpeg' in rv.headers['Content-Type']
             self.assertImageMatch(rv.data, tempfile, tolerance)
             try: os.remove(tempfile)
@@ -2295,11 +2323,11 @@ class ImageServerTestsFast(BaseTestCase):
         try:
             # Create a php.ini
             with open(tempfile, 'w') as tfile:
-                tfile.write('UNIT TEST! This is my php.ini file containing interesting info.')
+                tfile.write('QIS TEST. This is my php.ini file containing interesting info.')
             # Test we can't now serve that up
             rv = self.app.get('/original?src=php.ini')
             self.assertEqual(rv.status_code, 415)
-            self.assertIn('not a supported image', rv.data)
+            self.assertIn('not a supported image', rv.data.decode('utf8'))
         finally:
             os.remove(tempfile)
 
@@ -2436,7 +2464,7 @@ class ImageServerTestsFast(BaseTestCase):
             # Upload
             rv = self.file_upload(self.app, dst_file, 'test_images')
             self.assertEqual(rv.status_code, 200)
-            obj = json.loads(rv.data)['data']
+            obj = json.loads(rv.data.decode('utf8'))['data']
             self.assertEqual(len(obj), 1)
             self.assertIn('/tmp/qis_uploadfile.jpg', obj)
             imgdata = obj['/tmp/qis_uploadfile.jpg']
@@ -2465,15 +2493,15 @@ class ImageServerTestsFast(BaseTestCase):
         shutil.copy(src_file, dst_file2)
         try:
             # Test both files success
-            with open(dst_file1) as infile1:
-                with open(dst_file2) as infile2:
+            with open(dst_file1, 'rb') as infile1:
+                with open(dst_file2, 'rb') as infile2:
                     rv = self.app.post('/api/upload/', data={
                         'files': [infile1, infile2],
                         'path': 'test_images',
                         'overwrite': '1'
                     })
             self.assertEqual(rv.status_code, 200)
-            obj = json.loads(rv.data)['data']
+            obj = json.loads(rv.data.decode('utf8'))['data']
             self.assertEqual(len(obj), 2)
             imgdata = obj['/tmp/qis_uploadfile1.jpg']
             self.assertEqual(imgdata['src'], 'test_images/tmp_qis_uploadfile1.jpg')
@@ -2483,15 +2511,15 @@ class ImageServerTestsFast(BaseTestCase):
             self.assertGreater(imgdata['id'], 0)
             # Test 1 file success, 1 file failure
             delete_file('test_images/tmp_qis_uploadfile1.jpg')
-            with open(dst_file1) as infile1:
-                with open(dst_file2) as infile2:
+            with open(dst_file1, 'rb') as infile1:
+                with open(dst_file2, 'rb') as infile2:
                     rv = self.app.post('/api/upload/', data={
                         'files': [infile1, infile2],
                         'path': 'test_images',
                         'overwrite': '0'  # This will break now on dst_file2
                     })
             self.assertEqual(rv.status_code, API_CODES.ALREADY_EXISTS)
-            obj = json.loads(rv.data)
+            obj = json.loads(rv.data.decode('utf8'))
             self.assertEqual(obj['status'], API_CODES.ALREADY_EXISTS)
             obj = obj['data']
             self.assertEqual(len(obj), 2)
@@ -2522,27 +2550,27 @@ class ImageServerTestsFast(BaseTestCase):
         self.login('admin', 'admin')
         # Copy a test file to upload
         src_file = get_abs_path('test_images/cathedral.jpg')
-        dst_file = u'/tmp/qis uplo\xe4d f\xefle.jpg'
+        dst_file = '/tmp/qis uplo\xe4d f\xefle.jpg'
         shutil.copy(src_file, dst_file)
         try:
             # Upload
             rv = self.file_upload(self.app, dst_file, 'test_images')
             self.assertEqual(rv.status_code, 200)
-            obj = json.loads(rv.data)['data']
+            obj = json.loads(rv.data.decode('utf8'))['data']
             self.assertEqual(len(obj), 1)
-            self.assertIn(u'/tmp/qis uplo\xe4d f\xefle.jpg', obj)
-            imgdata = obj[u'/tmp/qis uplo\xe4d f\xefle.jpg']
-            self.assertEqual(imgdata['src'], u'test_images/tmp_qis uplo\xe4d f\xefle.jpg')
+            self.assertIn('/tmp/qis uplo\xe4d f\xefle.jpg', obj)
+            imgdata = obj['/tmp/qis uplo\xe4d f\xefle.jpg']
+            self.assertEqual(imgdata['src'], 'test_images/tmp_qis uplo\xe4d f\xefle.jpg')
             self.assertGreater(imgdata['id'], 0)
             # Make sure it works
-            rv = self.app.get(u'/image?src=test_images/tmp_qis uplo\xe4d f\xefle.jpg')
+            rv = self.app.get('/image?src=test_images/tmp_qis uplo\xe4d f\xefle.jpg')
             self.assertEqual(rv.status_code, 200)
         finally:
             # Remove the test files
             os.remove(dst_file)
-            delete_file(u'test_images/tmp_qis uplo\xe4d f\xefle.jpg')
+            delete_file('test_images/tmp_qis uplo\xe4d f\xefle.jpg')
         # Remove the data too
-        db_img = dm.get_image(src=u'test_images/tmp_qis uplo\xe4d f\xefle.jpg')
+        db_img = dm.get_image(src='test_images/tmp_qis uplo\xe4d f\xefle.jpg')
         assert db_img is not None, 'Upload did not create image data'
         dm.delete_image(db_img, True)
 
@@ -2585,7 +2613,7 @@ class ImageServerTestsFast(BaseTestCase):
 
     # Test unicode characters in filenames, especially dashes!
     def test_unicode_filenames(self):
-        temp_dir = u'\u00e2 te\u00dft \u2014 of \u00e7har\u0292'
+        temp_dir = '\u00e2 te\u00dft \u2014 of \u00e7har\u0292'
         temp_file = os.path.join(temp_dir, temp_dir + '.jpg')
         try:
             with flask_app.test_request_context():
@@ -2602,29 +2630,29 @@ class ImageServerTestsFast(BaseTestCase):
             copy_file('test_images/thames.jpg', temp_file)
             # Test plain image views
             rv = self.app.get(image_url)
-            assert rv.status_code == 200, rv.data
+            self.assertEqual(rv.status_code, 200)
             rv = self.app.get(original_url)
-            assert rv.status_code == 200, rv.data
+            self.assertEqual(rv.status_code, 200)
             # Test image with a unicode overlay name
             rv = self.app.get(overlayed_image_url)
-            assert rv.status_code == 200, rv.data
+            self.assertEqual(rv.status_code, 200)
             # Test directory listing
             self.login('admin', 'admin')
             rv = self.app.get(list_url)
-            assert rv.status_code == 200, rv.data
-            assert 'class="error' not in rv.data, rv.data
+            self.assertEqual(rv.status_code, 200)
+            self.assertNotIn('class="error', rv.data.decode('utf8'))
             # Test viewing details
             rv = self.app.get(details_url)
-            assert rv.status_code == 200, rv.data
-            assert 'class="error' not in rv.data, rv.data
+            self.assertEqual(rv.status_code, 200)
+            self.assertNotIn('class="error', rv.data.decode('utf8'))
             # Test folder permission admin
             rv = self.app.get(fp_admin_url)
-            assert rv.status_code == 200, rv.data
-            assert 'class="error' not in rv.data, rv.data
+            self.assertEqual(rv.status_code, 200)
+            self.assertNotIn('class="error', rv.data.decode('utf8'))
             # Test permissions tracing
             rv = self.app.get(fp_trace_url)
-            assert rv.status_code == 200, rv.data
-            assert 'class="error' not in rv.data, rv.data
+            self.assertEqual(rv.status_code, 200)
+            self.assertNotIn('class="error', rv.data.decode('utf8'))
         finally:
             delete_dir(temp_dir, recursive=True)
 
@@ -2741,17 +2769,17 @@ class ImageServerTestsFast(BaseTestCase):
             def test_pages(expect_pass):
                 rv = self.app.get('/list/') #1
                 assert rv.status_code == 200
-                assert ('test_images</a>' in rv.data) if expect_pass[0] else ('permission is required' in rv.data)
+                assert ('test_images</a>' in rv.data.decode('utf8')) if expect_pass[0] else ('permission is required' in rv.data.decode('utf8'))
                 rv = self.app.get('/details/?src=test_images/cathedral.jpg') #2
                 assert rv.status_code == 200
-                assert ('Image width' in rv.data) if expect_pass[1] else ('permission is required' in rv.data)
+                assert ('Image width' in rv.data.decode('utf8')) if expect_pass[1] else ('permission is required' in rv.data.decode('utf8'))
                 rv = self.app.get('/image?src=test_images/cathedral.jpg') #3
                 assert (rv.status_code == 200) if expect_pass[2] else (rv.status_code == 403)
                 rv = self.app.get('/original?src=test_images/cathedral.jpg') #4
                 assert (rv.status_code == 200) if expect_pass[3] else (rv.status_code == 403)
                 rv = self.app.get('/edit/?src=test_images/cathedral.jpg') #5
                 assert rv.status_code == 200
-                assert ('Title:' in rv.data) if expect_pass[4] else ('permission is required' in rv.data)
+                assert ('Title:' in rv.data.decode('utf8')) if expect_pass[4] else ('permission is required' in rv.data.decode('utf8'))
                 rv = self.file_upload(self.app, temp_file, 'test_images') #6
                 assert rv.status_code == 200 if expect_pass[5] else rv.status_code != 200
             # Create temp file for uploads
@@ -2868,7 +2896,7 @@ class ImageServerTestsFast(BaseTestCase):
                 set_default_expiry(-1)
                 img = self.app.get(img_url)
                 self.assertEqual(img.headers.get('Expires'), http_date(0))
-                self.assertEqual(img.headers.get('Cache-Control'), 'no-cache, public')
+                self.assertIn(img.headers.get('Cache-Control'), ['no-cache, public', 'public, no-cache'])
                 set_default_expiry(0)
                 img = self.app.get(img_url)
                 self.assertIsNone(img.headers.get('Expires'))
@@ -2876,7 +2904,7 @@ class ImageServerTestsFast(BaseTestCase):
                 set_default_expiry(60)
                 img = self.app.get(img_url)
                 self.assertEqual(img.headers.get('Expires'), http_date(int(time.time() + 60)))
-                self.assertEqual(img.headers.get('Cache-Control'), 'public, max-age=60')
+                self.assertIn(img.headers.get('Cache-Control'), ['public, max-age=60', 'max-age=60, public'])
         finally:
             reset_default_image_template()
 
@@ -2915,17 +2943,17 @@ class ImageServerTestsFast(BaseTestCase):
         self.login('kryten', 'kryten')  # Login to allow cache=0
         img_url = '/image?src=test_images/dorset.jpg&width=250&cache=0'
         rv = self.app.get(img_url)
-        assert rv.headers['X-From-Cache'] == 'False'
-        assert rv.headers.get('ETag') is not None
-        assert rv.headers.get('Expires') == http_date(int(time.time() + 604800))
-        assert rv.headers.get('Cache-Control') == 'public, max-age=604800'
+        self.assertEqual(rv.headers['X-From-Cache'], 'False')
+        self.assertIsNotNone(rv.headers.get('ETag'))
+        self.assertEqual(rv.headers.get('Expires'), http_date(int(time.time() + 604800)))
+        self.assertIn(rv.headers.get('Cache-Control'), ['public, max-age=604800', 'max-age=604800, public'])
         etag = rv.headers.get('ETag')
         # Etag should stay the same for the same re-generated image
         rv = self.app.get(img_url)
-        assert rv.headers['X-From-Cache'] == 'False'
-        assert rv.headers.get('Expires') == http_date(int(time.time() + 604800))
-        assert rv.headers.get('Cache-Control') == 'public, max-age=604800'
-        assert rv.headers.get('ETag') == etag
+        self.assertEqual(rv.headers['X-From-Cache'], 'False')
+        self.assertEqual(rv.headers.get('Expires'), http_date(int(time.time() + 604800)))
+        self.assertIn(rv.headers.get('Cache-Control'), ['public, max-age=604800', 'max-age=604800, public'])
+        self.assertEqual(rv.headers.get('ETag'), etag)
 
     # Test that etags are removed when client side caching is off
     def test_no_client_caching_etags(self):
@@ -2999,13 +3027,13 @@ class ImageServerTestsFast(BaseTestCase):
                     http_date(int(time.time() + 604800))       # Expected
                 ]
             )
-            self.assertEqual(rv.headers.get('Cache-Control'), 'public, max-age=604800')
+            self.assertIn(rv.headers.get('Cache-Control'), ['public, max-age=604800', 'max-age=604800, public'])
             # Flask bug? Content type gets here but is correctly absent outside of unit tests
             # self.assertIsNone(rv.headers.get('Content-Type'))
             self.assertIsNone(rv.headers.get('Content-Length'))
             self.assertIsNone(rv.headers.get('X-From-Cache'))
             self.assertIsNone(rv.headers.get('Content-Disposition'))
-            self.assertEqual(rv.data, '')
+            self.assertEqual(rv.data, b'')
             # Now reset the image
             if api == 'image':
                 im.reset_image(ImageAttrs('test_images/dorset.jpg'))
@@ -3030,7 +3058,7 @@ class ImageServerTestsFast(BaseTestCase):
         rv = self.app.get('/login/', headers={'X-Forwarded-Proto': 'https'})
         # Should be redirecting us to HTTPS
         self.assertEqual(rv.status_code, 302)
-        self.assertIn('https://', rv.data)
+        self.assertIn('https://', rv.data.decode('utf8'))
         # Should log localhost as the IP
         with mock.patch('imageserver.flask_app.logger.error') as mocklog:
             self.app.get(
@@ -3039,7 +3067,7 @@ class ImageServerTestsFast(BaseTestCase):
                 environ_base={'REMOTE_ADDR': '127.0.0.1'}
             )
             mocklog.assert_called_once_with(mock.ANY)
-            self.assertIn(u'IP 127.0.0.1', mocklog.call_args[0][0])
+            self.assertIn('IP 127.0.0.1', mocklog.call_args[0][0])
         # With proxy support enabled, expect the headers to be respected
         flask_app.config['PROXY_SERVERS'] = 1
         add_proxy_server_support(flask_app, flask_app.config['PROXY_SERVERS'])
@@ -3054,7 +3082,7 @@ class ImageServerTestsFast(BaseTestCase):
                 environ_base={'REMOTE_ADDR': '127.0.0.1'}
             )
             mocklog.assert_called_once_with(mock.ANY)
-            self.assertIn(u'IP 1.2.3.4', mocklog.call_args[0][0])
+            self.assertIn('IP 1.2.3.4', mocklog.call_args[0][0])
 
     # #2799 User names should be case insensitive
     def test_username_case(self):
@@ -3135,46 +3163,10 @@ class ImageServerCacheTests(BaseTestCase):
     def test_cache_slot_headers(self):
         from imageserver.cache_manager import SLOT_HEADER_SIZE
         from imageserver.cache_manager import MAX_OBJECT_SLOTS
-        header1 = cm._get_slot_header(1)
+        header1 = cm._get_slot_header(1, True)
         self.assertEqual(len(header1), SLOT_HEADER_SIZE)
-        header2 = cm._get_slot_header(MAX_OBJECT_SLOTS)
+        header2 = cm._get_slot_header(MAX_OBJECT_SLOTS, True)
         self.assertEqual(len(header2), SLOT_HEADER_SIZE)
-
-    # #1589 Test hash collision detection
-    def test_cache_integrity_checks(self):
-        # Check normal value set/get
-        ret = cm.raw_put('knight', ImageAttrs('round/table.jpg', 1001), integrity_check=True)
-        self.assertTrue(ret)
-        ret = cm.raw_get('knight', integrity_check=True)
-        self.assertIsNotNone(ret)
-        self.assertIsInstance(ret, ImageAttrs)
-        self.assertEqual(ret.filename(), 'round/table.jpg')
-        self.assertEqual(ret.database_id(), 1001)
-        ret = cm.raw_put('knight', 'ABC123', integrity_check=True)
-        self.assertTrue(ret)
-        ret = cm.raw_get('knight', integrity_check=True)
-        self.assertEqual(ret, 'ABC123')
-        # Check that value stored without an integrity check fails at raw_get()
-        _val = 'ABC123'
-        ret = cm.raw_put('knight', _val, integrity_check=False)
-        self.assertTrue(ret)
-        with mock.patch('imageserver.flask_app.logger.error') as mocklogger:
-            ret = cm.raw_get('knight', integrity_check=True)
-            self.assertIsNone(ret)
-            mocklogger.assert_called_once_with(mock.ANY)
-        # Check that value stored under a different key fails at raw_get()
-        _val = cm._get_integrity_header('thewrongkey') + 'ABC123'
-        ret = cm.raw_put('knight', _val, integrity_check=False)
-        self.assertTrue(ret)
-        with mock.patch('imageserver.flask_app.logger.error') as mocklogger:
-            ret = cm.raw_get('knight', integrity_check=True)
-            self.assertIsNone(ret)
-            mocklogger.assert_called_once_with(mock.ANY)
-        # Check delete
-        ret = cm.raw_delete('knight')
-        self.assertTrue(ret)
-        ret = cm.raw_get('knight')
-        self.assertIsNone(ret)
 
 
 class UtilityTests(unittest.TestCase):

@@ -19,6 +19,7 @@
 
 import os
 from base64 import b64encode, b64decode
+import sys
 
 from flask import abort, g, request, session
 from itsdangerous import (
@@ -27,6 +28,7 @@ from itsdangerous import (
 )
 from werkzeug.routing import NotFound
 
+PY2 = sys.version_info[0] == 2
 _exempt_views = []
 
 
@@ -66,8 +68,8 @@ def install_csrf(app, on_csrf=None):
             jsw = JSONWebSignatureSerializer(app.secret_key)
             tobj = jsw.loads(token)
 
-            nonce_int = bytes_to_int(b64decode(tobj["n"]))
-            key_int = bytes_to_int(b64decode(tobj["k"]))
+            nonce_int = bytes_to_int(b64decode(_str_to_bytes(tobj["n"])))
+            key_int = bytes_to_int(b64decode(_str_to_bytes(tobj["k"])))
 
             user_secret = int_to_bytes(nonce_int ^ key_int)
 
@@ -78,6 +80,16 @@ def install_csrf(app, on_csrf=None):
         except Exception:
             return True
 
+    def _bytes_to_str(b):
+        if PY2:
+            return b
+        return b.decode('ascii')
+
+    def _str_to_bytes(s):
+        if PY2:
+            return s
+        return bytes(s, 'ascii')
+
     def generate_csrf_token():
         nonce = os.urandom(16)
         secret = session.setdefault('_csrf_secret', os.urandom(16))
@@ -87,10 +99,9 @@ def install_csrf(app, on_csrf=None):
 
         jsw = JSONWebSignatureSerializer(app.secret_key)
         token = jsw.dumps({
-            "n": b64encode(nonce),
-            "k": b64encode(int_to_bytes(nonce_int ^ secret_int))
+            "n": _bytes_to_str(b64encode(nonce)),
+            "k": _bytes_to_str(b64encode(int_to_bytes(nonce_int ^ secret_int)))
         })
-
-        return token
+        return _bytes_to_str(token)
 
     app.jinja_env.globals['csrf_token'] = generate_csrf_token

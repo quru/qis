@@ -42,22 +42,22 @@ import os
 import threading
 import time
 
-import exif
+from . import exif
 
-from errors import DBDataError, DoesNotExistError, ImageError, ServerTooBusyError
-from filesystem_manager import get_upload_directory, path_exists
-from filesystem_manager import get_file_data, put_file_data
-from filesystem_manager import get_file_info
-from filesystem_sync import auto_sync_file, set_image_properties
-from image_attrs import ImageAttrs
-from image_wrapper import ImageWrapper
-from imagemagick import imagemagick_init
-from imagemagick import imagemagick_adjust_image, imagemagick_get_image_profile_data
-from imagemagick import imagemagick_get_image_dimensions, imagemagick_get_version_info
-from models import FolderPermission, Image, ImageHistory, Task
-from template_manager import ImageTemplateManager
-from util import default_value, get_file_extension
-from util import filepath_filename, validate_filename
+from .errors import DBDataError, DoesNotExistError, ImageError, ServerTooBusyError
+from .filesystem_manager import get_upload_directory, path_exists
+from .filesystem_manager import get_file_data, put_file_data
+from .filesystem_manager import get_file_info
+from .filesystem_sync import auto_sync_file, set_image_properties
+from .image_attrs import ImageAttrs
+from .image_wrapper import ImageWrapper
+from .imagemagick import imagemagick_init
+from .imagemagick import imagemagick_adjust_image, imagemagick_get_image_profile_data
+from .imagemagick import imagemagick_get_image_dimensions, imagemagick_get_version_info
+from .models import FolderPermission, Image, ImageHistory, Task
+from .template_manager import ImageTemplateManager
+from .util import default_value, get_file_extension
+from .util import filepath_filename, validate_filename
 
 
 class ImageManager(object):
@@ -164,24 +164,24 @@ class ImageManager(object):
         """
         if colorspace is not None:
             return [
-                k for k, v in self._icc_profiles.iteritems() if v[0] == colorspace
+                k for k, v in self._icc_profiles.items() if v[0] == colorspace
             ]
         else:
-            return self._icc_profiles.keys()
+            return list(self._icc_profiles.keys())
 
     def get_icc_profile_colorspaces(self):
         """
         Returns a list of the unique colorspace types of the available ICC
         profiles, e.g. ["RGB", "CMYK", "GRAY"]
         """
-        return list(set(v[0] for v in self._icc_profiles.itervalues()))
+        return list(set(v[0] for v in self._icc_profiles.values()))
 
     def get_image_formats(self):
         """
         Returns a lower case list of supported image formats
         (as file extensions) e.g. ['jpg','png']
         """
-        return self._settings['IMAGE_FORMATS'].keys()
+        return list(self._settings['IMAGE_FORMATS'].keys())
 
     def put_image(self, current_user, file_wrapper, file_name,
                   upload_path_idx=-1, upload_path=None, overwrite=False):
@@ -385,7 +385,7 @@ class ImageManager(object):
                 self._logger.debug('Waiting while another client generates ' + str(image_attrs))
             wait_until = time.time() + wait_timeout
             while self._is_image_lock(cache_key) and time.time() < wait_until:
-                time.sleep(1)
+                time.sleep(0.1)
             # Try again
             ret_image_data = self._cache.get(cache_key)
             if ret_image_data is None:
@@ -456,7 +456,7 @@ class ImageManager(object):
                 except ImageError as e:
                     # Image generation failed. Carry on and cache the fact that it's
                     # broken so that other clients don't repeatedly try to re-generate.
-                    ret_image_data = ImageManager.IMAGE_ERROR_HEADER + unicode(e)
+                    ret_image_data = ImageManager.IMAGE_ERROR_HEADER + str(e)
 
                 # Add it to cache for next time
                 if cache_result:
@@ -477,7 +477,9 @@ class ImageManager(object):
 
         # If there was an imaging error (just now or previously cached),
         # raise the exception now
-        if ret_image_data.startswith(ImageManager.IMAGE_ERROR_HEADER):
+        if (isinstance(ret_image_data, str) and
+            ret_image_data.startswith(ImageManager.IMAGE_ERROR_HEADER)
+        ):
             msg = ret_image_data[len(ImageManager.IMAGE_ERROR_HEADER):]
             raise ImageError(msg)
 
@@ -525,10 +527,7 @@ class ImageManager(object):
         Note that even if the last modification time is known, the associated
         image itself may not still be in cache (or may never have been cached).
         """
-        image_metadata = self._cache.raw_get(
-            image_attrs.get_metadata_cache_key(),
-            integrity_check=True
-        )
+        image_metadata = self._cache.raw_get(image_attrs.get_metadata_cache_key())
         return image_metadata['modified'] if image_metadata else 0
 
     def get_image_original_modified_time(self, image_attrs):
@@ -776,8 +775,7 @@ class ImageManager(object):
         ok = self._cache.raw_put(
             image_attrs.get_metadata_cache_key(), {
                 'modified': modified_time
-            },
-            integrity_check=True
+            }
         )
         if not ok:
             self._logger.warn(
@@ -1137,7 +1135,7 @@ class ImageManager(object):
         if icc_data is not None and len(icc_data) > 128:
             # The colorspace flag is 4 bytes from position 16 in the 128 byte header
             # See http://www.color.org/specification/ICC1v43_2010-12.pdf
-            return icc_data[16:20].strip()
+            return icc_data[16:20].strip().decode('ascii')
         return None
 
     @property
@@ -1164,12 +1162,12 @@ class ImageManager(object):
         Finds and returns the configured ICC profiles by searching for files
         in the ICC profiles directory. Returns a dictionary with keys of
         filename (lower case, without file extension) mapped to a tuple of
-        (icc_colorspace, icc_data).
+        (icc_colorspace<string>, icc_data<bytes>).
         """
         profiles = {}
 
         # Find *.icc and *.icm
-        icc_files = glob.glob(unicode(os.path.join(self._settings['ICC_BASE_DIR'], '*.ic*')))
+        icc_files = glob.glob(os.path.join(self._settings['ICC_BASE_DIR'], '*.ic*'))
         for icc_file_path in icc_files:
             (icc_name, _) = os.path.splitext(filepath_filename(icc_file_path))
             icc_name = icc_name.lower()

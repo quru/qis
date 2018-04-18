@@ -32,6 +32,7 @@
 #
 
 from calendar import timegm
+from collections import OrderedDict
 from datetime import datetime
 import markdown
 import time
@@ -39,12 +40,12 @@ import time
 from jinja2 import Markup
 from werkzeug.urls import url_quote_plus
 
-from errors import SecurityError
-from flask_app import app, logger, permissions_engine
-from flask_util import internal_url_for, external_url_for
-from models import FolderPermission, SystemPermissions
-from session_manager import get_session_user, logged_in
-from util import get_file_extension, filepath_filename, SimpleODict
+from .errors import SecurityError
+from .flask_app import app, logger, permissions_engine
+from .flask_util import internal_url_for, external_url_for
+from .models import FolderPermission, SystemPermissions
+from .session_manager import get_session_user, logged_in
+from .util import get_file_extension, filepath_filename
 
 
 @app.template_filter('datetimeformat')
@@ -192,18 +193,19 @@ def wrap_is_folder_permitted(folder, folder_access):
 
 def url_for_thumbnail(src, external=False, stats=True):
     """
-    Returns the URL for a thumbnail image of an image src.
-    Use this function to generate standard-sized and standard-formatted
-    thumbnail images in the UI so that they are cached correctly.
+    Returns the URL for a thumbnail image of an image src. Use this function to
+    generate standard-sized and standard-formatted thumbnail images in the UI
+    so that they are re-used from cache when possible.
+    Note that the order of the parameters in the returned URL cannot be relied
+    upon in Python versions below 3.6.
     """
-    url_args = SimpleODict(
-        src=src,
-        width='200',             # Also update the getPreviewImageURL()
-        height='200',            # function in preview_popup.js
-        format='jpg',            # if you change any if these...
-        colorspace='srgb',
-        strip='1'
-    )
+    url_args = OrderedDict()  # Order of **url_args is only preserved in Python 3.6+
+    url_args['src'] = src
+    url_args['width'] = '200'             # Also update the getPreviewImageURL()
+    url_args['height'] = '200'            # function in preview_popup.js
+    url_args['format'] = 'jpg'            # if you change any if these...
+    url_args['colorspace'] = 'srgb'
+    url_args['strip'] = '1'
     if not stats:
         url_args['stats'] = '0'  # stats does not affect caching
 
@@ -238,7 +240,7 @@ def log_security_error(error, request):
                 request.url,
                 user.username if user else '<anonymous>',
                 ip,
-                unicode(error)
+                str(error)
             )
         )
         return True

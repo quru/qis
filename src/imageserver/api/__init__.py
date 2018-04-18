@@ -40,16 +40,16 @@ url_version_prefix = '/v1'
 
 # Support definition of multiple URL rules per view (for API versioning)
 def api_add_url_rules(rules, endpoint=None, view_func=None, **options):
-    if isinstance(rules, basestring):
+    if isinstance(rules, str):
         rules = [rules]
     for rule in rules:
         blueprint.add_url_rule(rule, endpoint, view_func, **options)
 
 
 # Import API views
-import views_data_api
-import views_files_api
-import views_tasks_api
-import views_portfolios_api
-import views_api
-import views_pages
+from . import views_data_api
+from . import views_files_api
+from . import views_tasks_api
+from . import views_portfolios_api
+from . import views_api
+from . import views_pages

@@ -175,36 +175,36 @@ def log(astr):
     Outputs an informational message if silent mode is disabled.
     """
     if not silent:
-        print astr
+        print(astr)
 
 
 def error(astr):
     """
     Outputs an error message.
     """
-    print 'ERROR: ' + astr
+    print('ERROR: ' + astr)
 
 
 def show_usage():
     """
     Outputs usage information.
     """
-    print '\nAdministration utility for managing local image server user accounts.'
-    print '\nUsage: su <qis user>'
-    print '       python user_edit.py [-a] [-d] -u <username> -p <password> '
-    print '                           -e <email> -fn <firstname> -ln <lastname>'
-    print '\nWhere:'
-    print '         -a specifies user details to add (provide all details)'
-    print '         -d specifies a user to delete (only username required)'
-    print '         If neither -a or -d is specified, user details are updated'
+    print('\nAdministration utility for managing local image server user accounts.')
+    print('\nUsage: su <qis user>')
+    print('       python user_edit.py [-a] [-d] -u <username> -p <password> ')
+    print('                           -e <email> -fn <firstname> -ln <lastname>')
+    print('\nWhere:')
+    print('         -a specifies user details to add (provide all details)')
+    print('         -d specifies a user to delete (only username required)')
+    print('         If neither -a or -d is specified, user details are updated')
 
 
 if __name__ == '__main__':
     try:
+        pver = sys.version_info
         # Pythonpath - escape sub-folder and add custom libs
         site.addsitedir('../..')
-        site.addsitedir('../../../lib/python2.6/site-packages')
-        site.addsitedir('../../../lib/python2.7/site-packages')
+        site.addsitedir('../../../lib/python%d.%d/site-packages' % (pver.major, pver.minor))
         # Get params
         if len(sys.argv) > 2:
             params = Parameters()
@@ -213,12 +213,12 @@ if __name__ == '__main__':
                 rc = apply_user(params)
                 exit(rc)
             else:
-                print params.err_msg
+                print(params.err_msg)
                 exit(RETURN_BAD_PARAMS)
         show_usage()
         exit(RETURN_BAD_PARAMS)
 
     except Exception as e:
-        print 'Utility exited with error:\n' + str(e)
-        print 'Ensure you are using the correct user account, ' \
-              'and (optionally) set the QIS_SETTINGS environment variable.'
+        print('Utility exited with error:\n' + str(e))
+        print('Ensure you are using the correct user account, ' \
+              'and (optionally) set the QIS_SETTINGS environment variable.')

@@ -29,7 +29,7 @@
 # =========  ====  ============================================================
 #
 
-import cPickle
+import pickle
 
 from flask import request
 from flask.views import MethodView
@@ -99,7 +99,7 @@ class TaskAPI(MethodView):
         if db_task is None:
             raise AlreadyExistsError('Task is already running')
         # Decode the params before returning
-        db_task.params = cPickle.loads(db_task.params)
+        db_task.params = pickle.loads(db_task.params)
         return make_api_success_response(object_to_dict(db_task))
 
     @add_parameter_error_handler

@@ -45,4 +45,4 @@ def admin_login_required():
     return _check_internal_request(request, session, True, True, 'admin_any')
 
 # Import admin views
-import views_pages
+from . import views_pages

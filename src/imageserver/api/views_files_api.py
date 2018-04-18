@@ -29,7 +29,7 @@
 # =========  ====  ============================================================
 #
 
-import cPickle
+import pickle
 
 from flask import request
 from flask.views import MethodView
@@ -233,7 +233,7 @@ class FolderAPI(MethodView):
             task_dict = object_to_dict(task) if task is not None else None
             # Decode the params before returning
             if task_dict and task_dict.get('params'):
-                task_dict['params'] = cPickle.loads(task_dict['params'])
+                task_dict['params'] = pickle.loads(task_dict['params'])
             return make_api_success_response(task_dict, task_accepted=True)
         finally:
             if task and task_completed:
@@ -243,8 +243,9 @@ class FolderAPI(MethodView):
                 except:
                     pass
 
+
 # Add URL routing and minimum required permissions
-#          (classes functions will add further permission checking)
+# (class functions will add further permission checking)
 
 _fapi_file_views = api_permission_required(ImageFileAPI.as_view('admin.file.image'))
 api_add_url_rules(

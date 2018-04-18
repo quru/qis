@@ -44,6 +44,7 @@
 #                  (requires python-memcached v1.51)
 # 11May2015  Matt  Changed to use the pylibmc client, hopefully fixes very occasional
 #                  corruption seen with python-memcached, and is about 30% faster
+# 13Dec2017  Matt  Python 3, remove unicode handling
 #
 
 # Old Membase notes:
@@ -67,7 +68,7 @@
 #   At runtime only require libmemcached and the lib folder
 #
 
-import cPickle
+import pickle
 import random
 import time
 import threading
@@ -78,14 +79,12 @@ from sqlalchemy import desc, text
 from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import sessionmaker
 
-import errors
-from models import CacheBase, CacheEntry
-from util import unicode_to_ascii
+from . import errors
+from .models import CacheBase, CacheEntry
 
 
 MAX_OBJECT_SLOTS = 32
 SLOT_HEADER_SIZE = 4
-INTEGRITY_HEADER = '$IC'
 
 SERVER_MAX_KEY_LENGTH = 250
 SERVER_MAX_VALUE_LENGTH = 1024*1024
@@ -116,7 +115,7 @@ class CacheManager(object):
             self._server_list = server_list
             self._db_uri = db_uri
             self._db_pool_size = db_pool_size
-            self._capacity = 0L
+            self._capacity = 0
             self._db = None
             self._logger = logger
             self._locals = threading.local()
@@ -126,11 +125,11 @@ class CacheManager(object):
             self._init_db()
         except OperationalError as e:
             raise errors.StartupError(
-                'Cannot start cache manager. Database connection error: ' + unicode(e)
+                'Cannot start cache manager. Database connection error: ' + str(e)
             )
         except BaseException as e:
             raise errors.StartupError(
-                'Cannot start cache manager: ' + type(e).__name__ + ' ' + unicode(e)
+                'Cannot start cache manager: ' + type(e).__name__ + ' ' + str(e)
             )
 
     def client(self):
@@ -156,7 +155,7 @@ class CacheManager(object):
         """
         Closes connections and releases resources held by this object.
         """
-        self._capacity = 0L
+        self._capacity = 0
         self.client().disconnect_all()
         self._db.dispose()
 
@@ -172,7 +171,7 @@ class CacheManager(object):
         except pylibmc.Error:
             connected = False
         if not connected:
-            self._capacity = 0L
+            self._capacity = 0
         return connected
 
     def search(self, order=None, max_rows=1000, **searchfields):
@@ -214,8 +213,7 @@ class CacheManager(object):
         get() to try and load the object.
         """
         sql_operators = {'eq': '=', 'lt': '<', 'gt': '>', 'lte': '<=', 'gte': '>='}
-        sql_field_ops = searchfields.keys()
-        sql_field_ops.sort()
+        sql_field_ops = sorted(list(searchfields.keys()))
         # Create a blank query to build upon
         db_session = self._db.Session()
         try:
@@ -229,7 +227,7 @@ class CacheManager(object):
                 if sql_value is None:
                     # Add x IS NULL
                     db_query = db_query.filter(text(sql_field + ' is null'))
-                elif type(sql_value) == list:
+                elif isinstance(sql_value, list):
                     # OR the list values
                     sql_operator = sql_operators[sql_opcode]
                     or_query = '('
@@ -266,7 +264,7 @@ class CacheManager(object):
                     'searchfield3': entry.searchfield3,
                     'searchfield4': entry.searchfield4,
                     'searchfield5': entry.searchfield5,
-                    'metadata': None if entry.extradata is None else cPickle.loads(entry.extradata)
+                    'metadata': None if entry.extradata is None else pickle.loads(entry.extradata)
                 })
         finally:
             db_session.close()
@@ -283,6 +281,8 @@ class CacheManager(object):
         # avoids the need for any database lookups.
         chunk = self.raw_get(key+'_1')
         if chunk is not None:
+            is_bytes = isinstance(chunk, bytes)
+            blank = b'' if is_bytes else ''
             num_slots = self._get_slot_header_value(chunk[0:SLOT_HEADER_SIZE])
             if num_slots <= 0:
                 # Looks like an unmanaged object (no header).
@@ -294,12 +294,11 @@ class CacheManager(object):
                 # Read the other chunks. Some or all may have been expired/purged.
                 chunk_keys = [key+'_'+str(num) for num in range(2, num_slots + 1)]
                 # Pre-process chunk_keys here so that the returned dictionary keys will match up
-                chunk_keys = self._prepare_cache_keys(chunk_keys)
                 chunks = self.raw_getn(chunk_keys)
                 if len(chunks) == len(chunk_keys):
                     # Return correctly ordered, re-constituted object
                     chunk1 = chunk[SLOT_HEADER_SIZE:]
-                    return chunk1 + ''.join(chunks[k] for k in chunk_keys)
+                    return chunk1 + blank.join(chunks[k] for k in chunk_keys)
         # If we get here it's a plain cache miss or one or more chunks are missing.
         # For the former, just ensure the control record (if any) is deleted too.
         # For the latter, also delete any orphaned chunks that may still exist.
@@ -326,10 +325,12 @@ class CacheManager(object):
         num_slots = self._slots_for_size(len(obj))
         if num_slots > MAX_OBJECT_SLOTS:
             return False
+        is_bytes = isinstance(obj, bytes)
+        blank = b'' if is_bytes else ''
         for slot in range(1, num_slots + 1):
             from_offset = (slot - 1) * MAX_SLOT_SIZE
             to_offset = len(obj) if slot == num_slots else (slot * MAX_SLOT_SIZE)
-            slot_header = self._get_slot_header(num_slots) if slot == 1 else ''
+            slot_header = self._get_slot_header(num_slots, is_bytes) if slot == 1 else blank
             chunks[key+'_'+str(slot)] = slot_header + obj[from_offset:to_offset]
         # Add chunks to cache
         if self.raw_putn(chunks, expiry_secs):
@@ -342,9 +343,9 @@ class CacheManager(object):
                 entry.searchfield4 = search_info['searchfield4']
                 entry.searchfield5 = search_info['searchfield5']
                 if search_info['metadata'] is not None:
-                    entry.extradata = cPickle.dumps(
+                    entry.extradata = pickle.dumps(
                         search_info['metadata'],
-                        protocol=cPickle.HIGHEST_PROTOCOL
+                        protocol=pickle.HIGHEST_PROTOCOL
                     )
             # Add/update entry in the control db
             db_session = self._db.Session()
@@ -412,9 +413,9 @@ class CacheManager(object):
         some objects have been stored in chunks due to their size.
         """
         try:
-            cache_items = 0L
+            cache_items = 0
             for (_, stats_dict) in self.client().get_stats():
-                cache_items += long(stats_dict['curr_items'])
+                cache_items += int(stats_dict['curr_items'])
             return cache_items
         except pylibmc.Error:
             return -1
@@ -425,12 +426,12 @@ class CacheManager(object):
         or -1 if the cache is unavailable.
         """
         try:
-            cache_size = 0L
+            cache_size = 0
             for (_, stats_dict) in self.client().get_stats():
                 if 'mem_used' in stats_dict:
-                    cache_size += long(stats_dict['mem_used'])  # Membase
+                    cache_size += int(stats_dict['mem_used'])  # Membase
                 else:
-                    cache_size += long(stats_dict['bytes'])     # Memcached
+                    cache_size += int(stats_dict['bytes'])     # Memcached
             return cache_size
         except pylibmc.Error:
             return -1
@@ -456,19 +457,19 @@ class CacheManager(object):
         internally so that repeated calls incur little cost.
         """
         try:
-            if self._capacity > 0L:
+            if self._capacity > 0:
                 return self._capacity
 
-            self._capacity = 0L
+            self._capacity = 0
             for (_, stats_dict) in self.client().get_stats():
                 if 'ep_max_data_size' in stats_dict:
-                    self._capacity += long(stats_dict['ep_max_data_size'])  # Membase
+                    self._capacity += int(stats_dict['ep_max_data_size'])  # Membase
                 else:
-                    self._capacity += long(stats_dict['limit_maxbytes'])    # Memcached
+                    self._capacity += int(stats_dict['limit_maxbytes'])    # Memcached
             return self._capacity
 
         except pylibmc.Error:
-            self._capacity = 0L
+            self._capacity = 0
             return -1
 
     def clear(self):
@@ -484,45 +485,16 @@ class CacheManager(object):
         self.client().flush_all()
         return True
 
-    def raw_get(self, key, integrity_check=False):
+    def raw_get(self, key):
         """
         Returns the binary object with the given key from cache,
         or None if the key does not exist in the cache.
-        The integrity_check flag must match that given at raw_put().
         This method bypasses the cache control database.
         """
         try:
-            prepared_key = self._prepare_cache_key(key)
-            obj = self.client().get(prepared_key)
+            obj = self.client().get(self._prepare_cache_key(key))
         except pylibmc.Error:
             obj = None
-
-        if integrity_check and obj is not None:
-            expect_header = self._get_integrity_header(prepared_key)
-            try:
-                if not obj.startswith(expect_header):
-                    if not obj.startswith(INTEGRITY_HEADER):
-                        self._logger.error(
-                            'Cache value integrity: No value header for key: ' + key
-                        )
-                    else:
-                        header_end = max(min(obj.find('$', len(INTEGRITY_HEADER) + 1), 255), 5)
-                        self._logger.error(
-                            'Cache value integrity: Incorrect value header: ' +
-                            obj[:header_end + 1] + ' for key: ' + key
-                        )
-                    self.raw_delete(key)  # Wipe the value, caller can reset it
-                    return None
-            except:
-                self._logger.error(
-                    'Cache value integrity: Expected a string value for key: ' + key
-                )
-                self.raw_delete(key)  # Wipe the value, caller can reset it
-                return None
-
-            # Header matches, now unpickle the value
-            obj = cPickle.loads(obj[len(expect_header):])
-
         return obj
 
     def raw_getn(self, keys):
@@ -555,26 +527,15 @@ class CacheManager(object):
         except pylibmc.Error:
             return False
 
-    def raw_put(self, key, obj, expiry_secs=0, integrity_check=False):
+    def raw_put(self, key, obj, expiry_secs=0):
         """
-        Adds or replaces an object in cache, with an optional expiry time in
-        seconds, and an optional self-integrity check that stores the key
-        alongside the value, requiring the same flag at raw_get().
-        The pickled object size cannot be greater than MAX_SLOT_SIZE,
-        or (MAX_SLOT_SIZE - len(key) - 5) if the integrity check is enabled.
+        Adds or replaces an object in cache, with an optional expiry time in seconds.
+        The pickled object size cannot be greater than MAX_SLOT_SIZE.
         Returns a boolean indicating success.
         This method bypasses the cache control database.
         """
-        prepared_key = self._prepare_cache_key(key)
-        prepared_obj = obj
-        if integrity_check:
-            # We have to get obj as a string to prepend the integrity header
-            prepared_obj = (
-                self._get_integrity_header(prepared_key) +
-                cPickle.dumps(obj, protocol=cPickle.HIGHEST_PROTOCOL)
-            )
         try:
-            return self.client().set(prepared_key, prepared_obj, expiry_secs)
+            return self.client().set(self._prepare_cache_key(key), obj, expiry_secs)
         except pylibmc.Error:
             return False
 
@@ -584,7 +545,7 @@ class CacheManager(object):
         { 'key1':'value1', 'key2':'value2' }
         This method bypasses the cache control database.
         """
-        mapping = dict((self._prepare_cache_key(k), v) for (k, v) in mapping.items())
+        mapping = dict((self._prepare_cache_key(k), v) for (k, v) in list(mapping.items()))
         try:
             failed_keys = self.client().set_multi(mapping, expiry_secs)
             return (len(failed_keys) == 0)
@@ -651,20 +612,16 @@ class CacheManager(object):
 
     def _prepare_cache_key(self, key):
         """
-        Ensures a key is valid for memcached by converting to ascii if
-        necessary and replacing spaces. Returns the modified key,
-        or raises a ValueError if the key is empty or too long.
+        Ensures a key is valid for memcached by checking the value and replacing
+        spaces. Returns the modified key, or raises a ValueError if the key is
+        empty or too long.
         """
-        try:
-            ascii_key = key if isinstance(key, str) else key.encode('ascii')
-        except UnicodeEncodeError:
-            ascii_key = unicode_to_ascii(key)
-        ascii_key = ascii_key.replace(' ', '_')
-        if not ascii_key:
+        key = key.replace(' ', '_')
+        if not key:
             raise ValueError('Cache key is empty')
-        if not ascii_key or len(ascii_key) > SERVER_MAX_KEY_LENGTH:
-            raise ValueError('Cache key is too long: ' + ascii_key)
-        return ascii_key
+        if len(key) > SERVER_MAX_KEY_LENGTH:
+            raise ValueError('Cache key is too long: ' + key)
+        return key
 
     def _prepare_cache_keys(self, keys):
         """
@@ -678,33 +635,30 @@ class CacheManager(object):
         Returns the number of slots specified by a string slot header, or 0 if
         the supplied string is not a valid slot header.
         """
-        if len(header) == SLOT_HEADER_SIZE and header[0] == '$' and header[-1] == '$':
+        as_bytes = isinstance(header, bytes)
+        marker = b'$' if as_bytes else '$'
+        if len(header) == SLOT_HEADER_SIZE and header[:1] == marker and header[-1:] == marker:
             return int(header[1:-1])
         else:
             return 0
 
-    def _get_slot_header(self, num_slots):
+    def _get_slot_header(self, num_slots, as_bytes):
         """
-        Returns the string slot header for a given number of slots.
+        Returns the slot header for a given number of slots as a string or as bytes.
         """
-        return "$%02d$" % num_slots
+        if as_bytes:
+            return b"$" + ("%02d" % num_slots).encode('ascii') + b"$"
+        else:
+            return "$%02d$" % num_slots
 
     def _slots_for_size(self, num_bytes):
         """
         Returns the number of cache slots required to store the given number of bytes.
         """
-        slots = (num_bytes / MAX_SLOT_SIZE)
+        slots = (num_bytes // MAX_SLOT_SIZE)
         if num_bytes % MAX_SLOT_SIZE > 0:
             slots += 1
         return max(1, slots)
-
-    def _get_integrity_header(self, prepared_key):
-        """
-        Returns a string header for prepending to a string cache value.
-        The header incorporates the cache key, so that the value can be verified
-        against the same key upon retrieval.
-        """
-        return INTEGRITY_HEADER + '$' + prepared_key + '$'
 
     def _open_cache(self):
         """

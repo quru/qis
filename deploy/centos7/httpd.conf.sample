@@ -29,7 +29,7 @@
     # Set the number of processes and threads as per the scalability required
     WSGIApplicationGroup qis
     WSGIProcessGroup qis
-    WSGIDaemonProcess qis user=qis group=apache processes=2 threads=15 python-path=/opt/qis/src:/opt/qis/lib/python2.7/site-packages:/opt/qis/lib64/python2.7/site-packages
+    WSGIDaemonProcess qis user=qis group=apache processes=2 threads=15 python-path=/opt/qis/src:/opt/qis/lib/python3.5/site-packages:/opt/qis/lib64/python3.5/site-packages
 
     # Preload the code to reduce the delay at startup
     WSGIImportScript /opt/qis/src/wsgi/runserver.wsgi process-group=qis application-group=qis
