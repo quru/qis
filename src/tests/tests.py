@@ -297,6 +297,7 @@ def compare_images(img_path1, img_path2):
     )
     output = p.communicate()
     errmsg = (output[1] or output[0])
+    errmsg = errmsg.decode('utf8')
     if errmsg:
         raise ValueError('Compare generation error: ' + errmsg)
 
@@ -314,7 +315,7 @@ def compare_images(img_path1, img_path2):
         stderr=subprocess.PIPE
     )
     output = p.communicate()
-    result = output[1].strip()
+    result = output[1].decode('utf8').strip()
     os.remove(diff_temp_nm)
     # ImageMagick compare switched "identical" PSNR to 0 in 6.9.5-4 and to "inf" in 6.9.7-10
     psnr = float(result) if result not in ('0', 'inf') else 1000
