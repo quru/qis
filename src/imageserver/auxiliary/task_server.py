@@ -134,6 +134,7 @@ def _run_server(debug_mode):
 
         # Close nicely
         def _shutdown_hook(signum, frame):
+            logger.info('Shutdown signal received')
             shutdown_ev.set()
         signal.signal(signal.SIGTERM, _shutdown_hook)
 
@@ -215,11 +216,12 @@ def _run_server(debug_mode):
 
         # Shutdown
         if threads:
-            print('Task server shutdown, waiting on %d task(s)' % len(threads))
+            logger.info('Task server shutdown, waiting on %d task(s)' % len(threads))
             for t in threads:
                 t.join()
-        print("Task server shutdown")
+        logger.info('Task server exited')
 
+        print('Task server shutdown')
     except IOError as e:
         if e.errno == errno.EADDRINUSE:
             print("A task server is already running.")

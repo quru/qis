@@ -275,7 +275,10 @@ class StatsServerTests(main_tests.FlaskTestCase):
                 waited += 5
                 t_now = datetime.utcnow()
                 lres = dm.search_system_stats(t_then, t_now)
-            self.assertEqual(len(lres), 1, 'Timed out waiting for system stats to flush')
+            self.assertEqual(
+                len(lres), 1,
+                'Timed out waiting for system stats to flush at {}'.format(t_now)
+            )
             # See if the system stats line up with the views
             res = lres[0]
             self.assertEqual(res.requests, IMG_VIEWS + IMG_VIEWS_COPY + IMG_DOWNLOADS + IMG_VIEWS_NOSTATS + IMG_VIEWS_304)

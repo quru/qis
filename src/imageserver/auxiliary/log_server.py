@@ -117,6 +117,7 @@ class LogRecordSocketReceiver(socketserver.ThreadingTCPServer):
             # "must be called while serve_forever() is running in another thread"
             svr.shutdown()
 
+        self.logging_engine.info('Shutdown signal received')
         t = Thread(target=_shutdown_socket_server, args=(self,))
         t.start()
 

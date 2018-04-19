@@ -526,6 +526,7 @@ class StatsSocketServer(socketserver.ThreadingTCPServer):
         """
         Handles the SIGUSR1 signal.
         """
+        self.logger.info('Clear/reset signal received')
         self._lock_reset_caches()
 
     def _shutdown(self, signum, frame):
@@ -536,6 +537,7 @@ class StatsSocketServer(socketserver.ThreadingTCPServer):
             # "must be called while serve_forever() is running in another thread"
             svr.shutdown()
 
+        self.logger.info('Shutdown signal received')
         self.shutdown_ev.set()
         t = Thread(target=_shutdown_socket_server, args=(self,))
         t.start()
