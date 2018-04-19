@@ -26,6 +26,7 @@ def kill_aux_processes(nicely=True):
     )
     output = p.communicate()
     output = (output[1] or output[0])
+    output = output.decode('utf8')
     child_pids = [p for p in output.split() if p != str(this_pid)]
     for pid in child_pids:
         try:

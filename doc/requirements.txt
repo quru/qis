@@ -14,4 +14,3 @@ markdown==2.6.10
 #nose
 #coverage
 #mock
-#unittest2
