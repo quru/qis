@@ -63,18 +63,32 @@ Remove the old Python 2.x libraries:
     $ cd /opt/qis
 	$ sudo rm -rf lib/python2*
 
+### Apache configuration
+
 Update the Apache configuration to change `python2.x` directory paths to `python3.x`,
 test the Apache configuration and restart Apache.
 
 On Ubuntu:
 
 	$ sudo sed -i -e 's|python2.7|python3.5|g' /etc/apache2/sites-available/*qis*
-	$ sudo apachectl -t && sudo systemctl restart apache2
+	$ sudo apache2ctl -t && sudo systemctl restart apache2
 
 On CentOS/RHEL:
 
 	$ sudo sed -i -e 's|python2.7|python3.5|g' /etc/httpd/conf.d/*qis*
 	$ sudo apachectl -t && sudo systemctl restart httpd
+
+As an alternative to changing the Python version number here, you can remove it
+completely by using an improved configuration. In each of the QIS Apache
+configuration files, change the single `python-path` attribute:
+
+	python-path=/opt/qis/src:/opt/qis/lib/python3.5/site-packages:/opt/qis/lib64/python3.5/site-packages
+
+into separate `python-home` and `python-path` attributes:
+
+	python-home=/opt/qis python-path=/opt/qis/src
+
+This simpler and improved configuration will be the default in future.
 
 ## v2.x to v2.6
 
@@ -128,6 +142,9 @@ Add the following new lines inside the main `VirtualHost` section:
 Then reload the Apache configuration:
 
     $ sudo apachectl -t && sudo apachectl -k graceful
+
+This new configuration requires Apache's `mod_headers` module to be enabled, if
+it is not enabled by default.
 
 #### robots.txt
 

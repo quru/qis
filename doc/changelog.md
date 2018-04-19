@@ -1,3 +1,13 @@
+# v3.0.0
+_Changes: Migration to Python 3_
+
+There are no significant application changes from v2.7, but the Python code
+and runtime environment (including the `mod_wsgi` library) now requires Python
+3.4 or above.
+
+For how to upgrade an existing installation, see the [upgrading guide](upgrading.md).
+For new installations, see the [install guide](install.md).
+
 # v2.7.0
 _Changes: Add the back-end and API for portfolios, bug fix to background task
 locking in a multi-server deployment_

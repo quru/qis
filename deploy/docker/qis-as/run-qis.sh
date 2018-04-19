@@ -26,9 +26,9 @@ if [ ! -f "$FIRST_RUN_LOG_FILE" ]; then
 	
 	# Set Apache host name and mod_wsgi process groups
 	sed -i -e 's/.*ServerName.*/    ServerName '$HOSTNAME'/g' $APACHE_APP1_CONF_FILE
-	sed -i -e 's|.*WSGIDaemonProcess.*|    WSGIDaemonProcess qis user='$HTTP_USER' group=www-data processes='$HTTP_PROCESSES' threads='$HTTP_THREADS' python-path='$QIS_HOME'/src:'$QIS_HOME'/lib/python3.5/site-packages|g' $APACHE_APP1_CONF_FILE
+	sed -i -e 's|.*WSGIDaemonProcess.*|    WSGIDaemonProcess qis user='$HTTP_USER' group=www-data processes='$HTTP_PROCESSES' threads='$HTTP_THREADS' python-home='$QIS_HOME' python-path='$QIS_HOME'/src|g' $APACHE_APP1_CONF_FILE
 	sed -i -e 's/.*ServerName.*/    ServerName '$HOSTNAME'/g' $APACHE_APP2_CONF_FILE
-	sed -i -e 's|.*WSGIDaemonProcess.*|    WSGIDaemonProcess qis-ssl user='$HTTP_USER' group=www-data processes='$HTTPS_PROCESSES' threads='$HTTPS_THREADS' python-path='$QIS_HOME'/src:'$QIS_HOME'/lib/python3.5/site-packages|g' $APACHE_APP2_CONF_FILE
+	sed -i -e 's|.*WSGIDaemonProcess.*|    WSGIDaemonProcess qis-ssl user='$HTTP_USER' group=www-data processes='$HTTPS_PROCESSES' threads='$HTTPS_THREADS' python-home='$QIS_HOME' python-path='$QIS_HOME'/src|g' $APACHE_APP2_CONF_FILE
 	
 	# Configure QIS service connections
 	SECRET_KEY=$(pwgen -s 32 1)
