@@ -208,6 +208,14 @@ process by adding a few lines to the file `/etc/sysconfig/httpd`:
 	LANG=en_GB.UTF-8
 	LC_ALL=en_GB.UTF-8
 
+If not enabled by default, enable the following Apache modules. The process for
+this is operating system specific. At the time of writing these are all enabled
+by default in CentOS/Red Hat, but need explicitly enabling in Debian/Ubuntu.
+
+	* mod_ssl
+	* mod_headers
+	* mod_expires
+
 Create Apache configuration files to run QIS:
 
 	$ cd /opt/qis

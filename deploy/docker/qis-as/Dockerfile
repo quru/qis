@@ -91,6 +91,7 @@ RUN ln -s /etc/apache2/mods-available/ssl.load /etc/apache2/mods-enabled/ssl.loa
     ln -s /etc/apache2/mods-available/ssl.conf /etc/apache2/mods-enabled/ssl.conf && \
     ln -s /etc/apache2/mods-available/socache_shmcb.load /etc/apache2/mods-enabled/socache_shmcb.load && \
     ln -s /etc/apache2/mods-available/expires.load /etc/apache2/mods-enabled/expires.load && \
+    ln -s /etc/apache2/mods-available/headers.load /etc/apache2/mods-enabled/headers.load && \
     rm /etc/apache2/sites-enabled/000-default.conf && \
     ln -s /etc/apache2/sites-available/qis-wsgi.conf /etc/apache2/sites-enabled/qis-wsgi.conf && \
     ln -s /etc/apache2/sites-available/001-qis.conf /etc/apache2/sites-enabled/001-qis.conf && \
