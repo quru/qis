@@ -203,16 +203,18 @@ class ImageServerTestsWebPages(BaseTestCase):
     # #2475 Browse folder page, error reading directory should still be OK
     #       (OK as in returning a nice error rather than the HTTP 500 it used to)
     def test_browse_folder_page_bad_folder(self):
-        self.call_page_requiring_login(
-            '/list/?path=/test_images\x00uh oh&view=list',
-            required_text='embedded NUL character'
-        )
+        rv = self.call_page_requiring_login('/list/?path=/test_images\x00uh oh&view=list')
+        rv_data = rv.data.decode('utf8')
+        if ('embedded NUL character' not in rv_data and  # <  Python 3.5
+            'embedded null byte' not in rv_data):        # >= Python 3.5
+            self.fail('failed to find expected error message in the output')
 
     def test_browse_folder_page_bad_folder_grid(self):
-        self.call_page_requiring_login(
-            '/list/?path=/test_images\x00uh oh&view=grid',
-            required_text='embedded NUL character'
-        )
+        rv = self.call_page_requiring_login('/list/?path=/test_images\x00uh oh&view=grid')
+        rv_data = rv.data.decode('utf8')
+        if ('embedded NUL character' not in rv_data and  # <  Python 3.5
+            'embedded null byte' not in rv_data):        # >= Python 3.5
+            self.fail('failed to find expected error message in the output')
 
     # Image detail page
     def test_image_detail_page(self):
