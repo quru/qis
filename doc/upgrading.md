@@ -65,30 +65,44 @@ Remove the old Python 2.x libraries:
 
 ### Apache configuration
 
-Update the Apache configuration to change `python2.x` directory paths to `python3.x`,
-test the Apache configuration and restart Apache.
+The older QIS configuration for Apache includes a path reference of `python2.x`
+that needs updating. Rather than change this to `python3.x`, QIS v3 has a shorter
+and simpler configuration that does away with the version number.
 
-On Ubuntu:
+Use a text editor to change both of the QIS Apache configuration files:
 
-	$ sudo sed -i -e 's|python2.7|python3.5|g' /etc/apache2/sites-available/*qis*
-	$ sudo apache2ctl -t && sudo systemctl restart apache2
+	$ cd /etc/httpd/conf.d/               # CentOS / Red Hat
+	$ cd /etc/apache2/sites-available/    # Debian / Ubuntu
+	$ vi qis.conf
+	$ vi qis-ssl.conf
 
-On CentOS/RHEL:
+In each file, change the existing `WSGIDaemonProcess` definition from having a
+single `python-path` attribute:
 
-	$ sudo sed -i -e 's|python2.7|python3.5|g' /etc/httpd/conf.d/*qis*
-	$ sudo apachectl -t && sudo systemctl restart httpd
+	python-path=/opt/qis/src:/opt/qis/lib/python2.7/site-packages:/opt/qis/lib64/python2.7/site-packages
 
-As an alternative to changing the Python version number here, you can remove it
-completely by using an improved configuration. In each of the QIS Apache
-configuration files, change the single `python-path` attribute:
+to having separate `python-home` and `python-path` attributes instead:
 
-	python-path=/opt/qis/src:/opt/qis/lib/python3.5/site-packages:/opt/qis/lib64/python3.5/site-packages
+	python-home=/opt/qis  python-path=/opt/qis/src
 
-into separate `python-home` and `python-path` attributes:
+Then check that the configuration changes are OK:
 
-	python-home=/opt/qis python-path=/opt/qis/src
+	$ httpd -t      # CentOS / Red Hat
+	$ apache2 -t    # Debian / Ubuntu
+	Syntax OK
 
-This simpler and improved configuration will be the default in future.
+### Restart services
+
+Data and images cached under Python 2 cannot be loaded under Python 3, therefore
+the cache needs to be reset. Apache needs to be restarted to bring in the updated
+Python 3 code and modules and configuration.
+
+	$ sudo systemctl restart memcached
+	$ sudo systemctl restart httpd        # CentOS / Red Hat
+	$ sudo systemctl restart apache2      # Debian / Ubuntu
+
+If the Apache service fails to start or returns errors, check the error log
+at `/var/log/httpd/error_log` or `/var/log/apache2/error.log`.
 
 ## v2.x to v2.6
 
