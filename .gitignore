@@ -5,6 +5,7 @@
 .pydevproject
 .Python
 .DS_Store
+.vscode
 coverage.xml
 pip-selfcheck.json
 nosetests.xml
