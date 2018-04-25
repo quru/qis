@@ -18,6 +18,7 @@ nosetests.xml
 *.egg
 *.egg-info/
 bin
+bin-3
 build
 conf/*.py
 dist
