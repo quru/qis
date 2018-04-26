@@ -943,7 +943,7 @@ with the token as the username value. The password value is unused and can be bl
 <a name="api_upload"></a>
 ## upload
 Uploads one or more image files, optionally replacing any existing files that already exist
-with the same name.
+in the same location.
 
 ### URL
 * `/api/v1/upload/`
@@ -953,16 +953,20 @@ with the same name.
 
 ### Parameters
 * `files` - Mandatory, binary - One or more files to upload
-* `path_index` - Mandatory, integer - The destination folder index, or -1
-	* If 0 or above, this is the index of a standard upload folder as defined by the
-	  `IMAGE_UPLOAD_DIRS` system setting. As a trusted location, the folder will be
-	  created if it does not already exist.
-	* If -1, you must specify the destination folder in the `path` parameter. 
-* `path` - Optional, text - The destination folder path used when `path_index` is -1.
-  This folder path must already exist. You can use the [disk folder](#api_disk_folders) API
-  to find or create a folder.
-* `overwrite` - Mandatory, boolean - Whether to overwrite existing files if they already
-  exist with the same name in the destination folder
+* `path` - Optional, text - The destination folder path, when not using `path_index`.
+  This folder path must already exist. If permitted, you can use the
+  [disk folder](#api_disk_folders) API to find or create a folder path.
+* `path_index` - Optional, integer - The destination folder path as an index (starting
+  from 0) into the `IMAGE_UPLOAD_DIRS` list in the system settings. These pre-defined
+  locations are considered to be trusted, and for all users the folder will be created
+  if it does not already exist.
+* `overwrite` - Mandatory, text/boolean - The action to take when a file already exists
+  with the same name in the destination folder:
+	* `yes` (or `true` or `1`) - Overwrite the existing file with the new one
+	* `no` (or `false` or `0`) - Return a _file already exists_ error and do not overwrite it
+	* `rename` - Rename the new file so that it can be saved, leaving the existing file unchanged
+
+One of either `path` or `path_index` is required.
 
 As is standard for file upload forms on the web, the parameter data must be
 `multipart/form-data` encoded.
@@ -971,26 +975,28 @@ As is standard for file upload forms on the web, the parameter data must be
 * Upload permission for the destination folder
 
 ### Returns
-An object containing one attribute for every uploaded file, which maps the original filename
-to either success data or an error object. Success data is in the same format as for the
-[image details](#api_details) function. The error object contains the same data as the standard
-API error response.
+An key/value object containing one entry for every uploaded file, where each key is the
+original filename and each value is either success data or an error object. Success data
+is in the same format returned by the [image details](#api_details) function. The error
+object contains the same data as the standard API error response.
 
-Note that for each uploaded file, the returned filename may be different from the original filename.
-This is because dangerous or unsupported characters are removed from filenames. By default, unicode
-letters and numbers are allowed, but not unicode symbols. You can have unicode letters converted to
-their simplest form (ASCII) by disabling the `ALLOW_UNICODE_FILENAMES` system setting.
+Note that for each uploaded file, the returned filename may be different from the original
+filename. This happens when you upload with `overwrite=rename` and a file already exists,
+when 2 files are uploaded with the same filename (e.g. coming from different directories),
+or when the original filename contains dangerous or unsupported characters. By default,
+unicode letters and numbers are allowed, but not unicode symbols. If you do not want to
+allow unicode filenames at all, you can have them converted to their simplest form (that
+is ASCII) by adding `ALLOW_UNICODE_FILENAMES = False` to your settings file.
 
-If all files are uploaded successfully, the returned status will be `OK` and the data object as
-described above.
+If all files are uploaded successfully, the returned status will be `OK`.
 
-If one file upload fails, the function continues to try all the other files, but returns a status
-of error (describing the first error that occurred). The data object is returned as described above,
-meaning you need to check the entry for each filename to determine which files were uploaded and
-which failed (and why).
+If one file fails to upload, the function continues to try all the other files, but returns
+a status of error (describing only the first error that occurred). The data object is returned
+as described above, so you need to check the entry for each filename to determine which
+files were uploaded and which failed (and why).
 
-If there is an error with a parameter such that no uploads were even attempted,
-no data object is returned.
+If there is an error with a parameter such that no uploads were even attempted, the
+returned data object is `null`.
 
 ### Examples
 
@@ -1013,7 +1019,7 @@ no data object is returned.
 	  "status": 200
 	}
 
-But then running the same command again:
+Running the same command a second time:
 
 	$ curl -X POST -u <token>:unused -F files=@myimage.jpg -F path_index=-1 -F path=test_images -F overwrite=false 'https://images.example.com/api/v1/upload/'
 	{
@@ -1021,13 +1027,34 @@ But then running the same command again:
 	    "myimage.jpg": {
 	      "error": {
 	        "data": null,
-	        "message": "The specified item already exists (file 'myimage.jpg' already exists at this location on the server)",
+	        "message": "The specified item already exists (file path 'test_images/myimage.jpg' already exists)",
 	        "status": 409
 	      }
 	    }
 	  },
-	  "message": "The specified item already exists (file 'myimage.jpg' already exists at this location on the server)",
+	  "message": "The specified item already exists (file path 'test_images/myimage.jpg' already exists)",
 	  "status": 409
+	}
+
+Running the same command a third time but with `overwrite=rename`:
+
+	$ curl -X POST -u <token>:unused -F files=@myimage.jpg -F path_index=-1 -F path=test_images -F overwrite=rename 'https://images.example.com/api/v1/upload/'
+	{
+	  "data": {
+	    "myimage.jpg": {
+	      "id": 524,
+	      "title": "",
+	      "description": "",
+	      "download": true,
+	      "folder_id": 3,
+	      "height": 1200,
+	      "src": "test_images/myimage-001.jpg",
+	      "url": "http://images.example.com/image?src=test_images/myimage-001.jpg",
+	      "width": 1600
+	    }
+	  },
+	  "message": "OK",
+	  "status": 200
 	}
 
 <a name="api_folios"></a>

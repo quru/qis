@@ -42,7 +42,7 @@ from datetime import datetime, timedelta
 
 from errors import AlreadyExistsError, DoesNotExistError, SecurityError
 from flask_app import app
-from util import filepath_parent
+from util import filepath_filename, filepath_parent, get_file_extension
 
 
 def path_exists(rel_path, require_file=False, require_directory=False):
@@ -105,43 +105,67 @@ def get_abs_path(rel_path):
     return abs_path
 
 
-def put_file_data(file_wrapper, dest_path, filename, create_path=False, overwrite_existing=False):
+def put_file_data(file_wrapper, rel_path, overwrite_existing=False):
     """
-    Saves a Werkzeug FileStorage object 'file_wrapper' into the relative
-    directory path given by 'dest_path' and with file name 'filename'.
-    When 'create_path' is True, 'dest_path' will be created inside
-    IMAGES_BASE_DIR if it does not exist. When 'overwrite_existing' is True,
-    any existing file with the same name will be replaced.
+    Saves a Werkzeug FileStorage object file_wrapper to the given file path
+    (path relative to IMAGES_BASE_DIR). The directory part of the file path
+    must already exist. When overwrite_existing is True, any existing file
+    with the same path will be replaced.
 
+    Raises a ValueError if rel_path is empty.
     Raises an IOError if the file could not be saved.
-    Raises an AlreadyExistsError if the file already exists and
-    'overwrite_existing' is False. Raises a DoesNotExistError if 'create_path'
-    is False and 'dest_path' does not exist. Raises an OSError if 'create_path'
-    is True and 'dest_path' cannot be created. Raises a SecurityError if the
-    requested path and filename evaluates to a location outside of IMAGES_BASE_DIR.
+    Raises an AlreadyExistsError if the file already exists and overwrite_existing is False.
+    Raises a DoesNotExistError if the directory part of rel_path does not exist.
+    Raises a SecurityError if the requested path and filename evaluates to a location
+    outside of IMAGES_BASE_DIR.
     """
-    # Test/create destination directory
-    if not path_exists(dest_path):
-        if create_path:
-            make_dirs(dest_path)
-        else:
-            raise DoesNotExistError(u'Path \'' + dest_path + '\' does not exist')
+    # Check params
+    if not rel_path.strip():
+        raise ValueError('Destination file path is empty')
+    if not path_exists(filepath_parent(rel_path), require_directory=True):
+        raise DoesNotExistError(u'Folder \'' + filepath_parent(rel_path) + '\' does not exist')
     # Get (and security check) the absolute file path
-    abs_path = unicode(get_abs_path(os.path.join(dest_path, filename)))
+    abs_path = unicode(get_abs_path(rel_path))
     # Check for file existence
     if os.path.exists(abs_path) and not overwrite_existing:
-        raise AlreadyExistsError(
-            u'File \'' + filename + '\' already exists at this location on the server'
-        )
+        raise AlreadyExistsError(u'File path \'' + rel_path + '\' already exists')
     # Save the file
     file_wrapper.save(abs_path, 65536)
-    # (Try to) set the file permissions
     try:
+        # (Try to) set the file permissions
         os.chmod(abs_path, app.config['IMAGES_FILE_MODE'])
     except:
         # Not allowed if we just overwrote an existing file that was owned by
         # a different o/s user. Shouldn't error if we just created the file.
         pass
+
+
+def get_deduped_path(rel_path):
+    """
+    Given a file path that already exists (path relative to IMAGES_BASE_DIR),
+    returns a modified file path that does not yet exist. Beware that in a multi-
+    threaded context, 2 threads may receive the same output for the same input
+    at the same time.
+
+    Raises a ValueError if a unique path cannot be generated after 1000 tries.
+    """
+    if not path_exists(rel_path):
+        return rel_path
+    rel_path_orig = rel_path
+    fp_base = filepath_parent(rel_path)
+    fp_name = filepath_filename(rel_path)
+    fp_ext = get_file_extension(fp_name)
+    if fp_ext:
+        fp_ext = '.' + fp_ext
+        fp_name = fp_name.rstrip(fp_ext)
+    loops = 1
+    while path_exists(rel_path) and loops <= 999:
+        suffix = '-{:03}'.format(loops)
+        rel_path = os.path.join(fp_base, fp_name + suffix + fp_ext)
+        loops += 1
+    if os.path.exists(rel_path):
+        raise ValueError('Too many files uploaded as ' + rel_path_orig)
+    return rel_path
 
 
 def get_file_data(rel_path):
@@ -154,14 +178,10 @@ def get_file_data(rel_path):
     try:
         # Security check, get actual path
         abs_path = get_abs_path(rel_path)
-        # Read the file content
-        f = open(abs_path, 'rb')
+        with open(abs_path, 'rb') as f:
+            return f.read()
     except IOError:
         return None
-    try:
-        return f.read()
-    finally:
-        f.close()
 
 
 def get_file_info(rel_path):

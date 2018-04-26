@@ -53,3 +53,8 @@
 #err_msg {
 	display: none;
 }
+
+label img {
+	margin-left: 2px;
+	vertical-align: text-top;
+}

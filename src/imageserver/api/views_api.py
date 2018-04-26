@@ -44,7 +44,7 @@ from imageserver.errors import (
     AuthenticationError, DoesNotExistError, ImageError,
     ParameterError, SecurityError
 )
-from imageserver.filesystem_manager import get_directory_listing, path_exists
+from imageserver.filesystem_manager import get_directory_listing, get_upload_directory, path_exists
 from imageserver.filesystem_sync import auto_sync_file, auto_sync_existing_file
 from imageserver.filesystem_sync import auto_sync_folder
 from imageserver.flask_app import (
@@ -247,8 +247,9 @@ def imagedetails():
     return make_api_success_response(_image_dict(db_image))
 
 
-# Raw image(s) upload, returns a dict of original filename to image details
-# (as for /details), or filename to error message if an upload failed
+# Raw image(s) upload. Returns a dict of original filename to image details
+# (as for /details), or original filename to error message on failure, with
+# one dict entry for every file in 'files'.
 @blueprint.route('/upload', methods=['POST'])
 @blueprint.route(url_version_prefix + '/upload', methods=['POST'])  # Legacy (no slash)
 @blueprint.route('/upload/', methods=['POST'], strict_slashes=False)
@@ -269,31 +270,51 @@ def upload():
 
         # Check params
         path_index = parse_int(path_index)
-        overwrite = parse_boolean(overwrite)
+        if overwrite != 'rename':
+            overwrite = parse_boolean(overwrite)
         validate_string(path, 0, 1024)
+        if not path and path_index < 0:
+            raise ValueError('Either path or path_index is required')
         if len(file_list) < 1:
             raise ValueError('No files have been attached')
+
+        if path_index >= 0:
+            # Get a "trusted" pre-defined upload folder
+            # image_engine.put_image() will create it if it doesn't exist
+            _, path = get_upload_directory(path_index)
+        else:
+            # A manually specified folder is "untrusted" and has to exist already
+            if not path_exists(path):
+                raise DoesNotExistError('Path \'' + path + '\' does not exist')
 
         # Loop over the upload files
         put_image_exception = None
         can_download = None
+        saved_files = []
         for wkfile in file_list:
+            # TODO discard any path part here - not doing so is why we have weird paths in unit tests
             original_filename = wkfile.filename
             if original_filename:
                 db_image = None
                 try:
-                    # Save (also checks user-folder permissions)
+                    # Don't allow filenames like "../../../etc/passwd"
+                    safe_filename = secure_filename(
+                        original_filename,
+                        app.config['ALLOW_UNICODE_FILENAMES']
+                    )
+                    # v2.7.1 If we already saved a file as safe_filename during this upload,
+                    # override this one to have overwrite=rename
+                    overwrite_flag = 'rename' if safe_filename in saved_files else overwrite
+                    # Save (this also checks user-folder permissions)
                     _, db_image = image_engine.put_image(
                         current_user,
                         wkfile,
-                        secure_filename(
-                            original_filename,
-                            app.config['ALLOW_UNICODE_FILENAMES']
-                        ),
-                        path_index,
                         path,
-                        overwrite
+                        safe_filename,
+                        overwrite_flag
                     )
+                    # v2.7.1 Keep a record of what filenames we used during this upload
+                    saved_files.append(safe_filename)
                 except Exception as e:
                     # Save the error to use as our overall return value
                     if put_image_exception is None:
@@ -311,6 +332,8 @@ def upload():
                         )
                     # This loop success
                     ret_dict[original_filename] = _image_dict(db_image, can_download)
+            else:
+                logger.warn('Upload received blank filename, ignoring file')
 
         # Loop complete. If we had an exception, raise it now.
         if put_image_exception is not None:

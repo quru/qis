@@ -1,3 +1,11 @@
+# v2.7.1
+_Changes: Add new "rename" option to the upload API for files that already exist,
+bug fixes to prevent unexpected "already exists" errors with the upload API,
+allow uploads into the root of the image repository_
+
+* Update the Python and web code
+* Restart the Apache service
+
 # v2.7.0
 _Changes: Add the back-end and API for portfolios, bug fix to background task
 locking in a multi-server deployment_
