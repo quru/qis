@@ -44,6 +44,7 @@ setup(
 
     tests_require=[
         "mock",
-        "coverage"
+        "coverage",
+        "flake8"
     ],
 )

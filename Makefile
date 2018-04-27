@@ -28,7 +28,7 @@ webpack:
 	src/compress_js.sh
 
 flake8.txt: ${VENV_PATH}/bin/flake8
-	${VENV_ACTIVATE} ; flake8 src/ > flake8.txt || wc -l src/flake8.txt
+	${VENV_ACTIVATE} ; flake8 src/ > src/flake8.txt || wc -l src/flake8.txt
 
 ${VENV_PATH}/bin/flake8: venv
 	${VENV_ACTIVATE} ; pip install flake8
