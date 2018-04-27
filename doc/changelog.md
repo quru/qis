@@ -1,3 +1,12 @@
+# v3.0.1
+_Changes: Apache configuration improvements, add new "rename" option to the upload
+page and API for files that already exist, allow multiple file drops on the upload
+page, bug fixes to prevent unexpected "already exists" errors when uploading,
+allow uploads into the root of the image repository_
+
+* Update the Python and web code
+* Restart the Apache service
+
 # v3.0.0
 _Changes: Migration to Python 3_
 

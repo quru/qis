@@ -94,6 +94,7 @@ from imageserver.permissions_manager import _trace_to_str
 from imageserver.session_manager import get_session_user
 from imageserver.scripts.cache_util import delete_image_ids
 from imageserver.template_attrs import TemplateAttrs
+from imageserver.util import secure_filename
 
 
 # http://www.imagemagick.org/script/changelog.php
@@ -411,17 +412,33 @@ class BaseTestCase(FlaskTestCase):
         self.assertEqual(rv.status_code, 302)
 
     # Utility - uploads a file (provide the full path) to an image server
-    # folder via the file upload API. Note that Flask includes the path in
-    # the filename with slashes converted to underscores.
-    # Returns the app.post() return value.
-    def file_upload(self, app, src_file_path, dest_folder, overwrite=1):
-        with open(src_file_path, 'rb') as infile:
-            rv = app.post('/api/upload/', data={
-                'files': infile,
+    # folder via the file upload API. Returns the app.post() return value.
+    def file_upload(self, app, src_file_path, dest_folder, overwrite='1'):
+        return self.multi_file_upload(app, [src_file_path], dest_folder, overwrite)
+
+    # Utility - uploads multiple files (provide the full paths) to an image server
+    # folder via the file upload API. Returns the app.post() return value.
+    def multi_file_upload(self, app, src_file_paths, dest_folder, overwrite='1'):
+        files = []
+        try:
+            files = [open(path, 'rb') for path in src_file_paths]
+            return app.post('/api/upload/', data={
+                'files': files,
                 'path': dest_folder,
-                'overwrite': str(overwrite)
+                'overwrite': overwrite
             })
-        return rv
+        finally:
+            for fp in files:
+                fp.close()
+
+    # Utility - deletes a file from the image repository, and purges its data record
+    # from the database. If the path does not exist or there is no data record then
+    # the function continues silently without raising an error.
+    def delete_image_and_data(self, rel_path):
+        delete_file(rel_path)
+        db_img = dm.get_image(src=rel_path)
+        if db_img is not None:
+            dm.delete_image(db_img, True)
 
     # Utility - check that the keyword args/values are present in the given
     # dictionary of image properties (from ImageManager.get_image_properties)
@@ -607,8 +624,8 @@ class ImageServerBackgroundTaskTests(BaseTestCase):
 
         src_file = get_abs_path('test_images/pdftest.pdf')
         dest_file = '/tmp/qis_pdftest.pdf'
-        image_path = 'test_images/tmp_qis_pdftest.pdf'
-        burst_path = 'test_images/tmp_qis_pdftest.pdf.d'
+        image_path = 'test_images/qis_pdftest.pdf'
+        burst_path = 'test_images/qis_pdftest.pdf.d'
         # Login
         setup_user_account('kryten', 'admin_files')
         self.login('kryten', 'kryten')
@@ -1271,10 +1288,7 @@ class ImageServerTestsFast(BaseTestCase):
             self.assertGreater(len(i.history), 0)
             self.assertEqual(i.history[-1].action, ImageHistory.ACTION_DELETED)
         finally:
-            if os.path.exists(dst_file):
-                os.remove(dst_file)
-            if i:
-                dm.delete_image(i, True)
+            self.delete_image_and_data('test_images/test_image.jpg')
 
     # Test no params
     def test_no_src(self):
@@ -2386,7 +2400,7 @@ class ImageServerTestsFast(BaseTestCase):
         assert dm.get_image(src=image_path) is None
         # Check db auto-populates from an image upload
         temp_file = '/tmp/qis_uploadfile.jpg'
-        image_path = 'test_images/tmp_qis_uploadfile.jpg'
+        image_path = 'test_images/qis_uploadfile.jpg'
         try:
             i = dm.get_image(src=image_path)
             assert i is None
@@ -2454,7 +2468,7 @@ class ImageServerTestsFast(BaseTestCase):
 #        unreach = gc.collect()
 #        assert unreach == 0, str(unreach) + ' unreachable'
 
-    # File uploads
+    # File upload
     def test_file_upload(self):
         self.login('admin', 'admin')
         # Copy a test file to upload
@@ -2463,27 +2477,54 @@ class ImageServerTestsFast(BaseTestCase):
         shutil.copy(src_file, dst_file)
         try:
             # Upload
-            rv = self.file_upload(self.app, dst_file, 'test_images')
+            rv = self.file_upload(self.app, dst_file, 'test_images', '0')
             self.assertEqual(rv.status_code, 200)
             obj = json.loads(rv.data.decode('utf8'))['data']
             self.assertEqual(len(obj), 1)
             self.assertIn('/tmp/qis_uploadfile.jpg', obj)
             imgdata = obj['/tmp/qis_uploadfile.jpg']
-            self.assertEqual(imgdata['src'], 'test_images/tmp_qis_uploadfile.jpg')
+            self.assertEqual(imgdata['src'], 'test_images/qis_uploadfile.jpg')
             self.assertGreater(imgdata['id'], 0)
             # Make sure it works
-            rv = self.app.get('/image?src=test_images/tmp_qis_uploadfile.jpg')
+            rv = self.app.get('/image?src=test_images/qis_uploadfile.jpg')
+            self.assertEqual(rv.status_code, 200)
+            db_img = dm.get_image(src='test_images/qis_uploadfile.jpg')
+            self.assertIsNotNone(db_img, 'Upload did not create image data')
+        finally:
+            # Remove the test files
+            os.remove(dst_file)
+            self.delete_image_and_data('test_images/qis_uploadfile.jpg')
+
+    # v2.7.1 File upload - with overwrite as rename
+    def test_file_upload_overwrite_rename(self):
+        self.login('admin', 'admin')
+        # Copy a test file to upload
+        src_file = get_abs_path('test_images/cathedral.jpg')
+        dst_file = '/tmp/qis_uploadfile.jpg'
+        shutil.copy(src_file, dst_file)
+        try:
+            # Have the upload file exist already
+            copy_file('test_images/cathedral.jpg', 'test_images/qis_uploadfile.jpg')
+            # Upload
+            rv = self.file_upload(self.app, dst_file, 'test_images', 'rename')
+            self.assertEqual(rv.status_code, 200)
+            obj = json.loads(rv.data.decode('utf8'))['data']
+            self.assertEqual(len(obj), 1)
+            self.assertIn('/tmp/qis_uploadfile.jpg', obj)
+            imgdata = obj['/tmp/qis_uploadfile.jpg']
+            self.assertGreater(imgdata['id'], 0)
+            # Make sure it was renamed with -001 appended
+            self.assertEqual(imgdata['src'], 'test_images/qis_uploadfile-001.jpg')
+            # Make sure it works
+            rv = self.app.get('/image?src=test_images/qis_uploadfile-001.jpg')
             self.assertEqual(rv.status_code, 200)
         finally:
             # Remove the test files
             os.remove(dst_file)
-            delete_file('test_images/tmp_qis_uploadfile.jpg')
-        # Remove the data too
-        db_img = dm.get_image(src='test_images/tmp_qis_uploadfile.jpg')
-        assert db_img is not None, 'Upload did not create image data'
-        dm.delete_image(db_img, True)
+            self.delete_image_and_data('test_images/qis_uploadfile.jpg')
+            self.delete_image_and_data('test_images/qis_uploadfile-001.jpg')
 
-    # File uploads
+    # Multiple file uploads - expecting success
     def test_file_upload_multi(self):
         self.login('admin', 'admin')
         # Copy test files to upload
@@ -2493,32 +2534,49 @@ class ImageServerTestsFast(BaseTestCase):
         shutil.copy(src_file, dst_file1)
         shutil.copy(src_file, dst_file2)
         try:
-            # Test both files success
-            with open(dst_file1, 'rb') as infile1:
-                with open(dst_file2, 'rb') as infile2:
-                    rv = self.app.post('/api/upload/', data={
-                        'files': [infile1, infile2],
-                        'path': 'test_images',
-                        'overwrite': '1'
-                    })
+            rv = self.multi_file_upload(
+                self.app,
+                [dst_file1, dst_file2],
+                'test_images',
+                '0'
+            )
             self.assertEqual(rv.status_code, 200)
             obj = json.loads(rv.data.decode('utf8'))['data']
             self.assertEqual(len(obj), 2)
             imgdata = obj['/tmp/qis_uploadfile1.jpg']
-            self.assertEqual(imgdata['src'], 'test_images/tmp_qis_uploadfile1.jpg')
+            self.assertEqual(imgdata['src'], 'test_images/qis_uploadfile1.jpg')
             self.assertGreater(imgdata['id'], 0)
+            self.assertTrue(path_exists('test_images/qis_uploadfile1.jpg'))
             imgdata = obj['/tmp/qis_uploadfile2.jpg']
-            self.assertEqual(imgdata['src'], 'test_images/tmp_qis_uploadfile2.jpg')
+            self.assertEqual(imgdata['src'], 'test_images/qis_uploadfile2.jpg')
             self.assertGreater(imgdata['id'], 0)
+            self.assertTrue(path_exists('test_images/qis_uploadfile2.jpg'))
+        finally:
+            # Remove the test files
+            os.remove(dst_file1)
+            os.remove(dst_file2)
+            self.delete_image_and_data('test_images/qis_uploadfile1.jpg')
+            self.delete_image_and_data('test_images/qis_uploadfile2.jpg')
+
+    # Multiple file uploads - with overwrite no
+    def test_file_upload_multi_overwrite_no(self):
+        self.login('admin', 'admin')
+        # Copy test files to upload
+        src_file = get_abs_path('test_images/cathedral.jpg')
+        dst_file1 = '/tmp/qis_uploadfile1.jpg'
+        dst_file2 = '/tmp/qis_uploadfile2.jpg'
+        shutil.copy(src_file, dst_file1)
+        shutil.copy(src_file, dst_file2)
+        try:
+            # Make one of the files exist already
+            copy_file('test_images/cathedral.jpg', 'test_images/qis_uploadfile2.jpg')
             # Test 1 file success, 1 file failure
-            delete_file('test_images/tmp_qis_uploadfile1.jpg')
-            with open(dst_file1, 'rb') as infile1:
-                with open(dst_file2, 'rb') as infile2:
-                    rv = self.app.post('/api/upload/', data={
-                        'files': [infile1, infile2],
-                        'path': 'test_images',
-                        'overwrite': '0'  # This will break now on dst_file2
-                    })
+            rv = self.multi_file_upload(
+                self.app,
+                [dst_file1, dst_file2],
+                'test_images',
+                '0'  # This will break now on dst_file2
+            )
             self.assertEqual(rv.status_code, API_CODES.ALREADY_EXISTS)
             obj = json.loads(rv.data.decode('utf8'))
             self.assertEqual(obj['status'], API_CODES.ALREADY_EXISTS)
@@ -2526,7 +2584,7 @@ class ImageServerTestsFast(BaseTestCase):
             self.assertEqual(len(obj), 2)
             # First entry should be image info
             imgdata = obj['/tmp/qis_uploadfile1.jpg']
-            self.assertEqual(imgdata['src'], 'test_images/tmp_qis_uploadfile1.jpg')
+            self.assertEqual(imgdata['src'], 'test_images/qis_uploadfile1.jpg')
             self.assertGreater(imgdata['id'], 0)
             # Second entry should be error info
             imgdata = obj['/tmp/qis_uploadfile2.jpg']
@@ -2536,15 +2594,119 @@ class ImageServerTestsFast(BaseTestCase):
             self.assertIn('already exists', imgdata['error']['message'])
         finally:
             # Remove the test files
-            for f in [dst_file1, dst_file2]:
-                os.remove(f)
-            delete_file('test_images/tmp_qis_uploadfile1.jpg')
-            delete_file('test_images/tmp_qis_uploadfile2.jpg')
-        # Remove the data too
-        db_img = dm.get_image(src='test_images/tmp_qis_uploadfile1.jpg')
-        dm.delete_image(db_img, True)
-        db_img = dm.get_image(src='test_images/tmp_qis_uploadfile2.jpg')
-        dm.delete_image(db_img, True)
+            os.remove(dst_file1)
+            os.remove(dst_file2)
+            self.delete_image_and_data('test_images/qis_uploadfile1.jpg')
+            self.delete_image_and_data('test_images/qis_uploadfile2.jpg')
+
+    # Multiple file uploads - with overwrite yes
+    def test_file_upload_multi_overwrite_yes(self):
+        self.login('admin', 'admin')
+        # Copy test files to upload
+        src_file = get_abs_path('test_images/cathedral.jpg')
+        dst_file1 = '/tmp/qis_uploadfile1.jpg'
+        dst_file2 = '/tmp/qis_uploadfile2.jpg'
+        shutil.copy(src_file, dst_file1)
+        shutil.copy(src_file, dst_file2)
+        try:
+            # Make both files exist already
+            copy_file('test_images/cathedral.jpg', 'test_images/qis_uploadfile1.jpg')
+            copy_file('test_images/cathedral.jpg', 'test_images/qis_uploadfile2.jpg')
+            # Test overwrites
+            rv = self.multi_file_upload(
+                self.app,
+                [dst_file1, dst_file2],
+                'test_images',
+                '1'
+            )
+            self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+            obj = json.loads(rv.data.decode('utf8'))['data']
+            self.assertEqual(len(obj), 2)
+            # Both entries should be image info
+            imgdata = obj['/tmp/qis_uploadfile1.jpg']
+            self.assertEqual(imgdata['src'], 'test_images/qis_uploadfile1.jpg')
+            self.assertGreater(imgdata['id'], 0)
+            imgdata = obj['/tmp/qis_uploadfile2.jpg']
+            self.assertEqual(imgdata['src'], 'test_images/qis_uploadfile2.jpg')
+            self.assertGreater(imgdata['id'], 0)
+        finally:
+            # Remove the test files
+            os.remove(dst_file1)
+            os.remove(dst_file2)
+            self.delete_image_and_data('test_images/qis_uploadfile1.jpg')
+            self.delete_image_and_data('test_images/qis_uploadfile2.jpg')
+
+    # v2.7.1 Multiple file uploads - with dupe filenames (from different source directories)
+    def test_file_upload_multi_dupe_filenames(self):
+        self.login('admin', 'admin')
+        # Copy test files to upload
+        src_file = get_abs_path('test_images/cathedral.jpg')
+        dst_dir1 = '/tmp/qis_temp1'
+        dst_dir2 = '/tmp/qis_temp2'
+        dst_file1 = dst_dir1 + '/qis_uploadfile.jpg'  # } same
+        dst_file2 = dst_dir2 + '/qis_uploadfile.jpg'  # } filenames
+        os.mkdir(dst_dir1)
+        os.mkdir(dst_dir2)
+        shutil.copy(src_file, dst_file1)
+        shutil.copy(src_file, dst_file2)
+        try:
+            rv = self.multi_file_upload(
+                self.app,
+                [dst_file1, dst_file2],
+                'test_images',
+                '0'
+            )
+            self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+            obj = json.loads(rv.data.decode('utf8'))['data']
+            self.assertEqual(len(obj), 2)
+            # Both entries should be image info with one file renamed
+            imgdata = obj[dst_file1]
+            self.assertEqual(imgdata['src'], 'test_images/qis_uploadfile.jpg')
+            self.assertGreater(imgdata['id'], 0)
+            imgdata = obj[dst_file2]
+            self.assertEqual(imgdata['src'], 'test_images/qis_uploadfile-001.jpg')
+            self.assertGreater(imgdata['id'], 0)
+        finally:
+            # Remove the test files
+            shutil.rmtree(dst_dir1)
+            shutil.rmtree(dst_dir2)
+            self.delete_image_and_data('test_images/qis_uploadfile.jpg')
+            self.delete_image_and_data('test_images/qis_uploadfile-001.jpg')
+
+    # v2.7.1 Multiple file uploads - with filenames that accidentally get converted to dupes
+    def test_file_upload_multi_dupe_filenames_via_chars(self):
+        self.login('admin', 'admin')
+        # Copy test files to upload
+        src_file = get_abs_path('test_images/cathedral.jpg')
+        dst_file1 = '/tmp/qis_upload.jpg'
+        dst_file2 = '/tmp/?qis_upload?.jpg'
+        shutil.copy(src_file, dst_file1)
+        shutil.copy(src_file, dst_file2)
+        # Check that secure_filename() will make filenames the same during upload
+        self.assertEqual(secure_filename(dst_file1), secure_filename(dst_file2))
+        try:
+            rv = self.multi_file_upload(
+                self.app,
+                [dst_file1, dst_file2],
+                'test_images',
+                '0'
+            )
+            self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+            obj = json.loads(rv.data.decode('utf8'))['data']
+            self.assertEqual(len(obj), 2)
+            # Both entries should be image info with one file renamed
+            imgdata = obj['/tmp/qis_upload.jpg']
+            self.assertEqual(imgdata['src'], 'test_images/qis_upload.jpg')
+            self.assertGreater(imgdata['id'], 0)
+            imgdata = obj['/tmp/?qis_upload?.jpg']
+            self.assertEqual(imgdata['src'], 'test_images/qis_upload-001.jpg')
+            self.assertGreater(imgdata['id'], 0)
+        finally:
+            # Remove the test files
+            os.remove(dst_file1)
+            os.remove(dst_file2)
+            self.delete_image_and_data('test_images/qis_upload.jpg')
+            self.delete_image_and_data('test_images/qis_upload-001.jpg')
 
     # File uploads
     def test_file_upload_unicode(self):
@@ -2555,25 +2717,23 @@ class ImageServerTestsFast(BaseTestCase):
         shutil.copy(src_file, dst_file)
         try:
             # Upload
-            rv = self.file_upload(self.app, dst_file, 'test_images')
+            rv = self.file_upload(self.app, dst_file, 'test_images', '0')
             self.assertEqual(rv.status_code, 200)
             obj = json.loads(rv.data.decode('utf8'))['data']
             self.assertEqual(len(obj), 1)
             self.assertIn('/tmp/qis uplo\xe4d f\xefle.jpg', obj)
             imgdata = obj['/tmp/qis uplo\xe4d f\xefle.jpg']
-            self.assertEqual(imgdata['src'], 'test_images/tmp_qis uplo\xe4d f\xefle.jpg')
+            self.assertEqual(imgdata['src'], 'test_images/qis uplo\xe4d f\xefle.jpg')
             self.assertGreater(imgdata['id'], 0)
             # Make sure it works
-            rv = self.app.get('/image?src=test_images/tmp_qis uplo\xe4d f\xefle.jpg')
+            rv = self.app.get('/image?src=test_images/qis uplo\xe4d f\xefle.jpg')
             self.assertEqual(rv.status_code, 200)
+            db_img = dm.get_image(src='test_images/qis uplo\xe4d f\xefle.jpg')
+            self.assertIsNotNone(db_img, 'Upload did not create image data')
         finally:
             # Remove the test files
             os.remove(dst_file)
-            delete_file('test_images/tmp_qis uplo\xe4d f\xefle.jpg')
-        # Remove the data too
-        db_img = dm.get_image(src='test_images/tmp_qis uplo\xe4d f\xefle.jpg')
-        assert db_img is not None, 'Upload did not create image data'
-        dm.delete_image(db_img, True)
+            self.delete_image_and_data('test_images/qis uplo\xe4d f\xefle.jpg')
 
     # File uploads expected failures
     def test_bad_file_uploads(self):
@@ -2759,7 +2919,7 @@ class ImageServerTestsFast(BaseTestCase):
     # Test image and page access (folder permissions)
     def test_folder_permissions(self):
         temp_file = '/tmp/qis_uploadfile.jpg'
-        temp_image_path = 'test_images/tmp_qis_uploadfile.jpg'
+        temp_image_path = 'test_images/qis_uploadfile.jpg'
         try:
             # 1 Folder browse page requires view permission
             # 2 Image details page requires view permission
@@ -2855,7 +3015,7 @@ class ImageServerTestsFast(BaseTestCase):
         finally:
             # Delete temp file and uploaded file
             if os.path.exists(temp_file): os.remove(temp_file)
-            delete_file(temp_image_path)
+            self.delete_image_and_data(temp_image_path)
             set_default_public_permission(FolderPermission.ACCESS_DOWNLOAD)
             set_default_internal_permission(FolderPermission.ACCESS_DOWNLOAD)
 

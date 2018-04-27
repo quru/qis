@@ -31,6 +31,7 @@
 # 27 Feb 15  Matt  #532 Auto-reload template files
 # 22 Sep 15  Matt  v2 Templates are now loaded from the database
 # 25 Aug 16  Matt  v2.2 Replace fall-back image parameters with a default template
+# 26 Apr 18  Matt  v2.7.1/v3.0.1 Improve file uploads
 #
 
 # TODO Can we make base image detection more intelligent to work with cropped images?
@@ -45,9 +46,10 @@ import time
 from . import exif
 
 from .errors import DBDataError, DoesNotExistError, ImageError, ServerTooBusyError
-from .filesystem_manager import get_upload_directory, path_exists
-from .filesystem_manager import get_file_data, put_file_data
-from .filesystem_manager import get_file_info
+from .filesystem_manager import (
+    get_deduped_path, get_file_data, get_file_info,
+    make_dirs, path_exists, put_file_data
+)
 from .filesystem_sync import auto_sync_file, set_image_properties
 from .image_attrs import ImageAttrs
 from .image_wrapper import ImageWrapper
@@ -183,93 +185,79 @@ class ImageManager(object):
         """
         return list(self._settings['IMAGE_FORMATS'].keys())
 
-    def put_image(self, current_user, file_wrapper, file_name,
-                  upload_path_idx=-1, upload_path=None, overwrite=False):
+    def put_image(self, current_user, file_wrapper,
+                  dest_folder_path, dest_filename, overwrite_flag):
         """
-        Stores an image file on the server and returns its new
-        ImageAttrs object and detached database image object.
+        Stores an image file on the server and returns a tuple of its new
+        ImageAttrs object and its new database object (detached).
 
         The file_wrapper must be a Werkzeug FileStorage object for the uploaded
-        file, and file_name is the name (without path) to save as.
+        file, dest_folder_path is the folder path (relative to IMAGES_BASE_DIR)
+        to store the file into, and dest_filename is the file name (without path)
+        to save as. If dest_folder_path does not exist it will be created.
 
-        The destination path can be supplied either as an index into the
-        IMAGE_UPLOAD_DIRS list, or as a user-supplied path relative to IMAGES_BASE_DIR.
-        It is mandatory to provide either a path index or a manual path, and the path
-        must not contain the filename. If a manual path is provided, it must already
-        exist on the server (user supplied paths are untrusted). If a path index is
-        provided and the resulting entry from IMAGE_UPLOAD_DIRS does not exist, it
-        will be created.
+        If a file of the same name already exists at the destination path, the
+        existing file will be replaced if overwrite_flag is True, an exception
+        will be raised if overwrite_flag is False, or the value of dest_filename
+        will be changed to a unique value if overwrite_flag is set to "rename".
+        Always check the returned filename in the latter case to see whether
+        the file was renamed.
 
-        If a file of the same name already exists in the destination path, the
-        existing file will be replaced if overwrite is True, otherwise an exception
-        will be raised.
+        Any of the following exceptions may be raised:
 
-        On error storing the file, any of the following exceptions may be raised:
-
-        - ValueError - if a parameter is missing or has an invalid value
-        - IOError - if the file could not be created
-        - AlreadyExistsError - if a file with the same name already exists and overwrite is False
-        - DoesNotExistError - if the user-supplied upload path does not exist
-        - ImageError - if the image is an unsupported format (determined from the filename)
-        - SecurityError - if the current user does not have permission to upload to the target
-                          path or if the target path is outside IMAGES_BASE_DIR
+        ValueError if a parameter is missing or has an invalid value.
+        IOError if the file could not be created or written to.
+        AlreadyExistsError if the destination file already exists and overwrite_flag is False.
+        ImageError if the image is an unsupported format (determined from its filename).
+        SecurityError if the current user does not have permission to upload to the destination
+        path or if the destination path is outside IMAGES_BASE_DIR.
         """
+        _overwrite_options = [True, False, "rename"]
         # Check mandatory params
         if file_wrapper is None:
             raise ValueError('No image file was provided')
-        if upload_path_idx < 0 and upload_path is None:
-            raise ValueError('No image destination was provided')
-        file_name = file_name.strip() if file_name is not None else None
-        if not file_name:
+        dest_folder_path = dest_folder_path.strip()
+        dest_filename = dest_filename.strip()
+        if not dest_filename:
             raise ValueError('No image file name was provided')
-
+        if overwrite_flag not in _overwrite_options:
+            raise ValueError('overwrite_flag must be one of ' + str(_overwrite_options))
         # File name must be "a.ext"
-        validate_filename(file_name)
+        validate_filename(dest_filename)
         # and the extension must be supported
-        file_name_extension = get_file_extension(file_name)
+        file_name_extension = get_file_extension(dest_filename)
         if file_name_extension not in self.get_image_formats():
             raise ImageError('The file is not a supported image format. ' +
                              'Supported types are: ' + ', '.join(self.get_image_formats()) + '.')
 
-        # Load the destination path if it's a pre-defined one
-        allow_path_creation = False
-        if upload_path_idx >= 0:
-            _, upload_path = get_upload_directory(upload_path_idx)
-            allow_path_creation = True
-
-        # Strip any leading path char from the path
-        if upload_path[0:1] == '/' or upload_path[0:1] == '\\':
-            upload_path = upload_path[1:]
-
-        # Do not allow people to upload into IMAGES_BASE_DIR root
-        upload_path = upload_path.strip()
-        if not upload_path:
-            raise ValueError('No destination path was provided')
-
-        # Check for upload folder existence ahead of permission check
-        if not path_exists(upload_path, require_directory=True) and not allow_path_creation:
-            raise DoesNotExistError('Path \'' + upload_path + '\' does not exist')
-
         # Require upload permission or file admin
         self._permissions.ensure_folder_permitted(
-            upload_path,
+            dest_folder_path,
             FolderPermission.ACCESS_UPLOAD,
             current_user,
             folder_must_exist=False
         )
 
+        # Now that we know permission is OK, create the destination folder if we need to
+        if not path_exists(dest_folder_path, require_directory=True):
+            self._logger.debug('Creating new folder \'' + dest_folder_path + '\'')
+            make_dirs(dest_folder_path)
+
         # See if the image already exists
-        final_path = os.path.join(upload_path, file_name)
-        file_existed = path_exists(final_path, require_file=True)
+        final_path = os.path.join(dest_folder_path, dest_filename)
+        file_exists = path_exists(final_path)
+
+        # v2.7.1 If the image exists and overwrite_flag is "rename",
+        # generate a new unique name for the image.
+        if file_exists and overwrite_flag == "rename":
+            final_path = get_deduped_path(final_path)
+            overwrite_flag = False
 
         # Store the new file
-        # Relies on put_file_data() to perform further path checks
         self._logger.debug(
-            ('Replacing existing' if file_existed else 'Storing uploaded') +
-            ' file \'' + file_name + '\' at \'' + upload_path +
-            '\', allow path create ' + str(allow_path_creation)
+            ('Replacing existing' if file_exists else 'Storing new') + ' file ' + final_path
         )
-        put_file_data(file_wrapper, upload_path, file_name, allow_path_creation, overwrite)
+        put_file_data(file_wrapper, final_path, overwrite_flag)
 
         # Success - create/replace the image database record
         # and clear out the old version if it previously existed
@@ -288,7 +276,7 @@ class ImageManager(object):
             self._data.add_image_history(
                 db_image,
                 current_user,
-                ImageHistory.ACTION_REPLACED if file_existed else ImageHistory.ACTION_CREATED,
+                ImageHistory.ACTION_REPLACED if file_exists else ImageHistory.ACTION_CREATED,
                 'File uploaded by user',
                 _db_session=db_session,
                 _commit=True

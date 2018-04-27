@@ -14,6 +14,7 @@
 	Notable modifications:
 	Date       By    Details
 	=========  ====  ============================================================
+	26 Apr 18  Matt  v2.7.1/v3.0.1 Add overwrite=rename option
 -->
 {% endblock %}
 
@@ -73,12 +74,26 @@
 			<br/>
 		</div>
 		<div>
-			<label>Overwrite:</label>
-			<input type="checkbox" id="overwrite" name="overwrite" value="true" 
-			       {% if request.args.overwrite == 'True' %}checked="checked"{% endif %} />
-			<span class="smalltext">
-				<label class="inline" for="overwrite">Overwrite these files on the server if they already exist</label>
-			</span>
+			<label>Replace:</label>
+			<span>If a file with the same name already exists on the server</span>
+		</div>
+		<div>
+			<label></label>
+			<input type="radio" id="overwrite_no" name="overwrite" value="no" 
+			       {% if request.args.overwrite == 'no' or not request.args.overwrite %}checked="checked"{% endif %} />
+			<label class="inline" for="overwrite_no">Do not upload the new file</label>
+		</div>
+		<div>
+			<label></label>
+			<input type="radio" id="overwrite_rename" name="overwrite" value="rename" 
+			       {% if request.args.overwrite == 'rename' %}checked="checked"{% endif %} />
+			<label class="inline" for="overwrite_rename">Rename the new file (leaving the existing file alone)</label>
+		</div>
+		<div>
+			<label></label>
+			<input type="radio" id="overwrite_yes" name="overwrite" value="yes" 
+			       {% if request.args.overwrite == 'yes' %}checked="checked"{% endif %} />
+			<label class="inline" for="overwrite_yes">Replace the existing file with the new one <img src="{{ url_for('static', filename='images/icon-warning.png') }}" alt="Warning" title="The existing file will be overwritten"/></label>
 		</div>
 		<br/>
 		{% for up_desc, up_path, upload_permitted, view_permitted in upload_dirs %}

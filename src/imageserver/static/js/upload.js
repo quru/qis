@@ -21,20 +21,21 @@
 	along with this program.  If not, see http://www.gnu.org/licenses/
 
 	Last Changed:  $Date$ $Rev$ by $Author$
-	
+
 	Notable modifications:
 	Date       By    Details
 	=========  ====  ============================================================
 	22Oct2012  Matt  Converted to use upload JSON API, added HTML5 progress support
 	13Jan2015  Matt  Multiple file, drag and drop support
 	17Mar2015  Matt  Add folder browse
+	27Apr2018  Matt  Allow multiple file drops, appending to upload list
 */
 
 "use strict";
 
 var Upload = {
 	enhancedUpload: false,
-	droppedFiles: null
+	droppedFiles: []
 };
 
 Upload.init = function () {
@@ -68,7 +69,7 @@ Upload.onResetDir = function() {
 Upload.onResetDropzone = function() {
 	$('dropzone').removeClass('active');
 	$('dropzone').set('html', 'Drop your files here');
-	Upload.droppedFiles = null;
+	Upload.droppedFiles = [];
 };
 
 Upload.onPathKey = function(e) {
@@ -96,10 +97,16 @@ Upload.onDragEnd = function(e) {
 
 Upload.onDragDrop = function(e) {
 	e.stopPropagation();
-	e.preventDefault();	
+	e.preventDefault();
 
 	if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
-		Upload.droppedFiles = e.dataTransfer.files;
+		// Append non-dupe files to the upload list
+		for (var i = 0; i < e.dataTransfer.files.length; i++) {
+			var file = e.dataTransfer.files.item(i);
+			if (!Upload.fileInList(file, Upload.droppedFiles)) {
+				Upload.droppedFiles.push(file);
+			}
+		}
 		$('dropzone').set('html', Upload.droppedFiles.length + ' file' + (Upload.droppedFiles.length > 1 ? 's' : '') + ' dropped');
 		
 		if (validate_isempty('files') && validate_isempty('directory')) {
@@ -138,7 +145,7 @@ Upload.onSubmit = function(e) {
 Upload.validate = function() {
 	form_clearErrors('uploadform');
 	
-	if (validate_isempty('files') && validate_isempty('directory') && !Upload.droppedFiles) {
+	if (validate_isempty('files') && validate_isempty('directory') && !Upload.droppedFiles.length) {
 		form_setError('files');
 		alert('You must select a file to upload');
 		return false;
@@ -149,7 +156,7 @@ Upload.validate = function() {
 		return false;
 	}
 	// Dropped files require the HTML5 upload
-	if (Upload.droppedFiles && !Upload.enhancedUpload) {
+	if (Upload.droppedFiles.length && !Upload.enhancedUpload) {
 		form_setError('files');
 		alert('Sorry, your browser cannot upload dropped files.\nPlease use the file selector instead.');
 		Upload.onResetDropzone();
@@ -251,15 +258,20 @@ Upload.onJsonResponse = function(jsonObj) {
 
 // Submits the form using an HTML5 file-upload-capable XHR
 Upload.runEnhancedUpload = function() {
+	// Ridiculous workaround for Safari 11 bug, see https://stackoverflow.com/q/49614091/1671320
+	if ($('files').value === '')
+		$('files').disabled = true;
+	if ($('directory').value === '')
+		$('directory').disabled = true;
+	// End of workaround part 1, part 2 below
+
 	var form = $('uploadform'),
 	    formData = new FormData(form),
 	    xhr = new XMLHttpRequest();
 	
 	// Apply dropped files, if any
-	if (Upload.droppedFiles) {
-		for (var i = 0; i < Upload.droppedFiles.length; i++) {
-			formData.append('files', Upload.droppedFiles[i]);
-		}
+	for (var i = 0; i < Upload.droppedFiles.length; i++) {
+		formData.append('files', Upload.droppedFiles[i]);
 	}
 	
 	// Disable plain text response from the API
@@ -280,6 +292,10 @@ Upload.runEnhancedUpload = function() {
 	
 	xhr.open(form.method, form.action);
 	xhr.send(formData);
+
+	// Safari 11 bug workaround - part 2
+	$('files').disabled = false;
+	$('directory').disabled = false;
 };
 
 // Returns whether we can upload the file using an HTML5 XHR with progress events
@@ -322,6 +338,27 @@ Upload.getIFrameBody = function(iframe) {
 	var iframeDoc = iframe.contentDocument || iframe.contentWindow.document,
 	    iframeBods = iframeDoc.getElementsByTagName('body');
 	return (iframeBods.length > 0) ? $(iframeBods[0]) : null;
+};
+
+// Utility to return whether a File object is already in a list of File objects
+// This is a best guess as not all browsers support the same File object properties
+Upload.fileInList = function(file, fileList) {
+	if (file && fileList) {
+		for (var i = 0; i < fileList.length; i++) {
+			var thisFile = fileList[i];
+			// Check name property as a minimum
+			if (file.name && thisFile.name && file.name === thisFile.name) {
+				// Ok they might be the same, try some other properties
+				if (file.size && thisFile.size && file.size !== thisFile.size)
+					continue;
+				if (file.lastModified && thisFile.lastModified && file.lastModified !== thisFile.lastModified)
+					continue;
+				// They match as far as we can tell
+				return true;
+			}
+		}
+	}
+	return false;
 };
 
 // Invoked (by the folder selection window) when a folder is selected

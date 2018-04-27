@@ -37,10 +37,9 @@ import shutil
 from . import tests as main_tests
 from .tests import BaseTestCase, setup_user_account
 
-from imageserver.flask_app import data_engine as dm
 from imageserver.flask_app import cache_engine as cm
 from imageserver.filesystem_manager import (
-    get_abs_path, delete_file, delete_dir, make_dirs
+    get_abs_path, delete_dir, make_dirs
 )
 
 
@@ -125,15 +124,12 @@ class ImageServerTestsWebPages(BaseTestCase):
             #       browser-unsupported types e.g. TIF, PDF files
             start_idx = page_text.index('<img class')
             end_idx = page_text.index('>', start_idx)
-            self.assertIn('src=test_images/tmp_qis_uploadfile.jpg', page_text[start_idx:end_idx])
+            self.assertIn('src=test_images/qis_uploadfile.jpg', page_text[start_idx:end_idx])
             self.assertIn('format=jpg', page_text[start_idx:end_idx])
         finally:
             # Remove the test files and data
             os.remove(dst_file)
-            delete_file('test_images/tmp_qis_uploadfile.jpg')
-            db_img = dm.get_image(src='test_images/tmp_qis_uploadfile.jpg')
-            if db_img:
-                dm.delete_image(db_img, True)
+            self.delete_image_and_data('test_images/qis_uploadfile.jpg')
 
     # File upload complete page, no uploads
     def test_file_upload_complete_page_blank(self):
