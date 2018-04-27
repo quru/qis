@@ -5,6 +5,7 @@
 .pydevproject
 .Python
 .DS_Store
+.vscode
 coverage.xml
 pip-selfcheck.json
 nosetests.xml
@@ -17,6 +18,8 @@ nosetests.xml
 *.egg
 *.egg-info/
 bin
+bin-2
+bin-3
 build
 conf/*.py
 dist
