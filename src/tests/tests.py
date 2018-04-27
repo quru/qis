@@ -412,24 +412,20 @@ class BaseTestCase(FlaskTestCase):
         self.assertEqual(rv.status_code, 302)
 
     # Utility - uploads a file (provide the full path) to an image server
-    # folder via the file upload API. Note that Flask includes the path in
-    # the filename with slashes converted to underscores.
-    # Returns the app.post() return value.
-    def file_upload(self, app, src_file_path, dest_folder, overwrite=1):
+    # folder via the file upload API. Returns the app.post() return value.
+    def file_upload(self, app, src_file_path, dest_folder, overwrite='1'):
         return self.multi_file_upload(app, [src_file_path], dest_folder, overwrite)
 
     # Utility - uploads multiple files (provide the full paths) to an image server
-    # folder via the file upload API. Note that Flask includes the path in the
-    # filenames with slashes converted to underscores.
-    # Returns the app.post() return value.
-    def multi_file_upload(self, app, src_file_paths, dest_folder, overwrite=1):
+    # folder via the file upload API. Returns the app.post() return value.
+    def multi_file_upload(self, app, src_file_paths, dest_folder, overwrite='1'):
         files = []
         try:
             files = [open(path, 'rb') for path in src_file_paths]
             return app.post('/api/upload/', data={
                 'files': files,
                 'path': dest_folder,
-                'overwrite': str(overwrite)
+                'overwrite': overwrite
             })
         finally:
             for fp in files:
@@ -628,8 +624,8 @@ class ImageServerBackgroundTaskTests(BaseTestCase):
 
         src_file = get_abs_path('test_images/pdftest.pdf')
         dest_file = '/tmp/qis_pdftest.pdf'
-        image_path = 'test_images/tmp_qis_pdftest.pdf'
-        burst_path = 'test_images/tmp_qis_pdftest.pdf.d'
+        image_path = 'test_images/qis_pdftest.pdf'
+        burst_path = 'test_images/qis_pdftest.pdf.d'
         # Login
         setup_user_account('kryten', 'admin_files')
         self.login('kryten', 'kryten')
@@ -2375,7 +2371,7 @@ class ImageServerTestsFast(BaseTestCase):
         assert dm.get_image(src=image_path) is None
         # Check db auto-populates from an image upload
         temp_file = '/tmp/qis_uploadfile.jpg'
-        image_path = 'test_images/tmp_qis_uploadfile.jpg'
+        image_path = 'test_images/qis_uploadfile.jpg'
         try:
             i = dm.get_image(src=image_path)
             assert i is None
@@ -2452,23 +2448,23 @@ class ImageServerTestsFast(BaseTestCase):
         shutil.copy(src_file, dst_file)
         try:
             # Upload
-            rv = self.file_upload(self.app, dst_file, 'test_images')
+            rv = self.file_upload(self.app, dst_file, 'test_images', '0')
             self.assertEqual(rv.status_code, 200)
             obj = json.loads(rv.data)['data']
             self.assertEqual(len(obj), 1)
             self.assertIn('/tmp/qis_uploadfile.jpg', obj)
             imgdata = obj['/tmp/qis_uploadfile.jpg']
-            self.assertEqual(imgdata['src'], 'test_images/tmp_qis_uploadfile.jpg')
+            self.assertEqual(imgdata['src'], 'test_images/qis_uploadfile.jpg')
             self.assertGreater(imgdata['id'], 0)
             # Make sure it works
-            rv = self.app.get('/image?src=test_images/tmp_qis_uploadfile.jpg')
+            rv = self.app.get('/image?src=test_images/qis_uploadfile.jpg')
             self.assertEqual(rv.status_code, 200)
-            db_img = dm.get_image(src='test_images/tmp_qis_uploadfile.jpg')
+            db_img = dm.get_image(src='test_images/qis_uploadfile.jpg')
             self.assertIsNotNone(db_img, 'Upload did not create image data')
         finally:
             # Remove the test files
             os.remove(dst_file)
-            self.delete_image_and_data('test_images/tmp_qis_uploadfile.jpg')
+            self.delete_image_and_data('test_images/qis_uploadfile.jpg')
 
     # v2.7.1 File upload - with overwrite as rename
     def test_file_upload_overwrite_rename(self):
@@ -2479,7 +2475,7 @@ class ImageServerTestsFast(BaseTestCase):
         shutil.copy(src_file, dst_file)
         try:
             # Have the upload file exist already
-            copy_file('test_images/cathedral.jpg', 'test_images/tmp_qis_uploadfile.jpg')
+            copy_file('test_images/cathedral.jpg', 'test_images/qis_uploadfile.jpg')
             # Upload
             rv = self.file_upload(self.app, dst_file, 'test_images', 'rename')
             self.assertEqual(rv.status_code, 200)
@@ -2489,15 +2485,15 @@ class ImageServerTestsFast(BaseTestCase):
             imgdata = obj['/tmp/qis_uploadfile.jpg']
             self.assertGreater(imgdata['id'], 0)
             # Make sure it was renamed with -001 appended
-            self.assertEqual(imgdata['src'], 'test_images/tmp_qis_uploadfile-001.jpg')
+            self.assertEqual(imgdata['src'], 'test_images/qis_uploadfile-001.jpg')
             # Make sure it works
-            rv = self.app.get('/image?src=test_images/tmp_qis_uploadfile-001.jpg')
+            rv = self.app.get('/image?src=test_images/qis_uploadfile-001.jpg')
             self.assertEqual(rv.status_code, 200)
         finally:
             # Remove the test files
             os.remove(dst_file)
-            self.delete_image_and_data('test_images/tmp_qis_uploadfile.jpg')
-            self.delete_image_and_data('test_images/tmp_qis_uploadfile-001.jpg')
+            self.delete_image_and_data('test_images/qis_uploadfile.jpg')
+            self.delete_image_and_data('test_images/qis_uploadfile-001.jpg')
 
     # Multiple file uploads - expecting success
     def test_file_upload_multi(self):
@@ -2519,19 +2515,19 @@ class ImageServerTestsFast(BaseTestCase):
             obj = json.loads(rv.data)['data']
             self.assertEqual(len(obj), 2)
             imgdata = obj['/tmp/qis_uploadfile1.jpg']
-            self.assertEqual(imgdata['src'], 'test_images/tmp_qis_uploadfile1.jpg')
+            self.assertEqual(imgdata['src'], 'test_images/qis_uploadfile1.jpg')
             self.assertGreater(imgdata['id'], 0)
-            self.assertTrue(path_exists('test_images/tmp_qis_uploadfile1.jpg'))
+            self.assertTrue(path_exists('test_images/qis_uploadfile1.jpg'))
             imgdata = obj['/tmp/qis_uploadfile2.jpg']
-            self.assertEqual(imgdata['src'], 'test_images/tmp_qis_uploadfile2.jpg')
+            self.assertEqual(imgdata['src'], 'test_images/qis_uploadfile2.jpg')
             self.assertGreater(imgdata['id'], 0)
-            self.assertTrue(path_exists('test_images/tmp_qis_uploadfile2.jpg'))
+            self.assertTrue(path_exists('test_images/qis_uploadfile2.jpg'))
         finally:
             # Remove the test files
             os.remove(dst_file1)
             os.remove(dst_file2)
-            self.delete_image_and_data('test_images/tmp_qis_uploadfile1.jpg')
-            self.delete_image_and_data('test_images/tmp_qis_uploadfile2.jpg')
+            self.delete_image_and_data('test_images/qis_uploadfile1.jpg')
+            self.delete_image_and_data('test_images/qis_uploadfile2.jpg')
 
     # Multiple file uploads - with overwrite no
     def test_file_upload_multi_overwrite_no(self):
@@ -2544,7 +2540,7 @@ class ImageServerTestsFast(BaseTestCase):
         shutil.copy(src_file, dst_file2)
         try:
             # Make one of the files exist already
-            copy_file('test_images/cathedral.jpg', 'test_images/tmp_qis_uploadfile2.jpg')
+            copy_file('test_images/cathedral.jpg', 'test_images/qis_uploadfile2.jpg')
             # Test 1 file success, 1 file failure
             rv = self.multi_file_upload(
                 self.app,
@@ -2559,7 +2555,7 @@ class ImageServerTestsFast(BaseTestCase):
             self.assertEqual(len(obj), 2)
             # First entry should be image info
             imgdata = obj['/tmp/qis_uploadfile1.jpg']
-            self.assertEqual(imgdata['src'], 'test_images/tmp_qis_uploadfile1.jpg')
+            self.assertEqual(imgdata['src'], 'test_images/qis_uploadfile1.jpg')
             self.assertGreater(imgdata['id'], 0)
             # Second entry should be error info
             imgdata = obj['/tmp/qis_uploadfile2.jpg']
@@ -2571,8 +2567,8 @@ class ImageServerTestsFast(BaseTestCase):
             # Remove the test files
             os.remove(dst_file1)
             os.remove(dst_file2)
-            self.delete_image_and_data('test_images/tmp_qis_uploadfile1.jpg')
-            self.delete_image_and_data('test_images/tmp_qis_uploadfile2.jpg')
+            self.delete_image_and_data('test_images/qis_uploadfile1.jpg')
+            self.delete_image_and_data('test_images/qis_uploadfile2.jpg')
 
     # Multiple file uploads - with overwrite yes
     def test_file_upload_multi_overwrite_yes(self):
@@ -2585,8 +2581,8 @@ class ImageServerTestsFast(BaseTestCase):
         shutil.copy(src_file, dst_file2)
         try:
             # Make both files exist already
-            copy_file('test_images/cathedral.jpg', 'test_images/tmp_qis_uploadfile1.jpg')
-            copy_file('test_images/cathedral.jpg', 'test_images/tmp_qis_uploadfile2.jpg')
+            copy_file('test_images/cathedral.jpg', 'test_images/qis_uploadfile1.jpg')
+            copy_file('test_images/cathedral.jpg', 'test_images/qis_uploadfile2.jpg')
             # Test overwrites
             rv = self.multi_file_upload(
                 self.app,
@@ -2599,17 +2595,17 @@ class ImageServerTestsFast(BaseTestCase):
             self.assertEqual(len(obj), 2)
             # Both entries should be image info
             imgdata = obj['/tmp/qis_uploadfile1.jpg']
-            self.assertEqual(imgdata['src'], 'test_images/tmp_qis_uploadfile1.jpg')
+            self.assertEqual(imgdata['src'], 'test_images/qis_uploadfile1.jpg')
             self.assertGreater(imgdata['id'], 0)
             imgdata = obj['/tmp/qis_uploadfile2.jpg']
-            self.assertEqual(imgdata['src'], 'test_images/tmp_qis_uploadfile2.jpg')
+            self.assertEqual(imgdata['src'], 'test_images/qis_uploadfile2.jpg')
             self.assertGreater(imgdata['id'], 0)
         finally:
             # Remove the test files
             os.remove(dst_file1)
             os.remove(dst_file2)
-            self.delete_image_and_data('test_images/tmp_qis_uploadfile1.jpg')
-            self.delete_image_and_data('test_images/tmp_qis_uploadfile2.jpg')
+            self.delete_image_and_data('test_images/qis_uploadfile1.jpg')
+            self.delete_image_and_data('test_images/qis_uploadfile2.jpg')
 
     # v2.7.1 Multiple file uploads - with dupe filenames (from different source directories)
     def test_file_upload_multi_dupe_filenames(self):
@@ -2671,17 +2667,17 @@ class ImageServerTestsFast(BaseTestCase):
             self.assertEqual(len(obj), 2)
             # Both entries should be image info with one file renamed
             imgdata = obj['/tmp/qis_upload.jpg']
-            self.assertEqual(imgdata['src'], 'test_images/tmp_qis_upload.jpg')
+            self.assertEqual(imgdata['src'], 'test_images/qis_upload.jpg')
             self.assertGreater(imgdata['id'], 0)
             imgdata = obj['/tmp/?qis_upload?.jpg']
-            self.assertEqual(imgdata['src'], 'test_images/tmp_qis_upload-001.jpg')
+            self.assertEqual(imgdata['src'], 'test_images/qis_upload-001.jpg')
             self.assertGreater(imgdata['id'], 0)
         finally:
             # Remove the test files
             os.remove(dst_file1)
             os.remove(dst_file2)
-            self.delete_image_and_data('test_images/tmp_qis_upload.jpg')
-            self.delete_image_and_data('test_images/tmp_qis_upload-001.jpg')
+            self.delete_image_and_data('test_images/qis_upload.jpg')
+            self.delete_image_and_data('test_images/qis_upload-001.jpg')
 
     # File uploads
     def test_file_upload_unicode(self):
@@ -2692,23 +2688,23 @@ class ImageServerTestsFast(BaseTestCase):
         shutil.copy(src_file, dst_file)
         try:
             # Upload
-            rv = self.file_upload(self.app, dst_file, 'test_images')
+            rv = self.file_upload(self.app, dst_file, 'test_images', '0')
             self.assertEqual(rv.status_code, 200)
             obj = json.loads(rv.data)['data']
             self.assertEqual(len(obj), 1)
             self.assertIn(u'/tmp/qis uplo\xe4d f\xefle.jpg', obj)
             imgdata = obj[u'/tmp/qis uplo\xe4d f\xefle.jpg']
-            self.assertEqual(imgdata['src'], u'test_images/tmp_qis uplo\xe4d f\xefle.jpg')
+            self.assertEqual(imgdata['src'], u'test_images/qis uplo\xe4d f\xefle.jpg')
             self.assertGreater(imgdata['id'], 0)
             # Make sure it works
-            rv = self.app.get(u'/image?src=test_images/tmp_qis uplo\xe4d f\xefle.jpg')
+            rv = self.app.get(u'/image?src=test_images/qis uplo\xe4d f\xefle.jpg')
             self.assertEqual(rv.status_code, 200)
-            db_img = dm.get_image(src=u'test_images/tmp_qis uplo\xe4d f\xefle.jpg')
+            db_img = dm.get_image(src=u'test_images/qis uplo\xe4d f\xefle.jpg')
             self.assertIsNotNone(db_img, 'Upload did not create image data')
         finally:
             # Remove the test files
             os.remove(dst_file)
-            self.delete_image_and_data(u'test_images/tmp_qis uplo\xe4d f\xefle.jpg')
+            self.delete_image_and_data(u'test_images/qis uplo\xe4d f\xefle.jpg')
 
     # File uploads expected failures
     def test_bad_file_uploads(self):
@@ -2894,7 +2890,7 @@ class ImageServerTestsFast(BaseTestCase):
     # Test image and page access (folder permissions)
     def test_folder_permissions(self):
         temp_file = '/tmp/qis_uploadfile.jpg'
-        temp_image_path = 'test_images/tmp_qis_uploadfile.jpg'
+        temp_image_path = 'test_images/qis_uploadfile.jpg'
         try:
             # 1 Folder browse page requires view permission
             # 2 Image details page requires view permission
@@ -2990,7 +2986,7 @@ class ImageServerTestsFast(BaseTestCase):
         finally:
             # Delete temp file and uploaded file
             if os.path.exists(temp_file): os.remove(temp_file)
-            delete_file(temp_image_path)
+            self.delete_image_and_data(temp_image_path)
             set_default_public_permission(FolderPermission.ACCESS_DOWNLOAD)
             set_default_internal_permission(FolderPermission.ACCESS_DOWNLOAD)
 

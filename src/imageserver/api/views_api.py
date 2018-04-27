@@ -56,7 +56,7 @@ from imageserver.flask_util import api_permission_required, external_url_for, lo
 from imageserver.models import FolderPermission, Image, User
 from imageserver.session_manager import get_session_user
 from imageserver.user_auth import authenticate_user
-from imageserver.util import add_sep, get_file_extension, secure_filename
+from imageserver.util import add_sep, filepath_filename, get_file_extension, secure_filename
 from imageserver.util import parse_boolean, parse_int
 from imageserver.util import validate_number, validate_string
 
@@ -100,8 +100,9 @@ def token():
         else:
             # Success
             http_auth = TimedTokenBasicAuthentication(app)
-            token = http_auth.generate_auth_token({'user_id': user.id})
-            return make_api_success_response({'token': token})
+            return make_api_success_response({
+                'token': http_auth.generate_auth_token({'user_id': user.id})
+            })
 
     # Login incorrect
     logger.warn('Incorrect API login for username ' + username)
@@ -292,8 +293,8 @@ def upload():
         can_download = None
         saved_files = []
         for wkfile in file_list:
-            # TODO discard any path part here - not doing so is why we have weird paths in unit tests
-            original_filename = wkfile.filename
+            original_filepath = wkfile.filename
+            original_filename = filepath_filename(original_filepath)  # v2.7.1 added
             if original_filename:
                 db_image = None
                 try:
@@ -320,7 +321,7 @@ def upload():
                     if put_image_exception is None:
                         put_image_exception = e
                     # This loop failure, add the error info to our return data
-                    ret_dict[original_filename] = {'error': create_api_error_dict(e)}
+                    ret_dict[original_filepath] = {'error': create_api_error_dict(e)}
 
                 if db_image:
                     # Calculate download permission once (all files are going to same folder)
@@ -331,7 +332,7 @@ def upload():
                             get_session_user()
                         )
                     # This loop success
-                    ret_dict[original_filename] = _image_dict(db_image, can_download)
+                    ret_dict[original_filepath] = _image_dict(db_image, can_download)
             else:
                 logger.warn('Upload received blank filename, ignoring file')
 
