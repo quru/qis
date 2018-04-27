@@ -4,7 +4,7 @@ page and API for files that already exist, allow multiple file drops on the uplo
 page, bug fixes to prevent unexpected "already exists" errors when uploading,
 allow uploads into the root of the image repository_
 
-* Update the Python and web code
+* Update the Python and web code (the `src` folder)
 * Restart the Apache service
 
 # v3.0.0
@@ -23,7 +23,7 @@ locking in a multi-server deployment_
 
 See [the Portfolios specification](v2/Portfolios.md).
 
-* Update the Python and web code
+* Update the Python and web code (the `src` folder)
 * Restart the Apache service
 
 # v2.6.5
@@ -45,27 +45,27 @@ that indicates whether each file is a supported image type. With this change
 the API now matches the existing behaviour of folder browsing in the admin
 user interface.
 
-* Update the Python and web code
+* Update the Python and web code (the `src` folder)
 * Restart the Apache service
 
 # v2.6.3
 _Changes: Fix image zooming on devices with both a mouse/trackpad and a touch-screen_
 
-* Update the Python and web code
+* Update the Python and web code (the `src` folder)
 * Restart the Apache service
 
 # v2.6.2
 _Changes: Upgrade SQLAlchemy to v1.1, psutil to 5.4,
 plus minor upgrades to python-ldap, pylibmc, and python-requests_
 
-* Update the Python dependencies
+* Update the Python dependencies (the `lib` folder)
   (from `requirements.txt` or by installing a newer `QIS-libs.tar.gz`)
 * Restart the Apache service
 
 # v2.6.1
 _Changes: API URL changes for consistency (the previous URLs are still supported)_
 
-* Update the Python and web code
+* Update the Python and web code (the `src` folder)
 * Restart the Apache service
 
 # v2.6.0
@@ -85,7 +85,7 @@ For upgrade instructions, see the [upgrading guide](upgrading.md).
 # v2.5.1
 _Changes: Bug fix to Active Directory authentication_
 
-* Update the Python and web code
+* Update the Python and web code (the `src` folder)
 * Restart the Apache service
 
 # v2.5.0
@@ -93,7 +93,7 @@ _Changes: Bundle Quru's image-defer.js library, add lazy loading images to the
 image publisher outputs, make the grid/thumbnail view in the folder browse use
 lazily loaded thumbnail images_
 
-* Update the Python and web code
+* Update the Python and web code (the `src` folder)
 * Restart the Apache service
 
 # v2.4.0
@@ -108,7 +108,7 @@ If upgrading from v1.x, see the [upgrading guide](upgrading.md).
   
 If upgrading from v2.3:
 
-* Update the Python and web code
+* Update the Python and web code (the `src` folder)
 * Restart the Apache service
 
 # v2.3.0-dev
@@ -126,8 +126,8 @@ The `list` API no longer allows unlimited results with `limit=0`, and instead
 has a new `start` parameter to allow the retrieval of results as multiple pages.
 The `limit` parameter has a new maximum value of `1000`.
 
-* Update the Python and web code
-* Update the Python dependencies
+* Update the Python and web code (the `src` folder)
+* Update the Python dependencies (the `lib` folder)
 * Restart the Apache service
 
 # v2.2.0-dev
@@ -144,8 +144,8 @@ into your templates for you. If upgrading v2 you will need to manually ensure th
 where appropriate, your templates have values set for parameters that the old system
 settings used to provide.
 
-* Update the Python and web code
-* Update the Python dependencies
+* Update the Python and web code (the `src` folder)
+* Update the Python dependencies (the `lib` folder)
 * Run (or re-run) the `v2_upgrade` script:
 
 	cd src/imageserver/scripts
@@ -195,8 +195,8 @@ _Breaking change: move image templates into the database_
 
 This release requires Postgres 9.2 or above.
 
-* Update the Python and web code
-* Update the Python dependencies
+* Update the Python and web code (the `src` folder)
+* Update the Python dependencies (the `lib` folder)
 * Import the existing image templates into the database:
 
 	cd src/imageserver/scripts
@@ -214,8 +214,8 @@ for listing, creating, updating and deleting templates.
 _Changes: upgrade SQLAlchemy to v1, upgrade internal database models_
 
 * Stop the Apache service
-* Update the Python and web code
-* Update the Python dependencies
+* Update the Python and web code (the `src` folder)
+* Update the Python dependencies (the `lib` folder)
 * Restart the Memcached service
 * Optional: drop the `cachectl` table (note v2_upgrade.py will do this for you)
 * Start the Apache service
