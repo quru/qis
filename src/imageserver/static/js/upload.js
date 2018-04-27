@@ -258,6 +258,13 @@ Upload.onJsonResponse = function(jsonObj) {
 
 // Submits the form using an HTML5 file-upload-capable XHR
 Upload.runEnhancedUpload = function() {
+	// Ridiculous workaround for Safari 11 bug, see https://stackoverflow.com/q/49614091/1671320
+	if ($('files').value === '')
+		$('files').disabled = true;
+	if ($('directory').value === '')
+		$('directory').disabled = true;
+	// End of workaround part 1, part 2 below
+
 	var form = $('uploadform'),
 	    formData = new FormData(form),
 	    xhr = new XMLHttpRequest();
@@ -285,6 +292,10 @@ Upload.runEnhancedUpload = function() {
 	
 	xhr.open(form.method, form.action);
 	xhr.send(formData);
+
+	// Safari 11 bug workaround - part 2
+	$('files').disabled = false;
+	$('directory').disabled = false;
 };
 
 // Returns whether we can upload the file using an HTML5 XHR with progress events
