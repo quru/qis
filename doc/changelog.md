@@ -1,6 +1,7 @@
 # v2.7.1
-_Changes: Add new "rename" option to the upload API for files that already exist,
-bug fixes to prevent unexpected "already exists" errors with the upload API,
+_Changes: Add new "rename" option to the upload page and API for files that
+already exist, allow multiple file drops on the upload page,
+bug fixes to prevent unexpected "already exists" errors when uploading,
 allow uploads into the root of the image repository_
 
 * Update the Python and web code
