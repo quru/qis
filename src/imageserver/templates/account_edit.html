@@ -14,6 +14,7 @@
 	Notable modifications:
 	Date       By    Details
 	=========  ====  ============================================================
+	30 Apr 18  Matt  Add password confirmation field
 -->
 {% endblock %}
 
@@ -53,22 +54,29 @@
 			<input type="text" name="email" size="25" maxlength="120" value="{{ user.email }}"/>
 		</div>
 		<br/>
+		{% if user.auth_type == AUTH_TYPE_PASSWORD %}
 		<div>
 			<label>Username</label>
-			{% if user.auth_type == AUTH_TYPE_PASSWORD %}
 			<input type="text" name="username" size="25" maxlength="120" value="{{ user.username }}"/>
-			{% else %}
-			<input type="text" name="username" size="25" disabled="disabled" value="{{ user.username }}" title="Controlled externally" />
-			{% endif %}
 		</div>
 		<div>
 			<label>Password</label>
-			{% if user.auth_type == AUTH_TYPE_PASSWORD %}
-			<input type="password" name="password" size="25" maxlength="50" />
-			{% else %}
-			<input type="password" size="25" disabled="disabled" title="Controlled externally" />
-			{% endif %}
+			<input type="password" name="password" size="25" maxlength="120" />
 		</div>
+		<div>
+			<label>Confirm password</label>
+			<input type="password" name="passwordconf" size="25" maxlength="120" />
+		</div>
+		{% else %}
+		<div>
+			<label>Username</label>
+			<input type="text" name="username" size="25" disabled="disabled" value="{{ user.username }}" title="Controlled externally" />
+		</div>
+		<div>
+			<label>Password</label>
+			<input type="password" size="25" disabled="disabled" title="Controlled externally" />
+		</div>
+		{% endif %}
 		<br/>
 		<div>
 			<label></label>

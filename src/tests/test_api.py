@@ -419,7 +419,7 @@ class ImageServerAPITests(BaseTestCase):
             'last_name': 'Davis',
             'email': '',
             'username': 'admin',  # Dupe
-            'password': 'abcdef',
+            'password': 'abcdefghij',
             'auth_type': User.AUTH_TYPE_PASSWORD,
             'api_user': False,
             'status': User.STATUS_ACTIVE

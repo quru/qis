@@ -349,7 +349,7 @@ class UserAPI(MethodView):
         if params['auth_type'] != User.AUTH_TYPE_LDAP:
             validate_string(params['username'], 1, 120)
         if params['password'] or require_password:
-            validate_string(params['password'], 6, 120)
+            validate_string(params['password'], 8, 120)
         return params
 
 

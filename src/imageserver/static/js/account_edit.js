@@ -26,6 +26,7 @@
 	Date       By    Details
 	=========  ====  ============================================================
 	31Oct2012  Matt  Converted to a GenericPopup
+	30Apr2018  Matt  Add password confirmation field
 */
 
 function onInit() {
@@ -52,9 +53,15 @@ function validate() {
 		alert('You must enter a username for your account.');
 		return false;
 	}
-	if (!validate_isempty('password') && !validate_length('password', 6)) {
+	if (!validate_isempty('password') && !validate_length('password', 8)) {
 		form_setError('password');
-		alert('Your new password must be 6 characters or longer.');
+		alert('Your new password must be 8 characters or longer.');
+		return false;
+	}
+	if ($2('passwordconf') && $2('password') && $2('passwordconf').value !== $2('password').value) {
+		form_setError('password');
+		form_setError('passwordconf');
+		alert('The passwords entered do not match.');
 		return false;
 	}
 	return true;

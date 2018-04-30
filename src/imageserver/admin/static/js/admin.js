@@ -28,6 +28,7 @@
 	Date       By    Details
 	=========  ====  ============================================================
 	01Oct2015  Matt  Added template admin
+	30Apr2018  Matt  Add password confirmation field
 */
 
 "use strict";
@@ -266,9 +267,15 @@ UserEdit.validate = function() {
 		alert('You must enter a password for the user.');
 		return false;
 	}
-	if (!validate_isempty('password') && !validate_length('password', 6)) {
+	if (!validate_isempty('password') && !validate_length('password', 8)) {
 		form_setError('password');
-		alert('The user\'s password must be 6 characters or longer.');
+		alert('The password must be 8 characters or longer.');
+		return false;
+	}
+	if ($2('passwordconf') && $2('password') && $2('passwordconf').value !== $2('password').value) {
+		form_setError('password');
+		form_setError('passwordconf');
+		alert('The passwords entered do not match.');
 		return false;
 	}
 	return true;

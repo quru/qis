@@ -1,3 +1,10 @@
+# v3.0.2
+_Changes: Add help text to administration pages, add password confirmation field,
+allow 8 to 120 character passwords_
+
+* Update the Python and web code (the `src` folder)
+* Restart the Apache service
+
 # v3.0.1
 _Changes: Apache configuration improvements, add new "rename" option to the upload
 page and API for files that already exist, allow multiple file drops on the upload
