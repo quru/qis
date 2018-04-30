@@ -99,10 +99,9 @@ class DataManager(object):
                 self._enable_sql_time_logging()
             self._open_db()
             self._init_db()
-            self._upgrade_db()
         except OperationalError as e:
             raise errors.StartupError('Database connection error: ' + str(e))
-        except BaseException as e:
+        except Exception as e:
             raise errors.StartupError('Data manager error: ' + type(e).__name__ + ' ' + str(e))
 
     def _open_db(self):
@@ -1858,16 +1857,22 @@ class DataManager(object):
 
     def _init_db(self):
         """
-        Checks the database schema,
-        and creates the schema and default data if it does not yet exist.
+        Checks the database schema, creates the schema and default data if it
+        does not yet exist, and upgrades the existing schema as required.
+        Raises an SQLAlchemy error if the schema cannot be created or changed.
         """
         # Add database event listeners
         event.listen(User, 'before_insert', DataManager._validate_user)
         event.listen(User, 'before_update', DataManager._validate_user)
 
-        # The next section must only be attempted by one process at a time on server startup
+        # The next section must only be attempted by one process at a time on
+        # server startup. The latest code may depend on having the latest database
+        # changes in place, so we'll wait for up to 60 seconds to check the schema
+        # ourselves before giving up and continuing anyway.
+        have_lock = False
         if self._cache:
-            self._cache.get_global_lock()
+            have_lock = self._cache.get_global_lock(60)
+        if have_lock:
             try:
                 create_default_users = False
                 create_default_groups = False
@@ -2043,8 +2048,12 @@ class DataManager(object):
                     self.save_object(Property(Property.IMAGE_TEMPLATES_VERSION, '1'))
                     self.save_object(Property(Property.DEFAULT_TEMPLATE, 'default'))
 
+                # Run schema migrations as necessary
+                self._upgrade_db()
             finally:
                 self._cache.free_global_lock()
+        else:
+            self._logger.warning('Failed to obtain lock to check/upgrade the database schema')
 
         # Show a startup message on success
         self._logger.info('Management + stats database opened')

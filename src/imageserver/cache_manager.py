@@ -95,8 +95,8 @@ MAX_SLOT_SIZE = (
     )
 )
 
-GLOBAL_LOCK_KEY = 'CACHEMANAGER_UNIVERSAL_LOCK'
-GLOBAL_LOCK_TIMEOUT = 60
+_GLOBAL_LOCK_KEY = 'CACHEMANAGER_UNIVERSAL_LOCK'
+_GLOBAL_LOCK_TIMEOUT = 3600
 
 
 class CacheManager(object):
@@ -127,7 +127,7 @@ class CacheManager(object):
             raise errors.StartupError(
                 'Cannot start cache manager. Database connection error: ' + str(e)
             )
-        except BaseException as e:
+        except Exception as e:
             raise errors.StartupError(
                 'Cannot start cache manager: ' + type(e).__name__ + ' ' + str(e)
             )
@@ -574,41 +574,50 @@ class CacheManager(object):
         except pylibmc.Error:
             return False
 
-    def get_global_lock(self):
+    def get_global_lock(self, wait_timeout=0):
         """
-        Obtains a universal lock across all processes and threads, for
-        performing operations that must not occur in parallel.
-        Requires the cache engine to be operational (returns without action otherwise).
-        This function will block indefinitely in order to obtain the lock.
+        Obtains a universal lock across all processes and threads, so that the
+        caller can perform operations that must not occur in parallel.
+        Returns True if the caller obtained the lock before wait_timeout (in seconds)
+        occurred. Returns False if wait_timeout seconds passed while some other
+        process or thread is holding the lock. When True is returned, the caller
+        must ensure that free_global_lock() is called.
+        Requires the cache engine to be operational (returns False otherwise).
+        If not freed with free_global_lock(), the lock times out after 1 hour.
         """
         loops = 0
+        waited = 0
         while True:
-            lck = self.raw_get(GLOBAL_LOCK_KEY)
+            lck = self.raw_get(_GLOBAL_LOCK_KEY)
             if lck is None:
-                if self.raw_atomic_add(GLOBAL_LOCK_KEY, 'lock', GLOBAL_LOCK_TIMEOUT):
+                if self.raw_atomic_add(_GLOBAL_LOCK_KEY, 'locked', _GLOBAL_LOCK_TIMEOUT):
                     # Success
-                    return
-                else:
-                    if not self.connected():
-                        self._logger.warn(
-                            'Cache server appears to be down, unable to create global lock.'
-                        )
-                        return
-            loops += 1
+                    return True
+                elif not self.connected():
+                    self._logger.warning(
+                        'Cache server appears to be down, unable to create global lock.'
+                    )
+                    return False
+            # Someone else has the lock. Have we timed out yet?
+            if waited >= wait_timeout:
+                if wait_timeout > 0:
+                    self._logger.warning('Timed out waiting to obtain global lock')
+                return False
+            # Wait a while
             if loops % 10 == 0:
-                self._logger.warn('Waiting to obtain global lock')
-            time.sleep(
-                (0.1 * min(loops, 10)) +
-                (0 if loops < 5 else random.random())
-            )
+                self._logger.warning('Waiting to obtain global lock')
+            loops += 1
+            wait_for = (0.1 * min(loops, 10))
+            time.sleep(wait_for)
+            waited += wait_for
 
     def free_global_lock(self):
         """
-        Frees the universal lock.
-        This function does not check ownership of the lock, therefore it must
-        only be called by the thread that last returned from _get_global_lock().
+        Frees the universal lock. This function does not check ownership of
+        the lock, therefore it must only be called by the thread that made a
+        successful call to _get_global_lock().
         """
-        self.raw_delete(GLOBAL_LOCK_KEY)
+        self.raw_delete(_GLOBAL_LOCK_KEY)
 
     def _prepare_cache_key(self, key):
         """
@@ -722,38 +731,41 @@ class CacheManager(object):
 
     def _init_db(self):
         """
-        Creates the database schema, or clears the database if the cache is empty.
+        Creates the database schema, or resets the cache database if the cache is empty.
         This method cannot be called while the database is in normal use.
+        Raises an SQLAlchemy error if the schema cannot be created or changed.
         """
         # The next section must only be attempted by one process at a time on server startup
-        self.get_global_lock()
-        try:
-            # Check the control database schema has been created
-            if not CacheEntry.__table__.exists(self._db):
-                self._create_db_schema()
-                self._logger.info('Cache control database created.')
+        have_lock = self.get_global_lock(60)
+        if have_lock:
+            try:
+                # Check the control database schema has been created
+                if not CacheEntry.__table__.exists(self._db):
+                    self._create_db_schema()
+                    self._logger.info('Cache control database created.')
+                elif self.capacity() > 0:
+                    cache_count = self.count() - 1  # -1 to uncount the global lock
+                    if cache_count <= 0:
+                        # See if the control database is empty
+                        db_session = self._db.Session()
+                        db_count = db_session.query(CacheEntry.key).limit(1).count()
+                        db_session.close()
+                        if db_count > 0:
+                            # Cache is empty, control database is not. Delete and re-create
+                            # the database so we're not left with any fragmentation, etc.
+                            self._logger.info('Cache is empty, resetting cache control database')
+                            self._drop_db_schema()
+                            self._create_db_schema()
+                            # v3.0.2 Now add a few cache keys so that no other process also
+                            # starting up tries to drop and recreate the database table again
+                            self.put('CACHEMANAGER_DB_RESET_1', 'db reset', expiry_secs=120)
+                            self.put('CACHEMANAGER_DB_RESET_2', 'db reset', expiry_secs=120)
+            finally:
+                self.free_global_lock()
+        else:
+            self._logger.warning('Failed to obtain lock to check the cache control database')
 
-            # See if the cache is empty
-            if self.capacity() > 0:
-                # -1 to uncount the global lock
-                cache_count = self.count() - 1
-                if cache_count <= 0:
-                    # See if the control database is empty
-                    db_session = self._db.Session()
-                    db_count = db_session.query(CacheEntry.key).limit(1).count()
-                    db_session.close()
-                    if db_count > 0:
-                        # Cache is empty, control database is not. Delete and re-create
-                        # the database so we're not left with any fragmentation, etc.
-                        self._logger.info('Cache is empty. Resetting cache control database.')
-                        self._drop_db_schema()
-                        self._create_db_schema()
-            else:
-                self._logger.warn('Cache is down, skipped cache control database check.')
-
-            self._logger.info('Cache control database opened.')
-        finally:
-            self.free_global_lock()
+        self._logger.info('Cache control database opened.')
 
     def _create_db_schema(self):
         """

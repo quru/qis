@@ -1,6 +1,6 @@
 # v3.0.2
 _Changes: Add help text to administration pages, add password confirmation field,
-allow 8 to 120 character passwords_
+allow 8 to 120 character passwords, fix intermittent startup error_
 
 * Update the Python and web code (the `src` folder)
 * Restart the Apache service
