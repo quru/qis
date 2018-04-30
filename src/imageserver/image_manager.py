@@ -377,7 +377,7 @@ class ImageManager(object):
             # Try again
             ret_image_data = self._cache.get(cache_key)
             if ret_image_data is None:
-                self._logger.warn('Timed out waiting for ' + str(image_attrs))
+                self._logger.warning('Timed out waiting for ' + str(image_attrs))
                 if (
                     self._settings['IMAGE_GENERATION_RAISE_TOO_BUSY'] and
                     not self._settings['BENCHMARKING']
@@ -452,7 +452,7 @@ class ImageManager(object):
                         if debug_mode:
                             self._logger.debug('Added new image to cache: ' + str(image_attrs))
                     else:
-                        self._logger.warn('Failed to add image to cache: ' + str(image_attrs))
+                        self._logger.warning('Failed to add image to cache: ' + str(image_attrs))
             finally:
                 if cache_result:
                     # Tell anyone waiting they can now grab the cached image
@@ -766,7 +766,7 @@ class ImageManager(object):
             }
         )
         if not ok:
-            self._logger.warn(
+            self._logger.warning(
                 'Failed to cache modification time for: ' +
                 image_attrs.get_metadata_cache_key()
             )
@@ -856,7 +856,7 @@ class ImageManager(object):
         assert image_attrs.tile_spec() is not None, 'Tile base requested for non-tile image'
         # Requires the cache (the whole base image mechanism requires it)
         if not self._cache.connected():
-            self._logger.warn('Cache is not connected, not generating tile base')
+            self._logger.warning('Cache is not connected, not generating tile base')
             return None
         # As a defensive measure we will prevent repeated calls for the same
         # thing, though apart from the first time around, this shouldn't happen
@@ -871,7 +871,7 @@ class ImageManager(object):
         gen_flag = 'TILE_BASE_' + base_image_attrs.get_cache_key()
         if self._cache.raw_get(gen_flag) is not None:
             # Warn as this indicates faulty base image detection
-            self._logger.warn(
+            self._logger.warning(
                 'Tile base generation already performed for ' + str(image_attrs)
             )
             return None
@@ -931,13 +931,13 @@ class ImageManager(object):
             return
         # Requires the cache
         if not self._cache.connected():
-            self._logger.warn(
+            self._logger.warning(
                 'Cache is not connected, cannot pyramid image %s' % image_attrs.filename()
             )
             return
         # Attempt to ensure we don't force useful stuff out of small caches
         if float(len(original_data)) / float(self._cache.capacity()) > 0.05:
-            self._logger.warn(
+            self._logger.warning(
                 'Image is >5%% of free cache, will not pyramid image %s' % image_attrs.filename()
             )
             return

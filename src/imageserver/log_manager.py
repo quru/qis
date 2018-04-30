@@ -102,7 +102,7 @@ class LogManager(object):
     def info(self, msg):
         self.logging_engine.info(msg)
 
-    def warn(self, msg):
+    def warning(self, msg):
         self.logging_engine.warning(msg)
 
     def error(self, msg):

@@ -267,10 +267,10 @@ def image():
         # Pass through HTTP 4xx and 5xx
         raise
     except ServerTooBusyError:
-        logger.warn('503 Too busy for ' + request.url)
+        logger.warning('503 Too busy for ' + request.url)
         raise httpexc.ServiceUnavailable()
     except ImageError as e:
-        logger.warn('415 Invalid image file \'' + src + '\' : ' + str(e))
+        logger.warning('415 Invalid image file \'' + src + '\' : ' + str(e))
         raise httpexc.UnsupportedMediaType(str(e))
     except SecurityError as e:
         if app.config['DEBUG']:
@@ -282,7 +282,7 @@ def image():
         # won't but we should check whether the disk file now exists.
         if image_attrs.database_id() > 0 or path_exists(image_attrs.filename(), require_file=True):
             image_engine.reset_image(image_attrs)
-        logger.warn('404 Not found: ' + str(e))
+        logger.warning('404 Not found: ' + str(e))
         raise httpexc.NotFound(str(e))
     except Exception as e:
         if app.config['DEBUG']:
@@ -360,10 +360,10 @@ def original():
         # Pass through HTTP 4xx and 5xx
         raise
     except ServerTooBusyError:
-        logger.warn('503 Too busy for ' + request.url)
+        logger.warning('503 Too busy for ' + request.url)
         raise httpexc.ServiceUnavailable()
     except ImageError as e:
-        logger.warn('415 Invalid image file \'' + src + '\' : ' + str(e))
+        logger.warning('415 Invalid image file \'' + src + '\' : ' + str(e))
         raise httpexc.UnsupportedMediaType(str(e))
     except SecurityError as e:
         if app.config['DEBUG']:
@@ -375,7 +375,7 @@ def original():
         # won't but we should check whether the disk file now exists.
         if image_attrs.database_id() > 0 or path_exists(image_attrs.filename(), require_file=True):
             image_engine.reset_image(image_attrs)
-        logger.warn('404 Not found: ' + src)
+        logger.warning('404 Not found: ' + src)
         raise httpexc.NotFound(src)
     except Exception as e:
         if app.config['DEBUG']:
@@ -408,7 +408,7 @@ def handle_image_xref(xref):
                 log_fail_fn=logger.error
             )
         else:
-            logger.warn('XREF_TRACKING_URL must begin with http or https')
+            logger.warning('XREF_TRACKING_URL must begin with http or https')
 
 
 def make_image_response(image_wrapper, is_original, stats=None, as_attachment=None, xref=None):

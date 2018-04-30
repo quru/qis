@@ -105,7 +105,7 @@ def token():
             })
 
     # Login incorrect
-    logger.warn('Incorrect API login for username ' + username)
+    logger.warning('Incorrect API login for username ' + username)
     # Slow down scripted attacks
     sleep(1)
     raise SecurityError('Incorrect username or password')
@@ -330,7 +330,7 @@ def upload():
                     # This loop success
                     ret_dict[original_filepath] = _image_dict(db_image, can_download)
             else:
-                logger.warn('Upload received blank filename, ignoring file')
+                logger.warning('Upload received blank filename, ignoring file')
 
         # Loop complete. If we had an exception, raise it now.
         if put_image_exception is not None:

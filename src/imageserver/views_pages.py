@@ -100,7 +100,7 @@ def login():
                     login_error = '''Sorry, your username and password were not recognised.
                                      Please try again.'''
                     # Slow down scripted attacks
-                    logger.warn('Incorrect login for username ' + username)
+                    logger.warning('Incorrect login for username ' + username)
                     sleep(1)
         except Exception as e:
             if not log_security_error(e, request):

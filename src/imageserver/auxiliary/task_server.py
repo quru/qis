@@ -159,7 +159,7 @@ def _run_server(debug_mode):
                     t.lock_id.startswith(last_proc_id + '_') and
                     t.status == Task.STATUS_ACTIVE
                 ):
-                    logger.warn('Resetting interrupted task ID %d \'%s\'' % (t.id, t.name))
+                    logger.warning('Resetting interrupted task ID %d \'%s\'' % (t.id, t.name))
                     t.status = Task.STATUS_PENDING
                     t.lock_id = None
                     data_engine.save_object(t)
@@ -185,7 +185,7 @@ def _run_server(debug_mode):
                     # Lock it to our process
                     locked = data_engine.lock_task(task, lock_id)
                     if not locked:
-                        logger.warn('Failed to lock task ID %d \'%s\'' %
+                        logger.warning('Failed to lock task ID %d \'%s\'' %
                                     (task.id, task.name))
                     else:
                         logger.debug('Launching task ID %d \'%s\' as thread %d' %

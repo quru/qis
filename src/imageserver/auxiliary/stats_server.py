@@ -392,7 +392,7 @@ class StatsSocketServer(socketserver.ThreadingTCPServer):
         Flushes the current cache state to the database and resets the caches.
         """
         if not self.flush_lock.acquire(0):
-            self.logger.warn('A stats flush is already in progress, abandoning this run.')
+            self.logger.warning('A stats flush is already in progress, abandoning this run.')
             return
 
         start_time = datetime.utcnow()
@@ -442,7 +442,7 @@ class StatsSocketServer(socketserver.ThreadingTCPServer):
         end_time = datetime.utcnow()
         flush_delta = (end_time - start_time)
         if flush_delta.seconds > 10:
-            self.logger.warn(
+            self.logger.warning(
                 'Statistics flush took %s seconds, '
                 'check server load and database' % str(flush_delta.seconds)
             )
@@ -462,7 +462,7 @@ class StatsSocketServer(socketserver.ThreadingTCPServer):
         existence, removes list entries for image IDs that no longer exist, and
         returns the list.
         """
-        self.logger.warn(
+        self.logger.warning(
             'Stats data includes deleted images, attempting to fix and retry'
         )
         ret_list = []
@@ -473,7 +473,7 @@ class StatsSocketServer(socketserver.ThreadingTCPServer):
                     image_id,
                     _db_session=db_session) is None
             ):
-                self.logger.warn(
+                self.logger.warning(
                     'Removing deleted image ID %d from stats' % image_id
                 )
                 # Remove left-over images from cache too

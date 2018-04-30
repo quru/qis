@@ -701,7 +701,7 @@ class CacheManager(object):
                 ', holding ' + str(cache_count) + ' objects (via pylibmc).'
             )
         else:
-            self._logger.warn('Cache server appears to be down (via pylibmc).')
+            self._logger.warning('Cache server appears to be down (via pylibmc).')
 
     def _open_db(self):
         """

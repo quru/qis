@@ -188,7 +188,7 @@ def delete_folder_data(**kwargs):
     # Get the folder to delete
     db_folder = app.data_engine.get_folder(folder_id)
     if not db_folder:
-        app.log.warn('Folder ID %d has already been deleted' % folder_id)
+        app.log.warning('Folder ID %d has already been deleted' % folder_id)
         return
     # Don't continue if the folder still exists on disk
     assert not path_exists(db_folder.path, require_directory=True), \
@@ -292,7 +292,7 @@ def purge_deleted_folder_data(**kwargs):
 
     db_folder = app.data_engine.get_folder(folder_id)
     if not db_folder:
-        app.log.warn('Folder ID %d does not exist' % folder_id)
+        app.log.warning('Folder ID %d does not exist' % folder_id)
         return
     app.log.info('Purging deleted images and folders in ' + db_folder.path)
     app.data_engine.purge_deleted_folder_data(db_folder)
@@ -355,7 +355,7 @@ def uncache_folder_images(**kwargs):
 
     db_folder = app.data_engine.get_folder(folder_id)
     if not db_folder:
-        app.log.warn('Folder ID %d does not exist' % folder_id)
+        app.log.warning('Folder ID %d does not exist' % folder_id)
         return
     # Get both active and deleted, in case we are clearing deleted images
     image_ids = app.data_engine.list_image_ids(db_folder, recursive)
@@ -381,7 +381,7 @@ def burst_pdf(**kwargs):
 
     # Ensure src is a PDF
     if get_file_extension(src) not in app.config['PDF_FILE_TYPES']:
-        app.log.warn('Cannot burst non-PDF file: ' + src)
+        app.log.warning('Cannot burst non-PDF file: ' + src)
         return
 
     # See if the burst folder already exists (in the database and on disk)
@@ -406,9 +406,9 @@ def burst_pdf(**kwargs):
         if not imagemagick_burst_pdf(
             pdf_data, burst_folder_abs, app.config['PDF_BURST_DPI']
         ):
-            app.log.warn('Failed to burst PDF: ' + src)
+            app.log.warning('Failed to burst PDF: ' + src)
     else:
-        app.log.warn('Cannot burst PDF, file not found: ' + src)
+        app.log.warning('Cannot burst PDF, file not found: ' + src)
 
 
 def create_image_pyramid(**kwargs):
@@ -495,7 +495,7 @@ def export_portfolio(**kwargs):
     if not folio_export:
         raise DoesNotExistError('FolioExport ' + str(export_id))
     if folio_export.filename and folio_export.filesize:
-        app.log.warn(
+        app.log.warning(
             'Portfolio export ID %d has already completed, '
             'returning the existing export file' % export_id
         )
@@ -505,7 +505,7 @@ def export_portfolio(**kwargs):
     # avoid holding onto an idle database connection for a long time
     folio = app.data_engine.get_portfolio(folio_export.folio_id, load_images=True)
     if len(folio.images) == 0:
-        app.log.warn('Portfolio ID %d is empty, cannot export it' % folio.id)
+        app.log.warning('Portfolio ID %d is empty, cannot export it' % folio.id)
         return folio_export
 
     temp_dir = os.path.join(app.config['TEMP_DIR'], 'qis_export', str(export_id))

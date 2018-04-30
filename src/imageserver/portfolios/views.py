@@ -103,7 +103,7 @@ def portfolio_download(human_id, filename):
         log_security_error(e, request)
         raise httpexc.Forbidden()
     except DoesNotExistError as e:
-        logger.warn('404 Not found: ' + str(e))
+        logger.warning('404 Not found: ' + str(e))
         raise httpexc.NotFound(str(e))
     except Exception as e:
         if app.config['DEBUG']:

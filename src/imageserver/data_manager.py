@@ -887,7 +887,7 @@ class DataManager(object):
                 return db_img
             except IntegrityError:
                 # Duplicate key, another thread added the image before we did
-                self._logger.warn(
+                self._logger.warning(
                     'Another client added image %s to the database before us, will re-read' % src
                 )
             finally:
@@ -950,7 +950,7 @@ class DataManager(object):
                     return next_folder
             except errors.AlreadyExistsError:
                 # Duplicate key, another thread added the folder before we did
-                self._logger.warn(
+                self._logger.warning(
                     'Another client added folder %s to the '
                     'database before us, will re-read' % folder_path
                 )
