@@ -1,7 +1,9 @@
 # v3.0.2
 _Changes: Add help text to administration pages, add password confirmation field,
-allow 8 to 120 character passwords, fix intermittent startup error_
+allow 8 to 120 character passwords, fix intermittent startup error, fix SELinux
+policy to allow log file rotation_
 
+* Re-install `qis.pp` if SELinux is enabled (see the install guide)
 * Update the Python and web code (the `src` folder)
 * Restart the Apache service
 

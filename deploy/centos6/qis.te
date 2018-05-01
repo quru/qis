@@ -1,11 +1,14 @@
 
-module qis 1.0;
+module qis 1.1;
 
 require {
 	type httpd_t;
+	type httpd_log_t;
 	type unreserved_port_t;
 	type memcache_port_t;
 	type postgresql_port_t;
+	class dir remove_name;
+	class file { write unlink rename };
 	class tcp_socket { name_bind name_connect };
 }
 
@@ -20,3 +23,6 @@ allow httpd_t postgresql_port_t:tcp_socket name_connect;
 
 #!!!! This avc can be allowed using the boolean 'nis_enabled'
 allow httpd_t unreserved_port_t:tcp_socket { name_bind name_connect };
+
+allow httpd_t httpd_log_t:dir remove_name;
+allow httpd_t httpd_log_t:file { write unlink rename };
