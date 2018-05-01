@@ -2,8 +2,10 @@
 _Changes: Add new "rename" option to the upload page and API for files that
 already exist, allow multiple file drops on the upload page,
 bug fixes to prevent unexpected "already exists" errors when uploading,
-allow uploads into the root of the image repository_
+allow uploads into the root of the image repository, fix SELinux policy to
+allow log file rotation_
 
+* Re-install `qis.pp` if SELinux is enabled (see the install guide)
 * Update the Python and web code
 * Restart the Apache service
 
