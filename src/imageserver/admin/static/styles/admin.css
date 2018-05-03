@@ -75,11 +75,11 @@
 	overflow: hidden;
 }
 
+#folder_permissions .section {
+	margin-top: 2em;
+}
 #folder_permissions #current_info {
 	line-height: 18px;
-}
-#folder_permissions #permissions_current_container {
-	margin-top: 2em;
 }
 #folder_permissions #permissions_edit_container {
 	visibility: hidden;

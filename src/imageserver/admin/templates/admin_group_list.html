@@ -29,6 +29,30 @@
 		{% endif %}
 	</div>
 
+	<p>
+		Groups are used for image access control and the granting of permissions to users.
+		This is achieved in 2 ways. Firstly, each group contains a number of optional
+		check boxes that grant its members the ability to use certain system or
+		administration functions. Secondly, the ability to control whether images can be
+		viewed, uploaded, changed or deleted, is controlled by setting an access level in
+		the <a href="{{ url_for('admin.folder_permissions') }}">folder permissions area</a>
+		for an <em>image folder and group</em> pair.
+	</p>
+	<p>
+		There are 3 built-in groups that cannot be deleted (though you can rename them
+		and change them if you wish). The <em>Administrators</em> group is pre-configured
+		to grant full system access to its members. Only an existing administrator can
+		make another user a member of <em>Administrators</em>. The <em>Normal Users</em> group
+		acts as a standard group that every internal user belongs to. When a new user account
+		is created it is automatically added into <em>Normal Users</em>.
+		Lastly the <em>Public</em> group is a virtual group that represents anonymous users
+		- those who are not logged in to the image server. The <em>Public</em> group does
+		not have a list of members and does not define any system permissions (they are
+		all set to <em>deny</em>). However the <em>Public</em> group plays a very important
+		role in setting the <a href="{{ url_for('admin.folder_permissions') }}">folder permissions</a>,
+		where it is used to control whether or not images are visible to the public.
+	</p>
+
 	<table class="list_table" summary="Listing of {{ page_heading }}">
 
 		{% set row_class = cycler('even', 'odd') %}

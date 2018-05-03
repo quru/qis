@@ -46,8 +46,7 @@ img.help {
 
 /* Crop controls */
 
-.crop_container,
-.preview_container {
+.crop_container {
 	margin-top: 10px;
 }
 
@@ -129,6 +128,10 @@ img.help {
 
 /* Output */
 
+.inline_form {
+	margin: 0;
+}
+
 .output_templates {
 	position: absolute;
 	display: none;
@@ -136,5 +139,6 @@ img.help {
 
 .hljs {
 	background-color: white;
-	padding: 0;
+	padding: 0.5em;
+	border-radius: 0.25em;
 }

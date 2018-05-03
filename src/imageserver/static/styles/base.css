@@ -176,6 +176,12 @@ fieldset div {
 	margin-top: -1.3em;
 }
 
+.inline_form {
+	background-color: #d0d0d0;
+	border-radius: 0.25em;
+	display: inline-block;
+}
+
 /* Common classes
  */
 .action_menu_owner {
@@ -386,8 +392,10 @@ a:hover .highlight {
 
 .dropzone {
 	color: gray;
-	border: 4px gray dashed;
-	padding: 2em 5em;
+	border: 4px #a0a0a0 dashed;
+	border-radius: 0.25em;
+	margin: 2px;
+	padding: 1.5em 2px;
 	text-align: center;
 	display: inline-block;
 }

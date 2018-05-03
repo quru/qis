@@ -23,6 +23,11 @@
 	Last Changed:  $Date$ $Rev$ by $Author$
 */
 
+#dropzone,
+.inline_form {
+	width: 23rem;
+}
+
 .collapsible {
 	max-height: 12em;
 }

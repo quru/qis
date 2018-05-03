@@ -67,10 +67,10 @@
 					{% endif %}
 					<li class="spacer">&nbsp;</li>
 					{% if is_folder_permitted(db_info.folder, FolderPermission.ACCESS_UPLOAD) %}
-					<li><a id="file_reset" href="{{ url_for('details', src=src, reset=1) }}">Reset</a></li>
+					<li><a id="file_reset" href="{{ url_for('details', src=src, reset=1) }}">Reset</a> (clear cache)</li>
 					<li><a id="file_rename" href="#">Rename file</a></li>
 					{% else %}
-					<li {{ disabled_attrs }}>Reset</li>
+					<li {{ disabled_attrs }}>Reset (clear cache)</li>
 					<li {{ disabled_attrs }}>Rename file</li>
 					{% endif %}
 					{% if is_folder_permitted(db_info.folder, FolderPermission.ACCESS_DELETE) %}

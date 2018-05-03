@@ -36,6 +36,12 @@
 {% block body %}
 	{{ super() }}
 	
+	<p>
+		The image server performs its own background maintenance tasks, but on occasion
+		you may want to take control. For example, the size of the image server's database
+		can be greatly reduced by deleting the image statistics, if you don't need them.
+	</p>
+
 	{% macro auto_purge_message() -%}
 		<img src="{{ url_for('static', filename='images/icon-info.png') }}" alt="Info"/>
 		{% if settings.STATS_KEEP_DAYS > 0 %}
@@ -48,57 +54,63 @@
 	<p>
 		<h3>Purge image statistics</h3>
 		<form id="purge_istats_form" method="post" action="{{ url_for('api.admin.task', function_name='purge_image_stats') }}">
-			Erase image statistics older than
-			&nbsp;
-			<input id="purge_istats_text" type="text" size="9" maxlength="10" value="{{ purge_to|dateformat(False, 'dmy') }}"/>
-			<input id="purge_istats_date" name="date_to" type="hidden" value="" />
-			&nbsp;
-			<input type="submit" value="Purge now" />
 			<div class="tall">
 				{{ auto_purge_message() }}
 			</div>
-			<div class="tall highlight">
-				Image usage charts will show as blank before this date.<br/>
-				The top images report may be affected.
-			</div>
+			<fieldset class="inline_form">
+				Erase image statistics older than
+				&nbsp;
+				<input id="purge_istats_text" type="text" size="9" maxlength="10" value="{{ purge_to|dateformat(False, 'dmy') }}"/>
+				<input id="purge_istats_date" name="date_to" type="hidden" value="" />
+				&nbsp;
+				<input type="submit" value="Purge now" />
+				<div class="highlight">
+					Image usage charts will show as blank before this date.
+					The "top images" report may be affected.
+				</div>
+			</fieldset>
 		</form>
 	</p>
 
 	<p>
 		<h3>Purge system statistics</h3>
 		<form id="purge_sstats_form" method="post" action="{{ url_for('api.admin.task', function_name='purge_system_stats') }}">
-			Erase system statistics older than
-			&nbsp;
-			<input id="purge_sstats_text" type="text" size="9" maxlength="10" value="{{ purge_to|dateformat(False, 'dmy') }}"/>
-			<input id="purge_sstats_date" name="date_to" type="hidden" value="" />
-			&nbsp;
-			<input type="submit" value="Purge now" />
 			<div class="tall">
 				{{ auto_purge_message() }}
 			</div>
-			<div class="tall highlight">
-				System usage charts will show as blank before this date.
-			</div>
+			<fieldset class="inline_form">
+				Erase system statistics older than
+				&nbsp;
+				<input id="purge_sstats_text" type="text" size="9" maxlength="10" value="{{ purge_to|dateformat(False, 'dmy') }}"/>
+				<input id="purge_sstats_date" name="date_to" type="hidden" value="" />
+				&nbsp;
+				<input type="submit" value="Purge now" />
+				<div class="highlight">
+					System usage charts will show as blank before this date.
+				</div>
+			</fieldset>
 		</form>
 	</p>
 
 	<p>
 		<h3>Purge deleted image data</h3>
 		<form id="purge_data_form" method="post" action="{{ url_for('api.admin.task', function_name='purge_deleted_folder_data') }}">
-			Erase the retained image data for deleted images in
 			<div class="tall">
-				<span  id="purge_folder_text">all folders</span> and sub-folders
+				Erase the retained image data for deleted images in
+			</div>
+			<fieldset class="inline_form">
+				<span  id="purge_folder_text">All folders</span> and sub-folders
 				<input id="purge_folder_path" name="path" type="hidden" value="" />
 				&nbsp;
 				<input id="folder_select_button" type="button" value="Change folder" />
 				<input id="folder_browse_url" type="hidden" value="{{ url_for('folder_browse', path='', embed=1, msg='Select a folder:') }}" />
 				&nbsp;
 				<input type="submit" value="Purge now" />
-			</div>
-			<div class="tall highlight">
-				Titles, descriptions, statistics, and the former history of
-				deleted images will no longer be available.
-			</div>
+				<div class="highlight">
+					Titles, descriptions, statistics, and the former history of
+					deleted images will no longer be available.
+				</div>
+			</fieldset>
 		</form>
 	</p>
 	

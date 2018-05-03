@@ -27,6 +27,14 @@
 		(<a class="popuplink" href="{{ url_for('admin.user_edit', user_id=0, embed=1) }}">add a new user</a>)
 	</div>
 
+	<p>
+		The users list shows who is able to log into the image server, either via the login page
+		or the programmatic API. Logged in users can browse the image repository, and upload new
+		images, run reports, and perform administrative functions if their permissions allow.
+		A user typically belongs to one or more groups, with access permissions being defined
+		at the group level.
+	</p>
+	
 	<table class="list_table" summary="Listing of {{ page_heading }}">
 
 		{% set row_class = cycler('even', 'odd') %}

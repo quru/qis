@@ -39,38 +39,39 @@
 	{% endif %}
 	
 	<h2>System statistics</h2>
-	<br/>
-	<form id="chartform">
-		<div>
-			<label>Show:</label>
-			<select id="data_type" autocomplete="off">
-				{% set sel = 'selected="selected"'|safe %}
-				<option value="1" {{ sel if data_type == '1' }}>total image requests</option>
-				<option value="2" {{ sel if data_type == '2' }}>number of images served</option>
-				<option value="4" {{ sel if data_type == '4' }}>% images served from cache</option>
-				<option value="5" {{ sel if data_type == '5' }}>number of originals served</option>
-				<option value="6" {{ sel if data_type == '6' }}>total image bytes served</option>
-				<option value="7" {{ sel if data_type == '7' }}>time spent generating responses</option>
-				<option value="8" {{ sel if data_type == '8' }}>slowest response times</option>
-				<option value="100" {{ sel if data_type == '100' }}>CPU usage %</option>
-				<option value="101" {{ sel if data_type == '101' }}>RAM usage %</option>
-				<option value="102" {{ sel if data_type == '102' }}>image cache usage %</option>
-			</select>
-			&nbsp;
-			{% include "reports_inc_frequency.html" %}
-		</div>
-		<div>
-			<label>from:</label>
-			<input id="from_date" type="text" size="9" maxlength="10" value="{{ time_from|dateformat(False, 'dmy') }}"/> 
-			&nbsp;until&nbsp;
-			<input id="to_date" type="text" size="9" maxlength="10" value="{{ time_to|dateformat(False, 'dmy') }}"/> 
-		</div>
-		<div>
-			<label></label>
-			<input type="submit" value="Refresh chart">
-		</div>
-	</form>
-	<br/>
+	<p>
+		<form id="chartform">
+			<div>
+				<label>Show:</label>
+				<select id="data_type" autocomplete="off">
+					{% set sel = 'selected="selected"'|safe %}
+					<option value="1" {{ sel if data_type == '1' }}>total image requests</option>
+					<option value="2" {{ sel if data_type == '2' }}>number of images served</option>
+					<option value="4" {{ sel if data_type == '4' }}>% images served from cache</option>
+					<option value="5" {{ sel if data_type == '5' }}>number of originals served</option>
+					<option value="6" {{ sel if data_type == '6' }}>total image bytes served</option>
+					<option value="7" {{ sel if data_type == '7' }}>time spent generating responses</option>
+					<option value="8" {{ sel if data_type == '8' }}>slowest response times</option>
+					<option value="100" {{ sel if data_type == '100' }}>CPU usage %</option>
+					<option value="101" {{ sel if data_type == '101' }}>RAM usage %</option>
+					<option value="102" {{ sel if data_type == '102' }}>image cache usage %</option>
+				</select>
+				&nbsp;
+				{% include "reports_inc_frequency.html" %}
+			</div>
+			<div>
+				<label>From:</label>
+				<input id="from_date" type="text" size="9" maxlength="10" value="{{ time_from|dateformat(False, 'dmy') }}"/> 
+				&nbsp;until&nbsp;
+				<input id="to_date" type="text" size="9" maxlength="10" value="{{ time_to|dateformat(False, 'dmy') }}"/> 
+			</div>
+			<div>
+				<label></label>
+				<input type="submit" value="Refresh chart">
+			</div>
+		</form>
+	</p>
+	<br>
 	
 	{% set chart_axis = 'bytes' if data_type == '6' else 'percent' if data_type == '4' else 'int-positive-units' %}
 	{% set chart_opts = ('chart_1', True, True, 'time', chart_axis) %}

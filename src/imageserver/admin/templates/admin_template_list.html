@@ -18,7 +18,7 @@
 {% endblock %}
 
 {% set body_id = 'template_list' %}
-{% set page_heading = 'Templates' %}
+{% set page_heading = 'Image templates' %}
 
 {% block body %}
 	{{ super() }}
@@ -28,6 +28,13 @@
 		(<a href="{{ url_for('admin.template_edit', template_id=0, onClose='backrefresh') }}">add a new template</a>)
 		{% endif %}
 	</div>
+
+	<p>
+		An image template is a group of image processing options, saved together under a single name.
+		You can use templates to avoid repeating the same set of image options, to make image
+		URLs simpler, or to define a standard set of image options in a central place.
+		If an image is requested without a template, the <em>system default template</em> is automatically applied.
+	</p>
 
 	<table class="list_table" summary="Listing of {{ page_heading }}">
 
@@ -62,24 +69,28 @@
 	<h2>System default template</h2>
 	<div class="tall">
 		For image requests that do not specify a template, default image processing
-		values will be applied from this template:<br>
+		values will be taken from this template:<br>
 
 		{% if is_permitted(SystemPermission.PERMIT_SUPER_USER) %}
 			<form id="deftemplform" action="{{ url_for('api.admin.property', property_id=system_template_key) }}" _method="put">
-			<select name="value" autocomplete="off">
-			{% for template in templates %}
-				{% set sel = 'selected="selected"' if template.name|lower == system_template_value|lower else '' %}
-				<option value="{{ template.name }}" {{ sel|safe }}>{{ template.name }}</option>
-			{% endfor %}
-			</select>
-			&nbsp;<input type="submit" value="&nbsp;Change&nbsp;" />
+				<fieldset class="inline_form">
+					<select name="value" autocomplete="off">
+					{% for template in templates %}
+						{% set sel = 'selected="selected"' if template.name|lower == system_template_value|lower else '' %}
+						<option value="{{ template.name }}" {{ sel|safe }}>{{ template.name }}</option>
+					{% endfor %}
+					</select>
+					&nbsp;<input type="submit" value="&nbsp;Set default template&nbsp;" />
+				</fieldset>
 			</form>
 		{% else %}
-			<select disabled="disabled">
-			<option>{{ system_template_value|capitalize }}</option>
-			</select>
-			&nbsp;
-			<span class="smalltext">The default template can be changed a system administrator.</span> 
+			<fieldset class="inline_form">
+				<select disabled="disabled">
+				<option>{{ system_template_value|capitalize }}</option>
+				</select>
+				&nbsp;
+				<span class="smalltext">The default template can be changed an administrator.</span>
+			</fieldset>
 		{% endif %}
 	</div>
 

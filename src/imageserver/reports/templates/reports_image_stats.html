@@ -50,7 +50,7 @@
 			{% endif %}
 		</div>
 		<div>
-			<label>show:</label>
+			<label>Show:</label>
 			<select id="data_type" autocomplete="off">
 				{% set sel = 'selected="selected"'|safe %}
 				<option value="1" {{ sel if data_type == '1' }}>total requests</option>
@@ -65,7 +65,7 @@
 			{% include "reports_inc_frequency.html" %}
 		</div>
 		<div>
-			<label>from:</label>
+			<label>From:</label>
 			<input id="from_date" type="text" size="9" maxlength="10" value="{{ time_from|dateformat(False, 'dmy') }}"/> 
 			&nbsp;until&nbsp;
 			<input id="to_date" type="text" size="9" maxlength="10" value="{{ time_to|dateformat(False, 'dmy') }}"/> 

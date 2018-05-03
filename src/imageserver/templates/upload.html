@@ -45,99 +45,89 @@
 		<div id="dropfiles">
 			<label>Drag and drop:</label>
 			<div id="dropzone" class="dropzone">Drop your files here</div>
-			<br/><br/>
+			<br/>
 		</div>
 		<div id="selectfiles" class="collapsible">
 			<div>
-				<label for="file">Select files:</label>
-				<input type="file" name="files" id="files" multiple="" />
-				<input type="button" id="resetfiles" value="Clear"/>
+				<label for="file">Or select files:</label>
+				<fieldset class="inline_form">
+					<input type="file" name="files" id="files" multiple="" />
+					<input type="button" id="resetfiles" value="Clear"/>
+					<br>
+					<span class="smalltext">
+						Note: you can select multiple files, if supported by your browser.
+					</span>
+				</fieldset>
 			</div>
-			<div>
-				<label></label>
-				<span class="smalltext">
-					Note: you can select multiple files, if supported by your browser.
-				</span>
-			</div>
-			<br/>
 			<div>
 				<label for="directory">Or select folder:</label>
-				<input type="file" name="files" id="directory" directory="" webkitdirectory="" mozdirectory="" />
-				<input type="button" id="resetdir" value="Clear"/>
-			</div>
-			<div>
-				<label></label>
-				<span class="smalltext">
-					Note: folder selection is not supported by all browsers.
-				</span>
-			</div>
-			<br/>
-		</div>
-		<div>
-			<label>Replace:</label>
-			<span>If a file with the same name already exists on the server</span>
-		</div>
-		<div>
-			<label></label>
-			<input type="radio" id="overwrite_no" name="overwrite" value="no" 
-			       {% if request.args.overwrite == 'no' or not request.args.overwrite %}checked="checked"{% endif %} />
-			<label class="inline" for="overwrite_no">Do not upload the new file</label>
-		</div>
-		<div>
-			<label></label>
-			<input type="radio" id="overwrite_rename" name="overwrite" value="rename" 
-			       {% if request.args.overwrite == 'rename' %}checked="checked"{% endif %} />
-			<label class="inline" for="overwrite_rename">Rename the new file (leaving the existing file alone)</label>
-		</div>
-		<div>
-			<label></label>
-			<input type="radio" id="overwrite_yes" name="overwrite" value="yes" 
-			       {% if request.args.overwrite == 'yes' %}checked="checked"{% endif %} />
-			<label class="inline" for="overwrite_yes">Replace the existing file with the new one <img src="{{ url_for('static', filename='images/icon-warning.png') }}" alt="Warning" title="The existing file will be overwritten"/></label>
-		</div>
-		<br/>
-		{% for up_desc, up_path, upload_permitted, view_permitted in upload_dirs %}
-		<div>
-			<label>
-				{% if loop.first %}
-					Upload into:
-				{% endif %}
-			</label>
-			{% set check = (sel_radio_num == loop.index0) or (request.args.path_index == loop.index0|string) %}
-			{% if upload_permitted %}
-				<input type="radio" name="path_index" id="path_index_{{ loop.index0 }}" 
-				       value="{{ loop.index0 }}" {% if check %}checked="checked"{% endif %} />
-				<label class="inline" for="path_index_{{ loop.index0 }}">{{ up_desc }}</label>
-			{% else %}
-				<input type="radio" {{ disabled_attrs }} />
-				<label class="inline disabled" {{ disabled_attrs }}>{{ up_desc }}</label>
-			{% endif %}
-			{% if view_permitted %}
-				(<a href="{{ url_for('browse', path=up_path) }}">view folder</a>)
-			{% endif %}
-		</div>
-		{% endfor %}
-		<div>
-			<label></label>
-			{% set check = (sel_radio_num == -1) or (request.args.path_index == '-1') %}
-			<input type="radio" name="path_index" id="path_index_manual" 
-			       value="-1" {% if check %}checked="checked"{% endif %} />
-			<div class="inline-block">
-				<input type="text" name="path" id="path" maxlength="255" size="30" 
-				       {% if check %}value="{{ manual_path }}"{% endif %} />
-				<button id="folder_browse"
-				        data-browse-url="{{ url_for('folder_browse', path=manual_path, embed=1, msg='Select a folder:') }}"
-				        >Browse...</button>
-				<br><span class="smalltext">(this folder must already exist)</span>
+				<fieldset class="inline_form">
+					<input type="file" name="files" id="directory" directory="" webkitdirectory="" mozdirectory="" />
+					<input type="button" id="resetdir" value="Clear"/>
+					<br>
+					<span class="smalltext">
+						Note: folder selection is not supported by all browsers.
+					</span>
+				</fieldset>
 			</div>
 		</div>
-		<br/>
+		<br>
 		<div>
-			<label></label>
-			<input type="submit" id="submit" value=" Upload now " />
-			<progress id="upload_progress" value="0" max="100">
-				<span class="smalltext">(upgrade your browser to view progress)</span>
-			</progress>
+			<label>Upload into:</label>
+			<fieldset class="inline_form">
+				{% for up_desc, up_path, upload_permitted, view_permitted in upload_dirs %}
+					{% set check = (sel_radio_num == loop.index0) or (request.args.path_index == loop.index0|string) %}
+					{% if upload_permitted %}
+						<input type="radio" name="path_index" id="path_index_{{ loop.index0 }}" 
+							value="{{ loop.index0 }}" {% if check %}checked="checked"{% endif %} />
+						<label class="inline" for="path_index_{{ loop.index0 }}">{{ up_desc }}</label>
+					{% else %}
+						<input type="radio" {{ disabled_attrs }} />
+						<label class="inline disabled" {{ disabled_attrs }}>{{ up_desc }}</label>
+					{% endif %}
+					{% if view_permitted %}
+						(<a href="{{ url_for('browse', path=up_path) }}">view folder</a>)
+					{% endif %}
+					<br>
+				{% endfor %}
+				{% set check = (sel_radio_num == -1) or (request.args.path_index == '-1') %}
+				<input type="radio" name="path_index" id="path_index_manual" 
+				       value="-1" {% if check %}checked="checked"{% endif %} />
+				<div class="inline-block">
+					<input type="text" name="path" id="path" maxlength="255" size="30" 
+					       {% if check %}value="{{ manual_path }}"{% endif %} />
+					<button id="folder_browse"
+							data-browse-url="{{ url_for('folder_browse', path=manual_path, embed=1, msg='Select a folder:') }}"
+							>Browse...</button>
+					<br>
+					<span class="smalltext">(this folder must already exist)</span>
+				</div>
+			</fieldset>
+		</div>
+		<br>
+		<div>
+			<label>Options:</label>
+			<fieldset class="inline_form">
+				<div class="tall">If a file with the same name already exists on the server:</div>
+				<input type="radio" id="overwrite_no" name="overwrite" value="no" 
+				       {% if request.args.overwrite == 'no' or not request.args.overwrite %}checked="checked"{% endif %} />
+				<label class="inline" for="overwrite_no">Do not upload the new file</label>
+				<br>
+				<input type="radio" id="overwrite_rename" name="overwrite" value="rename" 
+				       {% if request.args.overwrite == 'rename' %}checked="checked"{% endif %} />
+				<label class="inline" for="overwrite_rename">Rename the new file (leaving the existing file alone)</label>
+				<br>
+				<input type="radio" id="overwrite_yes" name="overwrite" value="yes" 
+				       {% if request.args.overwrite == 'yes' %}checked="checked"{% endif %} />
+				<label class="inline" for="overwrite_yes">Replace the existing file with the new one <img src="{{ url_for('static', filename='images/icon-warning.png') }}" alt="Warning" title="The existing file will be overwritten"/></label>
+				<br><br>
+				<div class="center">
+					<input type="submit" id="submit" value=" Upload now " />
+					<progress id="upload_progress" value="0" max="100">
+						<span class="smalltext">(upgrade your browser to view progress)</span>
+					</progress>
+				</div>
+			</fieldset>
 		</div>
 		
 		<input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">

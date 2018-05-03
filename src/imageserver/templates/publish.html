@@ -103,7 +103,7 @@
 		</div>
 
 		<div class="column sticky">
-			<h3>Final image preview</h3>
+			<h3>Preview</h3>
 			<div class="preview_container">
 				<div id="preview_mask"><img src="{{ url_for('static', filename='images/icon-wait-invert.gif') }}" /></div>
 				<div id="preview_error" class="error">Cannot show image preview</div>
@@ -112,7 +112,7 @@
 			<div class="clear"></div>
 
 			<h3>Publish</h3>
-			<fieldset class="subtlebg">
+			<fieldset class="inline_form">
 				<div>
 					<label>Publish to file:</label>
 					<button id="publish_download" data-url="">Download final image</button>
@@ -130,7 +130,7 @@
 						<option value="canvas_zoom">Embedded zoomable image</option>
 					</select>
 				</div>
-				<pre><code id="publish_output"></code></pre>
+				<pre><code id="publish_output" class="hljs"></code></pre>
 			</fieldset>
 		</div>
 

@@ -24,8 +24,9 @@
 	{{ super() }}
 
 	{% if err_msg %}
-		<br/>
-		<div class="error">{{ err_msg|newlines }}</div>
+		<p class="error">
+			{{ err_msg|newlines }}
+		</p>
 	{% else %}
 		{% set old_access = current_permissions.access if current_permissions
 		                                               else FolderPermission.ACCESS_NONE %}
@@ -40,26 +41,49 @@
 		{% set permissions_inherited = current_permissions and
 		       (current_permissions.folder.id != folder.id or
 		        current_permissions.group.id != group.id) %}
-		
-		<div>
-			Folder permissions are controlled using groups, though you can
-			<a id="trace_permissions" href="{{ url_for('admin.trace_permissions', path=folder.path, embed=1) }}">view the resulting permissions for a particular user</a>.
-			
-			<p class="tall">
-				You are viewing permissions for:<br/>
-				
-				{{ 'The root folder' if folder_is_root else 'Folder '+folder.path }}
-				<input id="folder_select_button" type="button" value="Change folder" />
-				and group
-				{% include "admin_inc_group_select.html" %}
+
+		<p>
+			The image server controls who can view, upload, and manage images by
+			looking for permissions on folders in your image repository. Your folders are
+			arranged in a hierarchy (a tree structure) and the permissions work in the
+			same way. When you set the permission on a folder, it is inherited by all
+			that folder's sub-folders (and their sub-folders, and so on). The permissions
+			set on your image repository's <em>root</em> folder therefore act as the system-wide
+			defaults.
+		</p>
+		<p>
+			Folder permissions are defined on a per-group basis. The special <em>Public</em> group
+			represents anonymous users, those who are not logged into the image server itself.
+			If you are using the image server alongside a public-facing web site, this is where
+			the vast majority of image requests will come from. Image server users that <em>are</em>
+			logged in may belong to several groups. In this case the user will be granted the
+			most permissive access that the combination of all their groups provides. This might
+			be hard to follow, so there is a tool that can
+			<a id="trace_permissions" href="{{ url_for('admin.trace_permissions', path=folder.path, embed=1) }}">
+				calculate the overall folder permission for a single user
+			</a>.
+		</p>
+
+		<div class="section">			
+			<p>
+				<h3>Selection</h3>
+				<span class="tall">
+					You are viewing permissions for:<br/>
+					<fieldset class="inline_form">
+						{{ 'The root folder' if folder_is_root else 'Folder '+folder.path }}
+						<input id="folder_select_button" type="button" value="Change folder" />
+						and group
+						{% include "admin_inc_group_select.html" %}
+					</fieldset>
+				</span>
 			</p>
 		</div>
 		
-		<div id="permissions_current_container">
+		<div id="permissions_current_container" class="section">
 			<p>
 				<h3>Current permissions <span>(<a id="edit_perms" href="#">change</a>)</span></h3>
 				{% if current_permissions %}
-					The "{{ group.name }}" group has the following permissions
+					The "{{ group.name }}" group has the following permissions set
 					{% if folder_is_root %}
 					for the root folder:
 					{% else %}
@@ -111,6 +135,7 @@
 					{% set form_action = url_for('api.admin.folderpermission') if create else 
 					                     url_for('api.admin.folderpermission', permission_id=current_permissions.id) %}
 					<form id="editform" _method="{{ form_method }}" action="{{ form_action }}">
+						<fieldset class="inline_form">
 						<input type="hidden" name="folder_id" value="{{ folder.id }}" />
 						<input type="hidden" name="group_id" value="{{ group.id }}" />
 						<select name="access" id="access">
@@ -134,6 +159,7 @@
 							<option value="{{ FolderPermission.ACCESS_DELETE_FOLDER }}" {{ sel|safe }}>Delete sub-folders (full access)</option>
 						</select>
 						&nbsp;<input type="submit" value="&nbsp;Apply&nbsp;" />
+						</fieldset>
 					</form>
 				</div>
 			</p>
@@ -147,9 +173,11 @@
 			<p>
 				<h3>Reset permissions</h3>
 				<div class="tall">
-					Clear the override on this folder so that it reverts to default permissions.<br/>
+					Clear the override on this folder so that it reverts to standard permissions.<br/>
 					<form id="deleteform" _method="delete" action="{{ url_for('api.admin.folderpermission', permission_id=current_permissions.id) }}">
-						<input type="submit" value="&nbsp;Reset&nbsp;" />
+						<fieldset class="inline_form">
+						<input type="submit" value="&nbsp;Reset permissions&nbsp;" />
+						</fieldset>
 					</form>
 				</div>
 			</p>

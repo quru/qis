@@ -48,6 +48,7 @@ Upload.init = function () {
 	// These don't work via attachEvent for some reason (in Firefox at least)
 	$('dropzone').ondragover = Upload.onDragOver;
 	$('dropzone').ondragend = Upload.onDragEnd;
+	$('dropzone').ondragleave = Upload.onDragEnd;
 	$('dropzone').ondrop = Upload.onDragDrop;
 	// Without this, some browsers don't re-enable the button on page refresh
 	$('submit').disabled = false;
