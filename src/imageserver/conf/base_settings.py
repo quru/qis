@@ -68,7 +68,7 @@ IMAGE_RESIZE_QUALITY = 3
 # Maximum image width/height parameter value to accept
 # E.g. 15k x 15k x 32bpp = 900MB memory required for processing
 MAX_IMAGE_DIMENSION = 15000
-# Maximum grid size when producing tiles (must be a square of 2)
+# Maximum grid size when producing tiles (must be a power of 2)
 MAX_GRID_TILES = 256
 
 # Optional width and/or height limits to enforce for public-facing images,
@@ -199,7 +199,8 @@ MGMT_DATABASE_POOL_SIZE = 5    # (per Apache process)
 PROXY_SERVERS = 0
 
 # The HTTP port to restrict the API, login, file browsing and administration
-# web pages to, or 0 to use the standard web browsing ports
+# web pages to, or 0 to use the standard web browsing ports. Requires Apache/
+# Nginx to also be servicing the application on this port when non-zero.
 INTERNAL_BROWSING_PORT = 0
 # Whether to require HTTPS for the API, login, and administration web pages
 # to prevent eavesdropping and session hijacking (requires an installed SSL certificate)
@@ -242,12 +243,12 @@ LDAP_QUERY_BASE = ""
 LDAP_BIND_USER_DN = ""
 LDAP_BIND_PASSWORD = ""
 
-# Destination for sending anonymous usage data
+# Destination for sending anonymous usage data, once per 24 hours
 USAGE_DATA_URL = 'https://qis.quru.com/collectstats'
 
 # For use with the "xref" image parameter, a 3rd party URL that will be called
 # (every time the image is requested) with the xref value appended to it.
 # E.g. "http://www.example.com/trackid?id=", or "" to disable this feature.
 # Note: Do not use a URL that refers back to this same server, otherwise
-#       a deadlock condition could occur when the server is very busy.
+#       a deadlock-type condition could occur when the server is very busy.
 XREF_TRACKING_URL = ""
