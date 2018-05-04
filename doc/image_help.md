@@ -1,13 +1,10 @@
 # Imaging user's guide
 
-Quru Image Server is an image repository and web server that can be used on its own, 
-or in conjunction with your web site, to store, manipulate and display your images in a
-variety of ways. This guide is aimed at web site editors or content creators who wish to display
-or modify their images.
+This guide is aimed at web site editors, web developers, or content creators
+who wish to display and/or modify their images.
 
-Administrators wishing to configure the server should refer to the installation guide.
-
-Software developers can refer to both this and the [API user's guide](/api/help/).
+Software developers can use this guide in conjunction with the [API user's guide](/api/help/)
+for creating imaging workflows.
 
 ## Contents
 
@@ -37,6 +34,7 @@ Software developers can refer to both this and the [API user's guide](/api/help/
 	* [tmp](#option_tmp) (template)
 * [Usage notes](#notes)
 * [Accessing the original image](#original)
+* [Delivering responsive images](#responsive)
 
 <a name="example"></a>
 ## A simple example
@@ -57,7 +55,7 @@ generated for you, and the original file remains unchanged. This and many other 
 be combined together, and are described in the rest of this guide.
 
 Note: the HTML `<img>` tag itself can take further options, which are not described here.  
-Consult an HTML tutorial or try an [internet search engine](http://www.google.com/search?q=html+img+tag)
+Consult an HTML tutorial or try an [internet search engine](https://www.google.com/search?q=html+img+tag)
 for more information.
 
 <a name="defaults"></a>
@@ -67,31 +65,28 @@ View this page from within QIS to see the default image settings for your server
 <a name="templates"></a>
 ## Image templates
 
-A template is a group of image processing options saved together as a single named shortcut.
+A template is a group of image processing options, saved together under a single name.
 You can use templates to avoid repeating the same set of image options, to make image
-URLs simpler, and to define a standard set of image options in one place.
+URLs simpler, or to define a standard set of image options in a central place.
 
 All image options except for [src](#option_src), [xref](#option_xref), and [tile](#option_tile)
 can be saved in a template. The templates already available to you are [listed above](#defaults),
-and can be created or changed by your system administrator. You can then apply a template to an
+and can be created or changed by an administrator. You can then apply a template to an
 image using the [tmp](#option_tmp) option.
 
-In QIS v1 the use of templates was optional, and a small number of fixed system settings 
-provided fall-back values for image format, colorspace, and client caching time.
-
-As of QIS v2 a template is always used when an image is generated. If no [tmp](#option_tmp)
-parameter is given then the system's [default template](#defaults) is used to provide the
-fall-back values. This simplifies image generation and administration, and allows a
-default value to be provided for any of the available image options. If you do specify a
-template then the system's default template is not used.
+From QIS v2 onwards, a template is always used when an image is generated.
+If no [tmp](#option_tmp) parameter is given then the system's [default template](#defaults)
+is applied. This simplifies image generation and administration, and allows a
+default value to be defined for any of the available image options. If you do
+specify a template, then the system's default template is not used.
 
 <a name="options"></a>
 ## Image options
 
 For most of the options that follow, if an image template is specified (with the
-[tmp](#option_tmp) option), the default value for that option is taken from the
+[tmp](#option_tmp) option), the default value for the option is taken from that
 template. If no template is specified, a default value is taken from the system's
-default template. Finally, if the template does not set a value, the default action
+default template. Finally, if neither of these sets a value, the default action
 is to leave the image unchanged for that option.
 
 <a name="option_src"></a>
@@ -496,9 +491,10 @@ These options are intended only for advanced users.
 
 Applies an International Color Consortium (ICC) colour profile to the image,
 possibly changing the image's [colour model](#option_colorspace), to alter the way
-the colours appear on screen or on paper. Most commonly this option is used in print publishing,
-when the image is intended to be printed on a specific variety of paper.
-The ICC profiles available to you are [listed above](#defaults) and are set by your system administrator.
+the colours appear on screen or on paper. Most commonly this option is used in print
+publishing, when the image is intended to be printed on a specific variety of paper.
+The ICC profiles available to you are [listed above](#defaults) and are set by your
+system administrator.
 
 You should also specify a rendering intent when applying an ICC profile, where valid values
 are: saturation, perceptual, absolute, or relative. The rendering intent alters the way in which 
@@ -679,7 +675,7 @@ If you do not specify a value, the default is 7 days.
 Templates, as [described above](#templates), group together a standard set of image
 processing options. If you find that you commonly use the same set of image options,
 you should consider moving them into a template. The templates already available to
-you are [listed above](#defaults) and are controlled by your system administrator.
+you are [listed above](#defaults) and are controlled by an administrator.
 
 When using a template:
 
@@ -729,10 +725,10 @@ There is no fall-back from (2) to (3).
 As an example, if the server's default template has `jpg` format,
 and the template 'custom' specifies `png` format:
 
-<code>**src=myimage&tmp=custom&format=gif**</code> would return a `gif` image.  
-<code>**src=myimage&tmp=custom**</code> would return a `png` image.  
-<code>**src=myimage&format=gif**</code> would return a `gif` image.  
-<code>**src=myimage**</code> would return a `jpg` image.
+<code>**src=myimage&tmp=custom&format=gif**</code> would return a `gif` image, from (1).  
+<code>**src=myimage&tmp=custom**</code> would return a `png` image, from (2).  
+<code>**src=myimage&format=gif**</code> would return a `gif` image, from (1).  
+<code>**src=myimage**</code> would return a `jpg` image, from (3).
 
 ### Order of imaging operations
 Some operations, when combined together, would produce a different result if they were performed
@@ -778,3 +774,44 @@ and the [stats](#option_stats) parameter. All other options are ignored.
 Users must have the *download* permission to use the `original` URL.
 This allows you to restrict access to the full images by whether users are public or logged-in,
 and/or by folder.
+
+<a name="responsive"></a>
+## Delivering responsive images
+_Responsive images_ is a term used in web development for a technique whereby different
+sizes of the same image are made available on a web site, for use by different devices
+with different screen sizes. The idea is that large devices download a large and detailed
+image, while small devices download only a small, and perhaps cropped version. This is a
+crucial technique for making fast loading and low bandwidth mobile web sites.
+
+Getting responsive images in QIS is easy using the [width](#option_width) and
+[height](#option_height) image parameters.
+
+You can either use the `<img srcset=...>` HTML tag:
+
+	<img src="https://images.example.com/image?src=buildings/cathedral.jpg&width=800"
+	  srcset="https://images.example.com/image?src=buildings/cathedral.jpg&width=480 480w,
+	          https://images.example.com/image?src=buildings/cathedral.jpg&width=800 800w,
+	          https://images.example.com/image?src=buildings/cathedral.jpg&width=1200 1200w"
+	   sizes="100vw">
+
+Or you can use responsive CSS with background images:
+
+    .my-image {
+        width: 480px;
+		height: 360px;
+        background-image: url("https://images.example.com/image?src=buildings/cathedral.jpg&width=480");
+    }
+    @media screen and (min-width: 481px) and (max-width: 800px) {
+        .my-image {
+            width: 800px;
+			height: 600px;
+            background-image: url("https://images.example.com/image?src=buildings/cathedral.jpg&width=800");
+        }
+    }
+    @media screen and (min-width: 801px) {
+        .my-image {
+            width: 1200;
+			height: 900px;
+            background-image: url("https://images.example.com/image?src=buildings/cathedral.jpg&width=1200");
+        }
+    }
