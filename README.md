@@ -2,7 +2,8 @@
 
 QIS is a high performance web server for creating and delivering dynamic images.
 It is ideal for use in conjunction with your existing web site, for applications
-such as image galleries and product catalogues.
+such as image galleries and product catalogues. Some of the application features
+are listed below, but you can also read the [application overview](doc/overview.md).
 
 Quru has been using QIS in production since 2012, and the majority of source code
 is made available here under the

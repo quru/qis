@@ -181,6 +181,13 @@ def image_help():
     return response
 
 
+# The system overview help page
+@app.route('/overview/')
+@login_required
+def overview_help():
+    return _standard_help_page('overview_help.html')
+
+
 # The image uploading form
 @app.route('/upload/')
 @login_required

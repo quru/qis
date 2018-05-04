@@ -1,7 +1,8 @@
 # v3.0.2
-_Changes: Add new help text and UI improvements to the admin site,
-add a password confirmation field, allow 8 to 120 character passwords,
-fix intermittent startup error, fix SELinux policy to allow log file rotation_
+_Changes: Add the application overview help page, add new help text and UI
+improvements to the admin site, add a password confirmation field,
+allow 8 to 120 character passwords, fix occasional startup error,
+fix SELinux policy to allow log file rotation_
 
 * Re-install `qis.pp` if SELinux is enabled (see the install guide)
 * Update the Python and web code (the `src` folder)
