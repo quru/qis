@@ -239,9 +239,9 @@ is fast, simple, and reliable. Used alongside the image server, Memcached stores
 images and data in memory up until a memory limit is reached. This limit needs
 to be tuned to be as large as possible while still leaving some working memory
 free for image processing and anything else running on the server. Once the limit
-is reached, the next item to be stored causes the [least recently used](https://en.wikipedia.org/wiki/Cache_replacement_policies#Least_recently_used_(LRU))
-thing to be evicted from the cache. In other words, Memcached prioritises keeping
-hold of the most frequently used images and data.
+is reached, the next item to be stored causes the least recently used item to be
+evicted from the cache. In other words, Memcached prioritises keeping hold of the
+most frequently used images and data.
 
 If you generate images that are always unique, or will not be re-used in the
 near future, then QIS will still work for you but it will not be very fast.
