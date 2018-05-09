@@ -3,7 +3,8 @@
 To follow this guide you will need to have some knowledge of Linux server administration,
 and be familiar with using the Linux command line interface and common utilities.
 If this isn't you, by all means read on, but don't be surprised if the process quickly
-feels rather involved.
+feels rather involved. If you want to read about what QIS does before installing it,
+read the [application introduction and overview](overview.md).
 
 Apart from itself, QIS incorporates 3 major component applications:
 
@@ -546,9 +547,10 @@ Next, bring up the web interface and change the password for the `admin` user.
 * Click _Sign in_
 * Once logged in, hover over the _Administrator_ name in the top right corner, and choose _Edit account_
 * In the _Password_ field, enter a new password
+* Repeat the new password in the _Password confirmation_ field
 * Click _Apply_
 
-By default, both public and logged in users have permission to view all images,
+By default, both public and logged-in users have permission to view all images,
 but not to upload or change them. If you want to review or change this:
 
 * Sign in as above
@@ -558,13 +560,15 @@ but not to upload or change them. If you want to review or change this:
   * The _Public_ group represents public / anonymous / not-logged-in users
   * The _Normal users_ group is the default group for logged in users
 * The current permissions are shown below
-* Click _change_ to alter the current permission level
+* Click _Change_ to alter the current permission level
   * Each higher permission level includes the levels that precede it
+* Click _Apply_ to save your changes
 
 Note: global permissions flags (irrespective of folder) can also be defined at the
 group level in _Groups_ administration.
 
-Your QIS installation is now complete.
+Your QIS installation is now complete. For more information about access permissions
+and other topics you can read the [application overview](overview.md).
 
 ## Troubleshooting
 
