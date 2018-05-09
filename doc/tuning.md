@@ -8,7 +8,7 @@ goes into more detail.
 
 I'm not going to repeat the mod_wsgi documentation. It's fairly well written and
 comprehensive, so if you want to know more, go over to
-[modwsgi.org](http://www.modwsgi.org/) and have a read.
+[modwsgi.readthedocs.io](https://modwsgi.readthedocs.io/) and have a read.
 
 QIS uses the "daemon mode" of mod_wsgi as it offers several advantages, including
 easier configuration and higher performance out of the box.
@@ -82,7 +82,7 @@ that depend on those modules:
 * `IndexIgnore`
 
 This list is based on Hayden James' article
-[Strip Down Apache to Improve Performance & Memory Efficiency](http://haydenjames.io/strip-apache-improve-performance-memory-efficiency/).
+[Strip Down Apache to Improve Performance & Memory Efficiency](https://haydenjames.io/strip-apache-improve-performance-memory-efficiency/).
 
 ## Apache - MPM tuning
 
@@ -92,13 +92,13 @@ tuning settings are then typically in Apache's main `http.conf` file.
 
 For the prefork MPM tuning settings, read:
 
-* [Apache 2.4](http://httpd.apache.org/docs/current/mod/prefork.html)
-* [Apache 2.2](http://httpd.apache.org/docs/2.2/mod/prefork.html)
+* [Apache 2.4](https://httpd.apache.org/docs/current/mod/prefork.html)
+* [Apache 2.2](https://httpd.apache.org/docs/2.2/mod/prefork.html)
 
 For the worker MPM tuning settings, read:
 
-* [Apache 2.4](http://httpd.apache.org/docs/current/mod/worker.html)
-* [Apache 2.2](http://httpd.apache.org/docs/2.2/mod/worker.html)
+* [Apache 2.4](https://httpd.apache.org/docs/current/mod/worker.html)
+* [Apache 2.2](https://httpd.apache.org/docs/2.2/mod/worker.html)
 
 Then go back and read the tuning settings again. Particularly in Apache 2.2 there
 are various rules, guidelines, and dependencies between the settings.
@@ -210,7 +210,7 @@ is a low spec you can instead compile it as Q8, performance will improve and mem
 consumption will be approximately halved, at the expense of some image and colour
 accuracy.
 
-According to [http://www.imagemagick.org/discourse-server/viewtopic.php?f=2&t=22932](http://www.imagemagick.org/discourse-server/viewtopic.php?f=2&t=22932):
+According to [https://www.imagemagick.org/discourse-server/viewtopic.php?f=2&t=22932](https://www.imagemagick.org/discourse-server/viewtopic.php?f=2&t=22932):
 
 > We recommend Q16. It is a nice balance between performance, memory consumption,
 > and mathematical precision. Q8 uses less memory and improves performance.
@@ -219,7 +219,7 @@ According to [http://www.imagemagick.org/discourse-server/viewtopic.php?f=2&t=22
 
 If you wish to trade off some image precision in return for the performance
 gains of Q8, you'll need to compile ImageMagick from source as described at
-[http://www.imagemagick.org/script/advanced-unix-installation.php](http://www.imagemagick.org/script/advanced-unix-installation.php).
+[https://www.imagemagick.org/script/advanced-unix-installation.php](https://www.imagemagick.org/script/advanced-unix-installation.php).
 Run configure with:
 
 	$ ./configure --with-quantum-depth 8 <your-other-options>
@@ -244,7 +244,7 @@ may have an impact on the performance and capacity of your server:
 
 By tuning some of the image parameters in your templates (including your default
 template) you may be able to create smaller and/or faster images at the same
-quality. From the [image URL](./image_help.md) or template administration area
+quality. From the [image URL](image_help.md) or template administration area
 you can experiment with these file options:
 
 * *Strip meta-data* - if you do not require embedded colour profiles and meta-data
@@ -392,7 +392,7 @@ as follows:
 	effective_cache_size         4GB     Lower than the "recommended" value as we are reserving much of the server for Memcached and mod_wsgi
 	default_statistics_target    100     Recommended value (and the default on Postgres 8.4+)
 
-See also [the Postgres tuning documentation](http://wiki.postgresql.org/wiki/Tuning_Your_PostgreSQL_Server)
+See also [the Postgres tuning documentation](https://wiki.postgresql.org/wiki/Tuning_Your_PostgreSQL_Server)
 and consider looking at the `pgtune` utility.
 
 ### Memcached
@@ -412,7 +412,7 @@ When full, the 45 GB limit looks like:
 ### Checking memory use
 
 If you're not familiar with Linux memory management, first read the article
-[Linux Memory Management - Low on Memory](http://linux-mm.org/Low_On_Memory),
+[Linux Memory Management - Low on Memory](https://linux-mm.org/Low_On_Memory),
 otherwise you might see `MemTotal: 56GB, MemFree: 0.4GB` and think that you're
 out of memory when you're not.
 
@@ -532,8 +532,8 @@ where:
 * `http://www.example.com/contact/` is the web page that contains the image
 
 You can therefore use a log file analysis tool such as
-[Webalizer](http://www.webalizer.org/), [ALV](http://www.apacheviewer.com/),
-or [AWStats](http://www.awstats.org/) to discover the answer to questions
+[Webalizer](http://www.webalizer.org/), [ALV](https://www.apacheviewer.com/),
+or [AWStats](https://www.awstats.org/) to discover the answer to questions
 such as:
 
 * What are the slowest images being generated (largest times taken where the

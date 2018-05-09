@@ -3,8 +3,8 @@
 Quru Image Server provides a web-based Application Programming Interface (API) so that
 software developers can integrate QIS into their own web sites and imaging solutions.
 
-The API consists a number of HTTP [RESTful web services](http://en.wikipedia.org/wiki/Representational_state_transfer#RESTful_web_services),
-most of which return data in the [JSON](http://www.json.org/) format.
+The API consists a number of HTTP [RESTful web services](https://en.wikipedia.org/wiki/Representational_state_transfer#RESTful_web_services),
+most of which return data in the [JSON](https://www.json.org/) format.
 
 ## Contents
 
@@ -41,7 +41,7 @@ most of which return data in the [JSON](http://www.json.org/) format.
 <a name="json"></a>
 ## About JSON
 
-[JavaScript Object Notation](http://www.json.org/) (JSON) is a lightweight format used for
+[JavaScript Object Notation](https://www.json.org/) (JSON) is a lightweight format used for
 exchanging data. Despite being based on a small subset of JavaScript, JSON is language independent,
 and is typically smaller and simpler to use than alternative data formats such as XML.
 
@@ -52,7 +52,7 @@ Importantly for web applications, JSON data can be retrieved and converted direc
 JavaScript objects from within the web browser. Native support for the encoding and decoding of
 JSON data is built into all modern web browsers, and can be emulated in older web browsers that
 support JavaScript. In addition, most of the common JavaScript frameworks such as
-[jQuery](http://jquery.com/) provide a simple means of calling JSON web services via XHR
+[jQuery](https://jquery.com/) provide a simple means of calling JSON web services via XHR
 (sometimes known as Ajax).
 
 <a name="usage"></a>
@@ -125,7 +125,7 @@ Or to send data to a protected web service:
 
 ### Calling an API function with curl
 
-[curl](http://curl.haxx.se/) is a popular command line utility that allows you to make HTTP calls
+[curl](https://curl.haxx.se/) is a popular command line utility that allows you to make HTTP calls
 without a web browser. It is available for all common operating systems, and allows you to create
 useful scripts and quickly test individual functions.
 
@@ -916,7 +916,7 @@ The default value is 1 hour.
 * `password` - Mandatory, text - The password to authenticate with
 
 These parameters can be supplied either as standard `POST` data,
-or alternatively using [HTTP Basic Authentication](http://en.wikipedia.org/wiki/Basic_access_authentication) instead.
+or alternatively using [HTTP Basic Authentication](https://en.wikipedia.org/wiki/Basic_access_authentication) instead.
 
 ### Permissions required
 * The username must match an existing QIS user account
@@ -926,7 +926,7 @@ or alternatively using [HTTP Basic Authentication](http://en.wikipedia.org/wiki/
 An object that currently has only one attribute - `token` - as a string.
 
 To use the token, call the other API functions using
-[HTTP Basic Authentication](http://en.wikipedia.org/wiki/Basic_access_authentication)
+[HTTP Basic Authentication](https://en.wikipedia.org/wiki/Basic_access_authentication)
 with the token as the username value. The password value is unused and can be blank or a dummy value.
 
 ### Example

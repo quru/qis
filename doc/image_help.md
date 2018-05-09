@@ -3,7 +3,7 @@
 This guide is aimed at web site editors, web developers, or content creators
 who wish to display and/or modify their images.
 
-Software developers can use this guide in conjunction with the [API user's guide](/api/help/)
+Software developers can use this guide in conjunction with the [API user's guide](api_help.md)
 for creating imaging workflows.
 
 ## Contents

@@ -119,7 +119,7 @@ for more information. Typically though the following settings are updated:
 
 If Apache will be installed on a different server, enable TCP/IP connections to the Postgres
 service. This has security implications, and the example below allows remote connections from
-anywhere. Consult the [Postgres documentation](http://www.postgresql.org/docs/9.2/static/auth-pg-hba-conf.html)
+anywhere. Consult the [Postgres documentation](https://www.postgresql.org/docs/9.2/static/auth-pg-hba-conf.html)
 for more information. You can skip this if Apache will be installed on the same server.
 
 	$ sudo echo "listen_addresses = '*'" >> /var/lib/pgsql/data/postgresql.conf
@@ -246,7 +246,7 @@ your needs. Then check the validity of the new `conf` files:
 
 You may also need to adjust the default Apache settings in `/etc/httpd/conf/httpd.conf`,
 e.g. to raise the maximum number of workers. This is an advanced topic, see the tuning guide
-and the [Apache documentation](http://httpd.apache.org/docs/current/misc/perf-tuning.html)
+and the [Apache documentation](https://httpd.apache.org/docs/current/misc/perf-tuning.html)
 (especially the MPM settings) for more information. A guideline for the number of Apache
 workers is 4 * `WSGIDaemonProcess` processes * `WSGIDaemonProcess` threads. By default,
 Apache has worker limit of around 250.
@@ -370,7 +370,7 @@ To raise the shared memory limit to 16GB, run commands:
 	$ sysctl -w kernel.shmall=4194304
 
 Then change (or add) the same values in `/etc/sysctl.conf`.
-You can also refer to the [Postgres documentation](http://www.postgresql.org/docs/9.2/static/kernel-resources.html).
+You can also refer to the [Postgres documentation](https://www.postgresql.org/docs/9.2/static/kernel-resources.html).
 
 ## Configuring the firewall
 

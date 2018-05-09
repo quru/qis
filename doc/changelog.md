@@ -166,7 +166,7 @@ From `local_settings.py`, delete the settings `IMAGE_FORMAT_DEFAULT`,
 `IMAGE_STRIP_DEFAULT`, `IMAGE_EXPIRY_TIME_DEFAULT` (if present).
 
 These changes implement phase 1 of the discussion at: 
-[v2/Default-templates.txt](./v2/Default-templates.txt).
+[v2/Default-templates.txt](v2/Default-templates.txt).
 
 # v2.1.1-dev
 _Changes: Merge from v1.50 - qismagick.so v2.0 upgrade to better support
