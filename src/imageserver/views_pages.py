@@ -136,10 +136,6 @@ def logout():
 def image_help():
     embed = request.args.get('embed', '')
 
-    http_server_url = external_url_for('index')
-    server_url_idx = http_server_url.find(':') + 1
-    server_url = http_server_url[server_url_idx:]
-
     help_image_attrs = ImageAttrs('test_images/cathedral.jpg')
     logo_image_attrs = ImageAttrs('test_images/quru110.png')
     logo_pad_image_attrs = ImageAttrs('test_images/quru470.png')
@@ -162,23 +158,19 @@ def image_help():
         iccs=available_iccs
     )
 
-    response = make_response(render_template(
+    return _standard_help_page(
         'image_help.html',
         embed=embed,
-        subs={
-            '//images.example.com/': server_url,
+        extra_subs={
             'cathedral.jpg': help_image_attrs.filename(with_path=False),
             'buildings': help_image_attrs.folder_path(),
             'quru.png': logo_image_attrs.filename(with_path=False),
             'quru-padded.png': logo_pad_image_attrs.filename(with_path=False),
             'logos': logo_image_attrs.folder_path(),
-            'View this page from within QIS to see the'
-            ' default image settings for your server.': default_settings_html
+            'View this page from within QIS to see the '
+            'default image settings for your server.': default_settings_html
         }
-    ))
-    response.cache_control.public = True
-    response.cache_control.max_age = 3600
-    return response
+    )
 
 
 # The system overview help page
@@ -774,20 +766,37 @@ def folder_browse():
             db_session.close()
 
 
-def _standard_help_page(template_file):
+def _standard_help_page(template_file, embed=None, extra_subs=None):
     """
-    Calls and returns a render_template() with standard help page parameters.
+    Calls and returns render_template() with the standard help page parameters,
+    plus any extras supplied in 'extra_subs'. Also applies cache control headers
+    to the response.
     """
     http_server_url = external_url_for('index')
     server_url_idx = http_server_url.find(':') + 1
     server_url = http_server_url[server_url_idx:]
 
+    subs = {
+        # Replace images.example.com everywhere with the local server name
+        '//images.example.com/': server_url,
+        # Replace cross-document links with working URLs to the equivalent web pages
+        'api_help.md': internal_url_for('api.api_help'),
+        'image_help.md': internal_url_for('image_help'),
+        'overview.md': internal_url_for('overview_help'),
+        'js_simpleview_help.md': internal_url_for('simple_view_help'),
+        'js_slideshow_help.md': internal_url_for('slideshow_view_help'),
+        'js_canvasview_help.md': internal_url_for('canvas_view_help'),
+        'js_gallery_help.md': internal_url_for('gallery_view_help'),
+        # This line is standard in all the js help files
+        'View this page from within QIS to see a demo.': 'A demo page is [available here](..).',
+    }
+    if extra_subs:
+        subs.update(extra_subs)
+
     response = make_response(render_template(
         template_file,
-        subs={
-            '//images.example.com/': server_url,
-            'View this page from within QIS to see a demo.': 'A demo page is [available here](..).'
-        }
+        embed=embed,
+        subs=subs
     ))
     response.cache_control.public = True
     response.cache_control.max_age = 3600
