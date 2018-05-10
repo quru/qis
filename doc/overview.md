@@ -244,7 +244,7 @@ evicted from the cache. In other words, Memcached prioritises keeping hold of th
 most frequently used images and data.
 
 If you generate images that are always unique, or will not be re-used in the
-near future, then QIS will still work for you but it will not be very fast.
+near future, then QIS will still work for you but it will not be optimal.
 
 On the other hand, when you request an image that has already been generated and
 is still in the cache, it typically takes less than 2 milliseconds for the server
