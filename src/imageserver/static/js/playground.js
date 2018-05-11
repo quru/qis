@@ -35,3 +35,53 @@ var Playground = {
 	// This defines the parameters for the display image
 	imageSpec: {}
 };
+
+Playground.selectImage = function(imgSrc) {
+	var qsIdx = imgSrc.indexOf('?');
+	if (qsIdx != -1) {
+		Playground.imageSpec = QU.QueryStringToObject(imgSrc.substring(qsIdx + 1), false);
+		Playground.imageSrc = Playground.imageSpec.src;
+		// TODO delete me
+		QU.id('dostuff').innerHTML = 'Doing stuff with '+Playground.imageSrc;
+	}
+	// Hide image selection area
+	var selectionEl = QU.id('pg_selection');
+	if (selectionEl) {
+		QU.elSetClass(selectionEl, 'selected', true);
+		QU.elSetClass(QU.id('pg_main'), 'selected', true);
+		// Unhide the image re-select link
+		QU.elSetClass(QU.id('pg_reselect'), 'hidden', false);
+	}
+};
+
+Playground.openImageSelector = function() {
+	// Show image selection area
+	var selectionEl = QU.id('pg_selection');
+	if (selectionEl) {
+		QU.elSetClass(selectionEl, 'selected', false);
+		QU.elSetClass(QU.id('pg_main'), 'selected', false);
+	}
+};
+
+Playground.init = function() {
+	// Set up image selection
+	var thumbs = document.querySelectorAll('.pg_selection img');
+	for (var i = 0; i < thumbs.length; i++) {
+		thumbs[i].addEventListener('click', function(e) {
+			e.preventDefault();
+			Playground.selectImage(this.src);
+			return false;
+		});
+	}
+	// Set up image re-selection
+	var resel = document.querySelector('#pg_reselect a');
+	if (resel) {
+		resel.addEventListener('click', function(e) {
+			e.preventDefault();
+			Playground.openImageSelector();
+			return false;
+		});
+	}
+};
+
+QU.whenReady(Playground.init);
