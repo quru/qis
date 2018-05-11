@@ -13,10 +13,12 @@ $COMPRESS -o canvas_view.min.js    canvas_view.js
 $COMPRESS -o gallery_view.min.js   gallery_view.js
 $COMPRESS -o simple_view.min.js    simple_view.js
 $COMPRESS -o slideshow_view.min.js slideshow_view.js
+$COMPRESS -o playground.min.js     playground.js
 echo "" >> canvas_view.min.js    && cat common_view.min.js >> canvas_view.min.js
 echo "" >> gallery_view.min.js   && cat common_view.min.js >> gallery_view.min.js
 echo "" >> simple_view.min.js    && cat common_view.min.js >> simple_view.min.js
 echo "" >> slideshow_view.min.js && cat common_view.min.js >> slideshow_view.min.js
+echo "" >> playground.min.js     && cat common_view.min.js >> playground.min.js
 cd "$BASE"
 
 # UI

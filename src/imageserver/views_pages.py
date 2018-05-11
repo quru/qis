@@ -33,7 +33,7 @@ from datetime import datetime, timedelta
 import os.path
 from time import sleep
 
-from flask import make_response, redirect, request, session
+from flask import abort, make_response, redirect, request, session
 
 from .errors import DoesNotExistError
 from .exif import get_exif_geo_position
@@ -41,8 +41,7 @@ from .filesystem_manager import get_upload_directory, get_file_info
 from .filesystem_manager import get_directory_listing, path_exists
 from .filesystem_manager import DirectoryInfo
 from .filesystem_sync import auto_sync_file, auto_sync_folder
-from .flask_app import app
-from .flask_app import logger
+from .flask_app import app, logger
 from .flask_app import cache_engine, data_engine, image_engine, permissions_engine, task_engine
 from .flask_util import external_url_for, internal_url_for, render_template
 from .flask_util import login_point, login_required
@@ -764,6 +763,51 @@ def folder_browse():
                 db_session.rollback()
         finally:
             db_session.close()
+
+
+# v3.1.0 Public demo/playground page, requires enabling in settings
+@app.route('/demo/')
+def playground():
+    img_path = app.config['DEMO_IMAGE_PATH']
+    if not img_path:
+        abort(404)
+
+    try:
+        if not path_exists(img_path):
+            raise DoesNotExistError(
+                'the demonstration images were not found. Please ask your system '
+                'administrator to check the value of the DEMO_IMAGE_PATH setting.'
+            )
+        elif path_exists(img_path, require_file=True):
+            # File mode
+            permissions_engine.ensure_folder_permitted(
+                filepath_parent(img_path),
+                FolderPermission.ACCESS_VIEW,
+                get_session_user()
+            )
+            image_list = [img_path]
+        else:
+            # Folder mode
+            permissions_engine.ensure_folder_permitted(
+                img_path,
+                FolderPermission.ACCESS_VIEW,
+                get_session_user()
+            )
+            folder_info = get_directory_listing(img_path, False, 2, limit=100)
+            image_list = [os.path.join(img_path, f['filename']) for f in folder_info]
+
+        return render_template(
+            'playground.html',
+            image_list=image_list
+        )
+    except Exception as e:
+        log_security_error(e, request)
+        if app.config['DEBUG']:
+            raise
+        return render_template(
+            'playground.html',
+            err_msg='The demo page is currently unavailable: ' + str(e)
+        )
 
 
 def _standard_help_page(template_file, embed=None, extra_subs=None):

@@ -42,8 +42,7 @@ import werkzeug.exceptions as httpexc
 from .errors import DBError, DoesNotExistError, ImageError, SecurityError, ServerTooBusyError
 from .filesystem_manager import path_exists
 from .filesystem_sync import on_image_db_create_anon_history
-from .flask_app import app
-from .flask_app import logger
+from .flask_app import app, logger
 from .flask_app import data_engine, image_engine, permissions_engine, stats_engine
 from .image_attrs import ImageAttrs
 from .models import FolderPermission

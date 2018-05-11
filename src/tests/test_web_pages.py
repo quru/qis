@@ -37,6 +37,7 @@ import shutil
 from . import tests as main_tests
 from .tests import BaseTestCase, setup_user_account
 
+from imageserver.flask_app import app as flask_app
 from imageserver.flask_app import cache_engine as cm
 from imageserver.filesystem_manager import (
     get_abs_path, delete_dir, make_dirs
@@ -402,3 +403,32 @@ class ImageServerTestsWebPages(BaseTestCase):
 
     def test_slideshow_viewer_page_help(self):
         self.call_page_requiring_login('/slideshow/help/', required_text='A demo page is')
+
+    # v3.1.0 The demo/playground page
+    def test_demo_page_disabled(self):
+        # The page should be disabled by default
+        rv = self.app.get('/demo/')
+        self.assertEqual(rv.status_code, 404)
+
+    def test_demo_page_image(self):
+        flask_app.config['DEMO_IMAGE_PATH'] = 'test_images/cathedral.jpg'
+        rv = self.app.get('/demo/')
+        self.assertEqual(rv.status_code, 200)
+        self.assertIn('src=test_images/cathedral.jpg', rv.data.decode('utf8'))
+
+    def test_demo_page_folder(self):
+        flask_app.config['DEMO_IMAGE_PATH'] = 'test_images/'
+        rv = self.app.get('/demo/')
+        self.assertEqual(rv.status_code, 200)
+        rv_data = rv.data.decode('utf8')
+        self.assertIn('src=test_images/cathedral.jpg', rv_data)
+        self.assertIn('src=test_images/cowboy.jpg', rv_data)
+        self.assertIn('src=test_images/dorset.jpg', rv_data)
+
+    def test_demo_page_bad_config(self):
+        flask_app.config['DEMO_IMAGE_PATH'] = 'a/bad/path'
+        rv = self.app.get('/demo/')
+        self.assertEqual(rv.status_code, 200)
+        rv_data = rv.data.decode('utf8')
+        self.assertIn('not found', rv_data)
+        self.assertIn('value of the DEMO_IMAGE_PATH setting', rv_data)

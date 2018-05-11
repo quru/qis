@@ -109,6 +109,11 @@ PDF_FILE_TYPES = ['pdf', 'ps', 'eps', 'epsi', 'epsf']
 # application logo, or an empty string to use the default logo.
 LOGO_IMAGE_PATH = ""
 
+# An image path or folder path (relative to IMAGES_BASE_DIR) that contains the
+# image (or folder of images) to use for the public demo page at URL /demo/
+# The image(s) must be publicly viewable. An empty string disables the demo page.
+DEMO_IMAGE_PATH = ""
+
 # Image upload directories available for selection from the upload page.
 # These should be relative to IMAGES_BASE_DIR and will be created at file upload
 # time if they do not exist. You may optionally include date and time placeholders
