@@ -1,4 +1,4 @@
-# v3.0.2
+# v3.1.0
 _Changes: Add the application overview help page, add new help text and UI
 improvements to the admin site, add a password confirmation field,
 allow 8 to 120 character passwords, fix occasional startup error,
