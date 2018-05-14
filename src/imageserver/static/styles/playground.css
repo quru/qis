@@ -27,6 +27,20 @@ h2 {
 	margin-top: 0px;
 }
 
+.column {
+	width: 49.9%;
+	float: left;
+}
+
+/* For browsers that support calc(), maximise the image preview width */
+
+@media screen and (min-width: 78em) {     /* point at which 49.9% == control panel full width */
+	.col1 { width: calc(43em);         }  /* control panel full width */
+	.col2 { width: calc(99.9% - 43em); }  /* remainder of width */
+}
+
+/* Image selection area */
+
 .scroller {
 	box-sizing: border-box;
 	width: 100%;
@@ -69,4 +83,47 @@ h2 {
 .pg_main.selected {
 	margin-top: 0em;
 	transition: margin-top 1s ease-out;
+}
+
+/* Image playground area */
+
+.controls {
+	margin-right: 2em;
+}
+.preview {
+	position: relative;  /* Become parent for #wait_image position */
+	text-align: center;
+}
+
+.controls label {
+	display: inline-block;
+	width: 10em;
+	vertical-align: top;
+	margin-top: 0.2em;
+}
+.controls button {
+	width: 12em;
+}
+.controls fieldset label {
+	margin: 0;
+	font-size: 90%;
+}
+.controls fieldset input {
+	vertical-align: top;
+}
+
+#wait_image {
+	position: absolute;
+	top: 45%;
+	left: 45%;
+	z-index: 1;
+	background-color: white;
+	visibility: hidden;
+}
+#preview_image {
+	border: 1px dashed gray;
+	max-width: 100%;
+}
+#preview_image.loading {
+	opacity: 0.2;
 }
