@@ -34,7 +34,9 @@ var Playground = {
 	imageBaseURL: '',
 	// This defines the parameters for the display image
 	imageSpec: {},
-	imageSpecOrig: {}
+	imageSpecOrig: {},
+	// This indicates whether selectImage() has been called
+	ready: false
 };
 
 // Utility - returns the text after the first "?", or else the original text
@@ -46,7 +48,8 @@ Playground._getQS = function(url) {
 	return url;
 };
 
-// Invoked from the image selection area when a thumbnail is clicked on
+// Invoked from the image selection area when a thumbnail is clicked on.
+// Needs to be called once (after init()) before everything else works.
 Playground.selectImage = function(imgSrc) {
 	var qsIdx = imgSrc.indexOf('?');
 	if (qsIdx !== -1) {
@@ -65,6 +68,8 @@ Playground.selectImage = function(imgSrc) {
 		// Unhide the image re-select link
 		QU.elSetClass(QU.id('pg_reselect'), 'hidden', false);
 	}
+	// Once we have an image URL we're ready from then on
+	Playground.ready = true;
 	// Show initial preview
 	Playground.reset();
 };
@@ -80,12 +85,18 @@ Playground.openImageSelector = function() {
 
 // Applies a {key: value, ...} object to Playground.imageSpec and refreshes the preview image
 Playground.play = function(obj) {
+	if (!Playground.ready) {
+		return;
+	}
 	QU.merge(Playground.imageSpec, obj);
 	Playground.refreshPreviewImage();
 };
 
 // Call this when Playground.imageSpec has changed to update the preview image
 Playground.refreshPreviewImage = function() {
+	if (!Playground.ready) {
+		return;
+	}
 	var previewImg = QU.id('preview_image'),
 	    waitImg = QU.id('wait_image'),
 	    newSrc = Playground.imageBaseURL + '?' + QU.ObjectToQueryString(Playground.imageSpec);
@@ -93,7 +104,7 @@ Playground.refreshPreviewImage = function() {
 	// Only reload if a change has been made
 	if (Playground._getQS(newSrc) !== Playground._getQS(previewImg.src)) {
 		QU.elSetClass(previewImg, 'loading', true);
-		waitImg.style.visibility = 'visible';
+		QU.elSetClass(waitImg, 'hidden', false);
 		previewImg.src = newSrc;
 		// If the image was in cache, onload does not always fire
 		if (previewImg.complete) {
@@ -104,15 +115,22 @@ Playground.refreshPreviewImage = function() {
 
 // Invoked when preview image has loaded (called either once or twice depending on browser and caching)
 Playground.onPreviewImageLoaded = function() {
+	if (!Playground.ready) {
+		return;
+	}
 	var previewImg = QU.id('preview_image'),
 	    waitImg = QU.id('wait_image');
 
 	QU.elSetClass(previewImg, 'loading', false);
-	waitImg.style.visibility = 'hidden';
+	QU.elSetClass(previewImg, 'hidden', false);
+	QU.elSetClass(waitImg, 'hidden', true);
 };
 
 // Resets back a standard initial state
 Playground.reset = function() {
+	if (!Playground.ready) {
+		return;
+	}
 	// TODO reset UI and take w,h from there
 	// Reset preview image spec
 	Playground.imageSpec = QU.clone(Playground.imageSpecOrig);

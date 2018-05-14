@@ -90,11 +90,6 @@ h2 {
 .controls {
 	margin-right: 2em;
 }
-.preview {
-	position: relative;  /* Become parent for #wait_image position */
-	text-align: center;
-}
-
 .controls label {
 	display: inline-block;
 	width: 10em;
@@ -112,13 +107,22 @@ h2 {
 	vertical-align: top;
 }
 
+.preview {
+	position: relative;  /* Become parent for #wait_image position */
+	text-align: center;  /* Images centred */
+	min-height: 64px;    /* Size of icon-wait-64.gif */
+}
+
 #wait_image {
 	position: absolute;
 	top: 45%;
 	left: 45%;
 	z-index: 1;
 	background-color: white;
-	visibility: hidden;
+}
+#wait_image {
+	top: calc(50% - 32px);   /* For browsers that support calc(), put #wait_image in the proper centre */
+	left: calc(50% - 32px);
 }
 #preview_image {
 	border: 1px dashed gray;
