@@ -71,7 +71,7 @@
 					</div>
 					<br>
 					<div>
-						<label>Dimensions</label>
+						<label>Size</label>
 						<fieldset class="inline_form">
 							<button type="button" onclick="Playground.play({width: 0, height: 0})">Original size</button><br>
 							<button type="button" onclick="Playground.play({width: 200, height: 200})">Small square</button>
@@ -98,15 +98,28 @@
 						<label>Borders</label>
 						<fieldset class="inline_form">
 							<input id="autosizefit" type="checkbox" value="1" onchange="Playground.play({autosizefit: this.checked})">
-							<label for="autosizefit">Remove border</label><br>
+							<label for="autosizefit">Remove borders</label><br>
 							TODO some more
+						</fieldset>
+					</div>
+					<div>
+						<label>File format</label>
+						<fieldset class="inline_form">
+							<button type="button" onclick="Playground.play({format:'jpg', quality:20})">JPEG quality 20%</button>
+							<button type="button" onclick="Playground.play({format:'jpg', quality:50})">JPEG quality 50%</button><br>
+							<button type="button" onclick="Playground.play({format:'jpg', quality:70})">JPEG quality 70%</button>
+							<button type="button" onclick="Playground.play({format:'jpg', quality:90})">JPEG quality 90%</button><br>
+							<button type="button" onclick="Playground.play({format:'png', quality:79})">PNG type A</button>
+							<button type="button" onclick="Playground.play({format:'png', quality:31})">PNG type B</button><br>
+							<input id="strip" type="checkbox" value="1" onchange="Playground.play({strip: this.checked})">
+							<label for="strip">Strip metadata (e.g. EXIF data)</label>
 						</fieldset>
 					</div>
 				</div>
 			</div>
 
 			<div class="sticky column col2">
-				<h3>Image preview</h3>
+				<h3>Image preview <span id="preview_image_size"></span></h3>
 				<div class="preview odd">
 					<img class="hidden" id="wait_image" src="{{ url_for('static', filename='images/icon-wait-64.gif') }}">
 					<img class="hidden" id="preview_image" src="{{ url_for('static', filename='images/spacer.png') }}">

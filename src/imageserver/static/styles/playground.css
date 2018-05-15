@@ -102,6 +102,7 @@ h2 {
 .controls fieldset label {
 	margin: 0;
 	font-size: 90%;
+	width: auto;
 }
 .controls fieldset input {
 	vertical-align: top;

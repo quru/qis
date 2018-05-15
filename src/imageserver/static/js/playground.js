@@ -40,6 +40,31 @@ var Playground = {
 	ready: false
 };
 
+// Utility - available after a resource has loaded, returns its size in bytes.
+// Returns 0 on browsers that do not support the Resource Timing API, and
+// intermittently on some browsers when the resource comes from cache.
+Playground._resourceSize = function(url) {
+	if (window.performance && window.performance.getEntriesByType) {
+		var resources = performance.getEntriesByType('resource');
+		for (var i = 0; i < resources.length; i++) {
+			if (resources[i].name === url) {
+				return resources[i].decodedBodySize || 0;
+			}
+		}
+	}
+	return 0;
+};
+
+// Utility - formats a bytes value
+Playground._formatBytes = function(n) {
+	var units = ['bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'],
+		loops = 0;
+	while (n >= 1024 && ++loops) {
+		n /= 1024;
+	}
+	return(n.toFixed((n >= 10 || loops < 1) ? 0 : 1) + ' ' + units[loops]);
+};
+
 // Utility - returns the text after the first "?", or else the original text
 Playground._getQS = function(url) {
 	var qsIdx = url.indexOf('?');
@@ -49,10 +74,10 @@ Playground._getQS = function(url) {
 	return url;
 };
 
-// Utility - removes image parameters that we don't want set by default
+// Utility - adds/removes the default "clean" image parameters
 Playground._cleanImageSpec = function(spec) {
+	spec.strip = false;
 	delete spec.attach;
-	delete spec.strip;
 	delete spec.tmp;
 	return spec;
 };
@@ -135,6 +160,19 @@ Playground.play = function(obj) {
 	}
 };
 
+// Call this to show or hide the preview image file size (when available)
+Playground.showPreviewImageSize = function(show) {
+	var previewImg = QU.id('preview_image'),
+		previewImgCtr = QU.id('preview_image_size'),
+		previewImgSize = Playground._resourceSize(previewImg.src);
+
+	if (show && previewImgSize) {
+		previewImgCtr.innerText = '(file size ' + Playground._formatBytes(previewImgSize) + ')';
+	} else {
+		previewImgCtr.innerText = '';
+	}
+};
+
 // Call this when Playground.imageSpec has changed to update the preview image
 Playground.refreshPreviewImage = function() {
 	if (!Playground.ready) {
@@ -146,6 +184,7 @@ Playground.refreshPreviewImage = function() {
 
 	// Only reload if a change has been made
 	if (Playground._getQS(newSrc) !== Playground._getQS(previewImg.src)) {
+		Playground.showPreviewImageSize(false);
 		QU.elSetClass(previewImg, 'loading', true);
 		QU.elSetClass(waitImg, 'hidden', false);
 		previewImg.src = newSrc;
@@ -162,11 +201,12 @@ Playground.onPreviewImageLoaded = function() {
 		return;
 	}
 	var previewImg = QU.id('preview_image'),
-	    waitImg = QU.id('wait_image');
+		waitImg = QU.id('wait_image');
 
 	QU.elSetClass(previewImg, 'loading', false);
 	QU.elSetClass(previewImg, 'hidden', false);
 	QU.elSetClass(waitImg, 'hidden', true);
+	Playground.showPreviewImageSize(true);
 };
 
 // Call this when a change to the preview image also requires a change to the cropping image
