@@ -6,7 +6,8 @@
 	Requires:      base.js
 	               preview_popup.js
 	               MooTools More 1.3 - String.QueryString
-	               highlight.js
+				   highlight.js
+				   lassocrop.js
 	Copyright:     Quru Ltd (www.quru.com)
 	Licence:
 

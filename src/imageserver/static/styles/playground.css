@@ -50,12 +50,12 @@ h2 {
 }
 .pg_selection {
 	max-height: 235px;
-	transition: max-height 1s ease-out;
+	transition: max-height 1s ease-out;  /* see the JS if changing duration */
 	overflow: hidden;
 }
 .pg_selection.selected {
 	max-height: 0px;
-	transition: max-height 1s ease-out;
+	transition: max-height 1s ease-out;  /* see the JS if changing duration */
 }
 .pg_selection ul {
 	margin: 0;
@@ -78,11 +78,11 @@ h2 {
 
 .pg_main {
 	margin-top: 1em;
-	transition: margin-top 1s ease-out;
+	transition: margin-top 1s ease-out;  /* see the JS if changing duration */
 }
 .pg_main.selected {
 	margin-top: 0em;
-	transition: margin-top 1s ease-out;
+	transition: margin-top 1s ease-out;  /* see the JS if changing duration */
 }
 
 /* Image playground area */
@@ -128,6 +128,22 @@ h2 {
 	border: 1px dashed gray;
 	max-width: 100%;
 }
-#preview_image.loading {
+#preview_image.loading,
+.crop_container.loading {
 	opacity: 0.2;
+}
+
+.crop_container {
+	text-align: center;
+}
+.crop_container div {     /* Reset div styles for Lasso.Crop */
+	padding: 0;
+	margin: 0;
+}
+.crop_container > div {   /* Centre align Lasso.Crop */
+	margin-left: auto;
+	margin-right: auto;
+}
+.crop_container button {  /* Space for Lasso.Crop grab handles */
+	margin-top: 10px;
 }
