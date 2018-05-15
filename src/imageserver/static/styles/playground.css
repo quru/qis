@@ -50,12 +50,12 @@ h2 {
 }
 .pg_selection {
 	max-height: 235px;
-	transition: max-height 1s ease-out;  /* see the JS if changing duration */
+	transition: max-height 1s ease-out;
 	overflow: hidden;
 }
 .pg_selection.selected {
 	max-height: 0px;
-	transition: max-height 1s ease-out;  /* see the JS if changing duration */
+	transition: max-height 1s ease-out;
 }
 .pg_selection ul {
 	margin: 0;
@@ -78,11 +78,11 @@ h2 {
 
 .pg_main {
 	margin-top: 1em;
-	transition: margin-top 1s ease-out;  /* see the JS if changing duration */
+	transition: margin-top 1s ease-out;
 }
 .pg_main.selected {
 	margin-top: 0em;
-	transition: margin-top 1s ease-out;  /* see the JS if changing duration */
+	transition: margin-top 1s ease-out;
 }
 
 /* Image playground area */

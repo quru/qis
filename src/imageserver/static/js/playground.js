@@ -75,7 +75,10 @@ Playground.selectImage = function(imgSrc) {
 	if (selectionEl) {
 		QU.elSetClass(selectionEl, 'selected', true);
 		QU.elSetClass(QU.id('pg_main'), 'selected', true);
-		setTimeout(Playground.onImageSelectorAnimationComplete, 1050);
+		setTimeout(
+			Playground.onImageSelectorAnimationComplete,
+			Playground.getImageSelectorAnimationDuration() + 50
+		);
 		// Unhide the image re-select link
 		QU.elSetClass(QU.id('pg_reselect'), 'hidden', false);
 	}
@@ -91,7 +94,10 @@ Playground.openImageSelector = function() {
 	if (selectionEl) {
 		QU.elSetClass(selectionEl, 'selected', false);
 		QU.elSetClass(QU.id('pg_main'), 'selected', false);
-		setTimeout(Playground.onImageSelectorAnimationComplete, 1050);
+		setTimeout(
+			Playground.onImageSelectorAnimationComplete,
+			Playground.getImageSelectorAnimationDuration() + 50
+		);
 	}
 };
 
@@ -101,6 +107,20 @@ Playground.onImageSelectorAnimationComplete = function() {
 		// Lasso.Crop doesn't like animations, we need to tell it to re-measure its position
 		Playground.cropTool.getRelativeOffset();
 	}
+};
+
+// Returns the animation time for the image selection area, in milliseconds
+Playground.getImageSelectorAnimationDuration = function() {
+	var selectionEl = QU.id('pg_selection');
+	if (selectionEl) {
+		var styles = QU.elGetStyles(selectionEl, ['transition-duration']);
+		var td = styles ? styles['transition-duration'] : '';
+		if (td && td.substring(td.length - 2) == 'ms')
+			return parseFloat(td);         // millis
+		else if (td && td.substring(td.length - 1) == 's')
+			return parseFloat(td) * 1000;  // secs
+	}
+	return 1000;  // Default
 };
 
 // Applies a {key: value, ...} object to Playground.imageSpec and refreshes the preview image
@@ -161,7 +181,8 @@ Playground.refreshCropImage = function() {
 		width: 200,
 		height: 200,
 		autosizefit: 1,
-		strip: 1
+		strip: 1,
+		stats: 0
 	};
 	var extraProps = ['format', 'colorspace', 'angle', 'flip'];
 	extraProps.forEach(function(val) {

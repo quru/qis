@@ -86,20 +86,20 @@
 						</fieldset>
 					</div>
 					<div>
-						<label>Borders</label>
-						<fieldset class="inline_form">
-							<input id="autosizefit" type="checkbox" value="1" onchange="Playground.play({autosizefit: this.checked})">
-							<label for="autosizefit">Remove border</label><br>
-							TODO some more
-						</fieldset>
-					</div>
-					<div>
 						<label>Cropping</label>
 						<fieldset class="inline_form">
 							<div class="crop_container">
 								<img id="crop_image" src="{{ url_for('static', filename='images/spacer.png') }}">
 								<button type="button" onclick="Playground.resetCrop(true)">Reset crop</button>
 							</div>
+						</fieldset>
+					</div>
+					<div>
+						<label>Borders</label>
+						<fieldset class="inline_form">
+							<input id="autosizefit" type="checkbox" value="1" onchange="Playground.play({autosizefit: this.checked})">
+							<label for="autosizefit">Remove border</label><br>
+							TODO some more
 						</fieldset>
 					</div>
 				</div>
