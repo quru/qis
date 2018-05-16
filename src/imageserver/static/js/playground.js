@@ -3,7 +3,9 @@
 	Date started:  11 May 2018
 	By:            Matt Fozard
 	Purpose:       Quru Image Server file details helpers
-	Requires:      base.js, common_view.js
+	Requires:      base.js
+				   common_view.js
+				   canvas_view.js
 	               lassocrop.js (which requires MooTools)
 	Copyright:     Quru Ltd (www.quru.com)
 	Licence:
@@ -109,6 +111,7 @@ Playground.selectImage = function(imgSrc) {
 	}
 	// Once we have an image URL we're ready from then on
 	Playground.ready = true;
+	QU.elRemove('preview_image_msg');
 	// Show initial preview
 	Playground.reset();
 };
@@ -181,6 +184,14 @@ Playground.refreshPreviewImage = function() {
 	var previewImg = QU.id('preview_image'),
 	    waitImg = QU.id('wait_image'),
 	    newSrc = Playground.imageBaseURL + '?' + QU.ObjectToQueryString(Playground.imageSpec);
+
+	// Update image action URLs
+	QU.id('view_plain').href = newSrc;
+	QU.id('view_download').href = newSrc + '&amp;attach=1';
+	var specCopy = QU.clone(Playground.imageSpec);
+	specCopy.format = 'pdf';
+	specCopy.dpi = 150;
+	QU.id('view_pdf').href = Playground.imageBaseURL + '?' + QU.ObjectToQueryString(specCopy);
 
 	// Only reload if a change has been made
 	if (Playground._getQS(newSrc) !== Playground._getQS(previewImg.src)) {
@@ -300,6 +311,20 @@ Playground.resetCrop = function(apply) {
 	}
 };
 
+// Launches a full screen view of the preview image using canvas_view.js
+Playground.viewFullScreen = function() {
+	if (!Playground.ready) {
+		return;
+	}
+	canvas_view_init_image('preview_image');
+	var viewEl = QU.id('preview_image'),
+	    viewFn = viewEl._onclick;
+	if (viewFn) {
+		viewFn();
+		viewEl.removeEventListener('click', viewFn);
+	}
+};
+
 // Resets everything back a standard initial state
 Playground.reset = function() {
 	if (!Playground.ready) {
@@ -344,6 +369,12 @@ Playground.init = function() {
 			return false;
 		});
 	}
+	// Set up full screen view
+	QU.id('view_full').addEventListener('click', function(e) {
+		e.preventDefault();
+		Playground.viewFullScreen();
+		return false;
+	});
 	// Set up preview image events
 	QU.id('preview_image').addEventListener('load', Playground.onPreviewImageLoaded);
 	QU.id('crop_image').addEventListener('load', Playground.onCropImageLoaded);

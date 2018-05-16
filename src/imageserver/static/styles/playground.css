@@ -136,6 +136,10 @@ h2 {
 .crop_container.loading {
 	opacity: 0.2;
 }
+#preview_image_msg {
+	margin-top: 0.5em;
+	font-style: italic;
+}
 
 .crop_container {
 	text-align: center;

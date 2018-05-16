@@ -34,9 +34,9 @@
 from calendar import timegm
 from collections import OrderedDict
 from datetime import datetime
-import markdown
 import time
 
+import markdown
 from jinja2 import Markup
 from werkzeug.urls import url_quote_plus
 
@@ -153,6 +153,7 @@ def inject_template_vars():
     Sets the custom variables that are available inside templates.
     """
     return {
+        'config': app.config,
         'logged_in': logged_in(),
         'user': get_session_user(),
         'FolderPermission': FolderPermission,

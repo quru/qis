@@ -74,7 +74,7 @@ if (!window.QU) {
     // or its children (including any event handlers) remain.
     QU.elRemove = function(el) {
         el = QU.id(el);
-        if (el.parentNode)
+        if (el && el.parentNode)
             el.parentNode.removeChild(el);
         return el;
     }

@@ -20,15 +20,17 @@
 {% block title %}Imaging demos{% endblock %}
  
 {% block extra_head %}
-	<link rel="stylesheet" href="{{ url_for('static', filename='styles/playground.css') }}" type="text/css" />
+	<link rel="stylesheet" href="{{ url_for('static', filename='styles/canvas_view.css') }}" type="text/css">
+	<link rel="stylesheet" href="{{ url_for('static', filename='styles/playground.css') }}" type="text/css">
 	
 	{% if settings.DEBUG %}
 	<script src="{{ url_for('static', filename='js/lib/lassocrop.js') }}" type="text/javascript"></script>
 	<script src="{{ url_for('static', filename='js/common_view.js') }}" type="text/javascript"></script>
+	<script src="{{ url_for('static', filename='js/canvas_view.js') }}" type="text/javascript"></script>
 	<script src="{{ url_for('static', filename='js/playground.js') }}" type="text/javascript"></script>
 	{% else %}
 	<script src="{{ url_for('static', filename='js/lib/lassocrop.min.js') }}" type="text/javascript"></script>
-	<script src="{{ url_for('static', filename='js/common_view.min.js') }}" type="text/javascript"></script>
+	<script src="{{ url_for('static', filename='js/canvas_view.min.js') }}" type="text/javascript"></script>
 	<script src="{{ url_for('static', filename='js/playground.min.js') }}" type="text/javascript"></script>
 	{% endif %}
 {% endblock %}
@@ -73,7 +75,7 @@
 					<div>
 						<label>Size</label>
 						<fieldset class="inline_form">
-							<button type="button" onclick="Playground.play({width: 0, height: 0})">Original size</button><br>
+							<button type="button" onclick="Playground.play({width: 0, height: 0})">Full size</button><br>
 							<button type="button" onclick="Playground.play({width: 200, height: 200})">Small square</button>
 							<button type="button" onclick="Playground.play({width: 500, height: 500})">Medium square</button>
 							<button type="button" onclick="Playground.play({width: 1000, height: 1000})">Large square</button>
@@ -110,7 +112,7 @@
 							<button type="button" onclick="Playground.play({fill:'yellow'})">Yellow</button>
 							<button type="button" onclick="Playground.play({fill:'lightgray'})">Light Grey</button><br>
 							<button type="button" onclick="Playground.play({fill:'auto'})">Auto</button><br>
-							<button type="button" onclick="Playground.play({fill:'none'})">Transparent</button> <label>Requires PNG file format</label>
+							<button type="button" onclick="Playground.play({fill:'none'})">Transparent</button> <label>Requires PNG or GIF file format</label>
 							<div>
 								<input id="autosizefit" type="checkbox" value="1" onchange="Playground.play({autosizefit: this.checked})">
 								<label for="autosizefit">Adjust image size to remove borders</label>
@@ -186,16 +188,25 @@
 			<div class="sticky column col2">
 				<h3>Image preview <span id="preview_image_size"></span></h3>
 				<div class="preview odd">
-					<img class="hidden" id="wait_image" src="{{ url_for('static', filename='images/icon-wait-64.gif') }}">
-					<img class="hidden" id="preview_image" src="{{ url_for('static', filename='images/spacer.png') }}">
+					<img id="wait_image" class="hidden" src="{{ url_for('static', filename='images/icon-wait-64.gif') }}">
+					<img id="preview_image" class="hidden" src="{{ url_for('static', filename='images/spacer.png') }}">
+					<div id="preview_image_msg">Select an image above</div>
 				</div>
 				<h3>Image actions</h3>
 				<div class="actions">
-					<fieldset class="inline_form">
-						TODO View full screen / zoom<br>
-						TODO View actual size (new window)<br>
-						TODO View as PDF (new window)<br>
-						TODO Download image<br>
+					<fieldset class="inline_form tall">
+						<a id="view_full" href="javascript:void(0)">
+							View full screen with zoom
+						</a><br>
+						<a id="view_plain" href="javascript:void(0)" target="_image">
+							View image in a new window
+						</a><br>
+						<a id="view_pdf" href="javascript:void(0)" target="_image">
+							View as PDF in a new window
+						</a><br>
+						<a id="view_download" href="javascript:void(0)">
+							Download image
+						</a>
 					</fieldset>
 				</div>
 			</div>

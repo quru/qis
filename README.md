@@ -62,7 +62,8 @@ Dynamic image operations include:
 * Stripping of image metdata to minimise image file sizes
 * PDF to image conversion
 
-See the [imaging user's guide](doc/image_help.md) for a full list.
+See the [imaging user's guide](doc/image_help.md) for a full list,
+or try the [online demo](https://images.quru.com/demo/).
 
 Image presentation features include:
 
