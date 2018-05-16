@@ -5,6 +5,9 @@ allow 8 to 120 character passwords, add optional demo/playground page,
 fix occasional startup error, fix SELinux policy to allow log file rotation_
 
 * Re-install `qis.pp` if SELinux is enabled (see the install guide)
+* To enable the public demo page, add new settings to your `local_settings.py`:
+	* `DEMO_IMAGE_PATH`
+	* `DEMO_OVERLAY_IMAGE_PATH`
 * Update the Python and web code (the `src` folder)
 * Restart the Apache service
 
