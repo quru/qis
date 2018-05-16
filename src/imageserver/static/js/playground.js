@@ -185,12 +185,14 @@ Playground.refreshPreviewImage = function() {
 	// Only reload if a change has been made
 	if (Playground._getQS(newSrc) !== Playground._getQS(previewImg.src)) {
 		Playground.showPreviewImageSize(false);
-		QU.elSetClass(previewImg, 'loading', true);
-		QU.elSetClass(waitImg, 'hidden', false);
 		previewImg.src = newSrc;
-		// If the image was in cache, onload does not always fire
 		if (previewImg.complete) {
+			// The image was loaded from cache, onload does not always fire so fire it manually
 			Playground.onPreviewImageLoaded();
+		} else {
+			// The image is loading
+			QU.elSetClass(previewImg, 'loading', true);
+			QU.elSetClass(waitImg, 'hidden', false);
 		}
 	}
 };
@@ -304,6 +306,10 @@ Playground.reset = function() {
 		return;
 	}
 	// Reset the UI
+	var inputs = document.querySelectorAll('.controls input');
+	for (var i = 0; i < inputs.length; i++) {
+		inputs[i].checked = false;
+	}
 	Playground.resetCrop(false);
 	// Reset preview image spec
 	Playground.imageSpec = QU.clone(Playground.imageSpecOrig);

@@ -76,15 +76,16 @@
 							<button type="button" onclick="Playground.play({width: 0, height: 0})">Original size</button><br>
 							<button type="button" onclick="Playground.play({width: 200, height: 200})">Small square</button>
 							<button type="button" onclick="Playground.play({width: 500, height: 500})">Medium square</button>
-							<button type="button" onclick="Playground.play({width: 1000, height: 1000})">Large square</button><br>
+							<button type="button" onclick="Playground.play({width: 1000, height: 1000})">Large square</button>
 							<button type="button" onclick="Playground.play({width: 200, height: 150})">Small landscape</button>
 							<button type="button" onclick="Playground.play({width: 500, height: 375})">Medium landscape</button>
-							<button type="button" onclick="Playground.play({width: 1000, height: 750})">Large landscape</button><br>
+							<button type="button" onclick="Playground.play({width: 1000, height: 750})">Large landscape</button>
 							<button type="button" onclick="Playground.play({width: 150, height: 200})">Small portrait</button>
 							<button type="button" onclick="Playground.play({width: 375, height: 500})">Medium portrait</button>
 							<button type="button" onclick="Playground.play({width: 750, height: 1000})">Large portrait</button>
 						</fieldset>
 					</div>
+					<br>
 					<div>
 						<label>Cropping</label>
 						<fieldset class="inline_form">
@@ -92,27 +93,82 @@
 								<img id="crop_image" src="{{ url_for('static', filename='images/spacer.png') }}">
 								<button type="button" onclick="Playground.resetCrop(true)">Reset crop</button>
 							</div>
+							<div>
+								<input id="autocropfit" type="checkbox" value="1" onchange="Playground.play({autocropfit: this.checked})">
+								<label for="autocropfit">Adjust crop to fit image size</label>
+							</div>
 						</fieldset>
 					</div>
+					<br>
 					<div>
 						<label>Borders</label>
 						<fieldset class="inline_form">
-							<input id="autosizefit" type="checkbox" value="1" onchange="Playground.play({autosizefit: this.checked})">
-							<label for="autosizefit">Remove borders</label><br>
-							TODO some more
+							<button type="button" onclick="Playground.play({fill:'white'})">White</button>
+							<button type="button" onclick="Playground.play({fill:'black'})">Black</button>
+							<button type="button" onclick="Playground.play({fill:'gray'})">Mid Grey</button>
+							<button type="button" onclick="Playground.play({fill:'red'})">Red</button>
+							<button type="button" onclick="Playground.play({fill:'yellow'})">Yellow</button>
+							<button type="button" onclick="Playground.play({fill:'lightgray'})">Light Grey</button><br>
+							<button type="button" onclick="Playground.play({fill:'auto'})">Auto</button><br>
+							<button type="button" onclick="Playground.play({fill:'none'})">Transparent</button> <label>Requires PNG file format</label>
+							<div>
+								<input id="autosizefit" type="checkbox" value="1" onchange="Playground.play({autosizefit: this.checked})">
+								<label for="autosizefit">Adjust image size to remove borders</label>
+							</div>
 						</fieldset>
 					</div>
+					<br>
+					<div>
+						<label>Transforms</label>
+						<fieldset class="inline_form">
+							<button type="button" onclick="Playground.play({angle:0})">No rotation</button>
+							<button type="button" onclick="Playground.play({angle:-90})">Rotate 90&deg; left</button>
+							<button type="button" onclick="Playground.play({angle:90})">Rotate 90&deg; right</button>
+							<button type="button" onclick="Playground.play({angle:180})">Rotate 180&deg;</button>
+							<button type="button" onclick="Playground.play({angle:-45})">Rotate 45&deg; left</button>
+							<button type="button" onclick="Playground.play({angle:45})">Rotate 45&deg; right</button>
+							<button type="button" onclick="Playground.play({sharpen:0})">No sharpen/blur</button>
+							<button type="button" onclick="Playground.play({sharpen:100})">Sharpen</button>
+							<button type="button" onclick="Playground.play({sharpen:-300})">Blur</button>
+							<button type="button" onclick="Playground.play({flip:''})">No flip</button>
+							<button type="button" onclick="Playground.play({flip:'h'})">Flip horizontal</button>
+							<button type="button" onclick="Playground.play({flip:'v'})">Flip vertical</button>
+						</fieldset>
+					</div>
+					<br>
+					<div>
+						<label>Colour</label>
+						<fieldset class="inline_form">
+							<button type="button" onclick="Playground.play({colorspace:'srgb', icc:''})">Standard RGB</button>
+							<button type="button" onclick="Playground.play({colorspace:'', icc:'adobergb1998', intent:'perceptual'})">Adobe RGB</button>
+							<button type="button" onclick="Playground.play({colorspace:'', icc:'applergb', intent:'perceptual'})">Apple RGB</button>
+							<button type="button" onclick="Playground.play({colorspace:'gray', icc:''})">Grey (simple)</button>
+							<button type="button" onclick="Playground.play({colorspace:'', icc:'greyscale', intent:'perceptual'})">Grey (profile)</button>
+						</fieldset>
+					</div>
+					<br>
+					<div>
+						<label>Overlay /<br>Watermark</label>
+						<fieldset class="inline_form">
+							TODO
+						</fieldset>
+					</div>
+					<br>
 					<div>
 						<label>File format</label>
 						<fieldset class="inline_form">
 							<button type="button" onclick="Playground.play({format:'jpg', quality:20})">JPEG quality 20%</button>
-							<button type="button" onclick="Playground.play({format:'jpg', quality:50})">JPEG quality 50%</button><br>
+							<button type="button" onclick="Playground.play({format:'jpg', quality:50})">JPEG quality 50%</button>
 							<button type="button" onclick="Playground.play({format:'jpg', quality:70})">JPEG quality 70%</button>
-							<button type="button" onclick="Playground.play({format:'jpg', quality:90})">JPEG quality 90%</button><br>
-							<button type="button" onclick="Playground.play({format:'png', quality:79})">PNG type A</button>
-							<button type="button" onclick="Playground.play({format:'png', quality:31})">PNG type B</button><br>
-							<input id="strip" type="checkbox" value="1" onchange="Playground.play({strip: this.checked})">
-							<label for="strip">Strip metadata (e.g. EXIF data)</label>
+							<button type="button" onclick="Playground.play({format:'jpg', quality:90})">JPEG quality 90%</button>
+							<button type="button" onclick="Playground.play({format:'gif'})">GIF</button>
+							<button type="button" onclick="Playground.play({format:'bmp'})">BMP</button>
+							<button type="button" onclick="Playground.play({format:'png', quality:79})">PNG type 1</button>
+							<button type="button" onclick="Playground.play({format:'png', quality:31})">PNG type 2</button>
+							<div>
+								<input id="strip" type="checkbox" value="1" onchange="Playground.play({strip: this.checked})">
+								<label for="strip">Strip metadata (e.g. EXIF data) and colour profiles</label>
+							</div>
 						</fieldset>
 					</div>
 				</div>

@@ -34,9 +34,9 @@ h2 {
 
 /* For browsers that support calc(), maximise the image preview width */
 
-@media screen and (min-width: 78em) {     /* point at which 49.9% == control panel full width */
-	.col1 { width: calc(43em);         }  /* control panel full width */
-	.col2 { width: calc(99.9% - 43em); }  /* remainder of width */
+@media screen and (min-width: 75em) {     /* point at which 49.9% == control panel full width */
+	.col1 { width: calc(41em);         }  /* control panel full width */
+	.col2 { width: calc(99.9% - 41em); }  /* remainder of width */
 }
 
 /* Image selection area */
@@ -92,9 +92,12 @@ h2 {
 }
 .controls label {
 	display: inline-block;
-	width: 10em;
+	width: 8em;
 	vertical-align: top;
-	margin-top: 0.2em;
+	margin-top: 0.5em;
+}
+.controls fieldset {
+	max-width: 29em;
 }
 .controls button {
 	width: 12em;
