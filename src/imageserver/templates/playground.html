@@ -150,7 +150,16 @@
 					<div>
 						<label>Overlay /<br>Watermark</label>
 						<fieldset class="inline_form">
-							TODO
+							{% if overlay_image %}
+							<button type="button" onclick="Playground.play({overlay:''})">No overlay</button>
+							<button type="button" onclick="Playground.play({overlay:'{{ overlay_image }}', ovsize:0.2, ovopacity:0.3, ovpos:'c'})">Watermark small</button>
+							<button type="button" onclick="Playground.play({overlay:'{{ overlay_image }}', ovsize:0.7, ovopacity:0.3, ovpos:'c'})">Watermark large</button>
+							<button type="button" onclick="Playground.play({overlay:'{{ overlay_image }}', ovsize:0.3, ovopacity:1, ovpos:'nw'})">Corner logo 1</button>
+							<button type="button" onclick="Playground.play({overlay:'{{ overlay_image }}', ovsize:0.2, ovopacity:1, ovpos:'se'})">Corner logo 2</button>
+							<button type="button" onclick="Playground.play({overlay:'{{ overlay_image }}', ovsize:0.2, ovopacity:0.5, ovpos:'se'})">Corner logo 3</button>
+							{% else %}
+							<label><i>Not currently available</i></label>
+							{% endif %}
 						</fieldset>
 					</div>
 					<br>

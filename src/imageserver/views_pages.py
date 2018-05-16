@@ -796,9 +796,16 @@ def playground():
             folder_info = get_directory_listing(img_path, False, 2, limit=100)
             image_list = [os.path.join(img_path, f['filename']) for f in folder_info]
 
+        # Check if the demo overlay image exists
+        overlay_img_path = app.config['DEMO_OVERLAY_IMAGE_PATH']
+        if overlay_img_path and not path_exists(overlay_img_path, require_file=True):
+            logger.warning('Playground page overlay image does not exist: ' + overlay_img_path)
+            overlay_img_path = ''
+
         return render_template(
             'playground.html',
-            image_list=image_list
+            image_list=image_list,
+            overlay_image=overlay_img_path
         )
     except Exception as e:
         log_security_error(e, request)

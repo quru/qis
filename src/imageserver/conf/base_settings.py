@@ -113,6 +113,10 @@ LOGO_IMAGE_PATH = ""
 # image (or folder of images) to use for the public demo page at URL /demo/
 # The image(s) must be publicly viewable. An empty string disables the demo page.
 DEMO_IMAGE_PATH = ""
+# An image path (relative to IMAGES_BASE_DIR) of an image to use for the demo
+# overlay on the public demo page. The image must be publicly viewable.
+# An empty string disables the overlay demo.
+DEMO_OVERLAY_IMAGE_PATH = ""
 
 # Image upload directories available for selection from the upload page.
 # These should be relative to IMAGES_BASE_DIR and will be created at file upload
