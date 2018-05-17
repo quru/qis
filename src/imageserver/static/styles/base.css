@@ -121,8 +121,9 @@ input {
 	line-height: 1.5;
 	padding: 0.1em 0.5em 0.1em 0.5em;
 }
-input[type=text],
-input[type=password] {
+input[type="text"],
+input[type="password"],
+input[type="number"] {
 	height: 18px;
 }
 textarea {
@@ -131,10 +132,10 @@ textarea {
 	border: solid 1px #cccccc;
 }
 button,
-input[type=button],
-input[type=submit],
-input[type=reset],
-input[type=color] {
+input[type="button"],
+input[type="submit"],
+input[type="reset"],
+input[type="color"] {
 	margin: 1px;
 	margin-inline-start: -3px;  /* Firefox only - bring buttons back into line */
 }
