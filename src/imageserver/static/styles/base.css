@@ -113,15 +113,16 @@ fieldset {
 }
 
 button,
-input,
 textarea,
-select {
+select,
+input {
 	font-family: -apple-system,BlinkMacSystemFont,Arial;
 	font-size: 12px;
 	line-height: 1.5;
 	padding: 0.1em 0.5em 0.1em 0.5em;
 }
-input[type=text] {
+input[type=text],
+input[type=password] {
 	height: 18px;
 }
 textarea {
@@ -131,7 +132,10 @@ textarea {
 }
 button,
 input[type=button],
-input[type=submit] {
+input[type=submit],
+input[type=reset],
+input[type=color] {
+	margin: 1px;
 	margin-inline-start: -3px;  /* Firefox only - bring buttons back into line */
 }
 
@@ -321,9 +325,6 @@ a:hover .highlight {
 
 .tall {
 	line-height: 1.5em;
-}
-.topspace {
-	margin-top: 0.2em;
 }
 
 .smalltext {
