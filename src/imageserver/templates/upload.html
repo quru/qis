@@ -97,6 +97,7 @@
 					<input type="text" name="path" id="path" maxlength="255" size="30" 
 					       {% if check %}value="{{ manual_path }}"{% endif %} />
 					<button id="folder_browse"
+							type="button"
 							data-browse-url="{{ url_for('folder_browse', path=manual_path, embed=1, msg='Select a folder:') }}"
 							>Browse...</button>
 					<br>

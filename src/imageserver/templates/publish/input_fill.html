@@ -1,4 +1,4 @@
 {% set default = '' if default in ['', 'auto', 'none'] else default %}
 <input type="color" name="{{ web_name }}" id="publish_field_{{ key }}" class="publish_field"
        value="{{ default|default('#ffffff', True) }}" autocomplete="off">
-<button onclick="var el=$('publish_field_{{ key }}'); el.value='#ffffff'; el.fireEvent('change'); return false;">Reset</button>
+<button type="button" onclick="var el=$('publish_field_{{ key }}'); el.value='#ffffff'; el.fireEvent('change'); return false;">Reset</button>
