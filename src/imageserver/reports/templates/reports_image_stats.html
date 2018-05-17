@@ -66,13 +66,13 @@
 		</div>
 		<div>
 			<label>From:</label>
-			<input id="from_date" type="text" size="9" maxlength="10" value="{{ time_from|dateformat(False, 'dmy') }}"/> 
+			<input id="from_date" type="text" size="10" maxlength="10" value="{{ time_from|dateformat(False, 'dmy') }}"/> 
 			&nbsp;until&nbsp;
-			<input id="to_date" type="text" size="9" maxlength="10" value="{{ time_to|dateformat(False, 'dmy') }}"/> 
+			<input id="to_date" type="text" size="10" maxlength="10" value="{{ time_to|dateformat(False, 'dmy') }}"/> 
 		</div>
 		<div>
 			<label></label>
-			<input type="submit" value="Refresh chart">
+			<input type="submit" value="Refresh chart" class="topspace">
 		</div>
 	</form>
 	<br/>

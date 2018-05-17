@@ -88,7 +88,7 @@ h2 {
 /* Image playground area */
 
 .controls {
-	margin-right: 2em;
+	margin-right: 1em;
 }
 .controls label {
 	display: inline-block;
@@ -97,10 +97,10 @@ h2 {
 	margin-top: 0.5em;
 }
 .controls fieldset {
-	max-width: 29em;
+	max-width: 29.5em;
 }
 .controls button {
-	width: 12em;
+	width: 11em;
 }
 .controls fieldset label {
 	margin: 0;

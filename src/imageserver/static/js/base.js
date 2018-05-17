@@ -467,7 +467,7 @@ function base_init_menus() {
 		if (menu) dd_menu_init(el, menu);
 	});
 	/* Install special menu handlers */
-	popup_convert_anchor('account_menu', 575, 320, function() { window.location.reload(); });
+	popup_convert_anchor('account_menu', 575, 380, function() { window.location.reload(); });
 }
 
 window.addEvent('domready', function() {

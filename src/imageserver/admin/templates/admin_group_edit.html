@@ -36,18 +36,18 @@
 			<input type="hidden" name="group_id" value="{{ group.id|default(0) }}" />
 			<input type="hidden" name="group_type" value="{{ group.group_type|default(GROUP_TYPE_LOCAL) }}" />
 			
-			<div>
+			<div class="main_info">
 				<label>Group name</label>
 				{% if not group or group.group_type == GROUP_TYPE_LOCAL %}
-				<input type="text" name="name" size="25" maxlength="120" value="{{ group.name }}"/>
+				<input type="text" name="name" size="32" maxlength="120" value="{{ group.name }}"/>
 				{% else %}
 				{% set group_title = 'System group' if group.group_type == GROUP_TYPE_SYSTEM else 'Controlled externally' %}
-				<input type="text" name="name" size="25" disabled="disabled" value="{{ group.name }}" title="{{ group_title }}" />
+				<input type="text" name="name" size="32" disabled="disabled" value="{{ group.name }}" title="{{ group_title }}" />
 				{% endif %}
 			</div>
-			<div>
+			<div class="main_info">
 				<label>Description</label>
-				<textarea name="description" cols="25" rows="5">{{ group.description }}</textarea>
+				<textarea name="description" cols="32" rows="5">{{ group.description }}</textarea>
 			</div>
 			{% if group and group.id != GROUP_ID_PUBLIC %}
 			<div>

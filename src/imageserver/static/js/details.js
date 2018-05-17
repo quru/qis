@@ -35,7 +35,7 @@ function onInit() {
 		canvas_view_init('viewport', $('image_url').value);
 	
 	// Add event handlers
-	popup_convert_anchor('edit_attrs', 575, 340, function() { window.location.reload(); });
+	popup_convert_anchor('edit_attrs', 575, 380, function() { window.location.reload(); });
 	popup_convert_anchor('view_stats', 575, 650);
 	addEventEx('file_reset', 'click', onResetClick);
 	addEventEx('file_rename', 'click', onRenameClick);

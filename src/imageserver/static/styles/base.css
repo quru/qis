@@ -108,18 +108,31 @@ code {
 	padding: 0;
 }
 
-input[type="text"],
-input[type="password"],
-textarea {
-	font-family: Lucida Grande, Arial;
-	font-size: 11px;
-	padding: 2px;
-	border: 1px solid gray;
+fieldset {
+	padding: 0.5em;
 }
 
-fieldset {
-	/* Firefox fieldsets are padded by default, but this looks better */
-	padding: 0.5em;
+button,
+input,
+textarea,
+select {
+	font-family: -apple-system,BlinkMacSystemFont,Arial;
+	font-size: 12px;
+	line-height: 1.5;
+	padding: 0.1em 0.5em 0.1em 0.5em;
+}
+input[type=text] {
+	height: 18px;
+}
+textarea {
+	line-height: 1.2;
+	padding: 0.5em 0.6em 0.5em 0.6em;
+	border: solid 1px #cccccc;
+}
+button,
+input[type=button],
+input[type=submit] {
+	margin-inline-start: -3px;  /* Firefox only - bring buttons back into line */
 }
 
 /* Standard table style
@@ -308,6 +321,9 @@ a:hover .highlight {
 
 .tall {
 	line-height: 1.5em;
+}
+.topspace {
+	margin-top: 0.2em;
 }
 
 .smalltext {

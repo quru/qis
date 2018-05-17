@@ -41,6 +41,11 @@
 	cursor: pointer\9;  /* IE <9 */
 }
 
+.main_info input,
+.main_info textarea {
+	width: 20em;
+}
+
 #group_edit .members.left {
 	width: 35%;
 	float: left;

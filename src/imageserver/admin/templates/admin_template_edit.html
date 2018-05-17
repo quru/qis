@@ -55,15 +55,15 @@
 			<input type="hidden" name="template_id" value="{{ template.id|default(0) }}" />
 			<input type="hidden" name="template" id="template" value="" />
 			
-			<div>
+			<div class="main_info">
 				<label>Template name</label>
-				<input type="text" name="name" size="25" maxlength="120"
+				<input type="text" name="name" size="32" maxlength="120"
 				       {{ disabled if not allow_edit }}
 				       value="{{ template.name }}"/>
 			</div>
-			<div>
+			<div class="main_info">
 				<label>Description</label>
-				<textarea name="description" cols="25" rows="5"
+				<textarea name="description" cols="32" rows="5"
 				          {{ disabled if not allow_edit }}>{{ template.description }}</textarea>
 			</div>
 			<br/>
