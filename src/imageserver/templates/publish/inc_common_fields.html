@@ -159,13 +159,12 @@
 			<fieldset class="subtlebg">
 				<div>
 					<label>Overlay image:</label>
+					{{ input(fields, field_values, 'overlay_src', '/path/to/your-image.jpg') }}
 					<button id="overlay_src_browse"
 					        type="button"
 					        data-browse-url="{{ url_for('folder_browse', path=path, embed=1, show_files=1, msg='Select the overlay image file:') }}"
 					        >Browse...</button>
-					{{ help('option_overlay') }}<br>
-					<label></label>
-					{{ input(fields, field_values, 'overlay_src', '/path/to/your-image.jpg') }}
+					{{ help('option_overlay') }}
 				</div>
 				<div>
 					<label>Relative size:</label>

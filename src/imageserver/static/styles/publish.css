@@ -120,6 +120,10 @@ input[type="color"] {
 	vertical-align: middle;
 }
 
+#publish_field_overlay_src {
+	width: 12em;
+}
+
 /* Pop-up help */
 
 img.help {
