@@ -118,26 +118,18 @@ select,
 input {
 	font-family: -apple-system,BlinkMacSystemFont,Arial;
 	font-size: 12px;
-	line-height: 1.5;
-	padding: 0.1em 0.5em 0.1em 0.5em;
 }
 input[type="text"],
 input[type="password"],
 input[type="number"] {
+	line-height: 1.5;
+	padding: 0.1em 0.5em 0.1em 0.5em;
 	height: 18px;
 }
 textarea {
 	line-height: 1.2;
 	padding: 0.5em 0.6em 0.5em 0.6em;
 	border: solid 1px #cccccc;
-}
-button,
-input[type="button"],
-input[type="submit"],
-input[type="reset"],
-input[type="color"] {
-	margin: 1px;
-	margin-inline-start: -3px;  /* Firefox only - bring buttons back into line */
 }
 
 /* Standard table style
