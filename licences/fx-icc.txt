@@ -5,7 +5,7 @@ Sample ICC profiles from http://www.colorwiki.com/wiki/Stunt_Profiles
 Files:
 
 CX RGB RenderTest PCS=RGB.icc --> FX-RGB.icc
-CX_Monitor_weird.icc          --> FX-Metallic.icc
+CX_Monitor_weird.icc          --> FX-Sheen.icc
 CX Hue+45 abst.icc            --> FX-RotateHue.icc
 
 
