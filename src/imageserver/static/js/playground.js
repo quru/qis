@@ -44,7 +44,7 @@ var Playground = {
 
 // Utility - available after a resource has loaded, returns its size in bytes.
 // Returns 0 on browsers that do not support the Resource Timing API, and
-// intermittently on some browsers when the resource comes from cache.
+// intermittently on some browsers that do, when the resource comes from cache.
 Playground._resourceSize = function(url) {
 	if (window.performance && window.performance.getEntriesByType) {
 		var resources = performance.getEntriesByType('resource');
@@ -55,6 +55,32 @@ Playground._resourceSize = function(url) {
 		}
 	}
 	return 0;
+};
+
+// Utility - enables a group of buttons (or other elements) to be "sticky" (like
+// radio buttons) by applying the named class to the button that was clicked and
+// removing it from the others. The elements require an attribute called
+// "sticky-group" that must have the same value for all elements in a single
+// group.  e.g. <button sticky-group="group1">Click me</button>
+Playground._initStickyButtons = function(selector, activeClassName) {
+	var els = document.querySelectorAll(selector);
+	// Initialise loop
+	for (var i = 0; i < els.length; i++) {
+		els[i].addEventListener('click', function(e) {
+			var clickGroup = this.getAttribute("sticky-group");
+			if (clickGroup) {
+				// Runtime loop - remove active class from group
+				for (var j = 0; j < els.length; j++) {
+					var elGroup = els[j].getAttribute("sticky-group");
+					if (elGroup === clickGroup) {
+						QU.elSetClass(els[j], activeClassName, false);
+					}
+				}
+				// Set clicked item as active
+				QU.elSetClass(this, activeClassName, true);
+			}
+		});
+	}
 };
 
 // Utility - formats a bytes value
@@ -325,23 +351,35 @@ Playground.viewFullScreen = function() {
 	}
 };
 
+// Resets the UI controls back a standard initial state
+Playground.resetUI = function() {
+	// Checkboxes
+	var inputs = document.querySelectorAll('.controls input');
+	for (var i = 0; i < inputs.length; i++) {
+		inputs[i].checked = false;
+	}
+	// Sticky buttons (pre-selects those with a class of default)
+	var buttons = document.querySelectorAll('.controls button');
+	for (var i = 0; i < buttons.length; i++) {
+		QU.elSetClass(buttons[i], 'active', QU.elHasClass(buttons[i], 'default'));
+	}
+	// Cropping tool
+	Playground.resetCrop(false);
+};
+
 // Resets everything back a standard initial state
 Playground.reset = function() {
 	if (!Playground.ready) {
 		return;
 	}
-	// Reset the UI
-	var inputs = document.querySelectorAll('.controls input');
-	for (var i = 0; i < inputs.length; i++) {
-		inputs[i].checked = false;
-	}
-	Playground.resetCrop(false);
-	// Reset preview image spec
+	Playground.resetUI();
+	// Reset the preview image spec
 	Playground.imageSpec = QU.clone(Playground.imageSpecOrig);
 	QU.merge(Playground.imageSpec, {
 		width: 500,
-		height: 500,
-		format: 'jpg',
+		height: 500,                     // The default sticky buttons
+		format: 'jpg',                   // need to match this spec
+		quality: 80,
 		colorspace: 'srgb'
 	});
 	// Load the preview image again
@@ -378,6 +416,8 @@ Playground.init = function() {
 	// Set up preview image events
 	QU.id('preview_image').addEventListener('load', Playground.onPreviewImageLoaded);
 	QU.id('crop_image').addEventListener('load', Playground.onCropImageLoaded);
+	// Set up sticky buttons
+	Playground._initStickyButtons('.controls button', 'active');
 };
 
 QU.whenReady(Playground.init);

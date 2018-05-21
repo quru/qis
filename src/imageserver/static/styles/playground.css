@@ -102,6 +102,9 @@ h2 {
 .controls button {
 	width: 11em;
 }
+.controls button.active {
+	font-weight: bold;  /* the only thing that preserves platform-native button styling */
+}
 .controls fieldset label {
 	margin: 0;
 	font-size: 90%;
