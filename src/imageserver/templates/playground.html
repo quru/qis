@@ -141,11 +141,11 @@
 					<div>
 						<label>Colour</label>
 						<fieldset class="inline_form">
-							<button type="button" onclick="Playground.play({colorspace:'srgb', icc:''})">Standard RGB</button>
-							<button type="button" onclick="Playground.play({colorspace:'', icc:'adobergb1998', intent:'perceptual'})">Adobe RGB</button>
-							<button type="button" onclick="Playground.play({colorspace:'', icc:'applergb', intent:'perceptual'})">Apple RGB</button>
-							<button type="button" onclick="Playground.play({colorspace:'gray', icc:''})">Grey (simple)</button>
-							<button type="button" onclick="Playground.play({colorspace:'', icc:'greyscale', intent:'perceptual'})">Grey (profile)</button>
+							<button type="button" onclick="Playground.play({colorspace:'srgb', icc:'', strip: 0})">Standard RGB</button>
+							<button type="button" onclick="Playground.play({colorspace:'srgb', icc:'fx-sepia', intent:'perceptual', strip: 1})">Sepia effect</button>
+							<button type="button" onclick="Playground.play({colorspace:'srgb', icc:'fx-metallic', intent:'perceptual', strip: 1})">Metallic effect</button>
+							<button type="button" onclick="Playground.play({colorspace:'gray', icc:'', strip: 1})">Grey (simple)</button>
+							<button type="button" onclick="Playground.play({colorspace:'srgb', icc:'greyscale', intent:'perceptual', strip: 1})">Grey (profile)</button>
 						</fieldset>
 					</div>
 					<br>

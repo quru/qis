@@ -381,9 +381,9 @@ option, all this embedded information can be removed, resulting in a smaller fil
 Valid values are true or false, 1 or 0.
 
 For advanced users, the strip option should be left at false (or 0) if you are dealing with CMYK images,
-or with images that have an embedded [colour profile](#option_icc). Stripping a typical RGB image usually
-causes little or no visual change, but removing the colour profile from a CMYK image will cause it to be
-displayed and printed incorrectly.
+or with images that have an important embedded [colour profile](#option_icc). Stripping a typical RGB
+image usually causes little visual change, but removing the colour profile from a CMYK image may cause
+it to be displayed or printed incorrectly.
 
 This image is 15.3 KB in size, and includes an EXIF data block with several items, including:
 
@@ -489,27 +489,29 @@ Setting the logo to be semi-transparent, useful as a watermark effect:
 ### icc (colour profile) / intent
 These options are intended only for advanced users.
 
-Applies an International Color Consortium (ICC) colour profile to the image,
-possibly changing the image's [colour model](#option_colorspace), to alter the way
-the colours appear on screen or on paper. Most commonly this option is used in print
-publishing, when the image is intended to be printed on a specific variety of paper.
-The ICC profiles available to you are [listed above](#defaults) and are set by your
-system administrator.
+Attaches and applies an International Color Consortium (ICC) colour profile to the
+image, possibly changing the image's [colour model / colorspace](#option_colorspace),
+to alter the way the colours appear on screen or on paper. Most commonly this option
+is used in print publishing, when the image is intended to be printed on a specific
+brand of paper. The ICC profiles available to you are [listed above](#defaults) and
+are set by your system administrator.
 
-You should also specify a rendering intent when applying an ICC profile, where valid values
-are: saturation, perceptual, absolute, or relative. The rendering intent alters the way in which 
-the ICC profile is applied (further detail is beyond the scope of this guide).
+You should also specify a rendering intent when applying an ICC profile, where valid
+values are: saturation, perceptual, absolute, or relative. The rendering intent alters
+the way in which  the ICC profile is applied (further detail is beyond the scope of
+this guide).
 
 RGB profiles are used to target on-screen applications, such as the web.  
 CMYK profiles are used to target printer and paper variations in publishing.
 Some web browsers fail to display CMYK images correctly, or even at all.
 
-If you want to apply a CMYK profile but keep the image as RGB (for example to preview the
-effect on-screen), you can also specify the [colorspace](#option_colorspace) directive.
+If you want to apply a CMYK profile but then convert the image back to RGB (for example
+to preview the effect on-screen), you can add the [colorspace](#option_colorspace)
+directive.
 
-Note that if you also enable the [strip](#option_strip) option, the colour profile will be removed
-from the image after processing. This may be appropriate for an RGB image, but is almost certainly
-an error for a CMYK image.
+If you want to remove the colour profile from the image after applying it, enable
+the [strip](#option_strip) option. This is often appropriate for RGB images, but not
+in general for CMYK images.
 
 The sample image, with a greyscale conversion applied with 'perceptual' intent:
 
@@ -553,8 +555,8 @@ a default paper type that may not be appropriate, and it is better to apply a sp
 [colour profile](#option_icc) instead.
 
 If used together with [icc](#option_icc), then the ICC profile is applied first and the
-`colorspace` second. If [strip](#option_strip) is also enabled, this takes place last
-(but note the earlier warnings about stripping CMYK images).
+`colorspace` conversion second. If [strip](#option_strip) is also enabled, this removes the
+embedded colour profile last.
 
 The unaltered RGB sample image:
 

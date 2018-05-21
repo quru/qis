@@ -1,0 +1,24 @@
+Sample ICC profiles from http://www.colorwiki.com/wiki/Stunt_Profiles
+
+"All of the profiles mentioned in this article are available for download for free, courtesy of CHROMiX."
+
+Files:
+
+CX RGB RenderTest PCS=RGB.icc --> FX-RGB.icc
+CX_Monitor_weird.icc          --> FX-Metallic.icc
+CX Hue+45 abst.icc            --> FX-RotateHue.icc
+
+
+CX RGB RenderTest PCS=RGB.icc
+---
+The "PCS" in the file name stands for Perceptual, Colorimetric and Saturation. If you use the Perceptual rendering intent during printing, the image will have a strong red cast. If you use Relative Colorimetric, the image will go green, and Saturation will look blue. P = R; C = G; S = B.
+
+
+CX_Monitor_weird.icc
+---
+This monitor profile gives a strange look, while still rendering your display readable.
+
+
+CX Hue+45 abst.icc
+---
+This is an abstract profile that simply adds 45 degrees to the hue of all colors. In other words, all the colors in the image take a short spin around the color wheel.

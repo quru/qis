@@ -1123,7 +1123,10 @@ class ImageManager(object):
         if icc_data is not None and len(icc_data) > 128:
             # The colorspace flag is 4 bytes from position 16 in the 128 byte header
             # See http://www.color.org/specification/ICC1v43_2010-12.pdf
-            return icc_data[16:20].strip().decode('ascii')
+            cspace = icc_data[16:20].strip().decode('ascii')
+            if cspace.lower() in ('rgb', 'cmyk', 'gray', 'xyz', 'lab'):
+                cspace = cspace.upper()
+            return cspace
         return None
 
     @property
