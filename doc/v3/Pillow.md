@@ -12,8 +12,8 @@ and other basic features (see below) as standard.
 This new "basic" mode means that the open source version of QIS will now be
 functional, and so will hopefully attract new users to try it out. The existing
 `qismagick` library, which offers full imaging functionality, will become a paid-for
-upgrade that can simply be installed over the top of QIS Basic to turn it into QIS
-Premium. Commercial support will only be offered to Premium users.
+upgrade that can simply be installed over the top to turn QIS into "premium" mode.
+Commercial support will only be offered to premium users.
 
 Other ways of implementing basic/premium modes - e.g. limiting the number of users,
 limiting access to the API - are not really possible when the code is open source.
@@ -23,54 +23,54 @@ Anyone can just go into the code and disable the license checks.
 
     | Feature                       | Pillow supports        | Support in QIS Basic
     -------------------------------------------------------------------------------
-    | Read images from file, blob   | Y                      | Required
-    | Ping image dimensions         | Y                      | Required for APIs
-    | Read EXIF data                | Y                      |
-    | Page selection (PDF,TIFF)     | Y                      |
-    | Resize                        | Y                      |
-    | Resize mode/quality           | Y                      |
-    | Fit-to-size                   | Y (crop)               |
-    | Border-image positioning      | Y (manual)             |
-    | Rotation                      | Y                      |
-    | Flip h and v                  | Y                      |
-    | Cropping                      | Y                      |
-    | Fill colour (resize, rotate)  | Y (manual)             |
-    | Auto fill colour              | Y (Image.getpixel)     |
-    | Format change                 | Y (formats below)      |
-    | Compression setting           | Y (JPG and PNG)        |
-    | Sharpen/blur                  | Y                      |
-    | DPI change                    | ? (format dependent)   |
-    | Strip EXIF, colour profiles   | Y (manual)             |
-    | Overlays (size, transparency) | Y (manual)             |
-    | ICC profile attach, apply     | Y (ImageCms module)    |
-    | Colorspace conversion         | Y (Image.convert)      |
-    | Tiling                        | Y (crop)               | Required for APIs
+    | Read images from file, blob   | Y                      | P1 required
+    | Ping image dimensions         | Y                      | P1 required for APIs
+    | Read EXIF data                | Y                      | P1
+    | Page selection (PDF,TIFF)     | Y                      | P3
+    | Resize                        | Y                      | P1
+    | Resize mode/quality           | Y                      | P2
+    | Fit-to-size                   | Y (crop)               | P1
+    | Border-image positioning      | Y (manual)             | P3
+    | Rotation                      | Y                      | P1
+    | Flip h and v                  | Y                      | P1
+    | Cropping                      | Y                      | P1
+    | Fill colour (resize, rotate)  | Y (manual)             | P2
+    | Auto fill colour              | Y (Image.getpixel)     | P3
+    | Format change                 | Y (formats below)      | P1 selected formats
+    | Compression setting           | Y (JPG and PNG)        | P1
+    | Sharpen/blur                  | Y                      | P2
+    | DPI change                    | ? (format dependent)   | P3
+    | Strip EXIF, colour profiles   | Y (manual)             | P1
+    | Overlays (size, transparency) | Y (manual)             | P2
+    | ICC profile attach, apply     | Y (ImageCms module)    | P3
+    | Colorspace conversion         | Y (Image.convert)      | P3
+    | Tiling                        | Y (crop)               | P1 required for APIs
 
 ### qismagick special file handling
 
     | Feature                       | Pillow supports        | Support in QIS Basic
     -------------------------------------------------------------------------------
-    | PDF to image                  | N (Y w/ghostscript)    |
-    | Image to PDF                  | Y                      |
+    | PDF to image                  | N (Y w/ghostscript)    | P3
+    | Image to PDF                  | Y                      | No
     | RAW reading                   | N                      | No (can't)
 
 ### Image format support
 
     | Feature                       | Pillow supports        | Support in QIS Basic
     -------------------------------------------------------------------------------
-    | BMP rw                        | rw                     |
-    | DCM rw                        | --                     |
-    | GIF rw                        | rw                     |
-    | EPS r-                        | rw                     |
-    | JPG rw                        | rw                     | Required
-    | PJPG rw                       | rw                     |
-    | PDF rw                        | -w (rw w/ghostscript)  |
-    | PNG rw                        | rw                     | Required
-    | PPM rw                        | rw                     |
-    | PSD rw                        | r-                     |
+    | BMP rw                        | rw                     | No
+    | DCM rw                        | --                     | No
+    | GIF rw                        | rw                     | P1
+    | EPS r-                        | rw                     | No
+    | JPG rw                        | rw                     | P1 required
+    | PJPG rw                       | rw                     | P3
+    | PDF rw                        | -w (rw w/ghostscript)  | P3 r-
+    | PNG rw                        | rw                     | P1 required
+    | PPM rw                        | rw                     | No
+    | PSD rw                        | r-                     | No
     | SVG rw                        | --                     | No (can't)
-    | TGA rw                        | r-                     |
-    | TIF rw                        | rw                     |
+    | TGA rw                        | r-                     | No
+    | TIF rw                        | rw                     | P1
     | XCF rw                        | --                     | No (can't)
     | RAW (various) r-              | --                     | No (can't)
 
