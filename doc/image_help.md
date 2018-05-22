@@ -132,10 +132,11 @@ This setting has no effect for other image formats.
 Valid values are 1 to 100 for `jpg`, or 10 to 99 for `png`.
 
 For `jpg`, 1 is lowest quality, highest compression and smallest file size;
-while 100 is highest quality but largest file size. A value of 75 gives a reasonable 
-balance between image quality and file size. Note that if your original image is also a 
-`jpg`, you cannot improve its quality by specifying a value of 100; you will only generate
-a large image file at the same quality as the original.
+while 100 is highest quality but largest file size. A value of 80 gives a reasonable 
+balance between image quality and file size, while values above 95 are not recommended.
+Note that if your original image is a `jpg`, you cannot improve its quality by specifying
+a value of 100; you will only generate a very large image file at the same quality as the
+original.
 
 For `png`, the first digit is the compression level (1 to 9, 9 being highest compression),
 while the second digit determines the PNG filter type in use. Unlike the `jpg` file format, the

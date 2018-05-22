@@ -113,10 +113,10 @@ def setUp():
 
 # Utility - resets the database and cache, starts the aux processes
 def init_tests():
-    cm.clear()
-    reset_databases()
+    reset_databases()  # Requires the cache for locking
+    cm.clear()         # So reset the cache second
     launch_aux_processes()
-    time.sleep(1)  # Allow aux processes to start
+    time.sleep(2)      # Allow aux processes to start
 
 
 # Utility - delete and re-create the internal databases
