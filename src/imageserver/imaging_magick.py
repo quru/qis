@@ -1,7 +1,7 @@
 #
 # Quru Image Server
 #
-# Document:      imagemagick.py
+# Document:      imaging_magick.py
 # Date started:  07 Mar 2011
 # By:            Matt Fozard
 # Purpose:       Provides an interface to the ImageMagick image processing library

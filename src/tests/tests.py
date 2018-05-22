@@ -268,14 +268,14 @@ def call_im_composite(args_list):
 
 # Utility - returns the ImageMagick library version as an integer, e.g. 654 for v6.5.4
 def imagemagick_version():
-    import imageserver.imagemagick as magick
+    import imageserver.imaging_magick as magick
     # Assumes format "ImageMagick version: 654, Ghostscript delegate: 9.10"
     return int(magick.imagemagick_get_version_info()[21:24])
 
 
 # Utility - returns the Ghostscript application version as an integer, e.g. 910 for v9.10
 def gs_version():
-    import imageserver.imagemagick as magick
+    import imageserver.imaging_magick as magick
     # Assumes format "ImageMagick version: 654, Ghostscript delegate: 9.10"
     return int(float(magick.imagemagick_get_version_info()[-4:]) * 100)
 

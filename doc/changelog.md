@@ -1,3 +1,12 @@
+# v3.2.0
+_Changes: New QIS free/premium model. Adds new Pillow imaging back-end (with
+reduced functionality) so that QIS runs without requiring qismagick.so_
+
+* Update the Python and web code (the `src` folder)
+* Update the Python libraries
+* Delete `src/imageserver/imagemagick.py`
+* Restart the Apache service
+
 # v3.1.0
 _Changes: Add the application overview help page, add new help text and UI
 improvements to the admin site, add a password confirmation field,

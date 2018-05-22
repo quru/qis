@@ -372,7 +372,7 @@ def burst_pdf(**kwargs):
     from .filesystem_manager import get_abs_path, get_burst_path, get_file_data
     from .filesystem_manager import delete_dir, make_dirs, path_exists
     from .filesystem_sync import delete_folder
-    from .imagemagick import imagemagick_burst_pdf
+    from .imaging import imaging_burst_pdf
     from .models import Folder
     from .util import get_file_extension
 
@@ -403,9 +403,7 @@ def burst_pdf(**kwargs):
     if pdf_data is not None:
         make_dirs(burst_folder_rel)
         burst_folder_abs = get_abs_path(burst_folder_rel)
-        if not imagemagick_burst_pdf(
-            pdf_data, burst_folder_abs, app.config['PDF_BURST_DPI']
-        ):
+        if not imaging_burst_pdf(pdf_data, burst_folder_abs, app.config['PDF_BURST_DPI']):
             app.log.warning('Failed to burst PDF: ' + src)
     else:
         app.log.warning('Cannot burst PDF, file not found: ' + src)

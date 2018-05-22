@@ -53,9 +53,10 @@ from .filesystem_manager import (
 from .filesystem_sync import auto_sync_file, set_image_properties
 from .image_attrs import ImageAttrs
 from .image_wrapper import ImageWrapper
-from .imagemagick import imagemagick_init
-from .imagemagick import imagemagick_adjust_image, imagemagick_get_image_profile_data
-from .imagemagick import imagemagick_get_image_dimensions, imagemagick_get_version_info
+from .imaging import (
+    imaging_init, imaging_adjust_image, imaging_get_image_profile_data,
+    imaging_get_image_dimensions, imaging_get_version_info
+)
 from .models import FolderPermission, Image, ImageHistory, Task
 from .template_manager import ImageTemplateManager
 from .util import default_value, get_file_extension
@@ -82,13 +83,13 @@ class ImageManager(object):
         self._templates = ImageTemplateManager(data_manager, logger)
         self.__icc_profiles = None
         self._icc_load_lock = threading.Lock()
-        # Load C back-end
-        imagemagick_init(
+        # Load imaging library
+        imaging_init(
             settings['GHOSTSCRIPT_PATH'],
             settings['TEMP_DIR'],
             settings['PDF_BURST_DPI']
         )
-        logger.info('Loaded imaging library: ' + imagemagick_get_version_info())
+        logger.info('Loaded imaging library: ' + imaging_get_version_info())
 
     def finalise_image_attrs(self, image_attrs):
         """
@@ -574,8 +575,8 @@ class ImageManager(object):
         was an error reading the image.
         """
         try:
-            (width, height) = imagemagick_get_image_dimensions(image_data, image_format)
-            file_properties = imagemagick_get_image_profile_data(image_data, image_format)
+            (width, height) = imaging_get_image_dimensions(image_data, image_format)
+            file_properties = imaging_get_image_profile_data(image_data, image_format)
         except Exception as e:
             self._logger.error('Error reading image properties: %s' % str(e))
             return {}
@@ -612,7 +613,7 @@ class ImageManager(object):
         or (0, 0) if the image type is unsupported or could not be read.
         """
         try:
-            return imagemagick_get_image_dimensions(image_data, image_format)
+            return imaging_get_image_dimensions(image_data, image_format)
         except:
             return (0, 0)
 
@@ -920,7 +921,7 @@ class ImageManager(object):
             )
             return
         # Is image large enough to meet the threshold?
-        (w, h) = imagemagick_get_image_dimensions(
+        (w, h) = imaging_get_image_dimensions(
             original_data,
             original_type
         )
@@ -1095,7 +1096,7 @@ class ImageManager(object):
 
             # Finally, generate a new image from base_image_data
             try:
-                return imagemagick_adjust_image(
+                return imaging_adjust_image(
                     base_image_data,
                     base_image_attrs.format(),
                     page, iformat,

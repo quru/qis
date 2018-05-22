@@ -25,7 +25,7 @@ setup(
     packages=find_packages(package_dir, exclude=["tests", "tests.*"]),
 
     install_requires=[
-        "Pillow>=5.2.0,<6",
+        "Pillow>=5.1.0,<6",
         "Flask==0.12.2",
         "pyldap==2.4.45",
         "pylibmc==1.5.2",
