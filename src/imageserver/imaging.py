@@ -22,15 +22,17 @@
 #   You should have received a copy of the GNU Affero General Public License
 #   along with this program.  If not, see http://www.gnu.org/licenses/
 #
-# Last Changed:  $Date$ $Rev$ by $Author$
-#
 # Notable modifications:
 # Date       By    Details
 # =========  ====  ============================================================
 #
 
+# TODO Change DPI to _dpi_x and _dpi_y, support x,y format in templates, web params, PDF handling
+
 from . import imaging_magick as magick
 from . import imaging_pillow as pillow
+
+_backend = None
 
 
 def imaging_init(gs_path, temp_files_path, pdf_default_dpi):
@@ -44,7 +46,18 @@ def imaging_init(gs_path, temp_files_path, pdf_default_dpi):
     pdf_default_dpi - the default target DPI when converting PDFs to images,
                       or when requesting the dimensions of a PDF, e.g. 150
     """
-    return magick.imagemagick_init(gs_path, temp_files_path, pdf_default_dpi)
+    global _backend
+    try:
+        _backend = magick.ImageMagickBackend(gs_path, temp_files_path, pdf_default_dpi)
+    except ImportError:
+        _backend = pillow.PillowBackend(gs_path, temp_files_path, pdf_default_dpi)
+
+
+def imaging_get_version_info():
+    """
+    Returns a string containing the back-end library version information.
+    """
+    return _backend.get_version_info()
 
 
 def imaging_adjust_image(
@@ -62,7 +75,7 @@ def imaging_adjust_image(
     """
     Alters a raw image in any of the following ways, returning a new raw image:
     Resize, rotate, crop, change format, change compression, sharpen or blur,
-    adjust colour profile.
+    adjust colour profile, change colour space, apply an overlay.
 
     image_data  - the raw image data
     data_type   - optional type (file extension) of the image data
@@ -133,7 +146,7 @@ def imaging_adjust_image(
     minimum size 4. Tile number 1 is top left in the grid, and the last tile is
     bottom right. The tile is generated last, after all other adjustments.
     """
-    return magick.imagemagick_adjust_image(
+    return _backend.adjust_image(
         image_data, data_type, page, iformat,
         new_width, new_height, size_auto_fit,
         align_h, align_v, rotation, flip,
@@ -165,7 +178,7 @@ def imaging_burst_pdf(pdf_data, dest_dir, dpi):
     Raises an ValueError if the supplied data is not a PDF.
     Raises an IOError if the destination path is invalid.
     """
-    return magick.imagemagick_burst_pdf(pdf_data, dest_dir, dpi)
+    return _backend.burst_pdf(pdf_data, dest_dir, dpi)
 
 
 def imaging_get_image_profile_data(image_data, data_type):
@@ -181,7 +194,7 @@ def imaging_get_image_profile_data(image_data, data_type):
 
     Raises an ValueError if the supplied data is not a supported image.
     """
-    return magick.imagemagick_get_image_profile_data(image_data, data_type)
+    return _backend.get_image_profile_data(image_data, data_type)
 
 
 def imaging_get_image_dimensions(image_data, data_type):
@@ -196,11 +209,4 @@ def imaging_get_image_dimensions(image_data, data_type):
 
     Raises an ValueError if the supplied data is not a supported image.
     """
-    return magick.imagemagick_get_image_dimensions(image_data, data_type)
-
-
-def imaging_get_version_info():
-    """
-    Returns a string with the ImageMagick library version information.
-    """
-    return magick.imagemagick_get_version_info()
+    return _backend.get_image_dimensions(image_data, data_type)

@@ -75,6 +75,9 @@ from imageserver.flask_app import task_engine as tm
 from imageserver.flask_app import permissions_engine as pm
 from imageserver.flask_app import launch_aux_processes
 
+import imageserver.imaging as imaging
+from imageserver.imaging_magick import ImageMagickBackend
+
 from imageserver.api_util import API_CODES
 from imageserver.errors import AlreadyExistsError
 from imageserver.filesystem_manager import (
@@ -105,6 +108,9 @@ MAGICK_ROTATION_VERSION = 673
 # At some point from 9.14 to 9.16 Ghostscript draws thicker lines than before
 GS_LINES_VERSION = 914
 
+# TODO This is a temporary situation
+assert isinstance(imaging._backend, ImageMagickBackend), \
+    'Tests for the Pillow back end have not been written yet'
 
 # Module level setUp - run by nose
 def setUp():
@@ -268,16 +274,14 @@ def call_im_composite(args_list):
 
 # Utility - returns the ImageMagick library version as an integer, e.g. 654 for v6.5.4
 def imagemagick_version():
-    import imageserver.imaging_magick as magick
     # Assumes format "ImageMagick version: 654, Ghostscript delegate: 9.10"
-    return int(magick.imagemagick_get_version_info()[21:24])
+    return int(imaging.imaging_get_version_info()[21:24])
 
 
 # Utility - returns the Ghostscript application version as an integer, e.g. 910 for v9.10
 def gs_version():
-    import imageserver.imaging_magick as magick
     # Assumes format "ImageMagick version: 654, Ghostscript delegate: 9.10"
-    return int(float(magick.imagemagick_get_version_info()[-4:]) * 100)
+    return int(float(imaging.imaging_get_version_info()[-4:]) * 100)
 
 
 def compare_images(img_path1, img_path2):
