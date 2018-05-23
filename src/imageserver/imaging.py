@@ -37,12 +37,28 @@ from . import imaging_pillow as pillow
 _backend = None
 
 
-def imaging_init(gs_path, temp_files_path, pdf_default_dpi):
+def imaging_backend_supported(back_end='auto'):
     """
-    Initialises the back-end imaging library.
-    This function must be called once before the other functions can be used.
-    An ImportError is raised if no imaging library can be loaded.
+    Returns whether a back-end imaging library is installed and supported.
+    Possible back-ends: 'pillow' or 'imagemagick'.
+    """
+    try:
+        if back_end.lower() == 'imagemagick':
+            return magick.ImageMagickBackend('gs', '.', 150) is not None
+        elif back_end.lower() == 'pillow':
+            return pillow.PillowBackend('gs', '.', 150) is not None
+    except ImportError:
+        return False
 
+
+def imaging_init(back_end='auto', gs_path='gs', temp_files_path=None, pdf_default_dpi=150):
+    """
+    Initialises the back-end imaging library. This function must be called
+    once on startup before the other functions can be used; it is not safe
+    to call during normal operation.
+    An ImportError is raised if the back-end imaging library cannot be loaded.
+
+    back_end - which back-end to load: 'pillow', 'imagemagick', or 'auto'
     gs_path - for PDF file support, the path to the Ghostscript command, e.g. "gs"
     temp_files_path - the directory in which to create temp files, e.g. "/tmp",
                       defaults to the operating system's temp directory
@@ -50,12 +66,18 @@ def imaging_init(gs_path, temp_files_path, pdf_default_dpi):
                       or when requesting the dimensions of a PDF, e.g. 150
     """
     global _backend
-    try:
     if not temp_files_path:
         temp_files_path = tempfile.gettempdir()
+
+    if back_end.lower() == 'imagemagick':
         _backend = magick.ImageMagickBackend(gs_path, temp_files_path, pdf_default_dpi)
-    except ImportError:
+    elif back_end.lower() == 'pillow':
         _backend = pillow.PillowBackend(gs_path, temp_files_path, pdf_default_dpi)
+    else:
+        try:
+            _backend = magick.ImageMagickBackend(gs_path, temp_files_path, pdf_default_dpi)
+        except ImportError:
+            _backend = pillow.PillowBackend(gs_path, temp_files_path, pdf_default_dpi)
 
 
 def imaging_get_version_info():

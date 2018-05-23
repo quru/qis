@@ -85,6 +85,7 @@ class ImageManager(object):
         self._icc_load_lock = threading.Lock()
         # Load imaging library
         imaging_init(
+            settings['IMAGE_BACKEND'],
             settings['GHOSTSCRIPT_PATH'],
             settings['TEMP_DIR'],
             settings['PDF_BURST_DPI']

@@ -28,6 +28,11 @@ BENCHMARKING = False
 # Session encryption key. Set your own in local_settings.py and KEEP IT SECRET!
 SECRET_KEY = "\xc7\x9b\xed9Q\x89\xb0\x19\xad\x80\x85+r\xaat:U#\x9bi\xc9\x99zY"
 
+# Which imaging back-end to load (new in v3.2).
+# Use 'pillow' for basic imaging, 'imagemagick' for premium imaging
+# (requires qismagick.so), or 'auto' for automatic detection/selection.
+IMAGE_BACKEND = 'auto'
+
 # Supported image formats, as lower case file extension: (name, mime type).
 # Note it is the server's build of ImageMagick that determines which
 # formats are actually supported.
