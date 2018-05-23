@@ -172,6 +172,8 @@ def imaging_adjust_image(
     the grid size inclusive. The grid size must be a square (4, 9, 16, etc),
     minimum size 4. Tile number 1 is top left in the grid, and the last tile is
     bottom right. The tile is generated last, after all other adjustments.
+
+    Raises a ValueError if the supplied data is not a supported image.
     """
     return _backend.adjust_image(
         image_data, data_type, page, iformat,
@@ -202,7 +204,7 @@ def imaging_burst_pdf(pdf_data, dest_dir, dpi):
     the caller to decide whether to remove them or not.
 
     Raises an EnvironmentError if Ghostscript is not installed.
-    Raises an ValueError if the supplied data is not a PDF.
+    Raises a ValueError if the supplied data is not a PDF.
     Raises an IOError if the destination path is invalid.
     """
     return _backend.burst_pdf(pdf_data, dest_dir, dpi)
@@ -219,7 +221,7 @@ def imaging_get_image_profile_data(image_data, data_type):
     E.g. [('exif', 'Make', 'Canon'), ('exif', 'Model', '300D')]
     or an empty list if no profile data was found in the image.
 
-    Raises an ValueError if the supplied data is not a supported image.
+    Raises a ValueError if the supplied data is not a supported image.
     """
     return _backend.get_image_profile_data(image_data, data_type)
 
@@ -232,8 +234,8 @@ def imaging_get_image_dimensions(image_data, data_type):
     image_data  - the raw image data
     data_type   - optional type (file extension) of the image data
 
-    Returns a tuple with format (width, height)
+    Returns a tuple with format (width, height).
 
-    Raises an ValueError if the supplied data is not a supported image.
+    Raises a ValueError if the supplied data is not a supported image.
     """
     return _backend.get_image_dimensions(image_data, data_type)

@@ -200,7 +200,9 @@ IGNORE_TAGS = (
     'MakerNote', 'PrintImageMatching', 'NativeDigest',
     'JPEGInterchangeFormat', 'JPEGInterchangeFormatLength',
     'Interoperability IFD Pointer', 'InteroperabilityOffset',
-    'ExifOffset', 'ExifImageLength'
+    'ExifOffset', 'ExifImageLength',
+    # Added v3.2
+    'JPEGTables', 'StripByteCounts', 'StripOffsets'
 )
 
 

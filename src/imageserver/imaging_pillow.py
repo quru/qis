@@ -27,9 +27,12 @@
 # =========  ====  ============================================================
 #
 
+import io
+
 _pillow_import_error = None
 try:
     import PIL
+    from PIL import Image, ExifTags, TiffTags
 except Exception as e:
     _pillow_import_error = e
 
@@ -74,8 +77,12 @@ class PillowBackend(object):
 
         This method may not support all the functionality of the ImageMagick version.
         """
-        # TODO implement me
-        return None
+        image = self._load_image_data(image_data, data_type)
+        try:
+            # TODO implement me
+            raise ValueError('This is TODO')
+        finally:
+            image.close()
 
     def burst_pdf(self, pdf_data, dest_dir, dpi):
         """
@@ -95,13 +102,91 @@ class PillowBackend(object):
 
         This method may not support all the functionality of the ImageMagick version.
         """
-        # TODO implement me
-        return []
+        image = self._load_image_data(image_data, data_type)
+        try:
+            return self._get_image_tags(image)
+        finally:
+            image.close()
 
     def get_image_dimensions(self, image_data, data_type):
         """
         Pillow implementation of imaging.get_image_dimensions(),
         see the function documentation there for full details.
         """
-        # TODO implement me
-        return (0, 0)
+        image = self._load_image_data(image_data, data_type)
+        try:
+            return image.size
+        finally:
+            image.close()
+
+    def _load_image_data(self, image_data, data_type):
+        """
+        Returns a Pillow Image from raw image file bytes. The data type should
+        be the image's file extension to provide a decoding hint. The image is
+        lazy loaded - the pixel data is not decoded until either something requires
+        it or the load() method is called.
+        The caller should call close() on the image after use.
+        Raises a ValueError if the image type is not supported.
+        """
+        try:
+            return Image.open(io.BytesIO(image_data))
+        except IOError:
+            raise ValueError("Invalid or unsupported image format")
+
+    def _get_image_tags(self, image):
+        """
+        The back end of get_image_profile_data(),
+        returning a list of tuples in the format expected by exif.py.
+        """
+        results = []
+        # JpegImagePlugin and WebPImagePlugin
+        try:
+            exif_raw = image._getexif()
+            results += [
+                ('exif', ExifTags.TAGS[k], self._tag_value_to_string(v))
+                for k, v in exif_raw.items() if k in ExifTags.TAGS
+            ]
+        except AttributeError:
+            pass
+        # TiffImageplugin
+        try:
+            tiff_dict = {TiffTags.TAGS[k]: v for k, v in image.tag.items() if k in TiffTags.TAGS}
+            # Convert (val,) to val
+            for k in tiff_dict:
+                v = tiff_dict[k]
+                if isinstance(v, tuple) and len(v) == 1:
+                    tiff_dict[k] = v[0]
+            results += [
+                ('tiff', k, self._tag_value_to_string(v)) for k, v in tiff_dict.items()
+            ]
+        except AttributeError:
+            pass
+        # PNGImagePlugin
+        # TODO image.info
+        # JpegImagePlugin and TiffImageplugin
+        # TODO getiptcinfo()
+        # TODO move (val,) conversion into _tag_value_to_string?
+        # ImageMagick sorts its list, so do the same
+        results.sort()
+        return results
+
+    def _tag_value_to_string(self, val):
+        """
+        Converts an EXIF/TIFF tag value from the Python type returned by Pillow
+        into the string format required by exif.py.
+
+        From the exif.py documentation: raw_string_val should be in format
+        "str" for strings, "123" for numbers, "10/50" for ratios, and
+        "83, 84, 82" for binary (representing "STR").
+        """
+        if isinstance(val, str):
+            return val
+        elif isinstance(val, (int, float)):
+            return str(val)
+        elif isinstance(val, tuple) and len(val) == 2 and isinstance(val[0], int):
+            return "%d/%d" % val
+        elif isinstance(val, bytes):
+            return ', '.join([str(c) for c in val])
+        else:
+            # We don't know how to handle, but return something
+            return str(val)
