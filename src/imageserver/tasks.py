@@ -305,15 +305,17 @@ def delete_old_temp_files(**kwargs):
     """
     import glob
     import stat
+    import tempfile
     from .flask_app import app
 
-    temp_file_patterns = ['magick*', 'libpdf*', 'libraw*']
+    temp_path = app.config['TEMP_DIR'] or tempfile.gettempdir()
+    temp_file_patterns = ['qis*', 'magick*', 'libpdf*', 'libraw*']
     delete_before_time = datetime.now() - timedelta(days=1)
     tf_count = 0
     tf_removed = 0
     tf_errors = 0
     for pattern in temp_file_patterns:
-        temp_files = glob.glob(os.path.join(app.config['TEMP_DIR'], pattern))
+        temp_files = glob.glob(os.path.join(temp_path, pattern))
         for temp_file in temp_files:
             try:
                 tf_count += 1
@@ -477,6 +479,7 @@ def export_portfolio(**kwargs):
     A task that exports all the image files that make up a portfolio and stores
     them in a single zip file.
     """
+    import tempfile
     import zipfile
     from .errors import DoesNotExistError
     from .filesystem_manager import (
@@ -506,7 +509,8 @@ def export_portfolio(**kwargs):
         app.log.warning('Portfolio ID %d is empty, cannot export it' % folio.id)
         return folio_export
 
-    temp_dir = os.path.join(app.config['TEMP_DIR'], 'qis_export', str(export_id))
+    temp_path = app.config['TEMP_DIR'] or tempfile.gettempdir()
+    temp_dir = os.path.join(temp_path, 'qis_export', str(export_id))
     zip_obj = None
     try:
         # Make a temp dir for assembling the zip, then if anything goes wrong

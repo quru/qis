@@ -151,9 +151,9 @@ LOGGING_BASE_DIR = INSTALL_DIR + "logs/"
 # Prefix the name with a single dot/period to hide it in the admin interface.
 FOLIO_EXPORTS_DIR = ".folio_exports"
 
-# The path where temporary imaging files are stored.
-# Old temporary files will be periodically deleted.
-TEMP_DIR = "/tmp"
+# A path where temporary imaging files can be created, or an empty string to
+# use the operating system's default directory (e.g. "/tmp").
+TEMP_DIR = ""
 
 # Whether to allow alphanumeric unicode characters in filenames.
 # If False, all file names are coerced to the nearest ASCII equivalents.

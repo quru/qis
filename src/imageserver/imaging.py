@@ -29,6 +29,8 @@
 
 # TODO Change DPI to _dpi_x and _dpi_y, support x,y format in templates, web params, PDF handling
 
+import tempfile
+
 from . import imaging_magick as magick
 from . import imaging_pillow as pillow
 
@@ -42,12 +44,15 @@ def imaging_init(gs_path, temp_files_path, pdf_default_dpi):
     An ImportError is raised if no imaging library can be loaded.
 
     gs_path - for PDF file support, the path to the Ghostscript command, e.g. "gs"
-    temp_files_path - the directory in which to create temp files, e.g. "/tmp"
+    temp_files_path - the directory in which to create temp files, e.g. "/tmp",
+                      defaults to the operating system's temp directory
     pdf_default_dpi - the default target DPI when converting PDFs to images,
                       or when requesting the dimensions of a PDF, e.g. 150
     """
     global _backend
     try:
+    if not temp_files_path:
+        temp_files_path = tempfile.gettempdir()
         _backend = magick.ImageMagickBackend(gs_path, temp_files_path, pdf_default_dpi)
     except ImportError:
         _backend = pillow.PillowBackend(gs_path, temp_files_path, pdf_default_dpi)
