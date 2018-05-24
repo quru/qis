@@ -243,6 +243,7 @@
 	<!-- History -->
 	<div class="float">
 		<h3>Change history</h3>
+		<div class="history">
 		<table class="datatable" summary="History for {{ src }}">
 			{% if not db_history %}
 				<tr class="odd"><td>No history is available.</td></tr>
@@ -283,8 +284,9 @@
 				{% endfor %}
 			{% endif %}
 		</table>
+		</div>
 	</div>
-		
+
 	<div class="clear"></div>
 	
 	<input type="hidden" id="image_url" value="{{ url_for('image', src=src) }}" />
