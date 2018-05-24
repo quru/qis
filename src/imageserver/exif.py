@@ -195,7 +195,7 @@ DATA_TYPES = {
     15: 'Digits'         # IPTC   4
 }
 
-# Ignore these tags when processing
+# Ignore these exact tags when processing
 IGNORE_TAGS = (
     'MakerNote', 'PrintImageMatching', 'NativeDigest',
     'JPEGInterchangeFormat', 'JPEGInterchangeFormatLength',
@@ -205,7 +205,10 @@ IGNORE_TAGS = (
     'GPSInfo', 'ICCProfile', 'IptcNaaInfo', 'XMP',
     'JPEGTables', 'StripByteCounts', 'StripOffsets'
 )
-
+# Ignore tags starting with these when processing
+IGNORE_PREFIXES = (
+    'thumbnail:',
+)
 
 # Base properties class
 class BaseProps(object):
@@ -674,7 +677,9 @@ def raw_list_to_dict(props_list, return_unknown_profiles, return_unknown_propert
     """
     ret_dict = {}
     for (profile, name, value) in props_list:
-        if name not in IGNORE_TAGS:
+        ignored_name = name in IGNORE_TAGS
+        ignored_prefix = any([name.startswith(p) for p in IGNORE_PREFIXES])
+        if not ignored_name and not ignored_prefix:
             # Attempt to recognise the profile name
             profile = profile.upper()
             if profile in ['EXIF', 'TIFF'] or profile.startswith('IPTC'):
