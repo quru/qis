@@ -32,7 +32,7 @@ import io
 _pillow_import_error = None
 try:
     import PIL
-    from PIL import Image, ExifTags, TiffTags
+    from PIL import Image, ExifTags, TiffTags, IptcImagePlugin
 except Exception as e:
     _pillow_import_error = e
 
@@ -139,21 +139,25 @@ class PillowBackend(object):
         returning a list of tuples in the format expected by exif.py.
         """
         results = []
+        # JpegImagePlugin and WebPImagePlugin
         try:
-            # JpegImagePlugin and WebPImagePlugin
             results += self._tag_dict_to_tuplist(image._getexif(), 'exif', ExifTags.TAGS)
-        except AttributeError:
+        except AttributeError:  # ._getexif
             pass
+        # TiffImageplugin
         try:
-            # TiffImageplugin
             results += self._tag_dict_to_tuplist(image.tag, 'tiff', TiffTags.TAGS)
-        except AttributeError:
+        except AttributeError:  # .tag
             pass
-        # PNGImagePlugin
-        # TODO image.info
         # JpegImagePlugin and TiffImageplugin
-        # TODO getiptcinfo()
-        # ImageMagick sorts its list, so do the same
+        results += self._tag_dict_to_tuplist(
+            self._fix_iptc_dict(IptcImagePlugin.getiptcinfo(image)),
+            'iptc',
+            IptcTags
+        )
+        # PNGImagePlugin - Pillow has no built-in support for reading XMP or EXIF data
+        #                  from the headers. EXIF in PNG was only standardised in July 2017.
+        # <nothing to do for PNG>
         results.sort()
         return results
 
@@ -201,3 +205,73 @@ class PillowBackend(object):
         else:
             # We don't know how to handle, but return something
             return str(val)
+
+    def _fix_iptc_dict(self, tag_dict):
+        """
+        Given Pillow's IPTC dict in the format {(datatype, tagcode): b'value'},
+        returns a new dict in the format {tagcode: 'value'} similar to the EXIF
+        and TIFF dicts.
+        """
+        fixed_dict = {}
+        if tag_dict:
+            # Convert {(datatype, tagcode): value} to {tagcode:value}
+            fixed_dict = {k[1]:v for k, v in tag_dict.items()}
+            # Convert byte values to str and [byte, byte] to (str, str)
+            for k, v in fixed_dict.items():
+                if isinstance(v, bytes):
+                    fixed_dict[k] = v.decode('utf8')
+                elif isinstance(v, (tuple, list)) and v and isinstance(v[0], bytes):
+                    fixed_dict[k] = tuple([vi.decode('utf8') for vi in v])
+        return fixed_dict
+
+
+# A mapping of Pillow's IPTC tag codes to the exif.py tag names
+IptcTags = {
+    5: 'ObjectName',
+    7: 'EditStatus',
+    8: 'EditorialUpdate',
+    10: 'Urgency',
+    12: 'SubjectReference',
+    15: 'Category',
+    20: 'SupplementalCategories',
+    22: 'FixtureIdentifier',
+    25: 'Keywords',
+    26: 'ContentLocationCode',
+    27: 'ContentLocationName',
+    30: 'ReleaseDate',
+    35: 'ReleaseTime',
+    37: 'ExpirationDate',
+    38: 'ExpirationTime',
+    40: 'SpecialInstructions',
+    42: 'ActionAdvised',
+    45: 'ReferenceService',
+    47: 'ReferenceDate',
+    50: 'ReferenceNumber',
+    55: 'DateCreated',
+    60: 'TimeCreated',
+    62: 'DigitalCreationDate',
+    63: 'DigitalCreationTime',
+    65: 'OriginatingProgram',
+    70: 'ProgramVersion',
+    75: 'ObjectCycle',
+    80: 'By-line',
+    85: 'By-lineTitle',
+    90: 'City',
+    92: 'Sub-location',
+    95: 'Province-State',
+    100: 'Country-PrimaryLocationCode',
+    101: 'Country-PrimaryLocationName',
+    103: 'OriginalTransmissionReference',
+    105: 'Headline',
+    110: 'Credit',
+    115: 'Source',
+    116: 'CopyrightNotice',
+    118: 'Contact',
+    120: 'Caption-Abstract',
+    121: 'LocalCaption',
+    122: 'Writer-Editor',
+    125: 'RasterizedCaption',
+    130: 'ImageType',
+    131: 'ImageOrientation',
+    135: 'LanguageIdentifier',
+}

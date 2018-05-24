@@ -104,8 +104,8 @@ def filename_filter(filepath):
 @app.template_filter('decamelcase')
 def de_camelcase_filter(cc):
     """
-    A template filter to add spaces to a CamelCase word, so that
-    e.g. "MyXYZWord" becomes "My XYZ Word"
+    A template filter to add spaces to a CamelCase word, so that e.g.
+    "MyXYZWord" becomes "My XYZ Word" and "ArticleBy-line" becomes "Article Byline"
     """
     ret = ''
     len_cc = len(cc)
@@ -115,7 +115,7 @@ def de_camelcase_filter(cc):
         ):
             ret += ' '
         ret += cc[i]
-    return ret
+    return ret.replace('-', '')
 
 
 @app.template_filter('newlines')
