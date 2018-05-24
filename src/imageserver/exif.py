@@ -177,7 +177,7 @@ def _gps_position_to_decimal(dms_str, direction):
 
 
 # Regex to identify "1, 2, 3" type strings
-CHAR_LIST_REGEX = re.compile('[0-9]+[\s]?,[\s]?')
+CHAR_LIST_REGEX = re.compile(r'[0-9]+[\s]?,[\s]?')
 
 # EXIF and IPTC data types
 DATA_TYPES = {
@@ -202,6 +202,7 @@ IGNORE_TAGS = (
     'Interoperability IFD Pointer', 'InteroperabilityOffset',
     'ExifOffset', 'ExifImageLength',
     # Added v3.2
+    'GPSInfo', 'ICCProfile', 'IptcNaaInfo', 'XMP',
     'JPEGTables', 'StripByteCounts', 'StripOffsets'
 )
 
@@ -657,7 +658,8 @@ def raw_list_to_dict(props_list, return_unknown_profiles, return_unknown_propert
     { profile_name: [ (prop_name, friendly_string_val), ... ], ... }.
 
     raw_string_val should be in format "str" for strings, "123" for numbers,
-    "10/50" for ratios, and "83, 84, 82" for binary (representing "STR").
+    "10/50" for ratios, "1/2, 11/20" for a list of ratios,
+    and "83, 84, 82" for binary (this representing "STR").
 
     If return_unknown_profiles is True, properties of unrecognised image profiles
     are returned with all property names and values unchanged. If False, they are
@@ -667,6 +669,7 @@ def raw_list_to_dict(props_list, return_unknown_profiles, return_unknown_propert
     handle are returned with the property value unchanged. If False, they are
     discarded.
 
+    Supported input profile names are: 'TIFF', 'EXIF', or 'IPTC*'
     Returned (known) profile names are: 'TIFF', 'EXIF', 'GPS', or 'IPTC'
     """
     ret_dict = {}

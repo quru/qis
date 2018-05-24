@@ -139,54 +139,65 @@ class PillowBackend(object):
         returning a list of tuples in the format expected by exif.py.
         """
         results = []
-        # JpegImagePlugin and WebPImagePlugin
         try:
-            exif_raw = image._getexif()
-            results += [
-                ('exif', ExifTags.TAGS[k], self._tag_value_to_string(v))
-                for k, v in exif_raw.items() if k in ExifTags.TAGS
-            ]
+            # JpegImagePlugin and WebPImagePlugin
+            results += self._tag_dict_to_tuplist(image._getexif(), 'exif', ExifTags.TAGS)
         except AttributeError:
             pass
-        # TiffImageplugin
         try:
-            tiff_dict = {TiffTags.TAGS[k]: v for k, v in image.tag.items() if k in TiffTags.TAGS}
-            # Convert (val,) to val
-            for k in tiff_dict:
-                v = tiff_dict[k]
-                if isinstance(v, tuple) and len(v) == 1:
-                    tiff_dict[k] = v[0]
-            results += [
-                ('tiff', k, self._tag_value_to_string(v)) for k, v in tiff_dict.items()
-            ]
+            # TiffImageplugin
+            results += self._tag_dict_to_tuplist(image.tag, 'tiff', TiffTags.TAGS)
         except AttributeError:
             pass
         # PNGImagePlugin
         # TODO image.info
         # JpegImagePlugin and TiffImageplugin
         # TODO getiptcinfo()
-        # TODO move (val,) conversion into _tag_value_to_string?
         # ImageMagick sorts its list, so do the same
         results.sort()
+        return results
+
+    def _tag_dict_to_tuplist(self, tag_dict, key_type, key_dict):
+        """
+        Converts a Pillow tag dictionary to a list of tuples in the format
+        expected by exif.py: [('exif', 'key', 'value'), ...]. Returns an empty
+        list if the dictionary is None or empty or if no tags were recognised.
+        """
+        results = []
+        if tag_dict:
+            for k, v in tag_dict.items():
+                key_name = key_dict.get(k)
+                if key_name:
+                    if key_name == "GPSInfo":
+                        results += self._tag_dict_to_tuplist(v, 'exif', ExifTags.GPSTAGS)
+                    else:
+                        results.append(
+                            (key_type, key_name, self._tag_value_to_string(v))
+                        )
         return results
 
     def _tag_value_to_string(self, val):
         """
         Converts an EXIF/TIFF tag value from the Python type returned by Pillow
-        into the string format required by exif.py.
-
-        From the exif.py documentation: raw_string_val should be in format
-        "str" for strings, "123" for numbers, "10/50" for ratios, and
-        "83, 84, 82" for binary (representing "STR").
+        into the string format required by exif.py. From the exif.py documentation:
+        >
+        > raw_string_val should be in format "str" for strings, "123" for numbers,
+        > "10/50" for ratios, "1/2, 11/20" for a list of ratios,
+        > and "83, 84, 82" for binary (this representing "STR")
+        >
         """
         if isinstance(val, str):
             return val
-        elif isinstance(val, (int, float)):
-            return str(val)
-        elif isinstance(val, tuple) and len(val) == 2 and isinstance(val[0], int):
-            return "%d/%d" % val
         elif isinstance(val, bytes):
             return ', '.join([str(c) for c in val])
+        elif isinstance(val, (int, float)):
+            return str(val)
+        elif isinstance(val, tuple) and len(val) == 1:
+            return self._tag_value_to_string(val[0])
+        elif isinstance(val, tuple) and len(val) == 2 and isinstance(val[0], int):
+            return "%d/%d" % val
+        elif isinstance(val, tuple):
+            return ', '.join(self._tag_value_to_string(v) for v in val)
         else:
             # We don't know how to handle, but return something
             return str(val)
