@@ -197,26 +197,22 @@
 	{% if db_info and db_stats %}
 	<div class="clear"></div>
 	{% endif %}
-	
-	<!-- Image info -->
-	{% if image_info %}
-		{% for profile in image_info %}
-			{% if profile not in ['width', 'height'] %}
-			<div class="float">
-				<h3>{{ profile }}</h3>
-				<table class="datatable" summary="{{ profile }} data for {{ src }}">
-					{% for tags in image_info.get(profile) %}
-					<tr class="{{ loop.cycle('odd', 'even') }}">
-						<td class="label">{{ tags.0|decamelcase }}</td>
-						<td>{{ tags.1|truncate(140) }}</td>
-					</tr>
-					{% endfor %}
-				</table>
-			</div>
-			{% endif %}
-		{% endfor %}
-	{% endif %}
-	
+
+	{# Outputs the HTML for an EXIF/TIFF profile table #}
+	{% macro profile_table(img_src, profile_name, profile_dict) %}
+		<div class="float">
+			<h3>{{ profile_name }}</h3>
+			<table class="datatable" summary="{{ profile_name }} data for {{ img_src }}">
+				{% for tags in profile_dict %}
+				<tr class="{{ loop.cycle('odd', 'even') }}">
+					<td class="label">{{ tags.0|decamelcase }}</td>
+					<td>{{ tags.1|truncate(140) }}</td>
+				</tr>
+				{% endfor %}
+			</table>
+		</div>
+	{% endmacro %}
+
 	<!-- Geo info -->
 	{% if geo_info %}
 		<div class="float">
@@ -239,7 +235,24 @@
 			</script>
 		</div>
 	{% endif %}
-	
+
+	{% if image_info %}
+		<!-- Image metadata (geo) -->
+		{% for profile in image_info %}
+			{% if profile == 'GPS' %}
+				{{ profile_table(src, profile, image_info.get(profile)) }}
+				<div class="clear"></div>
+			{% endif %}
+		{% endfor %}
+
+		<!-- Image metadata (non-geo) -->
+		{% for profile in image_info %}
+			{% if profile not in ['width', 'height', 'GPS'] %}
+				{{ profile_table(src, profile, image_info.get(profile)) }}
+			{% endif %}
+		{% endfor %}
+	{% endif %}
+
 	<!-- History -->
 	<div class="float">
 		<h3>Change history</h3>
