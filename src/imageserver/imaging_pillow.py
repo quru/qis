@@ -38,6 +38,9 @@ except Exception as e:
     _pillow_import_error = e
 
 
+# TODO when not stripping - add extra save info for JPG, GIF, PNG, TIFF
+
+
 class PillowBackend(object):
     """
     Implements a back-end for imaging.py using the Python Pillow library.
@@ -108,6 +111,10 @@ class PillowBackend(object):
         image = self._load_image_data(image_data, data_type)
         bufout = io.BytesIO()
         try:
+            original_info = image.info
+            original_info['mode'] = image.mode
+            original_info['size'] = image.size
+
             # Adjust parameters to safe values (part 1)
             page = self._limit_number(page, 1, 999999)
             rotation = self._limit_number(rotation, -360.0, 360.0)
@@ -131,8 +138,7 @@ class PillowBackend(object):
             # Page selection - P3
 
             # Get original image info
-            cur_width = image.width
-            cur_height = image.height
+            cur_width, cur_height = image.size
             # #2321 Ensure no div by 0
             if cur_width == 0 or cur_height == 0:
                 raise ValueError('Image dimensions are zero')
@@ -182,6 +188,8 @@ class PillowBackend(object):
             # (2) Rotate
             if rotation:
                 image = self._image_rotate(image, rotation, rquality, fill_rgb)
+                cur_width, cur_height = image.size
+                cur_aspect = cur_width / cur_height
             # (3) Crop
             # (4) Resize
             if new_width != 0 or new_height != 0:
@@ -192,10 +200,13 @@ class PillowBackend(object):
             # (8) Set colorspace - P3
             # (9) Strip TODO see jpeg save options for how to not strip
 
-            # TODO set mode for file type before saving, consider transparency
-
             # Return encoded image bytes
-            save_opts = self._get_pillow_save_options(image, iformat, cquality, dpi)
+            image = self._set_pillow_save_mode(
+                image, iformat, fill_rgb, original_info
+            )
+            save_opts = self._get_pillow_save_options(
+                image, iformat, cquality, dpi, original_info
+            )
             image.save(bufout, **save_opts)
             return bufout.getvalue()
         finally:
@@ -276,6 +287,7 @@ class PillowBackend(object):
         # PNGImagePlugin - Pillow has no built-in support for reading XMP or EXIF data
         #                  from the headers. EXIF in PNG was only standardised in July 2017.
         # <nothing to do for PNG>
+        # TODO see what's in image.info.pnginfo
         results.sort()
         return results
 
@@ -358,27 +370,91 @@ class PillowBackend(object):
         """
         return self._get_pillow_format(format) in ['gif', 'png']
 
-    def _get_pillow_save_options(self, image, format, quality, dpi):
+    def _set_pillow_save_mode(self, image, save_format, fill_rgb, original_info, auto_close=True):
+        """
+        Pillow by design raises an error if you try to save an image in an
+        incompatible mode for the output format,
+        e.g. https://github.com/python-pillow/Pillow/issues/2609
+        so if required by the output format, this method copies and changes the
+        mode of an image, returning the new copy.
+        """
+        convert = False
+        save_format = self._get_pillow_format(save_format)
+        # GIF requires P mode, plus transparency if we're in LA or RGBA mode
+        if save_format == 'gif' and image.mode != 'P':
+            if image.mode.endswith('A'):
+                # Convert to P with transparency
+                alpha_band = image.split()[-1]
+                new_image = image.convert(
+                    'P', dither=Image.FLOYDSTEINBERG, palette=Image.ADAPTIVE,
+                    colors=255  # 0-254 leaving 255 for transparency
+                )
+                mask = Image.eval(alpha_band, lambda p: 255 if p <= 128 else 0)
+                new_image.paste(255, mask)
+                original_info['transparency'] = 255  # for _get_pillow_save_options()
+                if auto_close:
+                    image.close()
+                return new_image
+            else:
+                # Plain convert to P
+                return self._image_change_mode(image, 'P', auto_close=auto_close)
+        # PNG supports 1, L, LA, P, RGB and RGBA
+        if save_format == 'png' and image.mode not in ('1', 'L', 'LA', 'P', 'RGB', 'RGBA'):
+            convert = True
+        # JPG supports L, RGB, and CMYK
+        if save_format == 'jpeg' and image.mode not in ('L', 'RGB', 'CMYK'):
+            convert = True
+        # TIFF supports all sorts depending on the compression method,
+        # so we'll try allowing through the superset of PNG + JPG
+        if save_format == 'tiff' and image.mode not in ('1', 'L', 'LA', 'P', 'RGB', 'RGBA', 'CMYK'):
+            convert = True
+        # Convert to RGB if required
+        if convert:
+            if image.mode.endswith('A'):
+                # Convert transparency to the fill colour
+                # See https://github.com/python-pillow/Pillow/issues/2609#issuecomment-313922483
+                new_image = Image.new(image.mode[:-1], image.size, fill_rgb)
+                new_image.paste(image, image.split()[-1])
+                if auto_close:
+                    image.close()
+                return new_image
+            else:
+                # Plain convert to RGB
+                return self._image_change_mode(image, 'RGB', auto_close=auto_close)
+        # Otherwise return image unchanged
+        return image
+
+    def _get_pillow_save_options(self, image, format, quality, dpi, original_info):
         """
         Returns a dictionary of save options for an image plus desired image
         format, quality, and other file options.
         """
         save_opts = {}
-        # DPI
-        if dpi > 0:
-            save_opts['dpi'] = (dpi, dpi)
-        elif 'dpi' in image.info:
-            save_opts['dpi'] = image.info['dpi']
-        # Progressive JPEG
+        # Special case - handle progressive JPEG
         if format in ['pjpg', 'pjpeg']:
             format = 'jpeg'
             save_opts['progressive'] = True
-        elif 'progression' in image.info:
-            save_opts['progressive'] = image.info['progression']
-        # Format
+        elif 'progression' in original_info:
+            save_opts['progressive'] = original_info['progression']
+        # Set final format
         save_opts['format'] = self._get_pillow_format(format)
+        # Preserve transparency if we're in P, L, or RGB mode and it was there before
+        if (not image.mode.endswith('A') and
+            self._supports_transparency(save_opts['format']) and
+            'transparency' in original_info):
+            save_opts['transparency'] = original_info['transparency']
+        # Set or preserve DPI
+        if dpi > 0:
+            save_opts['dpi'] = (dpi, dpi)
+        elif 'dpi' in original_info:
+            save_opts['dpi'] = original_info['dpi']
+        # Set JPEG compression
         if save_opts['format'] in ['jpg', 'jpeg']:
             save_opts['quality'] = quality
+        # TODO Set PNG compression
+        # Set or preserve TIFF compression (it uses raw otherwise)
+        if save_opts['format'] == 'tiff':
+            save_opts['compression'] = original_info.get('compression', 'jpeg')
         return save_opts
 
     def _get_pillow_format(self, format):
@@ -431,7 +507,7 @@ class PillowBackend(object):
             image.close()
         return new_image
 
-    def _image_rotate(self, image, angle, quality, fill, auto_close=True):
+    def _image_rotate(self, image, angle, quality, fill_rgb, auto_close=True):
         """
         Copies and rotates an image clockwise, returning the new copy.
         """
@@ -439,7 +515,7 @@ class PillowBackend(object):
             angle * -1,
             self._get_pillow_resample(quality, rotating=True),
             expand=True,
-            fillcolor=fill  # Added Pillow 5.2
+            fillcolor=fill_rgb  # Requires Pillow 5.2
         )
         if auto_close:
             image.close()
