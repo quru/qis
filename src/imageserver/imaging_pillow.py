@@ -137,22 +137,19 @@ class PillowBackend(object):
 
             # Page selection - P3
 
-            # Get original image info
-            cur_width, cur_height = image.size
             # #2321 Ensure no div by 0
-            if cur_width == 0 or cur_height == 0:
+            if 0 in image.size:
                 raise ValueError('Image dimensions are zero')
-            cur_aspect = cur_width / cur_height
 
             # Adjust parameters to safe values (part 2)
             # Prevent enlargements, using largest of width/height to allow for rotation.
             # If enabling enlargements, enforce some max value to prevent server attacks.
-            max_dimension = max(cur_width, cur_height)
+            max_dimension = max(image.size)
             new_width = self._limit_number(
-                new_width, 0, cur_width if rotation == 0.0 else max_dimension
+                new_width, 0, image.width if rotation == 0.0 else max_dimension
             )
             new_height = self._limit_number(
-                new_height, 0, cur_height if rotation == 0.0 else max_dimension
+                new_height, 0, image.height if rotation == 0.0 else max_dimension
             )
 
             # If the target format supports transparency and we need it,
@@ -188,9 +185,16 @@ class PillowBackend(object):
             # (2) Rotate
             if rotation:
                 image = self._image_rotate(image, rotation, rquality, fill_rgb)
-                cur_width, cur_height = image.size
-                cur_aspect = cur_width / cur_height
             # (3) Crop
+            if (crop_top, crop_left, crop_bottom, crop_right) != (0.0, 0.0, 1.0, 1.0):
+                image = self._image_crop(
+                    image, crop_top, crop_left, crop_bottom, crop_right,
+                    crop_auto_fit, new_width, new_height
+                )
+                # If auto-fill is enabled and we didn't rotate (i.e. we haven't used the
+                # fill colour yet), work out a new fill colour, post-crop
+                if fill_colour == 'auto' and not rotation:
+                    raise NotImplementedError('Auto fill is not yet implemented')
             # (4) Resize
             if new_width != 0 or new_height != 0:
                 image = self._image_resize(image, new_width, new_height, rquality)
@@ -483,6 +487,93 @@ class PillowBackend(object):
         else:
             return Image.LANCZOS if not rotating else Image.BICUBIC
 
+    def _auto_crop_fit(self, image, top_px, left_px, bottom_px, right_px,
+                       target_width, target_height):
+        """
+        For the given image, cropped to the specified rectangle, and targetting
+        an output size of target_width x target_height, widens the cropping rectangle
+        either vertically or horizontally as far as possible, in order to reduce areas
+        that would otherwise become background fill colour in the output image.
+
+        In other words, an attempt is made to change the aspect ratio of the provided
+        cropping rectangle so that it matches the aspect ratio of the final output image.
+
+        Returns a tuple of the adjusted (top_px, left_px, bottom_px, right_px).
+        """
+        # #2321 Ensure we have a valid starting crop, prevent div by 0
+        if right_px <= left_px or bottom_px <= top_px or not target_width or not target_height:
+            return top_px, left_px, bottom_px, right_px
+
+        cropped_width = right_px - left_px
+        cropped_height = bottom_px - top_px
+        target_aspect = target_width / target_height
+        cropped_aspect = cropped_width / cropped_height
+
+        if target_aspect < cropped_aspect:
+            # The final resize would fit the requested crop by width,
+            # see if we can adjust the crop to fill the height
+            max_cropped_height = math.ceil(cropped_width / target_aspect)  # The crop height we need to get to the target aspect ratio
+            want_height = max_cropped_height - cropped_height
+            if want_height > 0:
+                to_fill_height = want_height
+                available_top = top_px
+                available_bottom = image.height - bottom_px
+                available_min = min(available_top, available_bottom)
+
+                if available_top + available_bottom <= to_fill_height:
+                    # We cannot reach max_cropped_height, the best we can do is use all height
+                    top_px = 0
+                    bottom_px = image.height
+                else:
+                    # We can reach max_cropped_height (there is room for all of to_fill_height)
+                    if available_min * 2 >= to_fill_height:
+                        # We can stretch the crop rectangle equally on both sides
+                        top_px -= (to_fill_height // 2)
+                        bottom_px += (to_fill_height // 2)
+                    else:
+                        # We require an uneven vertical stretch
+                        if available_top < available_bottom:
+                            top_px = 0
+                            to_fill_height -= available_top
+                            bottom_px += to_fill_height
+                        else:
+                            bottom_px = image.height
+                            to_fill_height -= available_bottom
+                            top_px -= to_fill_height
+        else:
+            # The final resize would fit the requested crop by height,
+            # see if we can adjust the crop to fill the width
+            max_cropped_width = math.ceil(cropped_height * target_aspect)  # The crop width we need to get to the target aspect ratio
+            want_width = max_cropped_width - cropped_width
+            if want_width > 0:
+                to_fill_width = want_width
+                available_left = left_px
+                available_right = image.width - right_px
+                available_min = min(available_left, available_right)
+
+                if available_left + available_right <= to_fill_width:
+                    # We cannot reach max_cropped_width, the best we can do is use all width
+                    left_px = 0
+                    right_px = image.width
+                else:
+                    # We can reach max_cropped_width (there is room for all of to_fill_width)
+                    if available_min * 2 >= to_fill_width:
+                        # We can stretch the crop rectangle equally on both sides
+                        left_px -= (to_fill_width // 2)
+                        right_px += (to_fill_width // 2)
+                    else:
+                        # We require an uneven horizontal stretch
+                        if available_left < available_right:
+                            left_px = 0
+                            to_fill_width -= available_left
+                            right_px += to_fill_width
+                        else:
+                            right_px = image.width
+                            to_fill_width -= available_right
+                            left_px -= to_fill_width
+
+        return top_px, left_px, bottom_px, right_px
+
     def _image_change_mode(self, image, mode, auto_close=True):
         """
         Copies and changes the mode of an image, e.g. to 'RGBA',
@@ -522,6 +613,36 @@ class PillowBackend(object):
         if auto_close:
             image.close()
         return new_image
+
+    def _image_crop(self, image, crop_top, crop_left, crop_bottom, crop_right,
+                    crop_auto_fit, target_width, target_height, auto_close=True):
+        """
+        Copies and crops an image, returning the new copy.
+        If target_width is set and target_height is set and auto-fit is True, the
+        requested crop will be expanded in one direction to better match the target size.
+        """
+        # Get the cropping pixels
+        top_px = math.ceil(image.height * crop_top)
+        left_px = math.ceil(image.width * crop_left)
+        bottom_px = math.ceil(image.height * crop_bottom)
+        right_px = math.ceil(image.width * crop_right)
+        # Does that actually produce a crop?
+        if top_px > 0 or left_px > 0 or bottom_px < image.height or right_px < image.width:
+            if crop_auto_fit and target_width and target_height:
+                # Auto crop fit function
+                top_px, left_px, bottom_px, right_px = self._auto_crop_fit(
+                    image,
+                    top_px, left_px, bottom_px, right_px,
+                    target_width, target_height
+                )
+            if right_px > left_px and bottom_px > top_px:
+                # Crop to the numbers
+                new_image = image.crop((left_px, top_px, right_px, bottom_px))
+                if auto_close:
+                    image.close()
+                return new_image
+        # Return unchanged image
+        return image
 
     def _image_resize(self, image, width, height, quality, auto_close=True):
         """
