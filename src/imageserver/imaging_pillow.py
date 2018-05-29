@@ -286,8 +286,8 @@ class PillowBackend(object):
         )
         # PNGImagePlugin - Pillow has no built-in support for reading XMP or EXIF data
         #                  from the headers. EXIF in PNG was only standardised in July 2017.
+        #                  There is image.info['pnginfo'] but I haven't seen it present yet.
         # <nothing to do for PNG>
-        # TODO see what's in image.info.pnginfo
         results.sort()
         return results
 
@@ -451,7 +451,9 @@ class PillowBackend(object):
         # Set JPEG compression
         if save_opts['format'] in ['jpg', 'jpeg']:
             save_opts['quality'] = quality
-        # TODO Set PNG compression
+        # Set PNG compression
+        if save_opts['format'] == 'png':
+            save_opts['compress_level'] = min(quality // 10, 9)
         # Set or preserve TIFF compression (it uses raw otherwise)
         if save_opts['format'] == 'tiff':
             save_opts['compression'] = original_info.get('compression', 'jpeg')
