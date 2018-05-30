@@ -132,7 +132,7 @@ class PillowBackend(object):
             sharpen = self._limit_number(sharpen, -500, 500)
             dpi = self._limit_number(dpi, 0, 32000)
             if tile_spec[0] > 0:
-                tile_spec[0] = self._limit_number(tile_spec[0], 1, tile_spec[1])
+                tile_spec = (self._limit_number(tile_spec[0], 1, tile_spec[1]), tile_spec[1])
             overlay_size = self._limit_number(overlay_size, 0.0, 1.0)
             overlay_opacity = self._limit_number(overlay_opacity, 0.0, 1.0)
 
@@ -202,11 +202,14 @@ class PillowBackend(object):
                     image, new_width, new_height, size_auto_fit,
                     align_h, align_v, fill_rgb, rquality
                 )
-            # (5) Overlay - P2
-            # (6) Tile
-            # (7) Apply ICC profile - P3
-            # (8) Set colorspace - P3
-            # (9) Strip TODO see jpeg save options for how to not strip
+            # (5) Blur/sharpen - P2
+            # (6) Overlay - P2
+            # (7) Tile
+            if tile_spec >= (1, 4):
+                image = self._image_tile(image, tile_spec)
+            # (8) Apply ICC profile - P3
+            # (9) Set colorspace - P3
+            # (10) Strip TODO see jpeg save options for how to not strip
 
             # Return encoded image bytes
             image = self._set_pillow_save_mode(
@@ -765,6 +768,47 @@ class PillowBackend(object):
         if auto_close:
             image.close()
         return new_image
+
+    def _image_tile(self, image, tile_spec, auto_close=True):
+        """
+        Copies and crops an image into tiles, returning the new copy/tile.
+        The tile spec should be (tile number, grid size), where the grid size
+        is a square (2*2, 3*3, 4*4, etc) and the tile number is between 1 and
+        the grid size. 1 is the top left tile, the last is bottom right.
+        When the image length cannot be divided exactly, some tiles may need to
+        be larger than others, but this will always be applied to the
+        right/bottom-most strip of tiles so that all strips fit together correctly
+        from the left/top.
+        """
+        grid_axis_len = int(math.sqrt(tile_spec[1]))
+        # Get 0-based X,Y coords for the tile number in the grid
+        div = tile_spec[0] // grid_axis_len
+        rem = tile_spec[0] % grid_axis_len
+        tile_x0 = (rem - 1) if rem != 0 else (grid_axis_len - 1)
+        tile_y0 = div if rem != 0 else (div - 1)
+
+        # Get tile size
+        tile_width = image.width // grid_axis_len
+        tile_height = image.height // grid_axis_len
+        tile_width_extra = image.width % grid_axis_len
+        tile_height_extra = image.height % grid_axis_len
+
+        # Get crop position
+        left_px = tile_x0 * tile_width
+        top_px = tile_y0 * tile_height
+
+        # Adjust tile size for inexact division if this is a right/bottom tile
+        if tile_x0 == (grid_axis_len - 1):
+            tile_width += tile_width_extra
+        if tile_y0 == (grid_axis_len - 1):
+            tile_height += tile_height_extra
+
+        # then crop to get the tile
+        new_image = image.crop((left_px, top_px, left_px + tile_width, top_px + tile_height))
+        if auto_close:
+            image.close()
+        return new_image
+
 
 # A mapping of Pillow's IPTC tag codes to the exif.py tag names
 IptcTags = {
