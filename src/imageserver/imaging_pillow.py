@@ -39,6 +39,7 @@ except Exception as e:
 
 
 # TODO when not stripping - add extra save info for JPG, GIF, PNG, TIFF
+# TODO we need to gamma correct on resize
 
 
 class PillowBackend(object):
@@ -168,7 +169,7 @@ class PillowBackend(object):
             # change the overall aspect ratio
             try:
                 if fill_colour == 'auto':
-                    raise NotImplementedError('Auto fill is not yet implemented')
+                    fill_rgb = self._auto_fill_colour(image)
                 elif fill_colour == 'none' or fill_colour == 'transparent':
                     fill_rgb = None
                 elif fill_colour:
@@ -194,10 +195,13 @@ class PillowBackend(object):
                 # If auto-fill is enabled and we didn't rotate (i.e. we haven't used the
                 # fill colour yet), work out a new fill colour, post-crop
                 if fill_colour == 'auto' and not rotation:
-                    raise NotImplementedError('Auto fill is not yet implemented')
+                    fill_rgb = self._auto_fill_colour(image)
             # (4) Resize
             if new_width != 0 or new_height != 0:
-                image = self._image_resize(image, new_width, new_height, rquality)
+                image = self._image_resize(
+                    image, new_width, new_height, size_auto_fit,
+                    align_h, align_v, fill_rgb, rquality
+                )
             # (5) Overlay - P2
             # (6) Tile
             # (7) Apply ICC profile - P3
@@ -574,6 +578,27 @@ class PillowBackend(object):
 
         return top_px, left_px, bottom_px, right_px
 
+    def _auto_fill_colour(self, image):
+        """
+        Calculates and returns a Pillow fill colour for an image.
+        """
+        # Auto-fill colour is P2, so for now just return white
+        return ImageColor.getrgb('#ffffff')
+
+    def _get_image_align_offset(self, image, target_width, target_height, align_h, align_v):
+        """
+        Returns the (x, y) position (from the target's top left) to place an image
+        inside a target rectangle, based on the alignment parameters.
+        The alignment values are as described at imaging.adjust_image().
+        """
+        # Image-in-image positioning is P3, so for now just centre it
+        offset_x = (target_width - image.width) // 2
+        offset_y = (target_height - image.height) // 2
+        # Do not allow the image to get chopped off when aligning it
+        offset_x = max(0, min(offset_x, target_width - image.width))
+        offset_y = max(0, min(offset_y, target_height - image.height))
+        return offset_x, offset_y
+
     def _image_change_mode(self, image, mode, auto_close=True):
         """
         Copies and changes the mode of an image, e.g. to 'RGBA',
@@ -644,23 +669,102 @@ class PillowBackend(object):
         # Return unchanged image
         return image
 
-    def _image_resize(self, image, width, height, quality, auto_close=True):
+    def _image_resize(self, image, width, height, size_auto_fit,
+                      align_h, align_v, fill_rgb, quality, auto_close=True):
         """
         Resizes an image, returning a resized copy.
-        The quality number can be from 1 (fastest) to 3 (best quality).
+        Width or height can be 0 to use the image's original width or height.
         The image will not be resized beyond its original size.
+
+        If the width and height ratio do not match the image's aspect ratio and
+        when size_auto_fit is false, the image will be returned at the requested
+        size, with the resized image centred within it, surrounded by the fill
+        colour. If size_auto_fit is true, either the width or height will be
+        reduced so that there is no fill (and the requested size then is not
+        respected).
+
+        The quality number can be from 1 (fastest) to 3 (best quality).
         """
-        # TODO Constrain size
-        # TODO Test for aspect changes
-        # TODO Do we need to gamma correct?
-        new_image = image.resize(
-            (width, height),
-            resample=self._get_pillow_resample(quality)
-        )
+        cur_aspect = image.width / image.height
+        resize_canvas = False
+
+        # Determine the final image dimensions
+        if width == 0 and height == 0:
+            # Keep the old dimensions
+            width = image.width
+            height = image.height
+        elif width == 0 or height == 0:
+            # Auto-resize based on the one dimension specified
+            if width == 0:
+                width = math.ceil(cur_aspect * height)
+            if height == 0:
+                height = math.ceil(width / cur_aspect)
+        else:
+            # Both a width and a height are specified
+            if size_auto_fit:
+                # Auto-adjust the requested canvas size to best fit the image
+                max_height = height
+                # Try first to resize image for the requested width
+                height = math.ceil(width / cur_aspect)
+                if height > max_height:
+                    # Image would be too tall, we need to resize for the requested height instead
+                    height = max_height
+                    width = math.ceil(height * cur_aspect)
+            else:
+                # Use the requested canvas size, and best fit the image within it
+                resize_canvas = True
+
+        # At this point, width and height contain the final image dimensions
+        new_image = None
+        if not resize_canvas:
+            # Plain image resize
+            if width != image.width or height != image.height:
+                new_image = image.resize(
+                    (width, height),
+                    resample=self._get_pillow_resample(quality)
+                )
+        else:
+            canvas_width = width
+            canvas_height = height
+            canvas_aspect = canvas_width / canvas_height
+
+            # Determine how the image should fit into the new canvas
+            if canvas_aspect < cur_aspect:
+                width = canvas_width
+                height = math.ceil(width / cur_aspect)
+            else:
+                height = canvas_height
+                width = math.ceil(height * cur_aspect)
+
+            # Handle float rounding, prevent single-side 1px canvas borders
+            if abs(width - canvas_width) == 1:
+                width = canvas_width
+            if abs(height - canvas_height) == 1:
+                height = canvas_height
+
+            # First perform plain old image resize
+            if width != image.width or height != image.height:
+                new_image = image.resize(
+                    (width, height),
+                    resample=self._get_pillow_resample(quality)
+                )
+
+            # Then adjust the canvas if required
+            if width != canvas_width or height != canvas_height:
+                canvas_image = Image.new(image.mode, (canvas_width, canvas_height), fill_rgb)
+                canvas_image.paste(
+                    new_image,
+                    self._get_image_align_offset(
+                        new_image, canvas_width, canvas_height, align_h, align_v
+                    )
+                )
+                new_image = canvas_image
+
+        if new_image is None:
+            return image
         if auto_close:
             image.close()
         return new_image
-
 
 # A mapping of Pillow's IPTC tag codes to the exif.py tag names
 IptcTags = {

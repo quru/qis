@@ -157,16 +157,13 @@ def imaging_adjust_image(
     ratio, and size_auto_fit is false, the image will be returned at the requested
     size, with the original image centred within it, surrounded by the fill colour.
     If size_auto_fit is true, either the width or height will be reduced so that
-    there is no fill (the requested size then is not respected).
+    there is no fill (and the requested size then is not respected).
 
     When cropping the image and a target width and a height have been specified,
     the optional crop_auto_fit flag can be enabled. This will attempt to minimise
     the amount of fill colour (padding) in the final image by enlarging the
     requested crop rectangle to best fill the target. Padding will not necessarily
     be eliminated unless the size_auto_fit flag is also used.
-
-    Identifying fill colours of the form "turquoise" require an array scan of
-    nearly 700 colour names (i.e. it can be slow).
 
     If a tile of the image is requested, tile number must be between 1 and
     the grid size inclusive. The grid size must be a square (4, 9, 16, etc),
