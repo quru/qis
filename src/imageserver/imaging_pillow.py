@@ -236,9 +236,9 @@ class PillowBackend(object):
             # (10) Strip TODO see jpeg save options for how to not strip
 
             # Return encoded image bytes
-            image = self._set_pillow_save_mode(
-                image, iformat, fill_rgb, original_info
-            )
+            image = self._set_pillow_save_mode(image, iformat, fill_rgb)
+            if 'transparency' in image.info:
+                original_info['transparency'] = image.info['transparency']
             save_opts = self._get_pillow_save_options(
                 image, iformat, cquality, dpi, original_info
             )
@@ -405,7 +405,7 @@ class PillowBackend(object):
         """
         return self._get_pillow_format(format) in ['gif', 'png']
 
-    def _set_pillow_save_mode(self, image, save_format, fill_rgb, original_info, auto_close=True):
+    def _set_pillow_save_mode(self, image, save_format, fill_rgb, auto_close=True):
         """
         Pillow by design raises an error if you try to save an image in an
         incompatible mode for the output format,
@@ -426,7 +426,7 @@ class PillowBackend(object):
                 )
                 mask = Image.eval(alpha_band, lambda p: 255 if p <= 128 else 0)
                 new_image.paste(255, mask)
-                original_info['transparency'] = 255  # for _get_pillow_save_options()
+                new_image.info['transparency'] = 255
                 if auto_close:
                     image.close()
                 return new_image
