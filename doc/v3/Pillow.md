@@ -88,3 +88,15 @@ Anyone can just go into the code and disable the license checks.
   https://github.com/python-pillow/Pillow/issues/518
 * Stripping EXIF data from an image
   https://stackoverflow.com/a/23249933/1671320
+
+### Pillow limitations vs ImageMagick/qismagick
+
+* No RAW file support
+* No SVG file support
+* Fewer other/legacy file types supported
+* Worse PDF support
+* No PNG filter type control
+* No support for more than 8 bpp / 32 bit color (ImageMagick uses 16 bpp
+  by default so that e.g. colorspace conversions do not cause clipping)
+* Loss of some metadata even with strip=0
+* Loss of some embedded colour profiles (suspected, awaiting tests)
