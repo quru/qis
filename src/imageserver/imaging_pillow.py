@@ -38,7 +38,6 @@ except Exception as e:
     _pillow_import_error = e
 
 
-# TODO use tag_v2 and TAGS_V2 for tiff instead of deprecated tag
 # TODO resize now applies an srgb icc profile - do we need to preserve it in
 #      subsequent operations? is it doing the right thing if the original image
 #      already had an icc profile on arrival?
@@ -320,8 +319,8 @@ class PillowBackend(object):
             pass
         # TiffImageplugin
         try:
-            results += self._tag_dict_to_tuplist(image.tag, 'tiff', TiffTags.TAGS)
-        except AttributeError:  # .tag
+            results += self._tag_dict_to_tuplist(image.tag_v2, 'tiff', TiffTagsGetter)
+        except AttributeError:  # .tag_v2
             pass
         # JpegImagePlugin and TiffImageplugin
         results += self._tag_dict_to_tuplist(
@@ -901,6 +900,21 @@ class PillowBackend(object):
         if auto_close:
             image.close()
         return new_image
+
+
+class TiffTagsGetter(object):
+    """
+    Provides a bare-minimum compatibility layer for converting a call to
+    self.get(tag_number) into a call to TiffTags.lookup(tag_number).name.
+
+    This allows the caller to have a single interface that behaves like
+    "TiffTags.TAGS.get(tag_number)" (v1 interface) while also searching the
+    TiffTags v2 interface, which returns a different data type.
+    """
+    @staticmethod
+    def get(tag_number):
+        taginfo = TiffTags.lookup(tag_number)
+        return None if taginfo.name == 'unknown' else taginfo.name
 
 
 # A mapping of Pillow's IPTC tag codes to the exif.py tag names
