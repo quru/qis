@@ -1,9 +1,11 @@
-# v3.2.0
-_Changes: New QIS free/premium model. Adds new Pillow imaging back-end (with
-reduced functionality) so that QIS runs without requiring qismagick.so_
+# v4.0.0
+_Changes: New QIS free/premium model. Adds new Python-Pillow imaging back-end
+(with reduced functionality) so that QIS runs without requiring qismagick.so.
+Updated Python libraries, including Flask v1._
 
 * Update the Python and web code (the `src` folder)
 * Update the Python libraries
+* Update the `qismagick` library to v4.0 (optional - if installed/required)
 * Delete `src/imageserver/imagemagick.py`
 * Restart the Apache service
 
