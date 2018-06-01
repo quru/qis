@@ -38,7 +38,7 @@ except Exception as e:
     _pillow_import_error = e
 
 
-# TODO when not stripping - add extra save info for JPG, GIF, PNG, TIFF
+# TODO use tag_v2 and TAGS_V2 for tiff instead of deprecated tag
 # TODO resize now applies an srgb icc profile - do we need to preserve it in
 #      subsequent operations? is it doing the right thing if the original image
 #      already had an icc profile on arrival?
@@ -49,6 +49,11 @@ class PillowBackend(object):
     Implements a back-end for imaging.py using the Python Pillow library.
     """
     MAX_ICC_SIZE = 1048576 * 5
+    METADATA_INFO_KEYS = (
+        'icc_profile', 'exif',                            # Generic
+        'gamma',                                          # PNG
+        'description', 'software', 'artist', 'copyright'  # TIFF
+    )
 
     def __init__(self, gs_path, temp_files_path, pdf_default_dpi):
         """
@@ -136,9 +141,13 @@ class PillowBackend(object):
         image = self._load_image_data(image_data, data_type)
         bufout = io.BytesIO()
         try:
+            # Keep a copy of the original image's info
             original_info = image.info
             original_info['mode'] = image.mode
             original_info['size'] = image.size
+            # Special case for TIFF
+            if hasattr(image, 'tag_v2'):
+                original_info.update(self._get_tiff_info_dict(image))
 
             # Adjust parameters to safe values (part 1)
             page = self._limit_number(page, 1, 999999)
@@ -226,6 +235,7 @@ class PillowBackend(object):
                     image, new_width, new_height, size_auto_fit,
                     align_h, align_v, fill_rgb, rquality
                 )
+                # TODO preserve srgb profile if was added? may not need to
             # (5) Blur/sharpen - P2
             # (6) Overlay - P2
             # (7) Tile
@@ -233,14 +243,14 @@ class PillowBackend(object):
                 image = self._image_tile(image, tile_spec)
             # (8) Apply ICC profile - P3
             # (9) Set colorspace - P3
-            # (10) Strip TODO see jpeg save options for how to not strip
+            # (10) Strip (handled below in _get_pillow_save_options)
 
             # Return encoded image bytes
             image = self._set_pillow_save_mode(image, iformat, fill_rgb)
             if 'transparency' in image.info:
                 original_info['transparency'] = image.info['transparency']
             save_opts = self._get_pillow_save_options(
-                image, iformat, cquality, dpi, original_info
+                image, iformat, cquality, dpi, original_info, strip_info
             )
             image.save(bufout, **save_opts)
             return bufout.getvalue()
@@ -399,6 +409,23 @@ class PillowBackend(object):
             return max_val
         return val
 
+    def _get_tiff_info_dict(self, image):
+        """
+        Pillow has a 'tiffinfo' parameter for setting TIFF tags when saving, but
+        using it causes errors with the libtiff back end. Luckily the TIFF plugin
+        also supports separate save parameters for the most common info fields.
+        This function extracts the tags that can be supplied as separate save
+        parameters, and returns them as a name/value dictionary, e.g.
+        {'software': 'Adobe Photoshop'}
+        """
+        d = {}
+        skip_tags = ('icc_profile', 'exif')
+        tag_dict = {k.lower(): v for k, v in image.tag_v2.named().items()}
+        for tag in tag_dict:
+            if (tag in PillowBackend.METADATA_INFO_KEYS) and (tag not in skip_tags):
+                d[tag] = tag_dict[tag]
+        return d
+
     def _supports_transparency(self, format):
         """
         Returns whether the given file format supports transparency.
@@ -459,10 +486,12 @@ class PillowBackend(object):
         # Otherwise return image unchanged
         return image
 
-    def _get_pillow_save_options(self, image, format, quality, dpi, original_info):
+    def _get_pillow_save_options(self, image, format, quality, dpi, original_info, strip_info):
         """
-        Returns a dictionary of save options for an image plus desired image
-        format, quality, and other file options.
+        Returns a dictionary of the save options for an image in the desired file
+        format, e.g. compression level, dpi, and other format-specific options.
+        When strip_info is False, metadata (e.g. EXIF tags) and color profiles
+        are copied across from the original_info dictionary.
         """
         save_opts = {}
         # Special case - handle progressive JPEG
@@ -481,8 +510,12 @@ class PillowBackend(object):
         # Set or preserve DPI
         if dpi > 0:
             save_opts['dpi'] = (dpi, dpi)
-        elif 'dpi' in original_info:
-            save_opts['dpi'] = original_info['dpi']
+            save_opts['resolution'] = dpi
+            save_opts['resolution_unit'] = 'inch'
+        else:
+            for key in ('dpi', 'resolution', 'resolution_unit'):
+                if key in original_info:
+                    save_opts[key] = original_info[key]
         # Set JPEG compression
         if save_opts['format'] in ['jpg', 'jpeg']:
             save_opts['quality'] = quality
@@ -492,6 +525,17 @@ class PillowBackend(object):
         # Set or preserve TIFF compression (it uses raw otherwise)
         if save_opts['format'] == 'tiff':
             save_opts['compression'] = original_info.get('compression', 'jpeg')
+        # Preserve or remove metadata
+        if strip_info:
+            # Remove info from image, don't add to save_opts
+            for key in PillowBackend.METADATA_INFO_KEYS:
+                if key in image.info:
+                    del image.info[key]
+        else:
+            # Keep info
+            for key in PillowBackend.METADATA_INFO_KEYS:
+                if key in original_info:
+                    save_opts[key] = original_info[key]
         return save_opts
 
     def _get_pillow_format(self, format):
