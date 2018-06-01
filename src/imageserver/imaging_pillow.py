@@ -38,11 +38,6 @@ except Exception as e:
     _pillow_import_error = e
 
 
-# TODO resize now applies an srgb icc profile - do we need to preserve it in
-#      subsequent operations? is it doing the right thing if the original image
-#      already had an icc profile on arrival?
-
-
 class PillowBackend(object):
     """
     Implements a back-end for imaging.py using the Python Pillow library.
@@ -66,23 +61,24 @@ class PillowBackend(object):
         if _pillow_import_error:
             raise ImportError("Failed to import Pillow: " + str(_pillow_import_error))
         try:
-            # Pre-calculate Linear RGB <--> sRGB transformations
+            # Cache some useful ICC profiles
             linear_file = io.BytesIO(LINEAR_RGB_ICC_PROFILE)
             srgb_file = io.BytesIO(SRGB_ICC_PROFILE)
-            linear_profile = ImageCms.ImageCmsProfile(linear_file)
-            srgb_profile = ImageCms.ImageCmsProfile(srgb_file)
+            self.linear_rgb_profile = ImageCms.ImageCmsProfile(linear_file)
+            self.srgb_profile = ImageCms.ImageCmsProfile(srgb_file)
 
+            # Pre-calculate Linear RGB <--> sRGB transformations
             self._transform_rgb_srgb_to_linear = ImageCms.buildTransform(
-                srgb_profile, linear_profile, 'RGB', 'RGB'
+                self.srgb_profile, self.linear_rgb_profile, 'RGB', 'RGB'
             )
             self._transform_rgb_linear_to_srgb = ImageCms.buildTransform(
-                linear_profile, srgb_profile, 'RGB', 'RGB'
+                self.linear_rgb_profile, self.srgb_profile, 'RGB', 'RGB'
             )
             self._transform_rgba_srgb_to_linear = ImageCms.buildTransform(
-                srgb_profile, linear_profile, 'RGBA', 'RGBA'
+                self.srgb_profile, self.linear_rgb_profile, 'RGBA', 'RGBA'
             )
             self._transform_rgba_linear_to_srgb = ImageCms.buildTransform(
-                linear_profile, srgb_profile, 'RGBA', 'RGBA'
+                self.linear_rgb_profile, self.srgb_profile, 'RGBA', 'RGBA'
             )
         finally:
             linear_file.close()
@@ -230,11 +226,13 @@ class PillowBackend(object):
                     fill_rgb = self._auto_fill_colour(image)
             # (4) Resize
             if new_width != 0 or new_height != 0:
+                # Pass through the ICC profile here if the image started out with one
+                if 'icc_profile' in original_info:
+                    image.info['icc_profile'] = original_info['icc_profile']
                 image = self._image_resize(
                     image, new_width, new_height, size_auto_fit,
                     align_h, align_v, fill_rgb, rquality
                 )
-                # TODO preserve srgb profile if was added? may not need to
             # (5) Blur/sharpen - P2
             # (6) Overlay - P2
             # (7) Tile
@@ -243,6 +241,7 @@ class PillowBackend(object):
             # (8) Apply ICC profile - P3
             # (9) Set colorspace - P3
             # (10) Strip (handled below in _get_pillow_save_options)
+            # TODO if RGB and profile and not sRGB profile and we're stripping the profile we need to convert to sRGB
 
             # Return encoded image bytes
             image = self._set_pillow_save_mode(image, iformat, fill_rgb)
@@ -745,23 +744,35 @@ class PillowBackend(object):
         The quality number can be from 1 (fastest) to 3 (best quality).
         """
         use_image = image
+        builtin_profile = None
         # Use gamma correction when resizing sRGB images - http://www.4p8.com/eric.brasseur/gamma.html
-        # Since Pillow does not have any colorspace awareness, we'll have to
-        # assume that anything in "RGB" mode is actually sRGB. This topic is
-        # discussed at https://github.com/python-pillow/Pillow/issues/1604
+        # Since Pillow does not have any colorspace awareness, we'll assume that
+        # anything in "RGB" mode without an embedded profile is actually sRGB.
+        # This topic is discussed at https://github.com/python-pillow/Pillow/issues/1604
         gamma_correct = image.mode.startswith('RGB')
         if gamma_correct:
-            transform = self._transform_rgba_srgb_to_linear if image.mode.endswith('A') else \
-                        self._transform_rgb_srgb_to_linear
-            use_image = ImageCms.applyTransform(image, transform)
+            if 'icc_profile' in image.info:
+                builtin_profile = ImageCms.ImageCmsProfile(io.BytesIO(image.info['icc_profile']))
+                use_image = ImageCms.profileToProfile(image, builtin_profile, self.linear_rgb_profile)
+            else:
+                transform = self._transform_rgba_srgb_to_linear if image.mode.endswith('A') else \
+                            self._transform_rgb_srgb_to_linear
+                use_image = ImageCms.applyTransform(image, transform)
+        # Actual resize here
         new_image = use_image.resize(
             (width, height),
             resample=self._get_pillow_resample(quality)
         )
         if gamma_correct:
-            transform = self._transform_rgba_linear_to_srgb if new_image.mode.endswith('A') else \
-                        self._transform_rgb_linear_to_srgb
-            new_image = ImageCms.applyTransform(new_image, transform)
+            if builtin_profile:
+                new_image = ImageCms.profileToProfile(new_image, self.linear_rgb_profile, builtin_profile)
+            else:
+                transform = self._transform_rgba_linear_to_srgb if new_image.mode.endswith('A') else \
+                            self._transform_rgb_linear_to_srgb
+                new_image = ImageCms.applyTransform(new_image, transform)
+                # Pillow attaches the sRGB profile, but as we arrived here without one...
+                if 'icc_profile' in new_image.info:
+                    del new_image.info['icc_profile']
         if auto_close:
             image.close()
         return new_image
