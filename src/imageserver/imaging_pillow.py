@@ -43,6 +43,8 @@ class PillowBackend(object):
     Implements a back-end for imaging.py using the Python Pillow library.
     """
     MAX_ICC_SIZE = 1048576 * 5
+
+    # Keys in image.info that are important to preserve through the processing chain
     METADATA_INFO_KEYS = (
         'icc_profile', 'exif',                            # Generic
         'gamma',                                          # PNG
@@ -190,6 +192,7 @@ class PillowBackend(object):
                             image,
                             'LA' if image.mode == 'L' else 'RGBA'
                         )
+                        self._restore_pillow_info(image, original_info)
                 else:
                     fill_colour = '#ffffff'
 
@@ -211,45 +214,52 @@ class PillowBackend(object):
             # (1) Flip
             if flip == 'h' or flip == 'v':
                 image = self._image_flip(image, flip)
+                self._restore_pillow_info(image, original_info)
             # (2) Rotate
             if rotation:
                 image = self._image_rotate(image, rotation, rquality, fill_rgb)
+                self._restore_pillow_info(image, original_info)
             # (3) Crop
             if (crop_top, crop_left, crop_bottom, crop_right) != (0.0, 0.0, 1.0, 1.0):
                 image = self._image_crop(
                     image, crop_top, crop_left, crop_bottom, crop_right,
                     crop_auto_fit, new_width, new_height
                 )
-                # If auto-fill is enabled and we didn't rotate (i.e. we haven't used the
-                # fill colour yet), work out a new fill colour, post-crop
+                self._restore_pillow_info(image, original_info)
+                # If auto-fill is enabled and we didn't rotate
+                # (i.e. we haven't filled yet), work out a new fill colour, post-crop
                 if fill_colour == 'auto' and not rotation:
                     fill_rgb = self._auto_fill_colour(image)
             # (4) Resize
             if new_width != 0 or new_height != 0:
-                # Pass through the ICC profile here if the image started out with one
-                if 'icc_profile' in original_info:
-                    image.info['icc_profile'] = original_info['icc_profile']
                 image = self._image_resize(
                     image, new_width, new_height, size_auto_fit,
                     align_h, align_v, fill_rgb, rquality
                 )
+                self._restore_pillow_info(image, original_info)
             # (5) Blur/sharpen - P2
             # (6) Overlay - P2
             # (7) Tile
             if tile_spec >= (1, 4):
                 image = self._image_tile(image, tile_spec)
+                self._restore_pillow_info(image, original_info)
             # (8) Apply ICC profile - P3
             # (9) Set colorspace - P3
-            # (10) Strip (handled below in _get_pillow_save_options)
-            # TODO if RGB and profile and not sRGB profile and we're stripping the profile we need to convert to sRGB
+            # (10) Strip (preparation, the strip is done by _get_pillow_save_options)
+            if strip_info:
+                image = self._image_pre_strip(image)
+                self._restore_pillow_info(image, original_info)
 
-            # Return encoded image bytes
+            # Check/set the image mode for the output image format
             image = self._set_pillow_save_mode(image, iformat, fill_rgb)
             if 'transparency' in image.info:
                 original_info['transparency'] = image.info['transparency']
+            self._restore_pillow_info(image, original_info)
+            # Get the save parameters for the output image format
             save_opts = self._get_pillow_save_options(
                 image, iformat, cquality, dpi, original_info, strip_info
             )
+            # Encode the image bytes and return encoded bytes
             image.save(bufout, **save_opts)
             return bufout.getvalue()
         finally:
@@ -430,6 +440,30 @@ class PillowBackend(object):
         """
         return self._get_pillow_format(format) in ['gif', 'png']
 
+    def _supports_icc_profile(self, format):
+        """
+        Returns whether the given file format supports an embedded ICC profile.
+        """
+        return self._get_pillow_format(format) in ['jpeg', 'png']
+
+    def _restore_pillow_info(self, image, info_dict, info_keys=None):
+        """
+        Most of the Pillow operations return a new Image that is missing the info
+        attributes of the input image. This utility copies one or more info
+        attributes from info_dict into image. The info_keys can be an iterable of
+        key names to copy from info_dict, or if left blank it defaults to
+        PillowBackend.METADATA_INFO_KEYS. Keys that do not exist in info_dict are
+        silently ignored.
+        """
+        if not info_keys:
+            info_keys = PillowBackend.METADATA_INFO_KEYS
+        elif isinstance(info_keys, str):
+            info_keys = [info_keys]
+
+        for key in info_keys:
+            if key in info_dict:
+                image.info[key] = info_dict[key]
+
     def _set_pillow_save_mode(self, image, save_format, fill_rgb, auto_close=True):
         """
         Pillow by design raises an error if you try to save an image in an
@@ -488,8 +522,9 @@ class PillowBackend(object):
         """
         Returns a dictionary of the save options for an image in the desired file
         format, e.g. compression level, dpi, and other format-specific options.
-        When strip_info is False, metadata (e.g. EXIF tags) and color profiles
-        are copied across from the original_info dictionary.
+        When strip_info is True, some metadata (e.g. EXIF tags) and color profiles
+        are removed from the image info. When strip_info is False, this metadata
+        is copied to the returned save options, as required by some image plugins.
         """
         save_opts = {}
         # Special case - handle progressive JPEG
@@ -530,10 +565,11 @@ class PillowBackend(object):
                 if key in image.info:
                     del image.info[key]
         else:
-            # Keep info
+            # Keep info by adding it to save_opts (some Pillow plugins keep the
+            # image info, some require it to be copied to save parameters)
             for key in PillowBackend.METADATA_INFO_KEYS:
-                if key in original_info:
-                    save_opts[key] = original_info[key]
+                if key in image.info:
+                    save_opts[key] = image.info[key]
         return save_opts
 
     def _get_pillow_format(self, format):
@@ -680,6 +716,26 @@ class PillowBackend(object):
         if auto_close:
             image.close()
         return new_image
+
+    def _image_pre_strip(self, image, auto_close=True):
+        """
+        For an image that is going to be "stripped", performs any image
+        pre-processing required, returning either the same image unchanged
+        or a processed copy of it.
+        """
+        # For RGB images that have a non-sRGB colour profile (e.g. Nikon RGB)
+        # we mess up the colours by simply stripping it. If we convert to sRGB
+        # first, the result is much better, sometimes visually identical. For
+        # CMYK images it is documented that stripping them alters the colours,
+        # and there is no default/fallback profile.
+        if image.mode.startswith('RGB') and 'icc_profile' in image.info:
+            if image.info['icc_profile'] != SRGB_ICC_PROFILE:
+                builtin_profile = ImageCms.ImageCmsProfile(io.BytesIO(image.info['icc_profile']))
+                new_image = ImageCms.profileToProfile(image, builtin_profile, self.srgb_profile)
+                if auto_close:
+                    image.close()
+                return new_image
+        return image
 
     def _image_flip(self, image, flip, auto_close=True):
         """
