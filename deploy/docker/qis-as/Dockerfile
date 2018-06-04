@@ -84,8 +84,6 @@ RUN curl -L "https://github.com/quru/qis/releases/download/v$QIS_VERSION/QIS-lib
     rm /tmp/qis-libs.tar.gz && \
     chown -R $QIS_USER:$QIS_USER lib
 
-# TODO Install qismagick.so package
-
 # Configure Apache
 RUN ln -s /etc/apache2/mods-available/ssl.load /etc/apache2/mods-enabled/ssl.load && \
     ln -s /etc/apache2/mods-available/ssl.conf /etc/apache2/mods-enabled/ssl.conf && \
