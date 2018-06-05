@@ -100,3 +100,4 @@ Anyone can just go into the code and disable the license checks.
   by default so that e.g. colorspace conversions do not cause clipping)
 * Loss of some metadata even with strip=0
 * Loss of some embedded colour profiles (suspected, awaiting tests)
+* Slow gamma corrected resizing (or, choose no gamma correction)

@@ -807,6 +807,7 @@ class PillowBackend(object):
         # This topic is discussed at https://github.com/python-pillow/Pillow/issues/1604
         gamma_correct = image.mode.startswith('RGB')
         if gamma_correct:
+            # TODO This takes 80% of the time for an image resize. Add a setting for whether to enable it.
             if 'icc_profile' in image.info:
                 builtin_profile = ImageCms.ImageCmsProfile(io.BytesIO(image.info['icc_profile']))
                 use_image = ImageCms.profileToProfile(image, builtin_profile, self.linear_rgb_profile)

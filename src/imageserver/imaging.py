@@ -37,10 +37,10 @@ from . import imaging_pillow as pillow
 _backend = None
 
 
-def imaging_backend_supported(back_end='auto'):
+def imaging_backend_supported(back_end):
     """
     Returns whether a back-end imaging library is installed and supported.
-    Possible back-ends: 'pillow' or 'imagemagick'.
+    Possible back-ends: "pillow" or "imagemagick".
     """
     try:
         if back_end.lower() == 'imagemagick':
@@ -48,7 +48,24 @@ def imaging_backend_supported(back_end='auto'):
         elif back_end.lower() == 'pillow':
             return pillow.PillowBackend('gs', '.', 150) is not None
     except ImportError:
-        return False
+        pass
+    return False
+
+
+def imaging_get_backend():
+    """
+    Returns whether the initialised imaging back-end is "pillow" or "imagemagick",
+    or returns None if imaging_init() has not been called.
+    """
+    global _backend
+    if not _backend:
+        return None
+    elif isinstance(_backend, magick.ImageMagickBackend):
+        return 'imagemagick'
+    elif isinstance(_backend, pillow.PillowBackend):
+        return 'pillow'
+    else:
+        return 'unknown'
 
 
 def imaging_init(back_end='auto', gs_path='gs', temp_files_path=None, pdf_default_dpi=150):
@@ -58,7 +75,7 @@ def imaging_init(back_end='auto', gs_path='gs', temp_files_path=None, pdf_defaul
     to call during normal operation.
     An ImportError is raised if the back-end imaging library cannot be loaded.
 
-    back_end - which back-end to load: 'pillow', 'imagemagick', or 'auto'
+    back_end - which back-end to load: "pillow", "imagemagick", or "auto"
     gs_path - for PDF file support, the path to the Ghostscript command, e.g. "gs"
     temp_files_path - the directory in which to create temp files, e.g. "/tmp",
                       defaults to the operating system's temp directory
@@ -73,7 +90,7 @@ def imaging_init(back_end='auto', gs_path='gs', temp_files_path=None, pdf_defaul
         _backend = magick.ImageMagickBackend(gs_path, temp_files_path, pdf_default_dpi)
     elif back_end.lower() == 'pillow':
         _backend = pillow.PillowBackend(gs_path, temp_files_path, pdf_default_dpi)
-    else:
+    else:  # Auto detect
         try:
             _backend = magick.ImageMagickBackend(gs_path, temp_files_path, pdf_default_dpi)
         except ImportError:
