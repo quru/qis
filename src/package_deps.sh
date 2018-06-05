@@ -16,7 +16,6 @@ DIST_DIR=$(pwd)/dist
 BUILD_DIR=$(pwd)/build
 WHEELS_DIR=$BUILD_DIR/wheels
 CACHE_DIR=$BUILD_DIR/cache
-QISMAGICK_DIR=$HOME/qis-build/qismagick
 
 if [ "$PYTHON_VER" = "" ]; then
 	echo "You must specify which python version to use, e.g. package_deps.sh python3.5"
@@ -56,11 +55,6 @@ find . -type f -name '*.tar.gz' -exec tar -zxf {} \;
 find . -type f -name '*.tar.bz2' -exec tar -jxf {} \;
 find . -type f -name 'setup.py' -execdir python -c "import setuptools; exec(open('setup.py').read(), {'__file__': './setup.py', '__name__': '__main__'})" bdist_wheel --dist-dir $WHEELS_DIR \;
 cd ../..
-
-# Add in the qismagick wheel, if present
-echo -e '\nAdding qismagick.so wheel'
-[ -d $QISMAGICK_DIR ] && cp $QISMAGICK_DIR/*.whl $WHEELS_DIR
-[ -d $QISMAGICK_DIR ] || echo "WARNING! $QISMAGICK_DIR not found (you will need to add it later)"
 
 # Install all the wheels we made (into the virtualenv's lib directory)
 echo -e '\nInstalling all wheels into the build environment'

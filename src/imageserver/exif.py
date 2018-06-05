@@ -201,7 +201,7 @@ IGNORE_TAGS = (
     'JPEGInterchangeFormat', 'JPEGInterchangeFormatLength',
     'Interoperability IFD Pointer', 'InteroperabilityOffset',
     'ExifOffset', 'ExifImageLength',
-    # Added v3.2
+    # Added v4.0
     'GPSInfo', 'ICCProfile', 'IptcNaaInfo', 'XMP',
     'JPEGTables', 'StripByteCounts', 'StripOffsets'
 )

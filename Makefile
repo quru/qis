@@ -3,8 +3,6 @@ PYTHON_VER := $(shell ${PYTHON_BIN} -c 'import platform; print(platform.python_v
 PYTHON := python${PYTHON_VER}
 VENV_PATH := .
 VENV_ACTIVATE := . ${VENV_PATH}/bin/activate
-QISMAGICK_SO := ${VENV_PATH}/lib/${PYTHON}/site-packages/qismagick.so
-QISMAGICK_WHEEL_DIR := $$HOME/qis-build/qismagick
 SET_LOCALE := export LANG=en_GB.UTF-8 ; export LC_ALL=en_GB.UTF-8
 
 jenkins: test distribute
@@ -33,12 +31,9 @@ flake8.txt: ${VENV_PATH}/bin/flake8
 ${VENV_PATH}/bin/flake8: venv
 	${VENV_ACTIVATE} ; pip install flake8
 
-venv: ${VENV_PATH}/bin/activate setup.py doc/requirements.txt ${QISMAGICK_SO}
+venv: ${VENV_PATH}/bin/activate setup.py doc/requirements.txt
 	${VENV_ACTIVATE} ; pip install --upgrade pip setuptools wheel
 	${VENV_ACTIVATE} ; pip install --upgrade -r doc/requirements.txt
-
-${QISMAGICK_SO}: setup.py doc/requirements.txt
-	${VENV_ACTIVATE} ; pip install --upgrade --no-index --find-links file://$(QISMAGICK_WHEEL_DIR) qismagick || echo "Warning: qismagick.so was not installed"
 
 ${VENV_PATH}/bin/activate:
 	virtualenv --python=${PYTHON} ${VENV_PATH}
