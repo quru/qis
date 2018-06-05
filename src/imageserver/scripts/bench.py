@@ -28,6 +28,7 @@
 # Date       By    Details
 # =========  ====  ============================================================
 # 18Nov2015  Matt  v1.42 Indicate server processing time vs total request time
+# 05Jun2018  Matt  v4.0 Add PDF support detection, add --no-pdf option
 #
 # Note: this script stands alone and can be run from anywhere that has Python
 #
@@ -52,54 +53,57 @@ REFERRER = 'qis/benchmark'
 
 # Sample URLs, based on a production workload, changed to use test images
 URLS = [
-    'image?src=test_images/cowboy.jpg&width=150',
-    'image?src=test_images/bear.jpg&width=640&height=480&halign=l0&valign=t0&autosizefit=1',
-    'image?src=test_images/sunrise1.jpg&fill=FFFFFF&height=480&width=640',
-    'image?src=test_images/sunrise2.jpg&top=0.055084745762&left=0.170000000000&bottom=0.817815678442&right=0.970000000000&height=480&width=640',
-    'image?src=test_images/bear.jpg&width=150',
-    'image?src=test_images/sunrise1.jpg&fill=FFFFFF&bottom=0.999999999999&height=480&width=640',
-    'image?src=test_images/cowboy.jpg&width=640&height=480&halign=l0&valign=t0&autosizefit=1',
-    'image?src=test_images/bear.jpg&fill=FFFFFF&height=480&width=640',
-    'image?src=test_images/sunrise2.jpg&top=0.084677419354&bottom=0.991958165889&height=480&width=640',
+    'image?src=test_images/cowboy.jpg&width=150&strip=1',
+    'image?src=test_images/bear.jpg&width=640&height=480&halign=l0&valign=t0&autosizefit=1&strip=0',
+    'image?src=test_images/sunrise1.jpg&fill=FFFFFF&height=480&width=640&strip=0',
+    'image?src=test_images/sunrise2.jpg&top=0.055084745762&left=0.170000000000&bottom=0.817815678442&right=0.970000000000&height=480&width=640&strip=0',
+    'image?src=test_images/bear.jpg&width=150&strip=1',
+    'image?src=test_images/sunrise1.jpg&fill=FFFFFF&bottom=0.999999999999&height=480&width=640&strip=0',
+    'image?src=test_images/cowboy.jpg&width=640&height=480&halign=l0&valign=t0&autosizefit=1&strip=0',
+    'image?src=test_images/bear.jpg&fill=FFFFFF&height=480&width=640&strip=1',
+    'image?src=test_images/sunrise2.jpg&top=0.084677419354&bottom=0.991958165889&height=480&width=640&strip=1',
     'original?src=test_images/quru110.png&stats=0',
-    'image?src=test_images/sunrise1.jpg&width=150',
+    'image?src=test_images/sunrise1.jpg&width=150&strip=1',
     'api/v1/details/?src=test_images/quru470.png',
-    'image?src=test_images/bear.jpg&tmp=SmallJpeg&width=200&quality=100&format=jpeg',
-    'image?src=test_images/quru470.png&width=150',
-    'image?src=test_images/pdftest.pdf&width=200',
-    'image?src=test_images/sunrise2.jpg&right=0.523050000000&width=200',
-    'image?src=test_images/pdftest.pdf&width=640',
-    'image?src=test_images/dorset.jpg&width=150',
-    'image?src=test_images/cathedral.jpg&width=200',
-    'image?src=test_images/cowboy.jpg&left=0.280000000000&right=0.808333333333&width=200',
-    'image?src=test_images/sunrise1.jpg&top=0.0870&left=0.0000&bottom=0.8333&right=1.0000&height=480&width=640',
-    'image?src=test_images/pdftest.pdf&width=200&height=200&fill=BBBBBB',
-    'image?src=test_images/cowboy.jpg&tmp=SmallJpeg&width=200&quality=100&format=jpeg',
-    'image?src=test_images/cathedral.jpg&top=0.019920318725&left=0.130000000000&bottom=0.976095617529&right=0.764000000000&width=200',
-    'image?src=test_images/bear.jpg&width=308',
-    'image?src=test_images/sunrise2.jpg&width=640&height=480&halign=l0&valign=t0&autosizefit=1',
-    'image?src=test_images/bear.jpg&fill=FFFFFF&bottom=0.810810810810&height=480&width=960',
-    'image?src=test_images/cathedral.jpg&width=308',
-    'image?src=test_images/dorset.jpg&width=308',
-    'image?src=test_images/thames.jpg&width=308',
-    'image?src=test_images/multipage.tif&left=0.046666666666&right=0.709725000000&width=200',
+    'image?src=test_images/bear.jpg&tmp=SmallJpeg&width=200&quality=100&format=jpeg&strip=1',
+    'image?src=test_images/quru470.png&width=150&strip=1',
+    'image?src=test_images/pdftest.pdf&width=200&strip=1',
+    'image?src=test_images/sunrise2.jpg&right=0.523050000000&width=200&strip=1',
+    'image?src=test_images/pdftest.pdf&width=640&strip=0',
+    'image?src=test_images/dorset.jpg&width=150&strip=1',
+    'image?src=test_images/cathedral.jpg&width=200&strip=1',
+    'image?src=test_images/cowboy.jpg&left=0.280000000000&right=0.808333333333&width=200&strip=1',
+    'image?src=test_images/sunrise1.jpg&top=0.0870&left=0.0000&bottom=0.8333&right=1.0000&height=480&width=640&strip=0',
+    'image?src=test_images/pdftest.pdf&width=200&height=200&fill=BBBBBB&strip=1',
+    'image?src=test_images/cowboy.jpg&tmp=SmallJpeg&width=200&quality=100&format=jpeg&strip=0',
+    'image?src=test_images/cathedral.jpg&top=0.019920318725&left=0.130000000000&bottom=0.976095617529&right=0.764000000000&width=200&strip=1',
+    'image?src=test_images/bear.jpg&width=308&strip=0',
+    'image?src=test_images/sunrise2.jpg&width=640&height=480&halign=l0&valign=t0&autosizefit=1&strip=0',
+    'image?src=test_images/bear.jpg&fill=FFFFFF&bottom=0.810810810810&height=480&width=960&strip=0',
+    'image?src=test_images/cathedral.jpg&width=308&strip=1',
+    'image?src=test_images/dorset.jpg&width=308&strip=0',
+    'image?src=test_images/thames.jpg&width=308&strip=0',
+    'image?src=test_images/multipage.tif&left=0.046666666666&right=0.709725000000&width=200&strip=0',
     'original?src=test_images/quru470.png',
-    'image?src=test_images/sunrise2.jpg&fill=FFFFFF&top=0.060000000000&bottom=0.420000000000&height=480&width=960',
-    'image?src=test_images/thames.jpg&fill=FFFFFF&top=0.276666666666&bottom=0.886681917047&height=480&width=640',
-    'image?src=test_images/cowboy.jpg&fill=FFFFFF&top=0.010000000000&bottom=0.607514937873&right=0.999999999999&height=480&width=640',
+    'image?src=test_images/sunrise2.jpg&fill=FFFFFF&top=0.060000000000&bottom=0.420000000000&height=480&width=960&strip=0',
+    'image?src=test_images/thames.jpg&fill=FFFFFF&top=0.276666666666&bottom=0.886681917047&height=480&width=640&strip=0',
+    'image?src=test_images/cowboy.jpg&fill=FFFFFF&top=0.010000000000&bottom=0.607514937873&right=0.999999999999&height=480&width=640&strip=0',
     'api/v1/details/?src=test_images/sunrise1.jpg',
-    'image?src=test_images/sunrise1.jpg&height=305&width=232&fill=ffffff',
-    'image?src=test_images/sunrise2.jpg&height=305&width=232&fill=ffffff',
+    'image?src=test_images/sunrise1.jpg&height=305&width=232&fill=ffffff&strip=1',
+    'image?src=test_images/sunrise2.jpg&height=305&width=232&fill=ffffff&strip=1',
     'image?src=test_images/bear.jpg&width=568&height=700&autosizefit=0&strip=1&format=jpg&fill=none&stats=0',
     'image?src=test_images/cowboy.jpg&width=2816&height=2112&strip=1&format=jpg&fill=none&autosizefit=0&stats=0&tile=8:16',
     'image?src=test_images/cowboy.jpg&width=2816&height=2112&strip=1&format=jpg&fill=none&autosizefit=0&stats=0&tile=12:16'
 ]
 
+# A URL that checks whether PDF conversion is supported
+PDF_URL = 'image?src=test_images/pdftest.pdf&width=100'
+
 # Roughly how many different images are in the image URLs
-URL_IMAGES = 8
+URL_IMAGES = 9
 
 
-def validate_params(server_url, num_requests, cache_pct, num_clients):
+def validate_params(server_url, num_requests, cache_pct, num_clients, include_pdf):
     """
     Validates the command line parameters, returning 0 on success or a code
     number that can be used as the application return value on error.
@@ -113,6 +117,21 @@ def validate_params(server_url, num_requests, cache_pct, num_clients):
     except urllib.error.URLError as e:
         error('Failed to connect to %s: %s' % (server_url, str(e)))
         return RETURN_BAD_PARAMS
+
+    # Check PDF support
+    if include_pdf:
+        log('Checking PDF conversion support')
+        try:
+            req = urllib.request.Request(server_url + PDF_URL)
+            req.add_header('Referer', REFERRER)
+            urllib.request.urlopen(req)
+        except urllib.error.HTTPError as e:
+            if e.code == 415:
+                error('PDF conversion is not supported by your server. '
+                    'Please re-run your command with --no-pdf.')
+                return RETURN_BAD_PARAMS
+            else:
+                raise
 
     # Validate the rest
     if num_requests < 1:
@@ -163,6 +182,7 @@ def show_usage():
     print('       --verbose to output more detailed status logs')
     print('       --only-warm to only warm the cache then skip the actual tests')
     print('       --skip-warm to skip the cache warming and run the tests immediately')
+    print('       --no-pdf to not perform tests of PDF to image conversion')
     print('\nExamples:')
     print('       python bench.py http://images.example.com/')
     print('       python bench.py --verbose http://images.example.com/ 5000 80 10')
@@ -177,8 +197,10 @@ def show_usage():
 
 def get_parameters():
     """
-    Returns a tuple of 7 items for the parameters provided on the command line:
-    server_url, num_requests, from_cache_pct, num_clients, verbose, warm_only, skip_warm
+    Returns a tuple of 8 items for the parameters provided on the command line:
+
+        (server_url, num_requests, from_cache_pct, num_clients,
+         verbose, warm_only, skip_warm, include_pdf)
     """
     server_url = None
     num_requests = None
@@ -187,6 +209,7 @@ def get_parameters():
     verbose = False
     warm_only = False
     skip_warm = False
+    include_pdf = True
 
     for arg in sys.argv:
         if arg == __file__:
@@ -197,6 +220,8 @@ def get_parameters():
             warm_only = True
         elif arg == '--skip-warm':
             skip_warm = True
+        elif arg == '--no-pdf':
+            include_pdf = False
         elif server_url is None:
             server_url = arg
         elif num_requests is None:
@@ -217,8 +242,10 @@ def get_parameters():
     if num_clients is None:
         num_clients = 4
 
-    return server_url, num_requests, from_cache_pct, num_clients, \
-        verbose, warm_only, skip_warm
+    return (
+        server_url, num_requests, from_cache_pct, num_clients,
+        verbose, warm_only, skip_warm, include_pdf
+    )
 
 
 def single_request(url):
@@ -254,12 +281,17 @@ def single_request(url):
 
 
 def make_requests(server_url, num_requests, cache_pct, num_clients,
-                  verbose, warm_only, skip_warm):
+                  verbose, warm_only, skip_warm, include_pdf):
     """
     Runs the benchmarking tests and prints the results.
     """
     global _vb
     _vb = verbose
+
+    # If PDF is disabled, request something else instead
+    if not include_pdf:
+        for idx, url in enumerate(URLS):
+            URLS[idx] = url.replace('pdftest.pdf', 'profile-pro-photo.jpg')
 
     # Create a URL list of num_requests
     loops = num_requests // len(URLS)
@@ -396,18 +428,20 @@ if __name__ == '__main__':
     try:
         # Get params
         server_url, num_requests, cache_pct, num_clients, \
-            verbose, warm_only, skip_warm = get_parameters()
+            verbose, warm_only, skip_warm, include_pdf = get_parameters()
         if not server_url:
             show_usage()
             exit(RETURN_MISSING_PARAMS)
 
-        rc = validate_params(server_url, num_requests, cache_pct, num_clients)
+        rc = validate_params(
+            server_url, num_requests, cache_pct, num_clients, include_pdf
+        )
         if rc != RETURN_OK:
             exit(rc)
 
         rc = make_requests(
             server_url, num_requests, cache_pct, num_clients,
-            verbose, warm_only, skip_warm
+            verbose, warm_only, skip_warm, include_pdf
         )
         exit(rc)
 
