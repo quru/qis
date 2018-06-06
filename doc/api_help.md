@@ -1653,7 +1653,7 @@ more recent versions of the software.
 	      "crop_fit": { "value": false },
 	      "dpi_x": { "value": null },
 	      "dpi_y": { "value": null },
-	      "expiry_secs": { "value": null },
+	      "expiry_secs": { "value": 604800 },
 	      "fill": { "value": "#ffffff" },
 	      "flip": { "value": "" },
 	      "format": { "value": "jpg" },
@@ -1668,7 +1668,7 @@ more recent versions of the software.
 	      "overlay_src": { "value": "" },
 	      "page": { "value": null },
 	      "quality": { "value": 80 },
-	      "record_stats": { "value": false },
+	      "record_stats": { "value": true },
 	      "right": { "value": null },
 	      "rotation": { "value": null },
 	      "sharpen": { "value": null },
@@ -1685,7 +1685,7 @@ more recent versions of the software.
 
 	$ curl -X POST -u <token>:unused -F 'name=grey-thumb' \
 	       -F 'description=Defines a greyscale thumbnail with a black fill' \
-	       -F 'template={ "colorspace":{"value":"grey"}, "width":{"value":400}, "height":{"value":400}, "fill":{"value":"black"} }' \
+	       -F 'template={ "colorspace":{"value":"gray"}, "width":{"value":400}, "height":{"value":400}, "fill":{"value":"black"} }' \
 	       'https://images.example.com/api/v1/admin/templates/'
 	{
 	  "data": {
@@ -1693,7 +1693,7 @@ more recent versions of the software.
 	    "id": 3,
 	    "name": "grey-thumb",
 	    "template": {
-	      "colorspace": { "value": "grey" },
+	      "colorspace": { "value": "gray" },
 	      "fill": { "value": "black" },
 	      "height": { "value": 400 },
 	      "width": { "value": 400 }
