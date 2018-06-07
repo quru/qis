@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Quru Image Server
 #
@@ -33,11 +32,11 @@
 from collections import defaultdict
 from io import BytesIO
 from datetime import datetime
+from unittest import mock
 import os
 import signal
 import time
 
-import mock
 import tests.tests as main_tests
 
 from imageserver.auxiliary import stats_server

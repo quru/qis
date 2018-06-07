@@ -14,5 +14,4 @@ markdown==2.6.10
 #wheel
 #nose
 #coverage
-#mock
 #flake8

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Quru Image Server
 #
@@ -46,8 +45,8 @@ import tempfile
 import time
 import timeit
 import unittest
+from unittest import mock
 
-import mock
 import flask
 from werkzeug.http import http_date
 
