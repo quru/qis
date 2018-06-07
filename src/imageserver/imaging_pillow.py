@@ -315,7 +315,7 @@ class PillowBackend(object):
         Raises a ValueError if any of the parameters have invalid values.
         """
         # Remove None entries from dict
-        image_spec = {k:v for k, v in image_spec.items() if v is not None}
+        image_spec = {k: v for k, v in image_spec.items() if v is not None}
         # Set default values / adjust parameters to safe values
         image_spec['page'] = _limit_number(image_spec.get('page', 1), 1, 999999)
         image_spec['width'] = image_spec.get('width', 0)
@@ -476,7 +476,7 @@ class PillowBackend(object):
         fixed_dict = {}
         if tag_dict:
             # Convert {(datatype, tagcode): value} to {tagcode:value}
-            fixed_dict = {k[1]:v for k, v in tag_dict.items()}
+            fixed_dict = {k[1]: v for k, v in tag_dict.items()}
             # Convert byte values to str and [byte, byte] to (str, str)
             for k, v in fixed_dict.items():
                 if isinstance(v, bytes):
@@ -586,7 +586,8 @@ class PillowBackend(object):
         # Otherwise return image unchanged
         return image
 
-    def _get_pillow_save_options(self, image, format, quality, dpi_x, dpi_y, original_info, strip_info):
+    def _get_pillow_save_options(self, image, format, quality, dpi_x, dpi_y,
+                                 original_info, strip_info):
         """
         Returns a dictionary of the save options for an image in the desired file
         format, e.g. compression level, dpi, and other format-specific options.

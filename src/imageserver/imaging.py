@@ -73,7 +73,7 @@ def imaging_init(back_end='auto', gs_path='gs', temp_files_path=None, pdf_defaul
         _backend = magick.ImageMagickBackend(gs_path, temp_files_path, pdf_default_dpi)
     elif back_end.lower() == 'pillow':
         _backend = pillow.PillowBackend(gs_path, temp_files_path, pdf_default_dpi)
-    else:  # Auto detect
+    else:  # Auto detect
         try:
             _backend = magick.ImageMagickBackend(gs_path, temp_files_path, pdf_default_dpi)
         except ImportError:
@@ -106,6 +106,7 @@ def imaging_get_version_info():
 # TODO poke operation support via image manager, not here directly,
 #      and map overlay data/src and icc data/src keys
 
+
 def imaging_supported_operations():
     """
     Returns a dictionary of key:boolean entries for which of the imaging operations
@@ -116,6 +117,7 @@ def imaging_supported_operations():
         key_supported = imaging_supported_operations().get(key, False)
     """
     return _backend.supported_operations()
+
 
 def imaging_adjust_image(image_data, data_type, image_spec):
     """
