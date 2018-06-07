@@ -34,7 +34,6 @@ import os
 import shutil
 
 from . import tests as main_tests
-from .tests import BaseTestCase, setup_user_account
 
 from imageserver.flask_app import app as flask_app
 from imageserver.flask_app import cache_engine as cm
@@ -43,12 +42,12 @@ from imageserver.filesystem_manager import (
 )
 
 
-class ImageServerTestsWebPages(BaseTestCase):
+class ImageServerTestsWebPages(main_tests.BaseTestCase):
     @classmethod
     def setUpClass(cls):
         super(ImageServerTestsWebPages, cls).setUpClass()
         main_tests.init_tests()
-        setup_user_account('webuser', 'none')
+        main_tests.setup_user_account('webuser', 'none')
 
     # Utility to call a page requiring login, with and without login,
     # returns the response of the requested URL after logging in.
@@ -319,7 +318,7 @@ class ImageServerTestsWebPages(BaseTestCase):
     def test_template_admin_page(self):
         # test_system_permission_pages() already tests that the pages work
         # so here we test that non-super users cannot edit templates
-        setup_user_account('lister', 'admin_files')
+        main_tests.setup_user_account('lister', 'admin_files')
         self.login('lister', 'lister')
         rv = self.app.get('/admin/templates/')
         self.assertEqual(rv.status_code, 200)

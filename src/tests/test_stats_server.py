@@ -37,7 +37,7 @@ import os
 import signal
 import time
 
-import tests.tests as main_tests
+from . import tests as main_tests
 
 from imageserver.auxiliary import stats_server
 from imageserver.auxiliary.util import get_pid

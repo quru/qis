@@ -41,10 +41,6 @@ from werkzeug.urls import url_quote_plus
 
 
 from . import tests as main_tests
-from .tests import (
-    BaseTestCase, setup_user_account,
-    set_default_internal_permission, set_default_public_permission
-)
 
 from imageserver.flask_app import app as flask_app
 from imageserver.flask_app import cache_engine as cm
@@ -71,7 +67,7 @@ from imageserver.models import (
 from imageserver.util import strip_sep, unicode_to_utf8
 
 
-class ImageServerAPITests(BaseTestCase):
+class ImageServerAPITests(main_tests.BaseTestCase):
     @classmethod
     def setUpClass(cls):
         super(ImageServerAPITests, cls).setUpClass()
@@ -104,7 +100,7 @@ class ImageServerAPITests(BaseTestCase):
         rv = self.app.get('/api/admin/groups/')
         self.assertEqual(rv.status_code, API_CODES.REQUIRES_AUTH)
         # Login
-        setup_user_account('kryten', 'admin_all', allow_api=True)
+        main_tests.setup_user_account('kryten', 'admin_all', allow_api=True)
         token = self.api_login('kryten', 'kryten')
         creds = self._base64_encode(token + ':password')
         # Try again
@@ -115,7 +111,7 @@ class ImageServerAPITests(BaseTestCase):
 
     # API token login - normal with username+password http basic auth
     def test_token_login_http_basic_auth(self):
-        setup_user_account('kryten', 'none', allow_api=True)
+        main_tests.setup_user_account('kryten', 'none', allow_api=True)
         creds = self._base64_encode('kryten:kryten')
         rv = self.app.post('/api/token/', headers={
             'Authorization': 'Basic ' + creds
@@ -126,7 +122,7 @@ class ImageServerAPITests(BaseTestCase):
 
     # API token login - account disabled
     def test_token_login_user_disabled(self):
-        setup_user_account('kryten', 'admin_users', allow_api=True)
+        main_tests.setup_user_account('kryten', 'admin_users', allow_api=True)
         user = dm.get_user(username='kryten')
         self.assertIsNotNone(user)
         user.status = User.STATUS_DELETED
@@ -135,12 +131,12 @@ class ImageServerAPITests(BaseTestCase):
 
     # API token login - user.allow_api flag false
     def test_token_allow_api_false(self):
-        setup_user_account('kryten', 'admin_users', allow_api=False)
+        main_tests.setup_user_account('kryten', 'admin_users', allow_api=False)
         self.assertRaises(AssertionError, self.api_login, 'kryten', 'kryten')
 
     # Test you cannot request a new token by authenticating with an older (still valid) token
     def test_no_token_extension(self):
-        setup_user_account('kryten', 'none', allow_api=True)
+        main_tests.setup_user_account('kryten', 'none', allow_api=True)
         token = self.api_login('kryten', 'kryten')
         creds = self._base64_encode(token + ':password')
         # Try to get a new token with only the old token
@@ -157,7 +153,7 @@ class ImageServerAPITests(BaseTestCase):
         # Enable CSRF - there have been bugs with this overring API responses
         flask_app.config['TESTING'] = False
         try:
-            setup_user_account('kryten', 'admin_users', allow_api=True)
+            main_tests.setup_user_account('kryten', 'admin_users', allow_api=True)
             # Get a 1 second token
             flask_app.config['API_TOKEN_EXPIRY_TIME'] = 1
             token = self.api_login('kryten', 'kryten')
@@ -194,7 +190,7 @@ class ImageServerAPITests(BaseTestCase):
         # Enable CSRF - there have been bugs with this overring API responses
         flask_app.config['TESTING'] = False
         try:
-            setup_user_account('kryten', 'admin_users', allow_api=True)
+            main_tests.setup_user_account('kryten', 'admin_users', allow_api=True)
             token = self.api_login('kryten', 'kryten')
             # Tampered token
             token = ('0' + token[1:]) if token[0] != '0' else ('1' + token[1:])
@@ -350,7 +346,7 @@ class ImageServerAPITests(BaseTestCase):
         rv = self.app.get(api_url)
         assert rv.status_code == API_CODES.REQUIRES_AUTH
         # Log in without edit permission
-        setup_user_account('kryten', 'none')
+        main_tests.setup_user_account('kryten', 'none')
         self.login('kryten', 'kryten')
         # Test PUT (should fail)
         rv = self.app.put(api_url, data={
@@ -359,7 +355,7 @@ class ImageServerAPITests(BaseTestCase):
         })
         assert rv.status_code == API_CODES.UNAUTHORISED
         # Log in with edit permission
-        setup_user_account('kryten', 'admin_files')
+        main_tests.setup_user_account('kryten', 'admin_files')
         self.login('kryten', 'kryten')
         # Test PUT
         rv = self.app.put(api_url, data={
@@ -383,7 +379,7 @@ class ImageServerAPITests(BaseTestCase):
         #
         # Log in as std user
         #
-        setup_user_account('kryten', 'none')
+        main_tests.setup_user_account('kryten', 'none')
         self.login('kryten', 'kryten')
         # Logged in std user - user list should fail
         rv = self.app.get('/api/admin/users/')
@@ -400,7 +396,7 @@ class ImageServerAPITests(BaseTestCase):
         #
         # Log in as user with user admin
         #
-        setup_user_account('kryten', 'admin_users')
+        main_tests.setup_user_account('kryten', 'admin_users')
         self.login('kryten', 'kryten')
         # Logged in - getting another's details should now work
         rv = self.app.get('/api/admin/users/1/')
@@ -462,7 +458,7 @@ class ImageServerAPITests(BaseTestCase):
         rv = self.app.get('/api/admin/groups/' + str(Group.ID_EVERYONE) + '/')
         assert rv.status_code == API_CODES.REQUIRES_AUTH
         # Log in as std user
-        setup_user_account('kryten', 'none')
+        main_tests.setup_user_account('kryten', 'none')
         self.login('kryten', 'kryten')
         # Logged in std user - access should be denied
         rv = self.app.get('/api/admin/groups/')
@@ -472,7 +468,7 @@ class ImageServerAPITests(BaseTestCase):
         #
         # Log in as user with basic group access
         #
-        setup_user_account('kryten', 'admin_users')
+        main_tests.setup_user_account('kryten', 'admin_users')
         self.login('kryten', 'kryten')
         # Logged in basic admin - getting group details should be OK
         rv = self.app.get('/api/admin/groups/' + str(Group.ID_EVERYONE) + '/')
@@ -599,10 +595,10 @@ class ImageServerAPITests(BaseTestCase):
     #       or lock out the admin user
     def test_group_admin_lockout(self):
         # Create and log in as a user with full group access
-        setup_user_account('kryten', 'admin_permissions')
+        main_tests.setup_user_account('kryten', 'admin_permissions')
         self.login('kryten', 'kryten')
         db_user = dm.get_user(username='kryten', load_groups=True)
-        # setup_user_account() should have set up 1 group with the admin access
+        # main_tests.setup_user_account() should have set up 1 group with the admin access
         admin_groups = [g for g in db_user.groups if g.permissions.admin_permissions]
         self.assertEqual(len(admin_groups), 1)
         admin_group = admin_groups[0]
@@ -662,7 +658,7 @@ class ImageServerAPITests(BaseTestCase):
         rv = self.app.get('/api/admin/permissions/1/')
         assert rv.status_code == API_CODES.REQUIRES_AUTH
         # Log in as std user
-        setup_user_account('kryten', 'none')
+        main_tests.setup_user_account('kryten', 'none')
         self.login('kryten', 'kryten')
         # Logged in std user - access should be denied
         rv = self.app.get('/api/admin/permissions/')
@@ -672,7 +668,7 @@ class ImageServerAPITests(BaseTestCase):
         #
         # Log in as user with permissions admin access
         #
-        setup_user_account('kryten', 'admin_permissions')
+        main_tests.setup_user_account('kryten', 'admin_permissions')
         self.login('kryten', 'kryten')
         # Getting permissions should be OK
         rv = self.app.get('/api/admin/permissions/1/')
@@ -744,7 +740,7 @@ class ImageServerAPITests(BaseTestCase):
         rv = self.app.get('/api/admin/templates/1/')
         self.assertEqual(rv.status_code, API_CODES.REQUIRES_AUTH)
         # Log in as std user
-        setup_user_account('kryten', 'none')
+        main_tests.setup_user_account('kryten', 'none')
         self.login('kryten', 'kryten')
         # Logged in - template details should be available
         rv = self.app.get('/api/admin/templates/2/')
@@ -772,7 +768,7 @@ class ImageServerAPITests(BaseTestCase):
         rv = self.app.delete('/api/admin/templates/2/')
         self.assertEqual(rv.status_code, API_CODES.UNAUTHORISED)
         # Super user can perform updates
-        setup_user_account('kryten', 'admin_all')
+        main_tests.setup_user_account('kryten', 'admin_all')
         self.login('kryten', 'kryten')
         # Create
         rv = self.app.post('/api/admin/templates/', data={
@@ -917,7 +913,7 @@ class ImageServerAPITests(BaseTestCase):
             rv = self.app.delete('/api/admin/filesystem/images/%d/' % temp_image_id)
             assert rv.status_code == API_CODES.REQUIRES_AUTH, str(rv)
             # Log in as a standard user
-            setup_user_account('kryten', 'none')
+            main_tests.setup_user_account('kryten', 'none')
             self.login('kryten', 'kryten')
             # File ops should still fail
             rv = self.app.put('/api/admin/filesystem/images/%d/' % temp_image_id,
@@ -928,7 +924,7 @@ class ImageServerAPITests(BaseTestCase):
             #
             # Log in as a user with file admin
             #
-            setup_user_account('kryten', 'admin_files')
+            main_tests.setup_user_account('kryten', 'admin_files')
             self.login('kryten', 'kryten')
             # Rename the file (in the same folder)
             renamed_image = temp_folder + '/newname.jpg'
@@ -1053,7 +1049,7 @@ class ImageServerAPITests(BaseTestCase):
             rv = self.app.delete('/api/admin/filesystem/folders/1/')
             assert rv.status_code == API_CODES.REQUIRES_AUTH, str(rv)
             # Log in as a standard user
-            setup_user_account('kryten', 'none')
+            main_tests.setup_user_account('kryten', 'none')
             self.login('kryten', 'kryten')
             # v1.40 Viewable folder should be readable
             rv = self.app.get('/api/admin/filesystem/folders/?path=test_images')
@@ -1070,7 +1066,7 @@ class ImageServerAPITests(BaseTestCase):
             #
             # Log in as a user with file admin
             #
-            setup_user_account('kryten', 'admin_files')
+            main_tests.setup_user_account('kryten', 'admin_files')
             self.login('kryten', 'kryten')
             # Create a new folder branch
             rv = self.app.post('/api/admin/filesystem/folders/', data={'path': temp_folder + '/a/b/'})
@@ -1192,7 +1188,7 @@ class ImageServerAPITests(BaseTestCase):
     # #2517 File admin API - ignore // in folders
     def test_file_api_folders_double_sep(self):
         temp_folder = '/test_folders_api'
-        setup_user_account('kryten', 'admin_files')
+        main_tests.setup_user_account('kryten', 'admin_files')
         self.login('kryten', 'kryten')
         test_cases = ['/a//b', '/a///b']
         try:
@@ -1234,7 +1230,7 @@ class ImageServerAPITests(BaseTestCase):
             self.assertEqual(rv.status_code, API_CODES.REQUIRES_AUTH)
 
             # Logged in as admin (non superuser) user - cannot run tasks with API
-            setup_user_account('kryten', 'admin_files')
+            main_tests.setup_user_account('kryten', 'admin_files')
             self.login('kryten', 'kryten')
             rv = self.app.post(purge_url, data={'path': ''})
             self.assertEqual(rv.status_code, API_CODES.UNAUTHORISED)
@@ -1252,7 +1248,7 @@ class ImageServerAPITests(BaseTestCase):
             rv = self.app.get(task_url + str(user_task.id) + '/')
             self.assertEqual(rv.status_code, API_CODES.SUCCESS)
             # Another (non super) user cannot query it
-            setup_user_account('taskuser', 'admin_files')
+            main_tests.setup_user_account('taskuser', 'admin_files')
             self.login('taskuser', 'taskuser')
             rv = self.app.get(task_url + str(user_task.id) + '/')
             self.assertEqual(rv.status_code, API_CODES.UNAUTHORISED)
@@ -1260,7 +1256,7 @@ class ImageServerAPITests(BaseTestCase):
             tm.cancel_task(user_task)
 
             # Logged in as superuser - task should launch with API
-            setup_user_account('kryten', 'admin_all')
+            main_tests.setup_user_account('kryten', 'admin_all')
             self.login('kryten', 'kryten')
             rv = self.app.post(purge_url, data={'path': ''})
             self.assertEqual(rv.status_code, API_CODES.SUCCESS)
@@ -1292,7 +1288,7 @@ class ImageServerAPITests(BaseTestCase):
     # Task properties API
     def test_properties_api(self):
         # Super user access is required
-        setup_user_account('kryten', 'admin_permissions')
+        main_tests.setup_user_account('kryten', 'admin_permissions')
         self.login('kryten', 'kryten')
         rv = self.app.get('/api/admin/properties/' + Property.DEFAULT_TEMPLATE + '/')
         self.assertEqual(rv.status_code, API_CODES.UNAUTHORISED)
@@ -1346,9 +1342,9 @@ class ImageServerAPITests(BaseTestCase):
             copy_file('test_images/cathedral.jpg', temp_image)
             db_image = auto_sync_existing_file(temp_image, dm, tm)
             # Reset user permissions to None
-            set_default_public_permission(FolderPermission.ACCESS_NONE)
-            set_default_internal_permission(FolderPermission.ACCESS_NONE)
-            setup_user_account('kryten', 'none')
+            main_tests.set_default_public_permission(FolderPermission.ACCESS_NONE)
+            main_tests.set_default_internal_permission(FolderPermission.ACCESS_NONE)
+            main_tests.setup_user_account('kryten', 'none')
             self.login('kryten', 'kryten')
             setup_fp_user(FolderPermission.ACCESS_NONE)
             # Folder list API requires view permission
@@ -1443,16 +1439,16 @@ class ImageServerAPITests(BaseTestCase):
             delete_dir(temp_folder)
             delete_dir(temp_folder2)
             delete_dir(temp_folder3)
-            set_default_public_permission(FolderPermission.ACCESS_DOWNLOAD)
-            set_default_internal_permission(FolderPermission.ACCESS_DOWNLOAD)
+            main_tests.set_default_public_permission(FolderPermission.ACCESS_DOWNLOAD)
+            main_tests.set_default_internal_permission(FolderPermission.ACCESS_DOWNLOAD)
 
     # CSRF protection should be active for web sessions but not for API tokens
     def test_csrf(self):
-        setup_user_account('deleteme', 'none')
+        main_tests.setup_user_account('deleteme', 'none')
         deluser = dm.get_user(username='deleteme')
         self.assertIsNotNone(deluser)
         try:
-            setup_user_account('kryten', 'admin_users', allow_api=True)
+            main_tests.setup_user_account('kryten', 'admin_users', allow_api=True)
             self.login('kryten', 'kryten')
             # Enable CSRF
             flask_app.config['TESTING'] = False
@@ -1500,7 +1496,7 @@ class ImageServerAPITests(BaseTestCase):
             assert unicode_to_utf8(obj['data']['src']) == unicode_to_utf8(temp_file), \
                    'Returned src is \'' + obj['data']['src'] + '\''
             # Test data API - images
-            setup_user_account('kryten', 'admin_files')
+            main_tests.setup_user_account('kryten', 'admin_files')
             self.login('kryten', 'kryten')
             db_img = dm.get_image(src=temp_file)
             assert db_img is not None
@@ -1523,7 +1519,7 @@ class ImageServerAPITests(BaseTestCase):
     # Test that bad filenames are filtered by the APIs
     def test_bad_filenames(self):
         try:
-            setup_user_account('kryten', 'admin_files')
+            main_tests.setup_user_account('kryten', 'admin_files')
             self.login('kryten', 'kryten')
             # Create a folder
             rv = self.app.post('/api/admin/filesystem/folders/', data={

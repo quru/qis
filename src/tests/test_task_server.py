@@ -32,7 +32,7 @@
 from datetime import datetime, timedelta
 import time
 
-import tests.tests as main_tests
+from . import tests as main_tests
 
 from imageserver.flask_app import data_engine as dm
 from imageserver.flask_app import task_engine as tm
