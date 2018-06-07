@@ -27,8 +27,6 @@
 # =========  ====  ============================================================
 #
 
-# TODO Change DPI to _dpi_x and _dpi_y, support x,y format in templates, web params, PDF handling
-
 import tempfile
 
 from . import imaging_magick as magick
@@ -40,7 +38,8 @@ _backend = None
 def imaging_backend_supported(back_end):
     """
     Returns whether a back-end imaging library is installed and supported.
-    Possible back-ends: "pillow" or "imagemagick".
+    Possible back-ends: "pillow" or "imagemagick". This method can be called
+    before imaging_init() to find out what back-ends are available.
     """
     try:
         if back_end.lower() == 'imagemagick':
@@ -50,22 +49,6 @@ def imaging_backend_supported(back_end):
     except ImportError:
         pass
     return False
-
-
-def imaging_get_backend():
-    """
-    Returns whether the initialised imaging back-end is "pillow" or "imagemagick",
-    or returns None if imaging_init() has not been called.
-    """
-    global _backend
-    if not _backend:
-        return None
-    elif isinstance(_backend, magick.ImageMagickBackend):
-        return 'imagemagick'
-    elif isinstance(_backend, pillow.PillowBackend):
-        return 'pillow'
-    else:
-        return 'unknown'
 
 
 def imaging_init(back_end='auto', gs_path='gs', temp_files_path=None, pdf_default_dpi=150):
@@ -97,109 +80,129 @@ def imaging_init(back_end='auto', gs_path='gs', temp_files_path=None, pdf_defaul
             _backend = pillow.PillowBackend(gs_path, temp_files_path, pdf_default_dpi)
 
 
+def imaging_get_backend():
+    """
+    Returns whether the initialised imaging back-end is "pillow" or "imagemagick",
+    or returns None if imaging_init() has not been called.
+    """
+    global _backend
+    if not _backend:
+        return None
+    elif isinstance(_backend, magick.ImageMagickBackend):
+        return 'imagemagick'
+    elif isinstance(_backend, pillow.PillowBackend):
+        return 'pillow'
+    else:
+        return 'unknown'
+
+
 def imaging_get_version_info():
     """
     Returns a string containing the back-end library version information.
     """
     return _backend.get_version_info()
 
+# TODO we might need a supported file types too
+# TODO poke operation support via image manager, not here directly,
+#      and map overlay data/src and icc data/src keys
 
-def imaging_adjust_image(
-        image_data, data_type,
-        page=1, iformat='jpg',
-        new_width=0, new_height=0, size_auto_fit=False,
-        align_h=None, align_v=None, rotation=0.0, flip=None,
-        crop_top=0.0, crop_left=0.0, crop_bottom=1.0, crop_right=1.0, crop_auto_fit=False,
-        fill_colour='#ffffff', rquality=3, cquality=75, sharpen=0,
-        dpi=0, strip_info=False,
-        overlay_data=None, overlay_size=1.0, overlay_pos=None, overlay_opacity=1.0,
-        icc_profile=None, icc_intent=None, icc_bpc=False,
-        colorspace=None, tile_spec=(0, 0)
-    ):
+def imaging_supported_operations():
     """
-    Alters a raw image in any of the following ways, returning a new raw image:
-    Resize, rotate, crop, change format, change compression, sharpen or blur,
-    adjust colour profile, change colour space, apply an overlay.
+    Returns a dictionary of key:boolean entries for which of the imaging operations
+    defined for imaging_adjust_image() are supported by the current back-end. Some
+    back-ends may add their own keys, and some may not return "standard" keys if
+    they have not been kept updated. Therefore use this function as follows:
 
-    image_data  - the raw image data
+        key_supported = imaging_supported_operations().get(key, False)
+    """
+    return _backend.supported_operations()
+
+def imaging_adjust_image(image_data, data_type, image_spec):
+    """
+    Alters an encoded image in any of the following ways, returning a newly encoded
+    image: resize, rotate, crop, change format, change compression, sharpen or blur,
+    adjust colour profile, change colour space, apply an overlay, strip metadata.
+
+    image_data  - the raw image data (e.g. JPG bytes)
     data_type   - optional type (file extension) of the image data
-    page        - the page number to return (for multi-page images), default 1
-    iformat     - the lower case image format to return, default "jpg"
-    new_width   - the new image width, or 0 to proportion the image by its new height
-    new_height  - the new image height, or 0 to proportion the image by its new width
-    size_auto_fit - whether to adjust the requested width and height to retain the
-                    image proportions and avoid padding, True or False
-    align_h     - optional horizontal alignment if the image is to be padded.
-                  Specify the edge to align: L, C, or R; and position, 0 to 1, default C0.5
-    align_v     - optional vertical alignment if the image is to be padded.
-                  Specify the edge to align: T, C, or B; and position, 0 to 1, default C0.5
-    rotation    - number of degrees to rotate the image clockwise by, -360 to 360, default 0.0
-    flip        - flip the image horizontally or vertically, "h" or "v", default None
-    crop_top    - the top cropping value, 0 to 1, default 0.0
-    crop_left   - the left cropping value, 0 to 1, default 0.0
-    crop_bottom - the bottom cropping value, 0 to 1, default 1.0
-    crop_right  - the right cropping value, 0 to 1, default 1.0
-    crop_auto_fit - whether to adjust cropping positions to best fit the requested width
-                    and height (used only when both width and height are specified),
-                    True or False
-    fill_colour - new image background colour (used only when specifying a new width
-                  and height or rotating). Formats "blue", "#ffffff", "rgb(0,0,0)"
-                  or the special value "auto".
-    rquality    - resize algorithm, 1 (fastest) to 3 (best quality), default 3
-    cquality    - lossy image format compression quality %, 0 to 100, default 75
-    sharpen     - sharpening to apply during resize operations, -500 (heavy blur)
-                  to +500 (heavy sharpen), default 0 (none)
-    dpi         - the new DPI value to assign to the image, default 0 (keep existing DPI)
-    strip_info  - whether to strip EXIF/IPTC/XMP and colour profile meta data from
-                  the image, True or False
-    overlay_data - optional raw image data to overlay as a watermark, or None
-    overlay_size - the size of the overlay in relation to the main image, 0 to 1, default 1.0
-    overlay_pos  - the position of the overlay on the main image:
-                   "N", "NE", "E", "SE", "S", "SW", "W", "NW".
-                   Any other value (and the default) centres the overlay.
-    overlay_opacity - the opacity of the overlay, 0 to 1, default 1.0 (opaque)
-    icc_profile - the raw data of an ICC profile to apply to the image, default None
-    icc_intent  - an optional value for how to apply the ICC profile.
-                  "saturation", "perceptual", "absolute", or "relative", default None
-    icc_bpc     - whether to use Black Point Compensation when applying an ICC profile with
-                  the relative rendering intent, True or False
-    colorspace  - a quick alternative to applying an ICC profile, provides the ability to
-                  change the colour model of an image. Specify "rgb", "gray", or "cmyk".
-    tile_spec   - optional final crop to produce an image tile following all other
-                  adjustments. The tuple represents tile number, grid size.
+    image_spec  - a key:value dictionary of imaging operations to perform
 
-    Both width and height of 0 will retain the original image size.
+    The defined image_spec dictionary keys/values are as follows, though not
+    all back-ends support all operations, and some may support extras. Use the
+    imaging_supported_operations() function to query back-end support. Most of the
+    keys are intentionally the same as those used for the image templates API,
+    but there are differences for icc profile and overlay image, which are
+    filenames in the templates but raw profile/image bytes here.
+
+    page:          the page number to return (for multi-page images), default 1
+    width:         the new image width, or 0 to keep proportional with a new height
+    height:        the new image height, or 0 to keep proportional with a new width
+    size_fit:      whether to adjust the requested width and height to retain the
+                   image proportions and prevent padding, True or False
+    align_h:       horizontal alignment if the image is to be padded, as the edge
+                   to align (L, C, or R) and position 0 to 1, default "C0.5"
+    align_v:       vertical alignment if the image is to be padded, as the edge
+                   to align (T, C, or B) and position 0 to 1, default "C0.5"
+    rotation:      number of degrees to rotate the image clockwise, default 0.0
+    flip:          flip the image horizontally or vertically, "h" or "v", default ""
+    sharpen:       sharpen or blur effect to apply, from -500 (heavy blur) to 500
+                   (heavy sharpen), default 0 (none)
+    dpi_x:         a new horizontal DPI value to assign to the image, default 0 (no change)
+    dpi_y:         a new vertical DPI value to assign to the image, default 0 (no change)
+    fill:          image background colour (when rotating or specifying both width
+                   and height), format "blue", "#ffffff", "rgb(0,0,0)", or special
+                   values "auto" or "transparent", default white
+    top:           top cropping value, 0 to 1, default 0.0 (none)
+    left:          left cropping value, 0 to 1, default 0.0 (none)
+    bottom:        bottom cropping value, 0 to 1, default 1.0 (none)
+    right:         right cropping value, 0 to 1, default 1.0 (none)
+    crop_fit:      whether to adjust cropping positions to reduce padding when both
+                   width and height are specified, True or False
+    overlay_data:  raw image bytes to overlay as a watermark, default None
+    overlay_size:  size of the overlay relative to the base image, 0 to 1, default 1.0
+    overlay_pos:   position of the overlay on the main image:
+                   "N", "NE", "E","SE", "S", "SW", "W", "NW", default "C" for centre.
+    overlay_opacity: opacity level of the overlay, 0 to 1, default 1.0 (opaque)
+    icc_data:      raw bytes of an ICC profile to apply to the image, default None
+    icc_intent:    how to apply the ICC profile: "saturation", "perceptual",
+                   "absolute", or "relative", default ""
+    icc_bpc:       whether to use black point compensation when applying an ICC
+                   profile with the relative rendering intent, True or False
+    tile:          tuple of (tile number, grid size) to produce an image tile
+                   following all other adjustments, default (0, 0)
+    colorspace:    changes the colour model of an image: "rgb", "gray", or "cmyk",
+                   default "" (no change)
+    format:        lower case image format to return, default "jpg"
+    quality:       JPG quality or PNG compression type, 0 to 100, default 80
+    resize_type:   resizing algorithm, 1 (fastest) to 3 (best quality), default 3
+    strip:         whether to strip EXIF data and colour profiles from the image,
+                   True or False, default False
+
+    Specifying both width and height of 0 will retain the original image size.
 
     If the requested new width/height or cropping values define a different aspect
-    ratio, and size_auto_fit is false, the image will be returned at the requested
+    ratio, and auto_size_fit is false, the image will be returned at the requested
     size, with the original image centred within it, surrounded by the fill colour.
-    If size_auto_fit is true, either the width or height will be reduced so that
-    there is no fill (and the requested size then is not respected).
+    If auto_size_fit is true, either the width or height will be reduced so that
+    there is no fill (and so then the requested size is not respected).
 
     When cropping the image and a target width and a height have been specified,
-    the optional crop_auto_fit flag can be enabled. This will attempt to minimise
+    the optional auto_crop_fit flag can be enabled. This will attempt to minimise
     the amount of fill colour (padding) in the final image by enlarging the
     requested crop rectangle to best fill the target. Padding will not necessarily
-    be eliminated unless the size_auto_fit flag is also used.
+    be eliminated unless the auto_size_fit flag is also used.
 
     If a tile of the image is requested, tile number must be between 1 and
     the grid size inclusive. The grid size must be a square (4, 9, 16, etc),
     minimum size 4. Tile number 1 is top left in the grid, and the last tile is
     bottom right. The tile is generated last, after all other adjustments.
 
-    Raises a ValueError if the supplied data is not a supported image.
+    Returns a new image, encoded in the format requested by the image_spec.
+
+    Raises a ValueError if the supplied data is not a supported image, or for
+    invalid parameter values. Other back-end specific errors may also be raised.
     """
-    return _backend.adjust_image(
-        image_data, data_type, page, iformat,
-        new_width, new_height, size_auto_fit,
-        align_h, align_v, rotation, flip,
-        crop_top, crop_left, crop_bottom, crop_right, crop_auto_fit,
-        fill_colour, rquality, cquality, sharpen,
-        dpi, strip_info,
-        overlay_data, overlay_size, overlay_pos, overlay_opacity,
-        icc_profile, icc_intent, icc_bpc,
-        colorspace, tile_spec
-    )
+    return _backend.adjust_image(image_data, data_type, image_spec)
 
 
 def imaging_burst_pdf(pdf_data, dest_dir, dpi):

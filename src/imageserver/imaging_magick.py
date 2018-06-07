@@ -37,6 +37,8 @@
 # 22Aug2013  Matt  Added align parameters to adjust_image
 # 10Dec2015  Matt  qismagick 2.0 - pass through data formats for identification
 #                  of ambiguous file types (plain TIFF vs RAW TIFF)
+# 05Jun2018  Matt  qismagick 4.0 - imaging operations are now a dict,
+#                  add supported operations function
 #
 
 # TODO Consider testing/setting MAGICK_THREAD_LIMIT environment variable under mod_wsgi
@@ -71,57 +73,51 @@ class ImageMagickBackend(object):
         """
         return qismagick.get_library_info()
 
-    def adjust_image(
-            self, image_data, data_type,
-            page=1, iformat='jpg',
-            new_width=0, new_height=0, size_auto_fit=False,
-            align_h=None, align_v=None, rotation=0.0, flip=None,
-            crop_top=0.0, crop_left=0.0, crop_bottom=1.0, crop_right=1.0, crop_auto_fit=False,
-            fill_colour='#ffffff', rquality=3, cquality=75, sharpen=0,
-            dpi=0, strip_info=False,
-            overlay_data=None, overlay_size=1.0, overlay_pos=None, overlay_opacity=1.0,
-            icc_profile=None, icc_intent=None, icc_bpc=False,
-            colorspace=None, tile_spec=(0, 0)
-        ):
+    def supported_operations(self):
+        """
+        Returns which imaging operations are supported by the ImageMagick back-end.
+        See the function documentation for imaging.supported_operations() and
+        imaging.adjust_image() for more information.
+        """
+        return {
+            'page': True,
+            'width': True,
+            'height': True,
+            'size_fit': True,
+            'align_h': True,
+            'align_v': True,
+            'rotation': True,
+            'flip': True,
+            'sharpen': True,
+            'dpi_x': True,
+            'dpi_y': True,
+            'fill': True,
+            'top': True,
+            'left': True,
+            'bottom': True,
+            'right': True,
+            'crop_fit': True,
+            'overlay_data': True,
+            'overlay_size': True,
+            'overlay_pos': True,
+            'overlay_opacity': True,
+            'icc_data': True,
+            'icc_intent': True,
+            'icc_bpc': True,
+            'tile': True,
+            'colorspace': True,
+            'format': True,
+            'quality': True,
+            'resize_type': True,
+            'strip': True
+        }
+
+    def adjust_image(self, image_data, data_type, image_spec):
         """
         ImageMagick implementation of imaging.adjust_image(),
         see the function documentation there for full details.
         """
-        return qismagick.adjust_image(
-            image_data,
-            data_type,
-            page,
-            new_width,
-            new_height,
-            1 if size_auto_fit else 0,
-            align_h,
-            align_v,
-            rotation,
-            flip,
-            crop_top,
-            crop_left,
-            crop_bottom,
-            crop_right,
-            1 if crop_auto_fit else 0,
-            fill_colour,
-            iformat,
-            rquality,
-            cquality,
-            sharpen,
-            dpi,
-            1 if strip_info else 0,
-            overlay_data,
-            overlay_size,
-            overlay_pos,
-            overlay_opacity,
-            icc_profile,
-            icc_intent,
-            1 if icc_bpc else 0,
-            colorspace,
-            tile_spec[0],
-            tile_spec[1]
-        )
-
+        return qismagick.adjust_image(image_data, data_type, image_spec)
 
     def burst_pdf(self, pdf_data, dest_dir, dpi):
         """

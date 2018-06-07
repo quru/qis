@@ -1009,7 +1009,6 @@ class ImageManager(object):
             fill = default_value(new_image_attrs.fill(), '#ffffff')
             cquality = default_value(new_image_attrs.quality(), 0)
             sharpen = default_value(new_image_attrs.sharpen(), 0)
-            rquality = self._settings['IMAGE_RESIZE_QUALITY']
             overlay_src = new_image_attrs.overlay_src()
             overlay_size = default_value(new_image_attrs.overlay_size(), 1.0)
             overlay_pos = new_image_attrs.overlay_pos()
@@ -1096,19 +1095,43 @@ class ImageManager(object):
             icc_profile_data = self._icc_profiles[icc_profile_name][1] if icc_profile_name else None
 
             # Finally, generate a new image from base_image_data
+            image_ops = {
+                'page': page,
+                'width': width,
+                'height': height,
+                'size_fit': autosizefit,
+                'align_h': align_h,
+                'align_v': align_v,
+                'rotation': rotation,
+                'flip': flip,
+                'sharpen': sharpen,
+                'dpi_x': dpi,
+                'dpi_y': dpi,
+                'fill': fill,
+                'top': top,
+                'left': left,
+                'bottom': bottom,
+                'right': right,
+                'crop_fit': autocropfit,
+                'overlay_data': overlay_image_data,
+                'overlay_size': overlay_size,
+                'overlay_pos': overlay_pos,
+                'overlay_opacity': overlay_opacity,
+                'icc_data': icc_profile_data,
+                'icc_intent': icc_profile_intent,
+                'icc_bpc': icc_profile_bpc,
+                'tile': tile_spec,
+                'colorspace': colorspace,
+                'format': iformat,
+                'quality': cquality,
+                'resize_type': self._settings['IMAGE_RESIZE_QUALITY'],
+                'strip': strip_info
+            }
             try:
                 return imaging_adjust_image(
                     base_image_data,
                     base_image_attrs.format(),
-                    page, iformat,
-                    width, height, autosizefit,
-                    align_h, align_v, rotation, flip,
-                    top, left, bottom, right, autocropfit,
-                    fill, rquality, cquality, sharpen,
-                    dpi, strip_info,
-                    overlay_image_data, overlay_size, overlay_pos, overlay_opacity,
-                    icc_profile_data, icc_profile_intent, icc_profile_bpc,
-                    colorspace, tile_spec
+                    image_ops
                 )
             except Exception as e:
                 raise ImageError(str(e))

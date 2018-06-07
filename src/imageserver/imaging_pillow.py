@@ -92,47 +92,57 @@ class PillowBackend(object):
         """
         return "Pillow version: " + PIL.__version__
 
-    def adjust_image(
-            self, image_data, data_type,
-            page=1, iformat='jpg',
-            new_width=0, new_height=0, size_auto_fit=False,
-            align_h=None, align_v=None, rotation=0.0, flip=None,
-            crop_top=0.0, crop_left=0.0, crop_bottom=1.0, crop_right=1.0, crop_auto_fit=False,
-            fill_colour='#ffffff', rquality=3, cquality=75, sharpen=0,
-            dpi=0, strip_info=False,
-            overlay_data=None, overlay_size=1.0, overlay_pos=None, overlay_opacity=1.0,
-            icc_profile=None, icc_intent=None, icc_bpc=False,
-            colorspace=None, tile_spec=(0, 0)
-        ):
+    def supported_operations(self):
+        """
+        Returns which imaging operations are supported by the Pillow back-end.
+        See the function documentation for imaging.supported_operations() and
+        imaging.adjust_image() for more information.
+        """
+        return {
+            'page': False,
+            'width': True,
+            'height': True,
+            'size_fit': True,
+            'align_h': False,
+            'align_v': False,
+            'rotation': True,
+            'flip': True,
+            'sharpen': False,
+            'dpi_x': True,
+            'dpi_y': True,
+            'fill': True,
+            'top': True,
+            'left': True,
+            'bottom': True,
+            'right': True,
+            'crop_fit': True,
+            'overlay_data': False,
+            'overlay_size': False,
+            'overlay_pos': False,
+            'overlay_opacity': False,
+            'icc_data': False,
+            'icc_intent': False,
+            'icc_bpc': False,
+            'tile': True,
+            'colorspace': False,
+            'format': True,
+            'quality': True,
+            'resize_type': True,
+            'strip': True
+        }
+
+    def adjust_image(self, image_data, data_type, image_spec):
         """
         Pillow implementation of imaging.adjust_image(),
         see the function documentation there for full details.
 
-        This method may not support all the functionality of the ImageMagick version.
+        This method does not support all the functionality of the ImageMagick version.
         """
-        # Check for bad parameters
         if not image_data:
             raise ValueError('Image must be supplied')
-        if align_h and len(align_h) > 16:
-            raise ValueError('HAlign value too long')
-        if align_v and len(align_v) > 16:
-            raise ValueError('VAlign value too long')
-        if flip and len(flip) > 1:
-            raise ValueError('Flip value too long')
-        if fill_colour and len(fill_colour) > 32:
-            raise ValueError('Fill colour value too long')
-        if iformat and len(iformat) > 4:
-            raise ValueError('Format value too long')
-        if overlay_pos and len(overlay_pos) > 32:
-            raise ValueError('Overlay position value too long')
-        if icc_profile and len(icc_profile) > PillowBackend.MAX_ICC_SIZE:
-            raise ValueError('ICC profile too large')
-        if icc_intent and len(icc_intent) > 10:
-            raise ValueError('ICC rendering intent too long')        
-        if tile_spec[0] > 0:
-            grid_axis_len = int(math.sqrt(tile_spec[1]))
-            if tile_spec[1] < 4 or tile_spec[1] != (grid_axis_len * grid_axis_len):
-                raise ValueError('Tile grid size is not square, or is less than 4')
+
+        # Check for bad parameters, set default values for missing parameters
+        self._validate_image_spec(image_spec)
 
         # Read image data, blow up here if a bad image
         image = self._load_image_data(image_data, data_type)
@@ -146,47 +156,30 @@ class PillowBackend(object):
             if hasattr(image, 'tag_v2'):
                 original_info.update(self._get_tiff_info_dict(image))
 
-            # Adjust parameters to safe values (part 1)
-            page = self._limit_number(page, 1, 999999)
-            rotation = self._limit_number(rotation, -360.0, 360.0)
-            crop_top = self._limit_number(crop_top, 0.0, 1.0)
-            crop_left = self._limit_number(crop_left, 0.0, 1.0)
-            crop_bottom = self._limit_number(crop_bottom, 0.0, 1.0)
-            crop_right = self._limit_number(crop_right, 0.0, 1.0)
-            if crop_bottom < crop_top:
-                crop_bottom = crop_top
-            if crop_right < crop_left:
-                crop_right = crop_left
-            rquality = self._limit_number(rquality, 1, 3)
-            cquality = self._limit_number(cquality, 1, 100)
-            sharpen = self._limit_number(sharpen, -500, 500)
-            dpi = self._limit_number(dpi, 0, 32000)
-            if tile_spec[0] > 0:
-                tile_spec = (self._limit_number(tile_spec[0], 1, tile_spec[1]), tile_spec[1])
-            overlay_size = self._limit_number(overlay_size, 0.0, 1.0)
-            overlay_opacity = self._limit_number(overlay_opacity, 0.0, 1.0)
-
             # Page selection - P3
 
             # #2321 Ensure no div by 0
             if 0 in image.size:
                 raise ValueError('Image dimensions are zero')
 
-            # Adjust parameters to safe values (part 2)
             # Prevent enlargements, using largest of width/height to allow for rotation.
             # If enabling enlargements, enforce some max value to prevent server attacks.
             max_dimension = max(image.size)
-            new_width = self._limit_number(
-                new_width, 0, image.width if rotation == 0.0 else max_dimension
+            new_width = _limit_number(
+                image_spec['width'],
+                0,
+                image.width if image_spec['rotation'] == 0.0 else max_dimension
             )
-            new_height = self._limit_number(
-                new_height, 0, image.height if rotation == 0.0 else max_dimension
+            new_height = _limit_number(
+                image_spec['height'],
+                0,
+                image.height if image_spec['rotation'] == 0.0 else max_dimension
             )
 
             # If the target format supports transparency and we need it,
             # upgrade the image to RGBA
-            if fill_colour == 'none' or fill_colour == 'transparent':
-                if self._supports_transparency(iformat):
+            if image_spec['fill'] == 'none' or image_spec['fill'] == 'transparent':
+                if self._supports_transparency(image_spec['format']):
                     if image.mode != 'LA' and image.mode != 'RGBA':
                         image = self._image_change_mode(
                             image,
@@ -194,17 +187,17 @@ class PillowBackend(object):
                         )
                         self._restore_pillow_info(image, original_info)
                 else:
-                    fill_colour = '#ffffff'
+                    image_spec['fill'] = '#ffffff'
 
             # Set background colour, required for rotation or resizes that
             # change the overall aspect ratio
             try:
-                if fill_colour == 'auto':
+                if image_spec['fill'] == 'auto':
                     fill_rgb = self._auto_fill_colour(image)
-                elif fill_colour == 'none' or fill_colour == 'transparent':
+                elif image_spec['fill'] == 'none' or image_spec['fill'] == 'transparent':
                     fill_rgb = None
-                elif fill_colour:
-                    fill_rgb = ImageColor.getrgb(fill_colour)
+                elif image_spec['fill']:
+                    fill_rgb = ImageColor.getrgb(image_spec['fill'])
                 else:
                     fill_rgb = ImageColor.getrgb('#ffffff')
             except ValueError:
@@ -212,52 +205,65 @@ class PillowBackend(object):
 
             # The order of imaging operations is fixed, and defined in image_help.md#notes
             # (1) Flip
-            if flip == 'h' or flip == 'v':
-                image = self._image_flip(image, flip)
+            if image_spec['flip'] == 'h' or image_spec['flip'] == 'v':
+                image = self._image_flip(image, image_spec['flip'])
                 self._restore_pillow_info(image, original_info)
             # (2) Rotate
-            if rotation:
-                image = self._image_rotate(image, rotation, rquality, fill_rgb)
+            if image_spec['rotation']:
+                image = self._image_rotate(
+                    image,
+                    image_spec['rotation'],
+                    image_spec['resize_type'], fill_rgb
+                )
                 self._restore_pillow_info(image, original_info)
             # (3) Crop
-            if (crop_top, crop_left, crop_bottom, crop_right) != (0.0, 0.0, 1.0, 1.0):
+            if (image_spec['top'], image_spec['left'], image_spec['bottom'], image_spec['right']) != (0.0, 0.0, 1.0, 1.0):
                 image = self._image_crop(
-                    image, crop_top, crop_left, crop_bottom, crop_right,
-                    crop_auto_fit, new_width, new_height
+                    image,
+                    image_spec['top'], image_spec['left'],
+                    image_spec['bottom'], image_spec['right'],
+                    image_spec['crop_fit'], new_width, new_height
                 )
                 self._restore_pillow_info(image, original_info)
                 # If auto-fill is enabled and we didn't rotate
                 # (i.e. we haven't filled yet), work out a new fill colour, post-crop
-                if fill_colour == 'auto' and not rotation:
+                if image_spec['fill'] == 'auto' and not image_spec['rotation']:
                     fill_rgb = self._auto_fill_colour(image)
             # (4) Resize
             if new_width != 0 or new_height != 0:
                 image = self._image_resize(
-                    image, new_width, new_height, size_auto_fit,
-                    align_h, align_v, fill_rgb, rquality
+                    image,
+                    new_width, new_height,
+                    image_spec['size_fit'],
+                    image_spec['align_h'], image_spec['align_v'],
+                    fill_rgb,
+                    image_spec['resize_type']
                 )
                 self._restore_pillow_info(image, original_info)
             # (5) Blur/sharpen - P2
             # (6) Overlay - P2
             # (7) Tile
-            if tile_spec >= (1, 4):
-                image = self._image_tile(image, tile_spec)
+            if image_spec['tile'] >= (1, 4):
+                image = self._image_tile(image, image_spec['tile'])
                 self._restore_pillow_info(image, original_info)
             # (8) Apply ICC profile - P3
             # (9) Set colorspace - P3
             # (10) Strip (preparation, the strip is done by _get_pillow_save_options)
-            if strip_info:
+            if image_spec['strip']:
                 image = self._image_pre_strip(image)
                 self._restore_pillow_info(image, original_info)
 
             # Check/set the image mode for the output image format
-            image = self._set_pillow_save_mode(image, iformat, fill_rgb)
+            image = self._set_pillow_save_mode(image, image_spec['format'], fill_rgb)
             if 'transparency' in image.info:
                 original_info['transparency'] = image.info['transparency']
             self._restore_pillow_info(image, original_info)
             # Get the save parameters for the output image format
             save_opts = self._get_pillow_save_options(
-                image, iformat, cquality, dpi, original_info, strip_info
+                image,
+                image_spec['format'], image_spec['quality'],
+                image_spec['dpi_x'], image_spec['dpi_y'],
+                original_info, image_spec['strip']
             )
             # Encode the image bytes and return encoded bytes
             image.save(bufout, **save_opts)
@@ -300,6 +306,78 @@ class PillowBackend(object):
             return image.size
         finally:
             image.close()
+
+    def _validate_image_spec(self, image_spec):
+        """
+        Reads and validates the imaging parameters from a Python dictionary as
+        described at imaging.adjust_image(). The dictionary is updated in-place
+        with default values for any missing parameters.
+        Raises a ValueError if any of the parameters have invalid values.
+        """
+        # Remove None entries from dict
+        image_spec = {k:v for k, v in image_spec.items() if v is not None}
+        # Set default values / adjust parameters to safe values
+        image_spec['page'] = _limit_number(image_spec.get('page', 1), 1, 999999)
+        image_spec['width'] = image_spec.get('width', 0)
+        image_spec['height'] = image_spec.get('height', 0)
+        image_spec['size_fit'] = image_spec.get('size_fit', False)
+        image_spec['align_h'] = image_spec.get('align_h', '')
+        image_spec['align_v'] = image_spec.get('align_v', '')
+        image_spec['rotation'] = _limit_number(image_spec.get('rotation', 0.0), -360.0, 360.0)
+        image_spec['flip'] = image_spec.get('flip', '')
+        image_spec['sharpen'] = _limit_number(image_spec.get('sharpen', 0), -500, 500)
+        image_spec['dpi_x'] = _limit_number(image_spec.get('dpi_x', 0), 0, 32000)
+        image_spec['dpi_y'] = _limit_number(image_spec.get('dpi_y', 0), 0, 32000)
+        image_spec['fill'] = image_spec.get('fill', '#ffffff')
+        image_spec['top'] = _limit_number(image_spec.get('top', 0.0), 0.0, 1.0)
+        image_spec['left'] = _limit_number(image_spec.get('left', 0.0), 0.0, 1.0)
+        image_spec['bottom'] = _limit_number(image_spec.get('bottom', 1.0), 0.0, 1.0)
+        image_spec['right'] = _limit_number(image_spec.get('right', 1.0), 0.0, 1.0)
+        image_spec['crop_fit'] = image_spec.get('crop_fit', False)
+        image_spec['overlay_data'] = image_spec.get('overlay_data', None)
+        image_spec['overlay_size'] = _limit_number(image_spec.get('overlay_size', 1.0), 0.0, 1.0)
+        image_spec['overlay_pos'] = image_spec.get('overlay_pos', '')
+        image_spec['overlay_opacity'] = _limit_number(image_spec.get('overlay_opacity', 1.0), 0.0, 1.0)
+        image_spec['icc_data'] = image_spec.get('icc_data', None)
+        image_spec['icc_intent'] = image_spec.get('icc_intent', '')
+        image_spec['icc_bpc'] = image_spec.get('icc_bpc', False)
+        image_spec['tile'] = image_spec.get('tile', (0, 0))
+        image_spec['colorspace'] = image_spec.get('colorspace', '')
+        image_spec['format'] = image_spec.get('format', 'jpg')
+        image_spec['quality'] = _limit_number(image_spec.get('quality', 80), 1, 100)
+        image_spec['resize_type'] = _limit_number(image_spec.get('resize_type', 3), 1, 3)
+        image_spec['strip'] = image_spec.get('strip', False)
+
+        tile_spec = image_spec['tile']
+        if tile_spec[0] > 0:
+            image_spec['tile'] = (_limit_number(tile_spec[0], 1, tile_spec[1]), tile_spec[1])
+        if image_spec['bottom'] < image_spec['top']:
+            image_spec['bottom'] = image_spec['top']
+        if image_spec['right'] < image_spec['left']:
+            image_spec['right'] = image_spec['left']
+
+        # Check for parameter values that should raise an error
+        if len(image_spec['align_h']) > 16:
+            raise ValueError('HAlign value too long')
+        if len(image_spec['align_v']) > 16:
+            raise ValueError('VAlign value too long')
+        if len(image_spec['flip']) > 1:
+            raise ValueError('Flip value too long')
+        if len(image_spec['fill']) > 32:
+            raise ValueError('Fill colour value too long')
+        if len(image_spec['format']) > 4:
+            raise ValueError('Format value too long')
+        if len(image_spec['overlay_pos']) > 32:
+            raise ValueError('Overlay position value too long')
+        if image_spec['icc_data'] and len(image_spec['icc_data']) > PillowBackend.MAX_ICC_SIZE:
+            raise ValueError('ICC profile too large')
+        if len(image_spec['icc_intent']) > 10:
+            raise ValueError('ICC rendering intent too long')
+        tile_spec = image_spec['tile']
+        if tile_spec[0] > 0:
+            grid_axis_len = int(math.sqrt(tile_spec[1]))
+            if tile_spec[1] < 4 or tile_spec[1] != (grid_axis_len * grid_axis_len):
+                raise ValueError('Tile grid size is not square, or is less than 4')
 
     def _load_image_data(self, image_data, data_type):
         """
@@ -407,16 +485,6 @@ class PillowBackend(object):
                     fixed_dict[k] = tuple([vi.decode('utf8') for vi in v])
         return fixed_dict
 
-    def _limit_number(self, val, min_val, max_val):
-        """
-        Returns val, or min_val or max_val if val is out of range.
-        """
-        if val < min_val:
-            return min_val
-        elif val > max_val:
-            return max_val
-        return val
-
     def _get_tiff_info_dict(self, image):
         """
         Pillow has a 'tiffinfo' parameter for setting TIFF tags when saving, but
@@ -518,7 +586,7 @@ class PillowBackend(object):
         # Otherwise return image unchanged
         return image
 
-    def _get_pillow_save_options(self, image, format, quality, dpi, original_info, strip_info):
+    def _get_pillow_save_options(self, image, format, quality, dpi_x, dpi_y, original_info, strip_info):
         """
         Returns a dictionary of the save options for an image in the desired file
         format, e.g. compression level, dpi, and other format-specific options.
@@ -541,9 +609,9 @@ class PillowBackend(object):
             'transparency' in original_info):
             save_opts['transparency'] = original_info['transparency']
         # Set or preserve DPI
-        if dpi > 0:
-            save_opts['dpi'] = (dpi, dpi)
-            save_opts['resolution'] = dpi
+        if dpi_x and dpi_y:
+            save_opts['dpi'] = (dpi_x, dpi_y)
+            save_opts['resolution'] = (dpi_x, dpi_y)
             save_opts['resolution_unit'] = 'inch'
         else:
             for key in ('dpi', 'resolution', 'resolution_unit'):
@@ -1205,3 +1273,14 @@ LINEAR_RGB_ICC_PROFILE = (b'\x00\x00\x01\xE0\x41\x44\x42\x45\x02\x10\x00\x00\x6D
                           b'\x00\x00\x03\x90\x58\x59\x5A\x20\x00\x00\x00\x00\x00\x00\x62\x96\x00\x00\xB7\x87\x00'
                           b'\x00\x18\xDA\x58\x59\x5A\x20\x00\x00\x00\x00\x00\x00\x24\x9F\x00\x00\x0F\x84\x00\x00'
                           b'\xB6\xC2\x63\x75\x72\x76\x00\x00\x00\x00\x00\x00\x00\x01\x01\x00\x00\x00')
+
+
+def _limit_number(val, min_val, max_val):
+    """
+    Returns val, or min_val or max_val if val is out of range.
+    """
+    if val < min_val:
+        return min_val
+    elif val > max_val:
+        return max_val
+    return val
