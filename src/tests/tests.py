@@ -251,7 +251,10 @@ class BaseTestCase(FlaskTestCase):
             'password': pwd
         })
         # 302 = success redirect, 200 = login page with error message
-        self.assertEqual(rv.status_code, 302, 'Login failed with response: ' + rv.data.decode('utf8'))
+        self.assertEqual(
+            rv.status_code, 302,
+            'Login failed with response: ' + get_login_error(rv.data.decode('utf8'))
+        )
 
     # Utility - gets an API token
     def api_login(self, usr, pwd):
