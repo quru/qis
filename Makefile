@@ -16,8 +16,9 @@ test:
 	make flake8.txt
 	make runtests
 
-runtests: venv
-	${VENV_ACTIVATE} ; ${SET_LOCALE} ; python setup.py test
+runtests: venv testing_env
+	${VENV_ACTIVATE} ; ${SET_LOCALE} ; coverage run --source src/imageserver setup.py test
+	coverage xml -o src/coverage.xml
 
 runserver: venv
 	${VENV_ACTIVATE} ; ${SET_LOCALE} ; python src/runserver.py
@@ -25,17 +26,22 @@ runserver: venv
 webpack:
 	src/compress_js.sh
 
-flake8.txt: ${VENV_PATH}/bin/flake8
-	${VENV_ACTIVATE} ; flake8 src/ > src/flake8.txt || wc -l src/flake8.txt
-
-${VENV_PATH}/bin/flake8: venv
-	${VENV_ACTIVATE} ; pip install flake8
-
 venv: ${VENV_PATH}/bin/activate setup.py doc/requirements.txt
 	${VENV_ACTIVATE} ; pip install --upgrade pip setuptools wheel
 	${VENV_ACTIVATE} ; pip install --upgrade -r doc/requirements.txt
 
+testing_env: ${VENV_PATH}/bin/flake8 ${VENV_PATH}/bin/coverage
+
+flake8.txt: testing_env
+	${VENV_ACTIVATE} ; flake8 src/ > src/flake8.txt || wc -l src/flake8.txt
+
+${VENV_PATH}/bin/flake8: ${VENV_PATH}/bin/activate
+	${VENV_ACTIVATE} ; pip install flake8
+
+${VENV_PATH}/bin/coverage: ${VENV_PATH}/bin/activate
+	${VENV_ACTIVATE} ; pip install coverage
+
 ${VENV_PATH}/bin/activate:
 	virtualenv --python=${PYTHON} ${VENV_PATH}
 
-.PHONY: distribute jenkins test runtests runserver webpack flake8.txt venv
+.PHONY: distribute jenkins test runtests runserver webpack flake8.txt venv testing_env
