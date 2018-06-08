@@ -87,10 +87,20 @@ from imageserver.scripts.cache_util import delete_image_ids
 from imageserver.template_attrs import TemplateAttrs
 from imageserver.util import secure_filename
 
+from . import kill_aux_processes
 
-# Module level setUp - run by nose
-def setUp():
+
+# Module level setUp
+def setUpModule():
     init_tests()
+
+
+# Module + Package level tearDown
+# Unittest doesn't have a package level tearDown so we're being naughty
+# and relying on the order of files being returned by the test discovery.
+# tests.py does always seem to be returned last so this has the desired effect.
+def tearDownModule():
+    kill_aux_processes()
 
 
 # Utility - resets the database and cache, starts the aux processes

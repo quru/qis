@@ -12,6 +12,5 @@ markdown==2.6.10
 
 # Additional requirements for setup / unit tests
 #wheel
-#nose
 #coverage
 #flake8

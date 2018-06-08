@@ -219,6 +219,7 @@ def _run_server(debug_mode):
             logger.info('Task server shutdown, waiting on %d task(s)' % len(threads))
             for t in threads:
                 t.join()
+        dummy.close()
         logger.info('Task server exited')
 
         print('Task server shutdown')

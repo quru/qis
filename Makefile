@@ -17,7 +17,7 @@ test:
 	make runtests
 
 runtests: venv
-	${VENV_ACTIVATE} ; ${SET_LOCALE} ; python setup.py nosetests
+	${VENV_ACTIVATE} ; ${SET_LOCALE} ; python setup.py test
 
 runserver: venv
 	${VENV_ACTIVATE} ; ${SET_LOCALE} ; python src/runserver.py

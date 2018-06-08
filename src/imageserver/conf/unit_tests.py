@@ -20,7 +20,7 @@ MGMT_DATABASE_CONNECTION = "postgresql+psycopg2:///qis-mgmt-test"
 MGMT_DATABASE_POOL_SIZE = 2
 
 # Set testing image directories
-INSTALL_DIR = "../"
+INSTALL_DIR = ""
 DOCS_BASE_DIR = INSTALL_DIR + "doc/"
 ICC_BASE_DIR = INSTALL_DIR + "icc/"
 IMAGES_BASE_DIR = INSTALL_DIR + "images/"

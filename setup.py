@@ -1,10 +1,10 @@
 import os.path
 from setuptools import setup, find_packages
 
-package_dir = "src/"
+package_dir = "src"
 
 about = {}
-with open(os.path.join(package_dir, "imageserver/__about__.py")) as fp:
+with open(os.path.join(package_dir, "imageserver", "__about__.py")) as fp:
     exec(fp.read(), about)
 
 setup(
@@ -23,6 +23,7 @@ setup(
 
     package_dir={"": package_dir},
     packages=find_packages(package_dir, exclude=["tests", "tests.*"]),
+    test_suite="tests",
 
     install_requires=[
         "Pillow>=5.1.0,<6",
@@ -39,7 +40,6 @@ setup(
 
     setup_requires=[
         "wheel",
-        "nose"
     ],
 
     tests_require=[

@@ -1,20 +1,9 @@
 #
-# tests package setup and teardown
+# Testing package utilities
 #
 import os
 import signal
 import subprocess
-
-
-# Package level setUp - run by nose
-def setUp():
-    pass
-
-
-# Package level tearDown - run by nose
-def tearDown():
-    kill_aux_processes()
-
 
 # Utility - kill the aux child processes
 def kill_aux_processes(nicely=True):
