@@ -36,6 +36,7 @@ import zipfile
 from datetime import datetime, timedelta
 
 from . import tests as main_tests
+from . import test_imaging as imaging_tests
 
 from imageserver.flask_app import app as flask_app
 from imageserver.flask_app import data_engine as dm
@@ -712,7 +713,7 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
             self.assertEqual(entries[1].filename, 'image2.png')
             for fname in ['image1.png', 'image2.png']:
                 img_file = exzip.open(fname, 'r')
-                png_dims = main_tests.get_png_dimensions(img_file.read())
+                png_dims = imaging_tests.get_png_dimensions(img_file.read())
                 self.assertEqual(png_dims[0], 100)
         finally:
             exzip.close()
