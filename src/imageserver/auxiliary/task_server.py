@@ -109,6 +109,7 @@ def _run_server(debug_mode):
     IDLE_WAIT = 5       # All in seconds
     CLEANUP_EVERY = 10  #
 
+    proc_mutex = None
     try:
         num_threads = app.config['TASK_SERVER_THREADS']
         if num_threads < 1:
@@ -117,8 +118,8 @@ def _run_server(debug_mode):
         # Hold open a port. Without messing around with lock files
         # (and where to put them, and how to lock them), this appears to be the
         # only easy cross platform way of emulating Windows' named global mutex.
-        dummy = socket()
-        dummy.bind((app.config['TASK_SERVER'], app.config['TASK_SERVER_PORT']))
+        proc_mutex = socket()
+        proc_mutex.bind((app.config['TASK_SERVER'], app.config['TASK_SERVER_PORT']))
 
         # If here, we opened the port so we're the only task server running locally
         shutdown_ev = Event()
@@ -219,7 +220,6 @@ def _run_server(debug_mode):
             logger.info('Task server shutdown, waiting on %d task(s)' % len(threads))
             for t in threads:
                 t.join()
-        dummy.close()
         logger.info('Task server exited')
 
         print('Task server shutdown')
@@ -233,6 +233,9 @@ def _run_server(debug_mode):
             print("Task server exited")
         else:
             print("Task server exited: " + str(e))
+    finally:
+        if proc_mutex:
+            proc_mutex.close()
     sys.exit()
 
 
