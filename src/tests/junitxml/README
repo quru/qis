@@ -1,0 +1,73 @@
+PyJUnitXML
+==========
+
+A Python unittest TestResult that outputs JUnit compatible XML.
+
+Copyright
+---------
+
+PyJUnitXML is Copyright (c) 2009 Robert Collins, and distributed under the
+GNU Library General Public Licence version 3 (LGPL-3). Broadly, this means you
+have the right to use this library in any application you want, regardless of
+the licence of your application, but that if you modify this library the
+modifications you make need to be released under a compatible terms if you
+convey the application to other users. For exact details see the COPYING and
+GPL-3 files included in the source.
+
+Usage
+-----
+
+To use PyJUnitXML you need to specify it as your ``TestResult`` when running
+your tests using pyunit. One way of doing this is to invoke the ``test`` method
+directly on your test suite::
+
+ >>> import junitxml
+ >>> result = junitxml.JUnitXmlResult(sys.stdout)
+ >>> result.startTestRun()
+ >>> suite.run(result)
+ >>> result.stopTestRun()
+
+The ``startTestRun`` and ``stopTestRun`` methods are new in python 2.7 and 3.1.
+If you are using older versions of python, and do not invoke the test result
+directly, you may find that no output occurs at all. This is likely because the
+``stopTestRun`` method is not being invoked, and you will need to arrange for it
+to be invoked.
+
+There is a command line runner you can use::
+
+  $ python -m junitxml.main discover
+
+or
+
+  $ junitxml discover
+
+If the package scripts have been installed.
+
+Troubleshooting
+---------------
+
+My test runs, but nothing is output? Check that ``result.stopTestRun`` is being
+called. Due to the XML file format requiring a header containing the test
+counts, nothing is output until the test run has completed, and that is 
+signalled by the ``stopTestRun`` method being called.
+
+Reporting Bugs and Asking Questions
+-----------------------------------
+
+PyJUnitXML is hosted on Launchpad at https://launchpad.net/pyjunitxml. Please
+file bugs, ask questions and so on at will.
+
+Running PyJUnitXML's test suite
+-------------------------------
+
+The function junitxml.test_suite defines the junitxml test suite, you can use
+any runner you like. I personally use::
+
+ $ python -m subunit.run junitxml.test_suite | subunit2gtk
+
+If you have testrepository you can simply run testr::
+
+ $ testr run
+
+Enjoy,
+Rob Collins
