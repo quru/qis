@@ -93,7 +93,6 @@ def double_fork(process_name, process_function, process_args):
         p.daemon = False
         # Start target_function as the grand-child process
         p.start()
-        time.sleep(1)
         # Force the child exit, leaving the grand-child still running.
         # The parent process can now exit cleanly without waiting to wait() or join()
         # on the grand-child (and it can't, since it knows nothing about it).

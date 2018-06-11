@@ -103,12 +103,13 @@ def tearDownModule():
     kill_aux_processes()
 
 
-# Utility - resets the database and cache, starts the aux processes
-def init_tests():
+# Utility - resets the database and cache, and optionally starts the aux processes
+def init_tests(launch_aux=True):
     reset_databases()  # Requires the cache for locking
     cm.clear()         # So reset the cache second
-    launch_aux_processes()
-    time.sleep(2)      # Allow aux processes to start
+    if launch_aux:
+        launch_aux_processes()
+        time.sleep(2)
 
 
 # Utility - delete and re-create the internal databases

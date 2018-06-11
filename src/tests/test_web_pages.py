@@ -46,7 +46,7 @@ class ImageServerTestsWebPages(main_tests.BaseTestCase):
     @classmethod
     def setUpClass(cls):
         super(ImageServerTestsWebPages, cls).setUpClass()
-        main_tests.init_tests()
+        main_tests.init_tests(False)
         main_tests.setup_user_account('webuser', 'none')
 
     # Utility to call a page requiring login, with and without login,
