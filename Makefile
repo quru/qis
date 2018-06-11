@@ -5,23 +5,23 @@ VENV_PATH := .
 VENV_ACTIVATE := . ${VENV_PATH}/bin/activate
 SET_LOCALE := export LANG=en_GB.UTF-8 ; export LC_ALL=en_GB.UTF-8
 
-jenkins: test distribute
+runserver: venv
+	${VENV_ACTIVATE} ; ${SET_LOCALE} ; python src/runserver.py
+
+test: venv
+	${VENV_ACTIVATE} ; ${SET_LOCALE} ; python setup.py test
+
+test_with_stats: venv testing_env
+	make flake8.txt
+	${VENV_ACTIVATE} ; ${SET_LOCALE} ; coverage run --source src/imageserver -m src.tests.junitxml -t src -s src/tests -o src/junit.xml
+	coverage xml -o src/coverage.xml
 
 distribute: venv webpack
 	src/package_deps.sh ${PYTHON}
 	${VENV_ACTIVATE} ; python setup.py sdist
 	echo 'The packaged application and libraries are now in the "dist" folder'
 
-test:
-	make flake8.txt
-	make runtests
-
-runtests: venv testing_env
-	${VENV_ACTIVATE} ; ${SET_LOCALE} ; coverage run --source src/imageserver setup.py test
-	coverage xml -o src/coverage.xml
-
-runserver: venv
-	${VENV_ACTIVATE} ; ${SET_LOCALE} ; python src/runserver.py
+jenkins: test_with_stats distribute
 
 webpack:
 	src/compress_js.sh
@@ -33,7 +33,7 @@ venv: ${VENV_PATH}/bin/activate setup.py doc/requirements.txt
 testing_env: ${VENV_PATH}/bin/flake8 ${VENV_PATH}/bin/coverage
 
 flake8.txt: testing_env
-	${VENV_ACTIVATE} ; flake8 src/ > src/flake8.txt || wc -l src/flake8.txt
+	${VENV_ACTIVATE} ; flake8 src > src/flake8.txt || wc -l src/flake8.txt
 
 ${VENV_PATH}/bin/flake8: ${VENV_PATH}/bin/activate
 	${VENV_ACTIVATE} ; pip install flake8
@@ -44,4 +44,4 @@ ${VENV_PATH}/bin/coverage: ${VENV_PATH}/bin/activate
 ${VENV_PATH}/bin/activate:
 	virtualenv --python=${PYTHON} ${VENV_PATH}
 
-.PHONY: distribute jenkins test runtests runserver webpack flake8.txt venv testing_env
+.PHONY: runserver test test_with_stats distribute jenkins webpack venv testing_env flake8.txt

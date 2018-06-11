@@ -5,6 +5,7 @@ import os
 import signal
 import subprocess
 
+
 # Utility - kill the aux child processes
 def kill_aux_processes(nicely=True):
     this_pid = os.getpid()
