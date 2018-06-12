@@ -47,7 +47,7 @@
 		<div class="error">{{ err_msg|newlines }}</div>
 	{% else %}
 		{% set form_method = 'put' if template else 'post' %}
-		{% set form_action = url_for('api.admin.template', template_id=template.id) if template else url_for('api.admin.template') %}
+		{% set form_action = url_for('api.admin-template', template_id=template.id) if template else url_for('api.admin-template') %}
 		{% set allow_edit = is_permitted(SystemPermission.PERMIT_SUPER_USER) %}
 		{% set disabled = 'disabled="disabled"'|safe %}
 		

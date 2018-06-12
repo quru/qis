@@ -4,7 +4,7 @@ _Changes: New QIS free/premium model. Adds new Python-Pillow imaging back-end
 Updated Python libraries, including Flask v1._
 
 * Update the Python and web code (the `src` folder)
-* Update the Python libraries
+* Update the Python libraries (replace not overwrite)
 * Update the `qismagick` library to v4.0 (newly optional - if installed/required)
 * Delete `src/imageserver/imagemagick.py`
 * Restart the Apache service

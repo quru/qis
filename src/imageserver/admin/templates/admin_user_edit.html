@@ -28,7 +28,7 @@
 		<div class="error">{{ err_msg|newlines }}</div>
 	{% else %}
 		{% set form_method = 'put' if user else 'post' %}
-		{% set form_action = url_for('api.admin.user', user_id=user.id) if user else url_for('api.admin.user') %}
+		{% set form_action = url_for('api.admin-user', user_id=user.id) if user else url_for('api.admin-user') %}
 		{% set checked = 'checked="checked"'|safe %}
 		
 		<form id="editform" _method="{{ form_method }}" action="{{ form_action }}">

@@ -38,7 +38,7 @@
 
 	<h2>Account details</h2>
 	<br/>
-	<form id="accountform" _method="put" action="{{ url_for('api.admin.user', user_id=user.id) }}">
+	<form id="accountform" _method="put" action="{{ url_for('api.admin-user', user_id=user.id) }}">
 		<input type="hidden" name="auth_type" value="{{ user.auth_type }}"/>
 		<input type="hidden" name="allow_api" value="{{ user.allow_api }}"/>
 		<div>

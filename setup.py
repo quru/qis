@@ -27,15 +27,14 @@ setup(
 
     install_requires=[
         "Pillow>=5.1.0,<6",
-        "Flask==0.12.2",
-        "pyldap==2.4.45",
+        "Flask==1.0.2",
+        "python-ldap==3.1.0",
         "pylibmc==1.5.2",
-        "psycopg2==2.6.2",
-        "SQLAlchemy==1.1.18",
-        "requests==2.18.4",
-        "psutil==5.4.1",
-        "itsdangerous==0.24",
-        "markdown==2.6.10"
+        "psycopg2==2.7.4",
+        "SQLAlchemy==1.2.8",
+        "requests==2.19.0",
+        "psutil==5.4.6",
+        "markdown==2.6.11"
     ],
 
     setup_requires=[

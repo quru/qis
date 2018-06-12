@@ -136,8 +136,8 @@
 		<input type="hidden" id="folder_path" value="{{ db_info.path }}" />
 		<input type="hidden" id="parent_folder_path" value="{{ parent_path }}" />
 		<input type="hidden" id="path_sep" value="{{ pathsep }}" />
-		<input type="hidden" id="folder_admin_create_url" value="{{ url_for('api.admin.file.folder') }}" />
-		<input type="hidden" id="folder_admin_url" value="{{ url_for('api.admin.file.folder', folder_id=db_info.id) }}" />
+		<input type="hidden" id="folder_admin_create_url" value="{{ url_for('api.admin-file-folder') }}" />
+		<input type="hidden" id="folder_admin_url" value="{{ url_for('api.admin-file-folder', folder_id=db_info.id) }}" />
 		<input type="hidden" id="folder_browse_url" value="{{ url_for('folder_browse', path=parent_path, embed=1, msg='Select the new containing folder:') }}" />
 		{% endif %}
 	{% endif %}

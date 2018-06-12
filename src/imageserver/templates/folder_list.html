@@ -162,8 +162,8 @@
 		<input type="hidden" id="folder_path" value="{{ path }}" />
 		<input type="hidden" id="parent_folder_path" value="{{ parent_path }}" />
 		<input type="hidden" id="path_sep" value="{{ pathsep }}" />
-		<input type="hidden" id="folder_admin_create_url" value="{{ url_for('api.admin.file.folder') }}" />
-		<input type="hidden" id="folder_admin_url" value="{{ url_for('api.admin.file.folder', folder_id=db_info.id) }}" />
+		<input type="hidden" id="folder_admin_create_url" value="{{ url_for('api.admin-file-folder') }}" />
+		<input type="hidden" id="folder_admin_url" value="{{ url_for('api.admin-file-folder', folder_id=db_info.id) }}" />
 		{% endif %}
 	{% endif %}
 {% endblock %}

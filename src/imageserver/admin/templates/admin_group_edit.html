@@ -27,7 +27,7 @@
 		<div class="error">{{ err_msg|newlines }}</div>
 	{% else %}
 		{% set form_method = 'put' if group else 'post' %}
-		{% set form_action = url_for('api.admin.group', group_id=group.id) if group else url_for('api.admin.group') %}
+		{% set form_action = url_for('api.admin-group', group_id=group.id) if group else url_for('api.admin-group') %}
 		{% set allow_perms = is_permitted(SystemPermission.PERMIT_ADMIN_PERMISSIONS) %}
 		{% set checked = 'checked="checked"'|safe %}
 		{% set disabled = 'disabled="disabled"'|safe %}
@@ -178,7 +178,7 @@
 			<div class="clear"></div>
 			
 			<!-- Dummy form to provide URLs -->
-			<form id="memberform" action="{{ url_for('api.admin.usergroup', group_id=group.id) }}">
+			<form id="memberform" action="{{ url_for('api.admin-usergroup', group_id=group.id) }}">
 			</form>
 		{% endif %}
 		
