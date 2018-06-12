@@ -73,11 +73,13 @@ def init(back_end='auto', gs_path='gs', temp_files_path=None, pdf_default_dpi=15
         _backend = magick.ImageMagickBackend(gs_path, temp_files_path, pdf_default_dpi)
     elif back_end.lower() == 'pillow':
         _backend = pillow.PillowBackend(gs_path, temp_files_path, pdf_default_dpi)
-    else:  # Auto detect
+    elif back_end.lower() == 'auto':
         try:
             _backend = magick.ImageMagickBackend(gs_path, temp_files_path, pdf_default_dpi)
         except ImportError:
             _backend = pillow.PillowBackend(gs_path, temp_files_path, pdf_default_dpi)
+    else:
+        raise ValueError('Unsupported back end: ' + back_end)
 
 
 def get_backend():
