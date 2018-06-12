@@ -833,9 +833,9 @@ class ImageServerTestsFast(BaseTestCase):
             '', 1,
             rotation=f, top=f, left=f, bottom=f, right=f,
             overlay_size=f, overlay_opacity=f,
-            overlay_src='grr'  # So the overlay params get kept
+            overlay_src='ovsrc123'  # So the overlay params get kept
         )
-        ov_hash = str(hash('grr'))
+        ov_hash = str(hash('ovsrc123'))
         self.assertEqual(
             i.get_cache_key(),
             'IMG:1,O0.12346,T0.12346,L0.12346,B0.12346,R0.12346,Y' + ov_hash + ',YO0.12346,YS0.12346'
@@ -880,20 +880,20 @@ class ImageServerTestsFast(BaseTestCase):
         i.normalise_values()
         self.assertEqual(i.get_cache_key(), 'IMG:1,W200')
         # Hidden or 0 size overlay cancels overlay
-        ov_hash = str(hash('grr'))
-        i = ImageAttrs('', 1, overlay_src='grr', overlay_opacity=0.9, overlay_size=0.9)
+        ov_hash = str(hash('ovsrc123'))
+        i = ImageAttrs('', 1, overlay_src='ovsrc123', overlay_opacity=0.9, overlay_size=0.9)
         i.normalise_values()
         self.assertEqual(i.get_cache_key(), 'IMG:1,Y' + ov_hash + ',YO0.9,YS0.9')
-        i = ImageAttrs('', 1, overlay_src='grr', overlay_opacity=0, overlay_size=1)
+        i = ImageAttrs('', 1, overlay_src='ovsrc123', overlay_opacity=0, overlay_size=1)
         i.normalise_values()
         self.assertEqual(i.get_cache_key(), 'IMG:1')
-        i = ImageAttrs('', 1, overlay_src='grr', overlay_opacity=1, overlay_size=0)
+        i = ImageAttrs('', 1, overlay_src='ovsrc123', overlay_opacity=1, overlay_size=0)
         i.normalise_values()
         self.assertEqual(i.get_cache_key(), 'IMG:1')
         # No ICC name cancels ICC params
-        i = ImageAttrs('', 1, icc_profile='grr', icc_intent='relative', icc_bpc=True)
+        i = ImageAttrs('', 1, icc_profile='icc123', icc_intent='relative', icc_bpc=True)
         i.normalise_values()
-        self.assertEqual(i.get_cache_key(), 'IMG:1,Pgrr,Nrelative,C')
+        self.assertEqual(i.get_cache_key(), 'IMG:1,Picc123,Nrelative,C')
         i = ImageAttrs('', 1, icc_profile='', icc_intent='relative', icc_bpc=True)
         i.normalise_values()
         self.assertEqual(i.get_cache_key(), 'IMG:1')
