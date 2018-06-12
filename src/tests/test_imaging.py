@@ -60,10 +60,19 @@ from imageserver.image_attrs import ImageAttrs
 from imageserver.imaging_magick import ImageMagickBackend
 from imageserver.models import Image, ImageTemplate
 
+_im_version_string = ''
+
 
 # Module level setUp
 def setUpModule():
     main_tests.init_tests(False)
+    # Creating an ImageMagickBackend for the purposes of getting the version string
+    # has the unfortunate side effect of overwriting the gs path, PDF DPI in the
+    # loaded C library. To avoid side effects at runtime we'll get the string here.
+    if imaging.backend_supported('imagemagick'):
+        global _im_version_string
+        imbe = ImageMagickBackend('gs', '/tmp', 96)
+        _im_version_string = imbe.get_version_info()
 
 
 # Utility - selects the Pillow or ImageMagick back end
@@ -90,21 +99,15 @@ def get_png_dimensions(png_data):
 # Utility - returns the ImageMagick library version as an integer,
 # e.g. 654 for v6.5.4, or 0 if the ImageMagick back end is not available
 def imagemagick_version():
-    if imaging.backend_supported('imagemagick'):
-        imbe = ImageMagickBackend('gs', '/tmp', 96)
-        # Assumes format "ImageMagick version: 654, Ghostscript delegate: 9.10"
-        return int(imbe.get_version_info()[21:24])
-    return 0
+    # Assumes format "ImageMagick version: 654, Ghostscript delegate: 9.10"
+    return int(_im_version_string[21:24]) if _im_version_string else 0
 
 
 # Utility - returns the Ghostscript application version as an integer,
 # e.g. 910 for v9.10, or 0 if the ImageMagick back end is not available
 def gs_version():
-    if imaging.backend_supported('imagemagick'):
-        imbe = ImageMagickBackend('gs', '/tmp', 96)
-        # Assumes format "ImageMagick version: 654, Ghostscript delegate: 9.10"
-        return int(float(imbe.get_version_info()[-4:]) * 100)
-    return 0
+    # Assumes format "ImageMagick version: 654, Ghostscript delegate: 9.10"
+    return int(float(_im_version_string[-4:]) * 100) if _im_version_string else 0
 
 
 # A mix-in class for test classes that do imaging operations
