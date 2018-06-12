@@ -136,11 +136,21 @@ class ImagingTestCase(unittest.TestCase):
             b = PillowImage.open(img_file)
             self.assertEqual(a.mode, b.mode, 'Image colorspaces are different')
             self.assertEqual(a.size, b.size, 'Image dimensions are different')
-            diff_img = ImageChops.difference(a, b).convert('L')
+            diff_img = ImageChops.difference(a, b)
+            # Make sure diff_img is 8 bpp (0 to 255 pp)
+            if diff_img.mode == '1':
+                diff_img = diff_img.convert('L')
             hist = diff_img.histogram()
-            sq = (value * (idx**2) for idx, value in enumerate(hist))
+            # Combine all channels into 1 histogram
+            channels = max(len(hist) // 256, 1)
+            hist_combined = hist[:256]
+            for offset in range(1, channels):
+                for px in range(256):
+                    hist_combined[px] += hist[(offset * 256) + px]
+            # Calculate the root square mean
+            sq = (value * (idx**2) for idx, value in enumerate(hist_combined))
             sum_of_squares = sum(sq)
-            rms = math.sqrt(sum_of_squares / (a.size[0] * a.size[1]))
+            rms = math.sqrt(sum_of_squares / (a.size[0] * a.size[1] * channels))
             return rms
         finally:
             if a:
@@ -635,11 +645,13 @@ class CommonImageTests(main_tests.BaseTestCase, ImagingTestCase):
                 self.assertEqual(rv.status_code, 200)
                 # convert dorset.jpg -rotate 45 -quality 75 dorset-45.png &&
                 # convert dorset-45.png -gravity center -crop x60% output.png
-                # On RHEL 6, IM 654 to 672 gives a blurry old thing. IM 684 is sharp.
-                match_file = 'rotate-crop-im654.png' if (
-                    be == 'imagemagick' and
-                    imagemagick_version() < ImageMagickTests.MAGICK_ROTATION_VERSION
-                ) else 'rotate-crop.png'
+                if be == 'imagemagick':
+                    # On RHEL 6, IM 654 to 672 gives a blurry image. IM 684 is sharp.
+                    match_file = 'rotate-crop-im654.png' if (
+                        imagemagick_version() < ImageMagickTests.MAGICK_ROTATION_VERSION
+                    ) else 'rotate-crop.png'
+                else:
+                    match_file = 'rotate-crop-pillow.png'
                 self.assertImageMatch(rv.data, self.get_test_image_path(match_file))
 
     # Issue #648 - crop + rotate + resize should also do the right thing
