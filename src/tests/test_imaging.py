@@ -5,7 +5,7 @@
 # Date started:  07 June 2018
 # By:            Matt Fozard
 # Purpose:       Tests imaging operations
-# Requires:
+# Requires:      Pillow
 # Copyright:     Quru Ltd (www.quru.com)
 # Licence:
 #
@@ -31,13 +31,17 @@
 #
 
 import binascii
+import io
 import json
+import math
 import os
 import shutil
 import subprocess
 import tempfile
 import time
 import unittest
+
+from PIL import Image as PillowImage, ImageChops
 
 from . import tests as main_tests
 
@@ -54,6 +58,21 @@ from imageserver.filesystem_manager import (
 from imageserver.filesystem_sync import auto_sync_file, auto_sync_existing_file
 from imageserver.image_attrs import ImageAttrs
 from imageserver.models import Image, ImageTemplate
+
+
+# Module level setUp
+def setUpModule():
+    main_tests.init_tests(False)
+
+
+# Utility - selects the Pillow or ImageMagick back end
+def select_backend(backend):
+    imaging.imaging_init(
+        backend,
+        flask_app.config['GHOSTSCRIPT_PATH'],
+        flask_app.config['TEMP_DIR'],
+        flask_app.config['PDF_BURST_DPI']
+    )
 
 
 # Utility - returns a tuple of (width, height) of a PNG image
@@ -76,6 +95,7 @@ def get_app_path(app_name, paths):
     return app_path
 
 
+# TODO move into ImageMagickTests
 # Possible paths to ImageMagick binaries, in order of preference
 IMAGEMAGICK_PATHS = [
     "/usr/local/bin/",  # Installed from source
@@ -83,8 +103,11 @@ IMAGEMAGICK_PATHS = [
     ""                  # Default / first found in the PATH
 ]
 
+# TODO move into ImageMagickTests
 # At some point from 9.14 to 9.16 Ghostscript draws thicker lines than before
 GS_LINES_VERSION = 914
+
+# TODO move into ImageMagickTests
 # http://www.imagemagick.org/script/changelog.php
 # "2011-11-07 6.7.3-4 RotateImage() now uses distorts rather than shears."
 # Note: based on the change log, this number is a guess rather than a known fact
@@ -133,74 +156,172 @@ def compare_images(img_path1, img_path2):
     return psnr
 
 
-# TODO Add CommonTests that should be run for both back ends
-#      have a list of [im, pil] or [pil] auto detected
-#      use a test_fn with loop on the list to switch back end and run a _test_fn
+# A mix-in class for test classes that do imaging operations
+class ImagingTestCase(unittest.TestCase):
+    def get_test_image_path(self, filename):
+        """
+        Finds and returns the path of an image file in the tests package
+        """
+        for pth in (
+            filename,
+            os.path.join('images', filename),
+            os.path.join('tests', 'images', filename),
+            os.path.join('src', 'tests', 'images', filename)
+        ):
+            if os.path.exists(pth):
+                return pth
+        raise ValueError('Test image not found: ' + filename)
+
+    def image_diff_score(self, img_data, img_file):
+        """
+        Returns a score for how visually different image data A is from image file B.
+        Scores at (or close to) 0 mean the images are the same, scores above 50 mean
+        that the images are fairly different.
+        """
+        a = None
+        b = None
+        try:
+            a = PillowImage.open(io.BytesIO(img_data))
+            b = PillowImage.open(img_file)
+            self.assertEqual(a.mode, b.mode, 'Image colorspaces are different')
+            self.assertEqual(a.size, b.size, 'Image dimensions are different')
+            diff_img = ImageChops.difference(a, b).convert('L')
+            hist = diff_img.histogram()
+            sq = (value * (idx**2) for idx, value in enumerate(hist))
+            sum_of_squares = sum(sq)
+            rms = math.sqrt(sum_of_squares / (a.size[0] * a.size[1]))
+            return rms
+        finally:
+            if a:
+                a.close()
+            if b:
+                b.close()
+
+    def assertImageMatch(self, img_data, img_file, tolerance=5):
+        """
+        Returns whether image data matches an image file. The tolerance can be
+        0 for an exact match, around 5 to allow for small differences in JPEG
+        encoding, or larger values (up to perhaps 50) to allow larger differences.
+        On failure, saves the 2 images to /tmp so that they can be manually checked.
+        """
+        try:
+            rms = self.image_diff_score(img_data, img_file)
+            self.assertLessEqual(rms, tolerance, 'Images are too different')
+        except Exception:
+            self._save_image_pair((img_data, False), (img_file, True))
+            raise
+
+    def _save_image_pair(self, img_a, img_b):
+        """
+        Saves a pair of images, specified as tuples as either (bytes, False) or
+        (file_path, True) into /tmp
+        """
+        ext = ''
+        if img_a[1] and '.' in img_a[0]:
+            ext = os.path.splitext(img_a[0])[1]
+        if img_b[1] and '.' in img_b[0]:
+            ext = os.path.splitext(img_b[0])[1]
+        for item in [(img_a, 'a'), (img_b, 'b')]:
+            suffix = str(int(time.time()) % 1000)
+            dest_path = '/tmp/qis-test-failure-' + suffix + '-' + item[1] + ext
+            if item[0][1]:  # file path
+                shutil.copy(item[0][0], dest_path)
+            else:           # bytes
+                with open(dest_path, 'wb') as f:
+                    f.write(item[0][0])
 
 
+# Tests that can be run for both Pillow and ImageMagick back ends
+class CommonImageTests(main_tests.BaseTestCase, ImagingTestCase):
+    Backends = ['pillow']
+
+    @classmethod
+    def setUpClass(cls):
+        super(CommonImageTests, cls).setUpClass()
+        if imaging.imaging_backend_supported('imagemagick'):
+            cls.Backends += ['imagemagick']
+
+    # Test serving of plain image
+    def test_serve_plain_image(self):
+        for be in CommonImageTests.Backends:
+            select_backend(be)
+            with self.subTest(backend=be):
+                rv = self.app.get('/image?src=test_images/cathedral.jpg')
+                self.assertEqual(rv.status_code, 200)
+                self.assertIn('image/jpeg', rv.headers['Content-Type'])
+                # knowing length requires 'keep original' values in settings
+                self.assertEqual(len(rv.data), 648496)
+                self.assertEqual(rv.headers.get('Content-Length'), '648496')
+
+    # Test serving of original image
+    def test_serve_original_image(self):
+        for be in CommonImageTests.Backends:
+            select_backend(be)
+            with self.subTest(backend=be):
+                rv = self.app.get('/original?src=test_images/cathedral.jpg')
+                self.assertEqual(rv.status_code, 200)
+                self.assertIn('image/jpeg', rv.headers['Content-Type'])
+                self.assertEqual(len(rv.data), 648496)
+                self.assertEqual(rv.headers.get('Content-Length'), '648496')
+
+    # Test stripping of metadata
+    def test_info_strip(self):
+        for be in CommonImageTests.Backends:
+            select_backend(be)
+            with self.subTest(backend=be):
+                rv = self.app.get('/image?src=test_images/cathedral.jpg&width=200&strip=0')
+                self.assertEqual(rv.status_code, 200)
+                orig_len = len(rv.data)
+                rv = self.app.get('/image?src=test_images/cathedral.jpg&width=200&strip=1')
+                self.assertEqual(rv.status_code, 200)
+                self.assertLess(
+                    len(rv.data), orig_len, 'Stripped image is not smaller than the original'
+                )
+
+    # #4705 Test that stripping of RGB colour profiles does not cause major colour loss
+    def test_rgb_profile_strip(self):
+        for be in CommonImageTests.Backends:
+            select_backend(be)
+            with self.subTest(backend=be):
+                rv = self.app.get('/image?src=test_images/profile-pro-photo.jpg&width=900&height=600&format=png&quality=9&strip=0')
+                self.assertEqual(rv.status_code, 200)
+                orig_len = len(rv.data)
+                rv = self.app.get('/image?src=test_images/profile-pro-photo.jpg&width=900&height=600&format=png&quality=9&strip=1')
+                self.assertEqual(rv.status_code, 200)
+                self.assertLess(
+                    len(rv.data), orig_len, 'Stripped image is not smaller than the original'
+                )
+                # Now ensure it looks correct (not all dark and dull)
+                self.assertImageMatch(
+                    rv.data,
+                    self.get_test_image_path('strip-rgb-profile.png')
+                )
+
+
+# Tests that should be run only on the Pillow back end
 @unittest.skipIf(
     not imaging.imaging_backend_supported('pillow'),
     'Pillow imaging is not installed'
 )
-class PillowTests(main_tests.BaseTestCase):
+class PillowTests(main_tests.BaseTestCase, ImagingTestCase):
     @classmethod
     def setUpClass(cls):
         super(PillowTests, cls).setUpClass()
-        main_tests.init_tests()
-        # Switch to the Pillow back end
-        imaging.imaging_init(
-            'pillow',
-            flask_app.config['GHOSTSCRIPT_PATH'],
-            flask_app.config['TEMP_DIR'],
-            flask_app.config['PDF_BURST_DPI']
-        )
+        select_backend('pillow')
 
     # TODO write me
 
 
+# Tests that should be run only on the ImageMagick back end
 @unittest.skipIf(
     not imaging.imaging_backend_supported('imagemagick'),
     'ImageMagick imaging is not installed'
 )
-class ImageMagickTests(main_tests.BaseTestCase):
+class ImageMagickTests(main_tests.BaseTestCase, ImagingTestCase):
     @classmethod
     def setUpClass(cls):
         super(ImageMagickTests, cls).setUpClass()
-        main_tests.init_tests()
-        # Switch to the ImageMagick back end
-        imaging.imaging_init(
-            'imagemagick',
-            flask_app.config['GHOSTSCRIPT_PATH'],
-            flask_app.config['TEMP_DIR'],
-            flask_app.config['PDF_BURST_DPI']
-        )
-
-    # TODO this and compare_images - convert to pillow if we can
-    # Utility - asserts that an image matches an image file on disk
-    # "Typical values for the PSNR in lossy image and video compression are between 30 and 50"
-    # http://en.wikipedia.org/wiki/Peak_signal-to-noise_ratio
-    def assertImageMatch(self, img_data, match_file, tolerance=46):
-        if os.path.exists(match_file):
-            static_img = match_file
-        else:
-            static_img = os.path.join('tests/images', match_file)
-            if not os.path.exists(static_img):
-                static_img = os.path.join('src/tests/images', match_file)
-            if not os.path.exists(static_img):
-                raise ValueError('Test image not found: ' + match_file)
-        temp_img = '/tmp/qis_img.tmp'
-        try:
-            with open(temp_img, 'wb') as f:
-                f.write(img_data)
-            psnr = compare_images(temp_img, static_img)
-            self.assertGreaterEqual(psnr, tolerance)
-        except Exception:
-            # Save the unmatched image for evaluation
-            compare_name = os.path.split(static_img)[1]
-            shutil.copy(temp_img, '/tmp/match-test-fail-' + compare_name)
-            raise
-        finally:
-            os.remove(temp_img)
+        select_backend('imagemagick')
 
     # Utility - invoke ImageMagick convert command, wait for completion,
     #           and return a boolean indicating success
@@ -257,15 +378,6 @@ class ImageMagickTests(main_tests.BaseTestCase):
         self.assertImageMatch(rv.data, tempfile)
         if os.path.exists(tempfile):
             os.remove(tempfile)
-
-    # Test serving of plain image
-    def test_serve_plain_image(self):
-        rv = self.app.get('/image?src=test_images/cathedral.jpg')
-        self.assertEqual(rv.status_code, 200)
-        self.assertIn('image/jpeg', rv.headers['Content-Type'])
-        # knowing length requires 'keep original' values in settings
-        self.assertEqual(len(rv.data), 648496)
-        self.assertEqual(rv.headers.get('Content-Length'), '648496')
 
     # Test serving of public image with public width (but not height) limit
     def test_public_width_limit(self):
@@ -421,33 +533,8 @@ class ImageMagickTests(main_tests.BaseTestCase):
         rv = self.app.get('/image?src=test_images/cathedral.jpg&tmp=blank&format=png&width=900')
         self.assertEqual(rv.status_code, 400)
 
-    # Test serving of original image
-    def test_serve_original_image(self):
-        rv = self.app.get('/original?src=test_images/cathedral.jpg')
-        assert rv.status_code == 200
-        assert 'image/jpeg' in rv.headers['Content-Type'], 'HTTP headers do not specify image/jpeg'
-        assert len(rv.data) == 648496, 'Returned original image length is incorrect'
-        assert rv.headers.get('Content-Length') == '648496'
 
-    # Test stripping of metadata
-    def test_info_strip(self):
-        rv = self.app.get('/image?src=test_images/cathedral.jpg&width=200&strip=0')
-        assert rv.status_code == 200
-        orig_len = len(rv.data)
-        rv = self.app.get('/image?src=test_images/cathedral.jpg&width=200&strip=1')
-        assert rv.status_code == 200
-        assert len(rv.data) < orig_len, 'Stripped image is not smaller than the original'
 
-    # #4705 Test that stripping of RGB colour profiles does not cause major colour loss
-    def test_rgb_profile_strip(self):
-        rv = self.app.get('/image?src=test_images/profile-pro-photo.jpg&width=900&height=600&format=png&quality=9&strip=0')
-        assert rv.status_code == 200
-        orig_len = len(rv.data)
-        rv = self.app.get('/image?src=test_images/profile-pro-photo.jpg&width=900&height=600&format=png&quality=9&strip=1')
-        assert rv.status_code == 200
-        assert len(rv.data) < orig_len, 'Stripped image is not smaller than the original'
-        # Now ensure it looks correct (not all dark and dull)
-        self.assertImageMatch(rv.data, 'strip-rgb-profile.png')
 
     # Test attachment option
     def test_attach_image(self):
