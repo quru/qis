@@ -66,9 +66,9 @@ def setUpModule():
 
 
 # Utility - selects the Pillow or ImageMagick back end
-def select_backend(backend):
-    imaging.imaging_init(
-        backend,
+def select_backend(back_end):
+    imaging.init(
+        back_end,
         flask_app.config['GHOSTSCRIPT_PATH'],
         flask_app.config['TEMP_DIR'],
         flask_app.config['PDF_BURST_DPI']
@@ -238,8 +238,8 @@ class CommonImageTests(main_tests.BaseTestCase, ImagingTestCase):
     @classmethod
     def setUpClass(cls):
         super(CommonImageTests, cls).setUpClass()
-        if imaging.imaging_backend_supported('imagemagick'):
-            cls.Backends += ['imagemagick']
+        if imaging.backend_supported('imagemagick'):
+            CommonImageTests.Backends += ['imagemagick']
 
     # Test serving of plain image
     def test_serve_plain_image(self):
@@ -300,7 +300,7 @@ class CommonImageTests(main_tests.BaseTestCase, ImagingTestCase):
 
 # Tests that should be run only on the Pillow back end
 @unittest.skipIf(
-    not imaging.imaging_backend_supported('pillow'),
+    not imaging.backend_supported('pillow'),
     'Pillow imaging is not installed'
 )
 class PillowTests(main_tests.BaseTestCase, ImagingTestCase):
@@ -314,7 +314,7 @@ class PillowTests(main_tests.BaseTestCase, ImagingTestCase):
 
 # Tests that should be run only on the ImageMagick back end
 @unittest.skipIf(
-    not imaging.imaging_backend_supported('imagemagick'),
+    not imaging.backend_supported('imagemagick'),
     'ImageMagick imaging is not installed'
 )
 class ImageMagickTests(main_tests.BaseTestCase, ImagingTestCase):
@@ -338,12 +338,12 @@ class ImageMagickTests(main_tests.BaseTestCase, ImagingTestCase):
     # Utility - returns the ImageMagick library version as an integer, e.g. 654 for v6.5.4
     def imagemagick_version(self):
         # Assumes format "ImageMagick version: 654, Ghostscript delegate: 9.10"
-        return int(imaging.imaging_get_version_info()[21:24])
+        return int(imaging.get_version_info()[21:24])
 
     # Utility - returns the Ghostscript application version as an integer, e.g. 910 for v9.10
     def gs_version(self):
         # Assumes format "ImageMagick version: 654, Ghostscript delegate: 9.10"
-        return int(float(imaging.imaging_get_version_info()[-4:]) * 100)
+        return int(float(imaging.get_version_info()[-4:]) * 100)
 
     # Utility - invoke Ghostscript gs command, wait for completion,
     #           and return a boolean indicating success

@@ -56,7 +56,7 @@ class PillowBackend(object):
         Initialises the Pillow library. This function must be called once
         before the other functions can be used.
 
-        See imaging.imaging_init() for a description of the parameters.
+        See imaging.init() for a description of the parameters.
         An ImportError is raised if the Pillow library failed to load.
         """
         global _pillow_import_error

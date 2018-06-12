@@ -59,7 +59,7 @@ class ImageMagickBackend(object):
         Initialises the ImageMagick library. This function must be called once
         before the other functions can be used.
 
-        See imaging.imaging_init() for a description of the parameters.
+        See imaging.init() for a description of the parameters.
         An ImportError is raised if the ImageMagick library failed to load.
         """
         global _qismagick_import_error

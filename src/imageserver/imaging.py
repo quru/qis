@@ -35,11 +35,11 @@ from . import imaging_pillow as pillow
 _backend = None
 
 
-def imaging_backend_supported(back_end):
+def backend_supported(back_end):
     """
     Returns whether a back-end imaging library is installed and supported.
     Possible back-ends: "pillow" or "imagemagick". This method can be called
-    before imaging_init() to find out what back-ends are available.
+    before imaging.init() to find out what back-ends are available.
     """
     try:
         if back_end.lower() == 'imagemagick':
@@ -51,7 +51,7 @@ def imaging_backend_supported(back_end):
     return False
 
 
-def imaging_init(back_end='auto', gs_path='gs', temp_files_path=None, pdf_default_dpi=150):
+def init(back_end='auto', gs_path='gs', temp_files_path=None, pdf_default_dpi=150):
     """
     Initialises the back-end imaging library. This function must be called
     once on startup before the other functions can be used; it is not safe
@@ -80,10 +80,10 @@ def imaging_init(back_end='auto', gs_path='gs', temp_files_path=None, pdf_defaul
             _backend = pillow.PillowBackend(gs_path, temp_files_path, pdf_default_dpi)
 
 
-def imaging_get_backend():
+def get_backend():
     """
     Returns whether the initialised imaging back-end is "pillow" or "imagemagick",
-    or returns None if imaging_init() has not been called.
+    or returns None if imaging.init() has not been called.
     """
     global _backend
     if not _backend:
@@ -96,30 +96,31 @@ def imaging_get_backend():
         return 'unknown'
 
 
-def imaging_get_version_info():
+def get_version_info():
     """
     Returns a string containing the back-end library version information.
     """
     return _backend.get_version_info()
+
 
 # TODO we might need a supported file types too
 # TODO poke operation support via image manager, not here directly,
 #      and map overlay data/src and icc data/src keys
 
 
-def imaging_supported_operations():
+def supported_operations():
     """
     Returns a dictionary of key:boolean entries for which of the imaging operations
-    defined for imaging_adjust_image() are supported by the current back-end. Some
+    defined for imaging.adjust_image() are supported by the current back-end. Some
     back-ends may add their own keys, and some may not return "standard" keys if
     they have not been kept updated. Therefore use this function as follows:
 
-        key_supported = imaging_supported_operations().get(key, False)
+        key_supported = imaging.supported_operations().get(key, False)
     """
     return _backend.supported_operations()
 
 
-def imaging_adjust_image(image_data, data_type, image_spec):
+def adjust_image(image_data, data_type, image_spec):
     """
     Alters an encoded image in any of the following ways, returning a newly encoded
     image: resize, rotate, crop, change format, change compression, sharpen or blur,
@@ -131,7 +132,7 @@ def imaging_adjust_image(image_data, data_type, image_spec):
 
     The defined image_spec dictionary keys/values are as follows, though not
     all back-ends support all operations, and some may support extras. Use the
-    imaging_supported_operations() function to query back-end support. Most of the
+    imaging.supported_operations() function to query back-end support. Most of the
     keys are intentionally the same as those used for the image templates API,
     but there are differences for icc profile and overlay image, which are
     filenames in the templates but raw profile/image bytes here.
@@ -207,7 +208,7 @@ def imaging_adjust_image(image_data, data_type, image_spec):
     return _backend.adjust_image(image_data, data_type, image_spec)
 
 
-def imaging_burst_pdf(pdf_data, dest_dir, dpi):
+def burst_pdf(pdf_data, dest_dir, dpi):
     """
     Exports every page of a PDF file as separate PNG files into a directory
     using Ghostscript. Note that this operation may take some time.
@@ -229,7 +230,7 @@ def imaging_burst_pdf(pdf_data, dest_dir, dpi):
     return _backend.burst_pdf(pdf_data, dest_dir, dpi)
 
 
-def imaging_get_image_profile_data(image_data, data_type):
+def get_image_profile_data(image_data, data_type):
     """
     Reads and returns all EXIF / IPTC / XMP / etc profile data from an image.
 
@@ -245,7 +246,7 @@ def imaging_get_image_profile_data(image_data, data_type):
     return _backend.get_image_profile_data(image_data, data_type)
 
 
-def imaging_get_image_dimensions(image_data, data_type):
+def get_image_dimensions(image_data, data_type):
     """
     Obtains the pixel dimensions an image in an efficient way,
     avoiding the need to decode the image.
