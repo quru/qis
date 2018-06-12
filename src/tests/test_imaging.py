@@ -215,7 +215,7 @@ class CommonImageTests(main_tests.BaseTestCase, ImagingTestCase):
         self.assertIn('filename="cathedral.jpg"', rv.headers['Content-Disposition'])
 
     # Test attachment option (original) - back end independent
-    def test_attach_image(self):
+    def test_attach_original(self):
         rv = self.app.get('/original?src=test_images/cathedral.jpg&attach=1')
         self.assertEqual(rv.status_code, 200)
         self.assertIsNotNone(rv.headers.get('Content-Disposition'))
