@@ -60,19 +60,21 @@ from imageserver.image_attrs import ImageAttrs
 from imageserver.imaging_magick import ImageMagickBackend
 from imageserver.models import Image, ImageTemplate
 
+
+# Creating an ImageMagickBackend for the purposes of getting the version string
+# has the unfortunate side effect of overwriting the gs path, PDF DPI in the
+# loaded C library. To avoid side effects at runtime we'll get the string here.
+# We also need this info at import time for the @skipIf version checks to work.
 _im_version_string = ''
+if imaging.get_backend() == 'imagemagick':
+    _im_version_string = imaging.get_version_info()
+elif imaging.backend_supported('imagemagick'):
+    _im_version_string = ImageMagickBackend('gs', '/tmp', 96).get_version_info()
 
 
 # Module level setUp
 def setUpModule():
     main_tests.init_tests(False)
-    # Creating an ImageMagickBackend for the purposes of getting the version string
-    # has the unfortunate side effect of overwriting the gs path, PDF DPI in the
-    # loaded C library. To avoid side effects at runtime we'll get the string here.
-    if imaging.backend_supported('imagemagick'):
-        global _im_version_string
-        imbe = ImageMagickBackend('gs', '/tmp', 96)
-        _im_version_string = imbe.get_version_info()
 
 
 # Utility - selects the Pillow or ImageMagick back end
