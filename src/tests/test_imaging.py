@@ -73,6 +73,8 @@ def select_backend(back_end):
         flask_app.config['TEMP_DIR'],
         flask_app.config['PDF_BURST_DPI']
     )
+    # VERY IMPORTANT! Clear any images cached from the previous back end
+    cm.clear()
 
 
 # Utility - returns a tuple of (width, height) of a PNG image

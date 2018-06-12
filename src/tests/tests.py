@@ -243,7 +243,7 @@ def get_login_error(html):
 
 class FlaskTestCase(unittest.TestCase):
     def setUp(self):
-        # Restore original settings before each test
+        # Reset the app settings before each test
         self.reset_settings()
         # Create a test client for our tests
         self.app = flask_app.test_client()
