@@ -19,9 +19,6 @@ APPLICATION_ROOT = "/"
 # Whether to default image URLs to http or https
 PREFERRED_URL_SCHEME = "http"
 
-# Debug mode (do not enable this in production)
-DEBUG = False
-
 # Benchmark mode (do not enable this in production)
 BENCHMARKING = False
 

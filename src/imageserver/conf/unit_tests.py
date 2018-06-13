@@ -7,9 +7,6 @@
 # Yes we are
 TESTING = True
 
-# Test the production code
-DEBUG = False
-
 # Tests run locally
 PUBLIC_HOST_NAME = "localhost"
 

@@ -22,7 +22,6 @@ To suppress HTTP 503 errors and allow the test script to clear cached images
 as it goes, add the `BENCHMARKING` setting to your `local_settings.py` file.
 Remember to remove it when you have finished:
 
-	DEBUG = False
 	BENCHMARKING = True
 
 At present you also need to clear the server's cache before each test run,
@@ -247,15 +246,15 @@ Setup (folder permissions):
 
 * Enable _View and download_ permission for the `test_images` folder and the `Public` group
 
-Setup (local settings):
+Setup (add to your `local_settings.py` file):
 
-	DEBUG = False
 	BENCHMARKING = True
 
 Setup (every time):
 
 	$ memcached -m 512
-	$ python src/runserver.py
+	$ export FLASK_ENV=production
+	$ python3 src/runserver.py
 
 Default test:
 
