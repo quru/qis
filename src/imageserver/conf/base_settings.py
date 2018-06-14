@@ -66,6 +66,10 @@ IMAGE_FORMATS = {
 
 # Resize algorithm (1 fast/good, 2 better, 3 slow/best)
 IMAGE_RESIZE_QUALITY = 3
+# Whether to gamma correct sRGB images when resizing. Should be True for the
+# best image quality. Adds a small overhead with the ImageMagick back-end but
+# incurs a heavy performance penalty with the Pillow back-end.
+IMAGE_RESIZE_GAMMA_CORRECT = True
 
 # Maximum image width/height parameter value to accept
 # E.g. 15k x 15k x 32bpp = 900MB memory required for processing

@@ -128,6 +128,7 @@ class PillowBackend(object):
             'format': True,
             'quality': True,
             'resize_type': True,
+            'resize_gamma': True,
             'strip': True
         }
 
@@ -237,7 +238,8 @@ class PillowBackend(object):
                     image_spec['size_fit'],
                     image_spec['align_h'], image_spec['align_v'],
                     fill_rgb,
-                    image_spec['resize_type']
+                    image_spec['resize_type'],
+                    image_spec['resize_gamma']
                 )
                 self._restore_pillow_info(image, original_info)
             # (5) Blur/sharpen - P2
@@ -346,6 +348,7 @@ class PillowBackend(object):
         image_spec['format'] = image_spec.get('format', 'jpg')
         image_spec['quality'] = _limit_number(image_spec.get('quality', 80), 1, 100)
         image_spec['resize_type'] = _limit_number(image_spec.get('resize_type', 3), 1, 3)
+        image_spec['resize_gamma'] = image_spec.get('resize_gamma', True)
         image_spec['strip'] = image_spec.get('strip', False)
 
         tile_spec = image_spec['tile']
@@ -863,10 +866,12 @@ class PillowBackend(object):
         # Return unchanged image
         return image
 
-    def _image_resize_bare(self, image, width, height, quality, auto_close=True):
+    def _image_resize_bare(self, image, width, height, quality, gamma_correct, auto_close=True):
         """
         Resizes an image, returning a resized copy.
         The quality number can be from 1 (fastest) to 3 (best quality).
+        The gamma correction flag controls whether sRGB images are gamma corrected
+        during the resize (giving a better quality image but very slow processing).
         """
         use_image = image
         builtin_profile = None
@@ -874,9 +879,8 @@ class PillowBackend(object):
         # Since Pillow does not have any colorspace awareness, we'll assume that
         # anything in "RGB" mode without an embedded profile is actually sRGB.
         # This topic is discussed at https://github.com/python-pillow/Pillow/issues/1604
-        gamma_correct = image.mode.startswith('RGB')
-        if gamma_correct:
-            # TODO This takes 80% of the time for an image resize. Add a setting for whether to enable it.
+        do_gamma_correct = image.mode.startswith('RGB') and gamma_correct
+        if do_gamma_correct:
             if 'icc_profile' in image.info:
                 builtin_profile = ImageCms.ImageCmsProfile(io.BytesIO(image.info['icc_profile']))
                 use_image = ImageCms.profileToProfile(image, builtin_profile, self.linear_rgb_profile)
@@ -889,7 +893,7 @@ class PillowBackend(object):
             (width, height),
             resample=self._get_pillow_resample(quality)
         )
-        if gamma_correct:
+        if do_gamma_correct:
             if builtin_profile:
                 new_image = ImageCms.profileToProfile(new_image, self.linear_rgb_profile, builtin_profile)
             else:
@@ -904,7 +908,8 @@ class PillowBackend(object):
         return new_image
 
     def _image_resize(self, image, width, height, size_auto_fit,
-                      align_h, align_v, fill_rgb, quality, auto_close=True):
+                      align_h, align_v, fill_rgb, quality, gamma_correct,
+                      auto_close=True):
         """
         Resizes an image, returning a resized copy.
         Width or height can be 0 to use the image's original width or height.
@@ -918,6 +923,8 @@ class PillowBackend(object):
         respected).
 
         The quality number can be from 1 (fastest) to 3 (best quality).
+        The gamma correction flag controls whether sRGB images are gamma corrected
+        during the resize (giving a better quality image but very slow processing).
         """
         cur_aspect = image.width / image.height
         resize_canvas = False
@@ -954,7 +961,7 @@ class PillowBackend(object):
             # Plain image resize
             if width != image.width or height != image.height:
                 new_image = self._image_resize_bare(
-                    image, width, height, quality, auto_close=False
+                    image, width, height, quality, gamma_correct, auto_close=False
                 )
         else:
             canvas_width = width
@@ -978,7 +985,7 @@ class PillowBackend(object):
             # First perform plain image resize
             if width != image.width or height != image.height:
                 new_image = self._image_resize_bare(
-                    image, width, height, quality, auto_close=False
+                    image, width, height, quality, gamma_correct, auto_close=False
                 )
 
             # Then adjust the canvas if required

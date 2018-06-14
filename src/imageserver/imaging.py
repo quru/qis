@@ -180,6 +180,7 @@ def adjust_image(image_data, data_type, image_spec):
     format:        lower case image format to return, default "jpg"
     quality:       JPG quality or PNG compression type, 0 to 100, default 80
     resize_type:   resizing algorithm, 1 (fastest) to 3 (best quality), default 3
+    resize_gamma:  whether to gamma correct sRGB images when resizing, default True
     strip:         whether to strip EXIF data and colour profiles from the image,
                    True or False, default False
 

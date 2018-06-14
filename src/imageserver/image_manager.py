@@ -1122,6 +1122,7 @@ class ImageManager(object):
                 'format': iformat,
                 'quality': cquality,
                 'resize_type': self._settings['IMAGE_RESIZE_QUALITY'],
+                'resize_gamma': self._settings['IMAGE_RESIZE_GAMMA_CORRECT'],
                 'strip': strip_info
             }
             try:

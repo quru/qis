@@ -109,6 +109,7 @@ class ImageMagickBackend(object):
             'format': True,
             'quality': True,
             'resize_type': True,
+            'resize_gamma': True,
             'strip': True
         }
 
