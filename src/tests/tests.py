@@ -967,7 +967,7 @@ class ImageServerTestsFast(BaseTestCase):
         try_attrs = ImageAttrs('test_images/dorset.jpg', image_id, iformat='png', width=500)  # No rotation
         base = im._get_base_image(im.finalise_image_attrs(try_attrs))
         assert base is None
-        try_attrs = ImageAttrs('test_images/dorset.jpg', image_id, iformat='bmp', width=500, rotation=90)  # Format
+        try_attrs = ImageAttrs('test_images/dorset.jpg', image_id, iformat='gif', width=500, rotation=90)  # Format
         base = im._get_base_image(im.finalise_image_attrs(try_attrs))
         assert base is None
         try_attrs = ImageAttrs('test_images/dorset.jpg', image_id, iformat='png', width=500, height=500, rotation=90)  # Aspect ratio
@@ -1161,17 +1161,17 @@ class ImageServerTestsFast(BaseTestCase):
         try:
             db_def_temp = dm.get_image_template(tempname='Default')
             # Get img1 with explicit format and quality params
-            img1 = self.app.get('/image?src=test_images/dorset.jpg&width=800&format=bmp&quality=50')
+            img1 = self.app.get('/image?src=test_images/dorset.jpg&width=800&format=png&quality=50')
             self.assertEqual(img1.status_code, 200)
-            self.assertIn('image/bmp', img1.headers['Content-Type'])
-            # Get img2, no params but with defaults set to be the same as img1
-            db_def_temp.template['format']['value'] = 'bmp'
+            self.assertIn('image/png', img1.headers['Content-Type'])
+            # Get img2 with no params but with defaults set to be the same as img1
+            db_def_temp.template['format']['value'] = 'png'
             db_def_temp.template['quality']['value'] = 50
             dm.save_object(db_def_temp)
             im.reset_templates()
             img2 = self.app.get('/image?src=test_images/dorset.jpg&width=800')
             self.assertEqual(img2.status_code, 200)
-            self.assertIn('image/bmp', img2.headers['Content-Type'])
+            self.assertIn('image/png', img2.headers['Content-Type'])
             self.assertEqual(len(img1.data), len(img2.data))
             # Test keeping the original image format
             db_def_temp.template['format']['value'] = ''
@@ -2318,14 +2318,18 @@ class ImageServerCacheTests(BaseTestCase):
 
 class UtilityTests(unittest.TestCase):
     def test_image_attrs_serialisation(self):
-        ia = ImageAttrs('some/path', -1, page=2, iformat='psd', template='smalljpeg',
-                        width=1000, height=1000, size_fit=False,
+        ia = ImageAttrs('some/path', -1, page=2, iformat='gif', template='smalljpeg',
+                        width=2000, height=1000, size_fit=False,
                         fill='black', colorspace='rgb', strip=False)
         ia_dict = ia.to_dict()
         self.assertEqual(ia_dict['template'], 'smalljpeg')
         self.assertEqual(ia_dict['fill'], 'black')
         self.assertEqual(ia_dict['page'], 2)
         self.assertEqual(ia_dict['size_fit'], False)
+        self.assertEqual(ia_dict['format'], 'gif')
+        self.assertEqual(ia_dict['colorspace'], 'rgb')
+        self.assertEqual(ia_dict['width'], 2000)
+        self.assertEqual(ia_dict['height'], 1000)
         rev = ImageAttrs.from_dict(ia_dict)
         rev_dict = rev.to_dict()
         self.assertEqual(ia_dict, rev_dict)
