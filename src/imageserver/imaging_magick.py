@@ -73,6 +73,14 @@ class ImageMagickBackend(object):
         """
         return qismagick.get_library_info()
 
+    def supported_file_types(self):
+        """
+        Returns which image types are supported by the ImageMagick back-end.
+        See the function documentation for imaging.supported_file_types() for
+        more information.
+        """
+        return None
+
     def supported_operations(self):
         """
         Returns which imaging operations are supported by the ImageMagick back-end.

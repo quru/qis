@@ -177,12 +177,50 @@ class ImageManager(object):
         """
         return list(set(v[0] for v in self._icc_profiles.values()))
 
-    def get_image_formats(self):
+    def get_image_formats(self, supported_only=True):
         """
-        Returns a lower case list of supported image formats
-        (as file extensions) e.g. ['jpg','png']
+        Returns a list of either known or supported image formats as lower case
+        file extensions, e.g. ['jpg', 'png', 'gif']. When supported_only is False,
+        this is the list of file types defined by the IMAGE_FORMATS system setting.
+        When supported_only is True (the default), that list is filtered to return
+        only the image formats that the imaging back end claims to support.
         """
-        return list(self._settings['IMAGE_FORMATS'].keys())
+        if (
+            not getattr(self, '_memo_image_formats_supported', None) or
+            not getattr(self, '_memo_image_formats_all', None)
+        ):
+            self._memo_image_formats_all = sorted([
+                ext.lower() for ext in self._settings['IMAGE_FORMATS'].keys()
+            ])
+            self._memo_image_formats_supported = list(self._memo_image_formats_all)
+            restrict_types = imaging.supported_file_types()
+            if restrict_types:
+                self._memo_image_formats_supported = [
+                    ext for ext in self._memo_image_formats_supported
+                    if ext in restrict_types
+                ]
+        return (
+            self._memo_image_formats_supported
+            if supported_only else self._memo_image_formats_all
+        )
+
+    def get_supported_operations(self):
+        """
+        Returns a dictionary of {key: boolean} values for which imaging operations
+        are supported by the current imaging back end. The key names are the same
+        as those common to the ImageAttrs and TemplateAttrs dictionaries.
+        """
+        if not getattr(self, '_memo_supported_ops', None):
+            be_ops = dict(imaging.supported_operations())
+            self._memo_supported_ops = be_ops
+            # Convert the overlay/icc profile keys from data support to filename support
+            self._memo_supported_ops['overlay_src'] = be_ops.get('overlay_data', False)
+            if 'overlay_data' in be_ops:
+                del be_ops['overlay_data']
+            self._memo_supported_ops['icc_profile'] = be_ops.get('icc_data', False)
+            if 'icc_data' in be_ops:
+                del be_ops['icc_data']
+        return self._memo_supported_ops
 
     def put_image(self, current_user, file_wrapper,
                   dest_folder_path, dest_filename, overwrite_flag):
@@ -225,9 +263,13 @@ class ImageManager(object):
         validate_filename(dest_filename)
         # and the extension must be supported
         file_name_extension = get_file_extension(dest_filename)
-        if file_name_extension not in self.get_image_formats():
-            raise ImageError('The file is not a supported image format. ' +
-                             'Supported types are: ' + ', '.join(self.get_image_formats()) + '.')
+        # v4.0 we'll allow uploads of any KNOWN image type, even if it's not
+        # necessarily supported now (then upgrading the back end is always an option)
+        if file_name_extension not in self.get_image_formats(supported_only=False):
+            raise ImageError(
+                'The file is not an allowed image type. '
+                'Allowed types are: ' + ', '.join(self.get_image_formats(False)) + '.'
+            )
 
         # Require upload permission or file admin
         self._permissions.ensure_folder_permitted(
@@ -301,7 +343,7 @@ class ImageManager(object):
 
         # Check the filename first
         file_name_extension = get_file_extension(image_attrs.filename())
-        if file_name_extension not in self.get_image_formats():
+        if file_name_extension not in self.get_image_formats(supported_only=True):
             raise ImageError('The file is not a supported image format')
 
         file_data = get_file_data(image_attrs.filename())

@@ -105,9 +105,13 @@ def get_version_info():
     return _backend.get_version_info()
 
 
-# TODO we might need a supported file types too
-# TODO poke operation support via image manager, not here directly,
-#      and map overlay data/src and icc data/src keys
+def supported_file_types():
+    """
+    Returns a list of lower-case file types supported by the current back-end
+    e.g. ["gif", "jpg", "tif"]
+    or None if the back-end does not impose any particular limitation.
+    """
+    return _backend.supported_file_types()
 
 
 def supported_operations():

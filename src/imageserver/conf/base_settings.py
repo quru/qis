@@ -39,9 +39,12 @@ IMAGE_FORMATS = {
     # Common image files - Pillow or ImageMagick
     "gif": ("GIF image", "image/gif"),
     "jpg": ("JPEG image", "image/jpeg"),
+    "jpe": ("JPEG image", "image/jpeg"),
+    "jfif": ("JPEG image", "image/jpeg"),
+    "jif": ("JPEG image", "image/jpeg"),
     "jpeg": ("JPEG image", "image/jpeg"),
-    "pjpg": ("Progressive JPEG image", "image/jpeg"),
-    "pjpeg": ("Progressive JPEG image", "image/jpeg"),
+    "pjpg": ("Progressive JPEG image", "image/jpeg"),   # virtual format
+    "pjpeg": ("Progressive JPEG image", "image/jpeg"),  # virtual format
     "png": ("PNG image", "image/png"),
     "tif": ("TIFF image", "image/tiff"),
     "tiff": ("TIFF image", "image/tiff"),

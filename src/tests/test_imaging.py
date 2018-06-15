@@ -77,7 +77,7 @@ def setUpModule():
     main_tests.init_tests(False)
 
 
-# Utility - selects the Pillow or ImageMagick back end
+# Utility - selects or switches the Pillow / ImageMagick back end
 def select_backend(back_end):
     imaging.init(
         back_end,
@@ -87,6 +87,11 @@ def select_backend(back_end):
     )
     # VERY IMPORTANT! Clear any images cached from the previous back end
     cm.clear()
+    # The image manager does not expect the back end to change,
+    # we need to clear its internal caches too
+    im._memo_image_formats_all = None
+    im._memo_image_formats_supported = None
+    im._memo_supported_ops = None
 
 
 # Utility - returns a tuple of (width, height) of a PNG image
@@ -726,7 +731,13 @@ class PillowTests(main_tests.BaseTestCase, ImagingTestCase):
         super(PillowTests, cls).setUpClass()
         select_backend('pillow')
 
-    # TODO Add Pillow-only tests (as and when required)
+    # Tests that the image manager knows Pillow's file types
+    def test_image_formats(self):
+        # This should NOT be IMAGE_FORMATS, only the types we support in Pillow
+        self.assertEqual(
+            im.get_image_formats(),
+            sorted(imaging.supported_file_types())
+        )
 
 
 # Tests that should be run only on the ImageMagick back end
@@ -808,6 +819,14 @@ class ImageMagickTests(main_tests.BaseTestCase, ImagingTestCase):
         profile_dict = dict(props[profile])
         for k in kwargs:
             self.assertEqual(profile_dict[k], kwargs[k])
+
+    # Tests that the image manager knows ImageMagick's file types
+    def test_image_formats(self):
+        # This should be the same as IMAGE_FORMATS
+        self.assertEqual(
+            im.get_image_formats(),
+            sorted(flask_app.config['IMAGE_FORMATS'].keys())
+        )
 
     # Test the alignment within a filled image
     def test_align_centre_param(self):

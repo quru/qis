@@ -57,7 +57,7 @@ from .util import strip_seps
 from .views_util import log_security_error
 
 
-# The "About" page
+# The index page
 @app.route('/')
 def index():
     return render_template(
@@ -140,7 +140,7 @@ def image_help():
     logo_pad_image_attrs = ImageAttrs('test_images/quru470.png')
 
     default_template = image_engine.get_default_template()
-    available_formats = sorted(image_engine.get_image_formats())
+    available_formats = image_engine.get_image_formats(supported_only=True)
     available_templates = image_engine.get_template_names()
     available_templates.sort()
     available_iccs = {}
@@ -388,7 +388,7 @@ def browse():
 
         return render_template(
             'list.html',
-            image_formats=image_engine.get_image_formats(),
+            image_formats=image_engine.get_image_formats(supported_only=True),
             pathsep=os.path.sep,
             timezone=get_timezone_code(),
             directory_info=directory_info,
@@ -732,7 +732,7 @@ def folder_browse():
 
         return render_template(
             'folder_list.html',
-            image_formats=image_engine.get_image_formats(),
+            image_formats=image_engine.get_image_formats(supported_only=True),
             embed=embed,
             msg=msg,
             name=filepath_filename(from_path),

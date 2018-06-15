@@ -92,6 +92,18 @@ class PillowBackend(object):
         """
         return "Pillow version: " + PIL.__version__
 
+    def supported_file_types(self):
+        """
+        Returns which image types are supported by the Pillow back-end.
+        See the function documentation for imaging.supported_file_types() for
+        more information.
+        """
+        return [
+            'gif',
+            'jpg', 'jpeg', 'jpe', 'jfif', 'jif', 'pjpg', 'pjpeg',
+            'png', 'tif', 'tiff'
+        ]
+
     def supported_operations(self):
         """
         Returns which imaging operations are supported by the Pillow back-end.

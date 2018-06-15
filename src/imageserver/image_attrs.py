@@ -305,8 +305,8 @@ class ImageAttrs():
         try:
             (_, mime_type) = app.config['IMAGE_FORMATS'][self.format()]
             return mime_type
-        except:
-            raise ValueError('Unknown image type for ' + self.format())
+        except KeyError:
+            raise ValueError('Unknown image type: ' + self.format())
 
     def template(self):
         """
@@ -493,7 +493,7 @@ class ImageAttrs():
                "width": (RangeValidator(0, 10000), "width"), ... }
         """
         # These are lazy-loaded choices not available at import time
-        formats = lambda: [""] + app.image_engine.get_image_formats()
+        formats = lambda: [""] + app.image_engine.get_image_formats(supported_only=True)
         templates = lambda: [""] + app.image_engine.get_template_names(True)
         iccs = lambda: [""] + app.image_engine.get_icc_profile_names()
         # These are hard-coded choices
