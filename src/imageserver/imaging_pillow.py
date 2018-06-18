@@ -432,7 +432,7 @@ class PillowBackend(object):
         )
         # PNGImagePlugin - Pillow has no built-in support for reading XMP or EXIF data
         #                  from the headers. EXIF in PNG was only standardised in July 2017.
-        #                  There is image.info['pnginfo'] but I haven't seen it present yet.
+        #                  There is 'pnginfo' on save() but it's not returned by open().
         # <nothing to do for PNG>
         results.sort()
         return results

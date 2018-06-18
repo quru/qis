@@ -1192,31 +1192,6 @@ class ImageServerTestsFast(BaseTestCase):
         finally:
             reset_default_image_template()
 
-    # Test the ETag header behaves as it should
-    def test_etag(self):
-        rv = self.app.get('/image?src=test_images/thames.jpg&width=800')
-        assert rv.headers.get('ETag') is not None
-        etag_800 = rv.headers.get('ETag')
-        # Test same image
-        rv = self.app.get('/image?src=test_images/thames.jpg&width=800')
-        assert rv.headers.get('ETag') == etag_800
-        # Test equivalent image
-        rv = self.app.get('/image?src=test_images/thames.jpg&width=800&angle=360&format=jpg&left=0&right=1')
-        assert rv.headers.get('ETag') == etag_800
-        # Test slightly different image
-        rv = self.app.get('/image?src=test_images/thames.jpg&width=810')
-        assert rv.headers.get('ETag') != etag_800
-        etag_810 = rv.headers.get('ETag')
-        rv = self.app.get('/image?src=test_images/thames.jpg')
-        assert rv.headers.get('ETag') != etag_800
-        assert rv.headers.get('ETag') != etag_810
-        etag_thames = rv.headers.get('ETag')
-        # Test very different image
-        rv = self.app.get('/image?src=test_images/cathedral.jpg')
-        assert rv.headers.get('ETag') != etag_800
-        assert rv.headers.get('ETag') != etag_810
-        assert rv.headers.get('ETag') != etag_thames
-
     # Test image templates
     def test_templates(self):
         try:
@@ -1231,17 +1206,17 @@ class ImageServerTestsFast(BaseTestCase):
             # Create a temporary template to work with
             db_template = ImageTemplate(template, 'Temporary template for unit testing', {})
             db_template = dm.save_object(db_template, refresh=True)
-            # Test format - first use original format in default template
-            update_db_template(db_default_template, {'format': {'value': ''}})
-            rv = self.app.get('/image?src=test_images/thames.jpg')
-            self.assertEqual(rv.status_code, 200)
-            self.assertIn('image/jpeg', rv.headers['Content-Type'])
             # Test format from template
             update_db_template(db_template, {'format': {'value': 'png'}})
             self.assertIn(template, im.get_template_names())
             rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template)
             self.assertEqual(rv.status_code, 200)
             self.assertIn('image/png', rv.headers['Content-Type'])
+            # Switch back to JPG as Pillow support for strip=1/0 with PNG isn't there yet
+            update_db_template(db_template, {'format': {'value': ''}})
+            rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template)
+            self.assertEqual(rv.status_code, 200)
+            self.assertIn('image/jpeg', rv.headers['Content-Type'])
             original_len = len(rv.data)
             # Test cropping from template makes it smaller
             update_db_template(db_template, {'top': {'value': 0.1}, 'left': {'value': 0.1},
@@ -1282,14 +1257,15 @@ class ImageServerTestsFast(BaseTestCase):
             self.assertIsNotNone(rv.headers.get('Content-Disposition'))
             self.assertIn('attachment', rv.headers['Content-Disposition'])
             # Test that URL params override the template
-            rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template+'&format=bmp&attach=0')
+            rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template+'&format=gif&attach=0')
             self.assertEqual(rv.status_code, 200)
-            self.assertIn('image/bmp', rv.headers['Content-Type'])
+            self.assertIn('image/gif', rv.headers['Content-Type'])
             self.assertIsNone(rv.headers.get('Content-Disposition'))
-            template_bmp_len = len(rv.data)
-            rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template+'&format=bmp&width=600&height=600&attach=0')
+            template_gif_len = len(rv.data)   # at 500x500
+            rv = self.app.get('/image?src=test_images/thames.jpg&tmp='+template+'&format=gif&width=600&height=600&attach=0')
             self.assertEqual(rv.status_code, 200)
-            self.assertGreater(len(rv.data), template_bmp_len)
+            template_gif_len2 = len(rv.data)  # at 600x600
+            self.assertGreater(template_gif_len2, template_gif_len)
         finally:
             reset_default_image_template()
 
@@ -2080,6 +2056,31 @@ class ImageServerTestsFast(BaseTestCase):
         rv = self.app.get(img_url)
         assert rv.headers['X-From-Cache'] == 'True'
         assert rv.headers.get('ETag') == new_etag
+
+    # Test the ETag header behaves as it should
+    def test_etag_variations(self):
+        rv = self.app.get('/image?src=test_images/thames.jpg&width=800')
+        assert rv.headers.get('ETag') is not None
+        etag_800 = rv.headers.get('ETag')
+        # Test same image
+        rv = self.app.get('/image?src=test_images/thames.jpg&width=800')
+        assert rv.headers.get('ETag') == etag_800
+        # Test equivalent image
+        rv = self.app.get('/image?src=test_images/thames.jpg&width=800&angle=360&format=jpg&left=0&right=1')
+        assert rv.headers.get('ETag') == etag_800
+        # Test slightly different image
+        rv = self.app.get('/image?src=test_images/thames.jpg&width=810')
+        assert rv.headers.get('ETag') != etag_800
+        etag_810 = rv.headers.get('ETag')
+        rv = self.app.get('/image?src=test_images/thames.jpg')
+        assert rv.headers.get('ETag') != etag_800
+        assert rv.headers.get('ETag') != etag_810
+        etag_thames = rv.headers.get('ETag')
+        # Test very different image
+        rv = self.app.get('/image?src=test_images/cathedral.jpg')
+        assert rv.headers.get('ETag') != etag_800
+        assert rv.headers.get('ETag') != etag_810
+        assert rv.headers.get('ETag') != etag_thames
 
     # Test that browser caching still works when server side caching is off
     def test_no_server_caching_etags(self):
