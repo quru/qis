@@ -52,6 +52,7 @@ from imageserver.flask_app import cache_engine as cm
 from imageserver.flask_app import data_engine as dm
 from imageserver.flask_app import image_engine as im
 from imageserver.flask_app import task_engine as tm
+from imageserver.flask_app import reconfigure_app_for_imaging_backend
 from imageserver.filesystem_manager import (
     get_abs_path, delete_dir, delete_file, path_exists
 )
@@ -733,11 +734,19 @@ class PillowTests(main_tests.BaseTestCase, ImagingTestCase):
 
     # Tests that the image manager knows Pillow's file types
     def test_image_formats(self):
-        # This should NOT be IMAGE_FORMATS, only the types we support in Pillow
+        # This should NOT be config.IMAGE_FORMATS, only the types we support in Pillow
         self.assertEqual(
             im.get_image_formats(),
             sorted(imaging.supported_file_types())
         )
+
+    # Tests that application config settings are adjusted for Pillow
+    def test_app_imaging_config(self):
+        flask_app.config['IMAGE_RESIZE_GAMMA_CORRECT'] = True
+        flask_app.config['PDF_BURST_TO_PNG'] = True
+        reconfigure_app_for_imaging_backend(flask_app)
+        self.assertTrue(flask_app.config['IMAGE_RESIZE_GAMMA_CORRECT'])
+        self.assertFalse(flask_app.config['PDF_BURST_TO_PNG'])
 
 
 # Tests that should be run only on the ImageMagick back end
@@ -822,11 +831,19 @@ class ImageMagickTests(main_tests.BaseTestCase, ImagingTestCase):
 
     # Tests that the image manager knows ImageMagick's file types
     def test_image_formats(self):
-        # This should be the same as IMAGE_FORMATS
+        # This should be the same as config.IMAGE_FORMATS
         self.assertEqual(
             im.get_image_formats(),
             sorted(flask_app.config['IMAGE_FORMATS'].keys())
         )
+
+    # Tests that application config settings are adjusted for qismagick.so
+    def test_app_imaging_config(self):
+        flask_app.config['IMAGE_RESIZE_GAMMA_CORRECT'] = True
+        flask_app.config['PDF_BURST_TO_PNG'] = True
+        reconfigure_app_for_imaging_backend(flask_app)
+        self.assertTrue(flask_app.config['IMAGE_RESIZE_GAMMA_CORRECT'])
+        self.assertTrue(flask_app.config['PDF_BURST_TO_PNG'])
 
     # Test the alignment within a filled image
     def test_align_centre_param(self):

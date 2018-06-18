@@ -385,6 +385,10 @@ def burst_pdf(**kwargs):
     if get_file_extension(src) not in app.config['PDF_FILE_TYPES']:
         app.log.warning('Cannot burst non-PDF file: ' + src)
         return
+    if get_file_extension(src) not in app.image_engine.get_image_formats(supported_only=True):
+        app.log.warning('Cannot burst PDF file: ' + src +
+                        ' - this file type is not supported by the imaging library')
+        return
 
     # See if the burst folder already exists (in the database and on disk)
     db_folder = app.data_engine.get_folder(folder_path=burst_folder_rel)

@@ -103,6 +103,25 @@ def configure_app(app):
     app.config['_SETTINGS_IN_USE'] = ' + '.join(configs_used)
 
 
+def reconfigure_app_for_imaging_backend(app):
+    """
+    Disables and warns about settings enabled in app.config that are not supported
+    by the installed imaging back end.
+    """
+    supported_files = app.image_engine.get_image_formats(supported_only=True)
+    supported_ops = app.image_engine.get_supported_operations()
+    if app.config['IMAGE_RESIZE_GAMMA_CORRECT'] and not supported_ops.get('resize_gamma', False):
+        app.config['IMAGE_RESIZE_GAMMA_CORRECT'] = False
+        app.log.warning(
+            'Disabled IMAGE_RESIZE_GAMMA_CORRECT as it is not supported by the imaging library'
+        )
+    if app.config['PDF_BURST_TO_PNG'] and 'pdf' not in supported_files:
+        app.config['PDF_BURST_TO_PNG'] = False
+        app.log.warning(
+            'Disabled PDF_BURST_TO_PNG as it is not supported by the imaging library'
+        )
+
+
 # Create main web app
 app = flask.Flask(__name__)
 configure_app(app)
@@ -198,6 +217,8 @@ with app.app_context():
             logger
         )
         app.image_engine = image_engine
+        # v4.0 Adjust configuration for supported imaging operations
+        reconfigure_app_for_imaging_backend(app)
 
         # Import app views and template filters
         from . import views                                      # @UnusedImport
