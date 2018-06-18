@@ -35,6 +35,7 @@ import shutil
 
 from . import tests as main_tests
 
+from imageserver import __about__
 from imageserver.flask_app import app as flask_app
 from imageserver.flask_app import cache_engine as cm
 from imageserver.filesystem_manager import (
@@ -83,12 +84,19 @@ class ImageServerTestsWebPages(main_tests.BaseTestCase):
 
     # Home page
     def test_index_page(self):
-        from imageserver import __about__
         rv = self.app.get('/')
         self.assertEqual(rv.status_code, 200)
         self.assertIn(
             __about__.__title__ + ' v' + __about__.__version__,
             rv.data.decode('utf8')
+        )
+
+    # About page
+    def test_about_page(self):
+        self.call_page_requiring_login(
+            '/about/',
+            False,
+            'About ' + __about__.__title__
         )
 
     # Help page

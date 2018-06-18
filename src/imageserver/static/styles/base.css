@@ -294,6 +294,9 @@ a:hover .highlight {
 .center {
 	text-align: center;
 }
+.vmiddle {
+	vertical-align: middle;
+}
 .left {
 	text-align: left;
 }
@@ -412,6 +415,19 @@ a:hover .highlight {
 .dropzone.active {
 	color: black;
 	border: 4px black dashed;
+}
+
+.padded_table td {
+	padding: 0.1em 1em 0.1em 1em;
+}
+.padded_table.border td {
+	border-bottom: 1px solid #bbbbbb;
+}
+.padded_table.border tr:last-child td {
+	border-bottom: none;
+}
+.padded_table .inline_table td {
+	padding-left: 0;
 }
 
 /* Base template styles

@@ -55,11 +55,11 @@ Public-facing images can optionally be restricted in size when requested by unkn
 The following image formats are available for you to use:
 <p>
 <code>
-	{% for f in formats %}
-		{{ f }}{% if not loop.last %}, {% endif %}
+	{% if formats %}
+		{{ formats|join(', ') }}
 	{% else %}
 		None
-	{% endfor %}
+	{% endif %}
 </code>
 </p>
 
@@ -67,11 +67,11 @@ The following image formats are available for you to use:
 The following templates are available for you to use:
 <p>
 <code>
-	{% for t in templates %}
-		{{ t }}{% if not loop.last %}, {% endif %}
+	{% if templates %}
+		{{ templates|join(', ') }}
 	{% else %}
 		None
-	{% endfor %}
+	{% endif %}
 </code>
 </p>
 
@@ -79,11 +79,9 @@ The following templates are available for you to use:
 The following ICC profiles are available for you to use:
 {% for colorspace in iccs %}
 	<p>
-		<i>{{ colorspace }}:</i>&nbsp;&nbsp;{% if loop.last %}&nbsp;&nbsp;{% endif %}
+		<i>{{ colorspace }}:</i>&nbsp;&nbsp;
 		<code>
-			{% for name in iccs[colorspace] %}
-				{{ name }}{% if not loop.last %}, {% endif %}
-			{% endfor %}
+			{{ iccs[colorspace]|join(', ') }}
 		</code>
 	</p>
 {% else %}

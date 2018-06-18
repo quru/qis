@@ -5,7 +5,7 @@
 	Document:      index.html
 	Date started:  04 Apr 2011
 	By:            Matt Fozard
-	Purpose:       Quru Image Server About page
+	Purpose:       Quru Image Server index page
 	Requires:      
 	Copyright:     Quru Ltd (www.quru.com)
 	
@@ -27,26 +27,31 @@
 		</h1>
 	</div>
 
-	{% if settings.DEBUG %}
 	<p class="tall center">
-	  * DEBUG MODE ENABLED *
+		{{ app_edition() }} Edition<br>
+		{% if settings.DEBUG %}
+		* DEBUG MODE ENABLED *
+		{% endif %}
 	</p>
-	{% endif %}
 
 	<p class="tall center">
 		{% if logged_in %}
-		<a href="{{ url_for('browse') }}">Browse images</a><br />
+		<a href="{{ url_for('browse') }}">Browse images</a><br>
+		<a href="{{ url_for('overview_help') }}">System introduction</a><br>
+		<a href="{{ url_for('about') }}">System information</a><br>
 		{% else %}
-		<a href="{{ url_for('login') }}">Sign in</a><br />
+		<a href="{{ url_for('login') }}">Sign in</a><br>
 		{% endif %}
-		<a href="{{ about.__uri__ }}">About {{ about.__tag__ }}</a>
 	</p>
 
-	<p class="center">
-		{{ about.__copyright__ }}
+	<p class="tall center">
+		About Quru Ltd - <a href="https://quru.com/">https://quru.com/</a><br>
+		{{ about.__tag__ }} on quru.com - <a href="{{ about.__uri__ }}">{{ about.__uri__ }}</a><br>
 	</p>
-	<p class="center">
-		Licensed mostly under the <a href="http://www.gnu.org/licenses/agpl-3.0.txt">GNU Affero GPL</a>.<br />
-		<a href="{{ about.__source_uri__ }}">Visit us on GitHub</a>.
+
+	<br>
+	<p class="tall center">
+		{{ about.__copyright__ }}<br>
+		{% include "inc_license_text.html" %}
 	</p>
 {% endblock %}

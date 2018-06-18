@@ -40,6 +40,7 @@ import markdown
 from jinja2 import Markup
 from werkzeug.urls import url_quote_plus
 
+from . import imaging
 from .errors import SecurityError
 from .flask_app import app, logger, permissions_engine
 from .flask_util import internal_url_for, external_url_for
@@ -165,11 +166,19 @@ def register_template_funcs():
     """
     Sets the custom functions to make available inside templates.
     """
+    app.add_template_global(app_edition, 'app_edition')
     app.add_template_global(wrap_is_permitted, 'is_permitted')
     app.add_template_global(wrap_is_folder_permitted, 'is_folder_permitted')
     app.add_template_global(internal_url_for, 'url_for')
     app.add_template_global(external_url_for, 'external_url_for')
     app.add_template_global(url_for_thumbnail, 'url_for_thumbnail')
+
+
+def app_edition():
+    """
+    Returns whether the application is running in "Free" or "Premium" mode.
+    """
+    return "Premium" if imaging.get_backend() == "imagemagick" else "Free"
 
 
 def wrap_is_permitted(flag):

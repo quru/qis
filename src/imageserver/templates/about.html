@@ -1,0 +1,99 @@
+{% extends "base_help.html" %}
+
+{% block copyright %}
+<!-- 
+	Document:      about.html
+	Date started:  14 Jun 2018
+	By:            Matt Fozard
+	Purpose:       Quru Image Server about page
+	Requires:      
+	Copyright:     Quru Ltd (www.quru.com)
+	
+	Notable modifications:
+	Date       By    Details
+	=========  ====  ============================================================
+-->
+{% endblock %}
+
+{% block title %}About{% endblock %}
+
+{% block body %}
+	<h1>About {{ about.__title__ }}</h1>
+	<p class="tall">
+		{{ about.__copyright__ }}<br>
+		{% include "inc_license_text.html" %}
+	</p>
+
+	<h2>Web sites</h2>
+	<p class="tall">
+		About Quru Ltd - <a href="https://quru.com/">https://quru.com/</a><br>
+		{{ about.__tag__ }} on quru.com - <a href="{{ about.__uri__ }}">{{ about.__uri__ }}</a><br>
+		{{ about.__tag__ }} on GitHub - <a href="{{ about.__source_uri__ }}">{{ about.__source_uri__ }}</a><br>
+	</p>
+
+	<h2>Documentation</h2>
+	<p class="tall">
+		<a href="{{ url_for('overview_help') }}">Introduction and overview</a><br>
+		<a href="{{ url_for('image_help') }}">Imaging operations</a><br>
+		<a href="{{ url_for('api.api_help') }}">Developer API</a><br>
+		<a href="https://github.com/quru/qis/blob/master/doc/tuning.md">Tuning guide</a> (github.com)<br>
+		<a href="https://github.com/quru/qis/blob/master/doc/changelog.md">Change log</a> (github.com)<br>
+	</p>
+
+	<h2>System information</h2>
+	<p>
+	<table class="padded_table border">
+		<colgroup>
+			<col style="width: 15em;">
+			<col>
+		</colgroup>
+		<tr>
+			<td>Version</td>
+			<td>{{ about.__version__ }}</td>
+		</tr>
+		<tr>
+			<td>Edition</td>
+			<td>{{ app_edition() }} {% if app_edition()=='Free' %}(<a class="action" href="{{ about.__uri__ }}">upgrade information</a>){% endif %}</td>
+		</tr>
+		<tr>
+			<td>Debug mode</td>
+			<td>{{ 'Enabled' if settings.DEBUG else 'Off' }}</td>
+		</tr>
+		<tr>
+			<td>Default image template</td>
+			<td>{{ default_template.name() }}</td>
+		</tr>
+		<tr>
+			<td>Available image templates</td>
+			<td>{% if templates %}{{ templates|join(', ') }}{% else %}None{% endif %}</td>
+		</tr>
+		<tr>
+			<td>Available ICC profiles</td>
+			<td>{% if iccs %}{{ iccs|join(', ') }}{% else %}None{% endif %}</td>
+		</tr>
+		<tr>
+			<td>Imaging library</td>
+			<td>{{ image_lib|capitalize }}</td>
+		</tr>
+		<tr>
+			<td>Supported image formats</td>
+			<td>{% if formats %}{{ formats|join(', ') }}{% else %}None{% endif %}</td>
+		</tr>
+		<tr>
+			<td>Supported image operations</td>
+			<td>
+				<table class="inline_table">
+					{% set skip_keys = ('resize_type', 'resize_gamma') %}
+					{% for k in image_ops.keys()|sort if k not in skip_keys %}
+					<tr class="vmiddle">
+						<td>{{ k|replace('_', ' ')|capitalize }}</td>
+						<td class="smalltext">{% if image_ops[k] %}&#9989;{% else %}&#10060;{% endif %}</td>
+					</tr>
+					{% endfor %}
+				</table>
+			</td>
+		</tr>		
+	</table>
+	</p>
+
+{% endblock %}

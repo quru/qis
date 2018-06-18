@@ -35,6 +35,7 @@ from time import sleep
 
 from flask import abort, make_response, redirect, request, session
 
+from . import imaging
 from .errors import DoesNotExistError
 from .exif import get_exif_geo_position
 from .filesystem_manager import get_upload_directory, get_file_info
@@ -141,6 +142,7 @@ def image_help():
 
     default_template = image_engine.get_default_template()
     available_formats = image_engine.get_image_formats(supported_only=True)
+    available_image_ops = image_engine.get_supported_operations()
     available_templates = image_engine.get_template_names()
     available_templates.sort()
     available_iccs = {}
@@ -154,7 +156,9 @@ def image_help():
         formats=available_formats,
         templates=available_templates,
         default_template=default_template,
-        iccs=available_iccs
+        iccs=available_iccs,
+        image_lib=imaging.get_backend(),
+        image_ops=available_image_ops
     )
 
     return _standard_help_page(
@@ -169,6 +173,28 @@ def image_help():
             'View this page from within QIS to see the '
             'default image settings for your server.': default_settings_html
         }
+    )
+
+
+# The "About" page
+@app.route('/about/')
+@login_required
+def about():
+    default_template = image_engine.get_default_template()
+    available_formats = image_engine.get_image_formats(supported_only=True)
+    available_image_ops = image_engine.get_supported_operations()
+    available_templates = image_engine.get_template_names()
+    available_templates.sort()
+    available_iccs = image_engine.get_icc_profile_names()
+    available_iccs.sort()
+    return render_template(
+        'about.html',
+        formats=available_formats,
+        templates=available_templates,
+        default_template=default_template,
+        iccs=available_iccs,
+        image_lib=imaging.get_backend(),
+        image_ops=available_image_ops
     )
 
 
