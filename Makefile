@@ -3,17 +3,23 @@ PYTHON_VER := $(shell ${PYTHON_BIN} -c 'import platform; print(platform.python_v
 PYTHON := python${PYTHON_VER}
 VENV_PATH := .
 VENV_ACTIVATE := . ${VENV_PATH}/bin/activate
-SET_LOCALE := export LANG=en_GB.UTF-8 ; export LC_ALL=en_GB.UTF-8
+
+export LANG=en_GB.UTF-8
+export LC_ALL=en_GB.UTF-8
 
 runserver: venv
-	${VENV_ACTIVATE} ; ${SET_LOCALE} ; python src/runserver.py
+	${VENV_ACTIVATE} ; python src/runserver.py
 
 test: venv
-	${VENV_ACTIVATE} ; ${SET_LOCALE} ; python setup.py test
+	${VENV_ACTIVATE} ; python setup.py test
 
 test_with_stats: venv testing_env
 	make flake8.txt
-	${VENV_ACTIVATE} ; ${SET_LOCALE} ; coverage run --source src/imageserver -m src.tests.junitxml -t src -s src/tests -o src/junit.xml
+	#coverage erase - doesn't seem to work with --parallel-mode
+	rm -f .coverage*
+	${VENV_ACTIVATE} ; coverage run --parallel-mode --source src/imageserver -m src.tests.junitxml -t src -s src/tests -o src/junit.xml
+	coverage combine
+	coverage xml -o src/coverage.xml
 	coverage xml -o src/coverage.xml
 
 distribute: venv webpack
