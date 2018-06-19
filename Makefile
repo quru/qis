@@ -15,11 +15,8 @@ test: venv
 
 test_with_stats: venv testing_env
 	make flake8.txt
-	#coverage erase - doesn't seem to work with --parallel-mode
-	rm -f .coverage*
-	${VENV_ACTIVATE} ; coverage run --parallel-mode --source src/imageserver -m src.tests.junitxml -t src -s src/tests -o src/junit.xml
-	coverage combine
-	coverage xml -o src/coverage.xml
+	coverage erase
+	${VENV_ACTIVATE} ; coverage run --source src/imageserver -m src.tests.junitxml -t src -s src/tests -o src/junit.xml
 	coverage xml -o src/coverage.xml
 
 distribute: venv webpack

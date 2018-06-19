@@ -50,7 +50,7 @@ if __name__ == '__main__':
     if not os.environ.get('FLASK_ENV'):
         os.environ['FLASK_ENV'] = 'development'
 
-    from imageserver.flask_app import app, stop_aux_processes
+    from imageserver.flask_app import app, _stop_aux_processes
 
     normal_exit = True
     try:
@@ -85,4 +85,4 @@ if __name__ == '__main__':
         raise
     finally:
         if not normal_exit:
-            stop_aux_processes()
+            _stop_aux_processes()

@@ -65,7 +65,7 @@ from imageserver.flask_app import image_engine as im
 from imageserver.flask_app import stats_engine as sm
 from imageserver.flask_app import task_engine as tm
 from imageserver.flask_app import permissions_engine as pm
-from imageserver.flask_app import launch_aux_processes, stop_aux_processes
+from imageserver.flask_app import launch_aux_processes, _stop_aux_processes
 
 from imageserver.api_util import API_CODES
 from imageserver.errors import AlreadyExistsError
@@ -107,7 +107,7 @@ def init_tests(launch_aux=True):
 
 # Utility - cleans up after tests have finished
 def cleanup_tests():
-    stop_aux_processes()
+    _stop_aux_processes()
     # The aux processes have a 1 second shutdown response
     time.sleep(1.5)
     # In case there are other test modules following on,

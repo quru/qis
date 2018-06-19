@@ -47,7 +47,7 @@ from . import tests as main_tests
 
 from imageserver import imaging
 from imageserver.api_util import API_CODES
-from imageserver.flask_app import launch_aux_processes, stop_aux_processes
+from imageserver.flask_app import launch_aux_processes, _stop_aux_processes
 from imageserver.flask_app import app as flask_app
 from imageserver.flask_app import cache_engine as cm
 from imageserver.flask_app import data_engine as dm
@@ -1188,8 +1188,9 @@ class ImageMagickTaskTests(main_tests.BaseTestCase, ImagingTestCase):
     def setUpClass(cls):
         super(ImageMagickTaskTests, cls).setUpClass()
         select_backend('imagemagick')
-        # Restart the task manager with the ImageMagick back end
-        stop_aux_processes()
+        # Restart the task server with the ImageMagick back end,
+        # as it was probably launched with the Pillow back end
+        _stop_aux_processes()
         time.sleep(1.5)
         launch_aux_processes()
 
