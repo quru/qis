@@ -44,6 +44,7 @@ from imageserver.auxiliary.util import get_pid
 from imageserver.counter import Counter
 from imageserver.filesystem_manager import copy_file, delete_file
 from imageserver.flask_app import data_engine as dm
+from imageserver.flask_app import logger
 from imageserver.stats_manager import StatsManager
 
 
@@ -56,7 +57,7 @@ class BytesIOConnection(object):
         return self.buf.read(n)
 
     def send(self, data):
-        self.buf.write(data)
+        return self.buf.write(data)
 
     def value(self):
         return self.buf.getvalue()
@@ -89,7 +90,7 @@ class StatsHandlerTests(main_tests.FlaskTestCase):
 
     @mock.patch('imageserver.stats_manager.StatsManager._client_connect')
     def test_make_request(self, mock_connect):
-        sc = StatsManager(None, 'Mock', 1)
+        sc = StatsManager(logger, 'Mock', 1)
         sc._sock = BytesIOConnection()
         sc.log_request(7, 0.01)
         server = self._mock_server_call(sc._sock.value())
@@ -104,7 +105,7 @@ class StatsHandlerTests(main_tests.FlaskTestCase):
 
     @mock.patch('imageserver.stats_manager.StatsManager._client_connect')
     def test_make_request_nostats(self, mock_connect):
-        sc = StatsManager(None, 'Mock', 1)
+        sc = StatsManager(logger, 'Mock', 1)
         sc._sock = BytesIOConnection()
         sc.log_request(7, 0.01, False)
         server = self._mock_server_call(sc._sock.value())
@@ -119,7 +120,7 @@ class StatsHandlerTests(main_tests.FlaskTestCase):
 
     @mock.patch('imageserver.stats_manager.StatsManager._client_connect')
     def test_make_view(self, mock_connect):
-        sc = StatsManager(None, 'Mock', 1)
+        sc = StatsManager(logger, 'Mock', 1)
         sc._sock = BytesIOConnection()
         sc.log_view(7, 1024, False, 0.22)
         server = self._mock_server_call(sc._sock.value())
@@ -136,7 +137,7 @@ class StatsHandlerTests(main_tests.FlaskTestCase):
 
     @mock.patch('imageserver.stats_manager.StatsManager._client_connect')
     def test_make_view_nostats(self, mock_connect):
-        sc = StatsManager(None, 'Mock', 1)
+        sc = StatsManager(logger, 'Mock', 1)
         sc._sock = BytesIOConnection()
         sc.log_view(7, 1024, False, 0.22, False)
         server = self._mock_server_call(sc._sock.value())
@@ -152,7 +153,7 @@ class StatsHandlerTests(main_tests.FlaskTestCase):
 
     @mock.patch('imageserver.stats_manager.StatsManager._client_connect')
     def test_make_cached_view(self, mock_connect):
-        sc = StatsManager(None, 'Mock', 1)
+        sc = StatsManager(logger, 'Mock', 1)
         sc._sock = BytesIOConnection()
         sc.log_view(7, 1024, True, 0.02)
         server = self._mock_server_call(sc._sock.value())
@@ -169,7 +170,7 @@ class StatsHandlerTests(main_tests.FlaskTestCase):
 
     @mock.patch('imageserver.stats_manager.StatsManager._client_connect')
     def test_make_download(self, mock_connect):
-        sc = StatsManager(None, 'Mock', 1)
+        sc = StatsManager(logger, 'Mock', 1)
         sc._sock = BytesIOConnection()
         sc.log_download(7, 1024, 1)
         server = self._mock_server_call(sc._sock.value())
@@ -186,7 +187,7 @@ class StatsHandlerTests(main_tests.FlaskTestCase):
 
     @mock.patch('imageserver.stats_manager.StatsManager._client_connect')
     def test_make_download_nostats(self, mock_connect):
-        sc = StatsManager(None, 'Mock', 1)
+        sc = StatsManager(logger, 'Mock', 1)
         sc._sock = BytesIOConnection()
         sc.log_download(7, 1024, 1, False)
         server = self._mock_server_call(sc._sock.value())
