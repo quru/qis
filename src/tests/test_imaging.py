@@ -47,6 +47,7 @@ from . import tests as main_tests
 
 from imageserver import imaging
 from imageserver.api_util import API_CODES
+from imageserver.flask_app import launch_aux_processes, stop_aux_processes
 from imageserver.flask_app import app as flask_app
 from imageserver.flask_app import cache_engine as cm
 from imageserver.flask_app import data_engine as dm
@@ -63,7 +64,7 @@ from imageserver.models import Image, ImageTemplate
 
 
 # Creating an ImageMagickBackend for the purposes of getting the version string
-# has the unfortunate side effect of overwriting the gs path, PDF DPI in the
+# has the unfortunate side effect of overwriting the gs path and PDF DPI in the
 # loaded C library. To avoid side effects at runtime we'll get the string here.
 # We also need this info at import time for the @skipIf version checks to work.
 _im_version_string = ''
@@ -73,9 +74,11 @@ elif imaging.backend_supported('imagemagick'):
     _im_version_string = ImageMagickBackend('gs', '/tmp', 96).get_version_info()
 
 
-# Module level setUp
+# Module level setUp and tearDown
 def setUpModule():
-    main_tests.init_tests(False)
+    main_tests.init_tests()
+def tearDownModule():
+    main_tests.cleanup_tests()
 
 
 # Utility - selects or switches the Pillow / ImageMagick back end
@@ -724,8 +727,10 @@ class CommonImageTests(main_tests.BaseTestCase, ImagingTestCase):
 
 
 # Tests that should be run only on the Pillow back end
-@unittest.skipIf(not imaging.backend_supported('pillow'),
-    'Pillow imaging is not installed')
+@unittest.skipIf(
+    not imaging.backend_supported('pillow'),
+    'Pillow imaging is not installed'
+)
 class PillowTests(main_tests.BaseTestCase, ImagingTestCase):
     @classmethod
     def setUpClass(cls):
@@ -750,8 +755,10 @@ class PillowTests(main_tests.BaseTestCase, ImagingTestCase):
 
 
 # Tests that should be run only on the ImageMagick back end
-@unittest.skipIf(not imaging.backend_supported('imagemagick'),
-    'ImageMagick imaging is not installed')
+@unittest.skipIf(
+    not imaging.backend_supported('imagemagick'),
+    'ImageMagick imaging is not installed'
+)
 class ImageMagickTests(main_tests.BaseTestCase, ImagingTestCase):
     # Possible paths to ImageMagick binaries, in order of preference
     ImageMagickPaths = [
@@ -926,59 +933,6 @@ class ImageMagickTests(main_tests.BaseTestCase, ImagingTestCase):
         assert 'image/png' in rv.headers['Content-Type']
         self.assertImageMatch(rv.data, tempfile)
         pdf_reset()
-
-    # Tests PDF bursting
-    def test_pdf_bursting(self):
-        # At 150 DPI the result varies between 1237x1650 and 1238x1650
-        expect = (1238, 1650)
-
-        src_file = get_abs_path('test_images/pdftest.pdf')
-        dest_file = '/tmp/qis_pdftest.pdf'
-        image_path = 'test_images/qis_pdftest.pdf'
-        burst_path = 'test_images/qis_pdftest.pdf.d'
-        # Login
-        main_tests.setup_user_account('kryten', 'admin_files')
-        self.login('kryten', 'kryten')
-        try:
-            # Upload a PDF
-            shutil.copy(src_file, dest_file)
-            rv = self.file_upload(self.app, dest_file, 'test_images')
-            self.assertEqual(rv.status_code, 200)
-            # Wait a short time for task to start
-            time.sleep(15)
-            # Check PDF images directory created
-            assert path_exists(burst_path, require_directory=True), 'Burst folder has not been created'
-            # Converting pdftest.pdf takes about 15 seconds
-            time.sleep(20)
-            # Check page 1 exists and looks like we expect
-            rv = self.app.get('/original?src=' + burst_path + '/page-00001.png')
-            assert rv.status_code == 200
-            self.assertImageMatch(rv.data, self.get_test_image_path('pdf-page-1-%d.png' % expect[0]))
-            # Check page 1 actual dimensions - depends on PDF_BURST_DPI
-            (w, h) = get_png_dimensions(rv.data)
-            assert w == expect[0], 'Expected PDF dimensions of %dx%d @ 150 DPI' % expect
-            assert h == expect[1], 'Expected PDF dimensions of %dx%d @ 150 DPI' % expect
-            # Check page 27 exists and looks like we expect
-            rv = self.app.get('/original?src=' + burst_path + '/page-00027.png')
-            assert rv.status_code == 200
-            # There is a thicker line in gs 9.16 than there was in 9.10
-            p27_test_filename = 'pdf-page-27-%d%s.png' % (
-                expect[0],
-                '' if gs_version() < ImageMagickTests.GS_LINES_VERSION else '-gs-916'
-            )
-            self.assertImageMatch(rv.data, self.get_test_image_path(p27_test_filename))
-            # Check page 27 dimensions in the database
-            rv = self.app.get('/api/details/?src=' + burst_path + '/page-00027.png')
-            assert rv.status_code == API_CODES.SUCCESS
-            obj = json.loads(rv.data.decode('utf8'))
-            assert obj['data']['width'] == expect[0]
-            assert obj['data']['height'] == expect[1]
-        finally:
-            # Delete temp file and uploaded file and burst folder
-            if os.path.exists(dest_file):
-                os.remove(dest_file)
-            delete_file(image_path)
-            delete_dir(burst_path, recursive=True)
 
     # Test support for reading digital camera RAW files
     # Requires qismagick v2.0.0+
@@ -1222,3 +1176,79 @@ class ImageMagickTests(main_tests.BaseTestCase, ImagingTestCase):
             tempfile
         ]
         icc_test(img_url, magick_params)
+
+
+# Long running tests that should be run only on the ImageMagick back end
+@unittest.skipIf(
+    not imaging.backend_supported('imagemagick'),
+    'ImageMagick imaging is not installed'
+)
+class ImageMagickTaskTests(main_tests.BaseTestCase, ImagingTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super(ImageMagickTaskTests, cls).setUpClass()
+        select_backend('imagemagick')
+        # Restart the task manager with the ImageMagick back end
+        stop_aux_processes()
+        time.sleep(1.5)
+        launch_aux_processes()
+
+    # Tests PDF bursting
+    def test_pdf_bursting(self):
+        # Configure to burst PDFs
+        flask_app.config['PDF_BURST_TO_PNG'] = True
+        flask_app.config['PDF_BURST_DPI'] = 150
+
+        # At 150 DPI the result varies between 1237x1650 and 1238x1650
+        expect = (1238, 1650)
+
+        src_file = get_abs_path('test_images/pdftest.pdf')
+        dest_file = '/tmp/qis_pdftest.pdf'
+        image_path = 'test_images/qis_pdftest.pdf'
+        burst_path = 'test_images/qis_pdftest.pdf.d'
+        # Login
+        main_tests.setup_user_account('kryten', 'admin_files')
+        self.login('kryten', 'kryten')
+        try:
+            # Upload a PDF
+            shutil.copy(src_file, dest_file)
+            rv = self.file_upload(self.app, dest_file, 'test_images')
+            self.assertEqual(rv.status_code, 200)
+            # Wait a short time for task to start
+            time.sleep(15)
+            # Check PDF images directory created
+            self.assertTrue(
+                path_exists(burst_path, require_directory=True),
+                'Burst folder has not been created'
+            )
+            # Converting pdftest.pdf takes about 15 seconds
+            time.sleep(20)
+            # Check page 1 exists and looks like we expect
+            rv = self.app.get('/original?src=' + burst_path + '/page-00001.png')
+            self.assertEqual(rv.status_code, 200)
+            self.assertImageMatch(rv.data, self.get_test_image_path('pdf-page-1-%d.png' % expect[0]))
+            # Check page 1 actual dimensions - depends on PDF_BURST_DPI
+            (w, h) = get_png_dimensions(rv.data)
+            self.assertEqual(w, expect[0], 'Expected PDF dimensions of %dx%d @ 150 DPI' % expect)
+            self.assertEqual(h, expect[1], 'Expected PDF dimensions of %dx%d @ 150 DPI' % expect)
+            # Check page 27 exists and looks like we expect
+            rv = self.app.get('/original?src=' + burst_path + '/page-00027.png')
+            self.assertEqual(rv.status_code, 200)
+            # There is a thicker line in gs 9.16 than there was in 9.10
+            p27_test_filename = 'pdf-page-27-%d%s.png' % (
+                expect[0],
+                '' if gs_version() < ImageMagickTests.GS_LINES_VERSION else '-gs-916'
+            )
+            self.assertImageMatch(rv.data, self.get_test_image_path(p27_test_filename))
+            # Check page 27 dimensions in the database
+            rv = self.app.get('/api/details/?src=' + burst_path + '/page-00027.png')
+            self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+            obj = json.loads(rv.data.decode('utf8'))
+            self.assertEqual(obj['data']['width'], expect[0])
+            self.assertEqual(obj['data']['height'], expect[1])
+        finally:
+            # Delete temp file and uploaded file and burst folder
+            if os.path.exists(dest_file):
+                os.remove(dest_file)
+            delete_file(image_path)
+            delete_dir(burst_path, recursive=True)

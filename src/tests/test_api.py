@@ -67,12 +67,14 @@ from imageserver.models import (
 from imageserver.util import strip_sep, unicode_to_utf8
 
 
-class ImageServerAPITests(main_tests.BaseTestCase):
-    @classmethod
-    def setUpClass(cls):
-        super(ImageServerAPITests, cls).setUpClass()
-        main_tests.init_tests()
+# Module level setUp and tearDown
+def setUpModule():
+    main_tests.init_tests()
+def tearDownModule():
+    main_tests.cleanup_tests()
 
+
+class ImageServerAPITests(main_tests.BaseTestCase):
     # Utility - base64 encode a UTF8 string, returning an ASCII string
     def _base64_encode(self, s):
         return base64.b64encode(bytes(s, 'utf8')).decode('ascii')

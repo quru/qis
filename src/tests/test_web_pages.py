@@ -43,11 +43,17 @@ from imageserver.filesystem_manager import (
 )
 
 
+# Module level setUp and tearDown
+def setUpModule():
+    main_tests.init_tests()
+def tearDownModule():
+    main_tests.cleanup_tests()
+
+
 class ImageServerTestsWebPages(main_tests.BaseTestCase):
     @classmethod
     def setUpClass(cls):
         super(ImageServerTestsWebPages, cls).setUpClass()
-        main_tests.init_tests(False)
         main_tests.setup_user_account('webuser', 'none')
 
     # Utility to call a page requiring login, with and without login,

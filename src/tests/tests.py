@@ -62,9 +62,10 @@ from imageserver.flask_app import logger as lm
 from imageserver.flask_app import cache_engine as cm
 from imageserver.flask_app import data_engine as dm
 from imageserver.flask_app import image_engine as im
+from imageserver.flask_app import stats_engine as sm
 from imageserver.flask_app import task_engine as tm
 from imageserver.flask_app import permissions_engine as pm
-from imageserver.flask_app import launch_aux_processes
+from imageserver.flask_app import launch_aux_processes, stop_aux_processes
 
 from imageserver.api_util import API_CODES
 from imageserver.errors import AlreadyExistsError
@@ -87,20 +88,12 @@ from imageserver.scripts.cache_util import delete_image_ids
 from imageserver.template_attrs import TemplateAttrs
 from imageserver.util import secure_filename
 
-from . import kill_aux_processes
 
-
-# Module level setUp
+# Module level setUp and tearDown
 def setUpModule():
     init_tests()
-
-
-# Module + Package level tearDown
-# Unittest doesn't have a package level tearDown so we're being naughty
-# and relying on the order of files being returned by the test discovery.
-# tests.py does always seem to be returned last so this has the desired effect.
 def tearDownModule():
-    kill_aux_processes()
+    cleanup_tests()
 
 
 # Utility - resets the database and cache, and optionally starts the aux processes
@@ -109,7 +102,18 @@ def init_tests(launch_aux=True):
     cm.clear()         # So reset the cache second
     if launch_aux:
         launch_aux_processes()
-        time.sleep(2)
+        time.sleep(1)
+
+
+# Utility - cleans up after tests have finished
+def cleanup_tests():
+    stop_aux_processes()
+    # The aux processes have a 1 second shutdown response
+    time.sleep(1.5)
+    # In case there are other test modules following on,
+    # tell the test app that its aux server connections are now invalid
+    lm._client_close()
+    sm._client_close()
 
 
 # Utility - delete and re-create the internal databases

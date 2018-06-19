@@ -50,10 +50,10 @@ if __name__ == '__main__':
     if not os.environ.get('FLASK_ENV'):
         os.environ['FLASK_ENV'] = 'development'
 
+    from imageserver.flask_app import app, stop_aux_processes
+
     normal_exit = True
     try:
-        from imageserver.flask_app import app
-
         host = '127.0.0.1' if app.config['DEBUG'] else '0.0.0.0'
         if len(sys.argv) > 1:
             host = sys.argv[1]
@@ -85,6 +85,4 @@ if __name__ == '__main__':
         raise
     finally:
         if not normal_exit:
-            # Stop the background aux processes too
-            signal.signal(signal.SIGTERM, lambda a, b: None)
-            os.killpg(os.getpgid(0), signal.SIGTERM)
+            stop_aux_processes()

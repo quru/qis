@@ -125,7 +125,7 @@ def _run_server(debug_mode):
         shutdown_ev = Event()
         logger = app.log
         data_engine = app.data_engine
-        logger.set_name('tasks_' + str(os.getpid()))
+        logger.reconnect('tasks_' + str(os.getpid()))
         logger.info('Task server running')
 
         # Get the previous and the new process ID
@@ -186,11 +186,13 @@ def _run_server(debug_mode):
                     # Lock it to our process
                     locked = data_engine.lock_task(task, lock_id)
                     if not locked:
-                        logger.warning('Failed to lock task ID %d \'%s\'' %
-                                    (task.id, task.name))
+                        logger.warning('Failed to lock task ID %d \'%s\'' % (
+                            task.id, task.name)
+                        )
                     else:
-                        logger.debug('Launching task ID %d \'%s\' as thread %d' %
-                                     (task.id, task.name, thread_id))
+                        logger.debug('Launching task ID %d \'%s\' as thread %d' % (
+                                task.id, task.name, thread_id)
+                        )
                         # Go
                         t = threading.Thread(
                             target=run_task,

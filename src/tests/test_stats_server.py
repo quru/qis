@@ -48,6 +48,13 @@ from imageserver.flask_app import logger
 from imageserver.stats_manager import StatsManager
 
 
+# Module level setUp and tearDown
+def setUpModule():
+    main_tests.init_tests()
+def tearDownModule():
+    main_tests.cleanup_tests()
+
+
 class BytesIOConnection(object):
     def __init__(self, value=None):
         self.buf = BytesIO(value) if value else BytesIO()
@@ -203,25 +210,26 @@ class StatsHandlerTests(main_tests.FlaskTestCase):
 
 
 class StatsServerTests(main_tests.FlaskTestCase):
-    @classmethod
-    def setUpClass(cls):
-        super(StatsServerTests, cls).setUpClass()
-        StatsServerTests.purge_stats()
-        main_tests.init_tests()
-
-    # Utility - delete any stats (from earlier tests) that haven't been written
-    #           to the database yet
-    @staticmethod
-    def purge_stats():
+    # Utility - ensure the stats server connection is up and delete any pending
+    # stats (e.g. from earlier tests) that haven't been written to the database yet
+    def reset_stats_server(self):
         try:
+            # Send USR1 signal to the stats server to discard current stats
             stats_proc_pid = get_pid('stats')
             if stats_proc_pid:
                 os.kill(int(stats_proc_pid), signal.SIGUSR1)
+                time.sleep(0.5)
         except OSError as e:
-            if e.errno != 3:  # 3 == no such process
-                raise
+            if e.errno == 3:  # No such process
+                self.assertTrue(
+                    False,
+                    'Failed to signal the stats server as process ' + stats_proc_pid
+                )
+            raise
 
     def test_stats_engine(self):
+        # Setup
+        self.reset_stats_server()
         # Test constants
         IMG = 'test_images/cathedral.jpg'
         IMG_COPY = 'test_images/stats_test_image.jpg'
@@ -232,7 +240,7 @@ class StatsServerTests(main_tests.FlaskTestCase):
         IMG_VIEWS_COPY = 1
         IMG_DOWNLOADS = 1
         try:
-            t_then = datetime.utcnow()
+            t_start = datetime.utcnow()
             copy_file(IMG, IMG_COPY)
             # View some images
             for _ in range(IMG_VIEWS):
@@ -271,13 +279,13 @@ class StatsServerTests(main_tests.FlaskTestCase):
             lres = []
             waited = 0
             while not lres and waited < 75:
-                time.sleep(5)
-                waited += 5
-                t_now = datetime.utcnow()
-                lres = dm.search_system_stats(t_then, t_now)
+                time.sleep(2)
+                waited += 2
+                t_end = datetime.utcnow()
+                lres = dm.search_system_stats(t_start, t_end)
             self.assertEqual(
                 len(lres), 1,
-                'Timed out waiting for system stats to flush at {}'.format(t_now)
+                'Timed out waiting for system stats to flush at {}'.format(t_end)
             )
             # See if the system stats line up with the views
             res = lres[0]
@@ -292,7 +300,7 @@ class StatsServerTests(main_tests.FlaskTestCase):
             self.assertGreater(res.cpu_pc, 0)
             self.assertGreater(res.memory_pc, 0)
             # See if the image stats line up with the views
-            lres = dm.search_image_stats(t_then, t_now, db_image.id)
+            lres = dm.search_image_stats(t_start, t_end, db_image.id)
             self.assertEqual(len(lres), 1)
             res = lres[0]
             self.assertEqual(res.requests, IMG_VIEWS + IMG_DOWNLOADS + IMG_VIEWS_NOSTATS + IMG_VIEWS_304)
@@ -304,7 +312,7 @@ class StatsServerTests(main_tests.FlaskTestCase):
             self.assertGreater(res.max_request_seconds, 0)
             self.assertLess(res.max_request_seconds, res.request_seconds)
             # And the summary (reporting) data too
-            lsummary = dm.summarise_image_stats(t_then, t_now)
+            lsummary = dm.summarise_image_stats(t_start, t_end)
             # lsummary [(image_id, sum_requests, sum_views, sum_cached_views,
             #           sum_downloads, sum_bytes_served, sum_seconds, max_seconds)]
             self.assertEqual(len(lsummary), 1)
@@ -318,7 +326,7 @@ class StatsServerTests(main_tests.FlaskTestCase):
             self.assertGreater(res[6], 0)
             self.assertGreater(res[7], 0)
             self.assertLess(res[7], res[6])
-            ssummary = dm.summarise_system_stats(t_then, t_now)
+            ssummary = dm.summarise_system_stats(t_start, t_end)
             # ssummary (sum_requests, sum_views, sum_cached_views,
             #          sum_downloads, sum_bytes_served, sum_seconds, max_seconds)
             res = ssummary

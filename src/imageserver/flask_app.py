@@ -30,6 +30,8 @@
 #
 
 import os
+import signal
+
 import flask
 from . import __about__
 
@@ -287,3 +289,13 @@ def _launch_aux_processes(service_list='all'):
             app.config['TASK_SERVER_PORT'],
             app.config['DEBUG']
         )
+
+
+# Manually stops the aux processes
+def stop_aux_processes(nicely=True):
+    use_signal = signal.SIGTERM if nicely else signal.SIGKILL
+    # Stop all the processes in this process group apart from the current process
+    prev_handler = signal.signal(use_signal, lambda a, b: None)
+    os.killpg(os.getpgid(0), use_signal)
+    if prev_handler:
+        signal.signal(use_signal, prev_handler)

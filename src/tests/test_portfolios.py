@@ -58,11 +58,17 @@ from imageserver.models import (
 from imageserver.util import AttrObject, to_iso_datetime
 
 
+# Module level setUp and tearDown
+def setUpModule():
+    main_tests.init_tests()
+def tearDownModule():
+    main_tests.cleanup_tests()
+
+
 class PortfoliosAPITests(main_tests.BaseTestCase):
     @classmethod
     def setUpClass(cls):
         super(PortfoliosAPITests, cls).setUpClass()
-        main_tests.init_tests()
         assert 'test' in flask_app.config['FOLIO_EXPORTS_DIR'], \
             'Testing settings have not been applied, main_tests should do this!'
         # Preload all the API code as some of these tests need consistent run times
