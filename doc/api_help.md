@@ -6,6 +6,9 @@ software developers can integrate QIS into their own web sites and imaging solut
 The API consists a number of HTTP [RESTful web services](https://en.wikipedia.org/wiki/Representational_state_transfer#RESTful_web_services),
 most of which return data in the [JSON](https://www.json.org/) format.
 
+Features labelled with the ![Premium Edition](images/icon-premium-16.png) icon are only
+available in the Premium Edition, they are ignored in the Basic Edition.
+
 ## Contents
 
 * [About JSON](#json)
@@ -1615,10 +1618,14 @@ as described in the [imaging guide](image_help.md#option_tmp).
 * For `POST` and `PUT`:
 	* `name` - Mandatory, text - A unique name for the template
 	* `description` - Mandatory, text - A description for the template
-	* `template` - Mandatory, JSON text - A set of field/value-object pairs
-	    that define the preset imaging operations. See the examples below for
-	    the list of possible field names. Fields to remain unchanged can either
-	    have their values set to `null` or simply be omitted from the JSON.
+	* `template` - Mandatory, JSON text - A set of parameter-name/value-object
+	    pairs that define the imaging operations to apply. See the examples below
+			for the list of possible parameter names. Operations to be skipped can 
+			either have their values set to `null` or simply be omitted from the JSON.
+
+![Premium Edition](images/icon-premium-16.png) The template JSON can contain any
+parameter name that is valid in the Premium Edition. When used in the Basic Edition,
+any unsupported parameters are simply ignored by the imaging engine.
 
 ### Permissions required
 * None for `GET`
