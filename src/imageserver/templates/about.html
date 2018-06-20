@@ -77,7 +77,10 @@
 		</tr>
 		<tr>
 			<td>Supported image formats</td>
-			<td>{% if formats %}{{ formats|join(', ') }}{% else %}None{% endif %}</td>
+			<td>
+				{% if formats %}{{ formats|join(', ') }} &nbsp; &#9989;{% endif %}
+				{% if other_formats %}<br>{{ other_formats|join(', ') }} &nbsp; &#10060;{% endif %}
+			</td>
 		</tr>
 		<tr>
 			<td>Supported image operations</td>

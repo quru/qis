@@ -181,6 +181,7 @@ def image_help():
 @login_required
 def about():
     default_template = image_engine.get_default_template()
+    all_formats = image_engine.get_image_formats(supported_only=False)
     available_formats = image_engine.get_image_formats(supported_only=True)
     available_image_ops = image_engine.get_supported_operations()
     available_templates = image_engine.get_template_names()
@@ -190,6 +191,7 @@ def about():
     return render_template(
         'about.html',
         formats=available_formats,
+        other_formats=[f for f in all_formats if f not in available_formats],
         templates=available_templates,
         default_template=default_template,
         iccs=available_iccs,
