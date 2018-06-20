@@ -6,6 +6,9 @@ who wish to display and/or modify their images.
 Software developers can use this guide in conjunction with the [API user's guide](api_help.md)
 for creating imaging workflows.
 
+Features labelled with the ![Premium Edition](images/icon-premium-16.png) icon are only
+available in the Premium Edition, they are ignored in the Basic Edition.
+
 ## Contents
 
 * [A simple example](#example)
@@ -60,7 +63,7 @@ for more information.
 
 <a name="defaults"></a>
 ## Default settings
-View this page from within QIS to see the default image settings for your server.
+View this page from within QIS to see the current image settings for your server.
 
 <a name="templates"></a>
 ## Image templates
@@ -96,7 +99,7 @@ manipulate. This is the only mandatory parameter. If you do not specify any othe
 the image is returned with the server's [default image template](#defaults) applied.
 
 <a name="option_page"></a>
-### page
+### page ![Premium Edition](images/icon-premium-16.png)
 Relevant only to multi-page file formats such as `tiff` and `pdf`, specifies which page number
 to return. The first page number is 1, which is also the default value.
 
@@ -138,9 +141,13 @@ Note that if your original image is a `jpg`, you cannot improve its quality by s
 a value of 100; you will only generate a very large image file at the same quality as the
 original.
 
-For `png`, the first digit is the compression level (1 to 9, 9 being highest compression),
-while the second digit determines the PNG filter type in use. Unlike the `jpg` file format, the
-`png` format is lossless, so changing this value does not affect image quality, only the resulting
+For `png` in Basic Edition, the first digit is the compression level (1 to 9, 9 being
+highest compression), while the second digit must be provided but is ignored.
+
+![Premium Edition](images/icon-premium-16.png) For `png` in Premium Edition, the first digit
+is the compression level (1 to 9, 9 being highest compression), while the second digit
+determines the PNG filter type in use. Unlike the `jpg` file format, the `png` format is
+lossless, so changing this value does not affect image quality, only the resulting
 file size and file creation speed. The "optimal" value varies for different images, and also
 for whether you want to optimise for file size or processing speed. As a starting point, try
 21 or 31 for simple images (those with large areas of one colour), and 79 or 99 for complex
@@ -211,7 +218,7 @@ Or for a portrait version of the same image, 150x200, so that there is no horizo
 ![](//images.example.com/image?src=buildings/cathedral.jpg&stats=0&format=jpg&angle=90&fill=red&width=200&height=200&autosizefit=1)
 
 <a name="option_halign"></a><a name="option_valign"></a>
-### halign / valign
+### halign / valign ![Premium Edition](images/icon-premium-16.png)
 Valid only when a width and height are both defined (and [autosizefit](#option_autosizefit) is false),
 sets the position of the inner image within the area padded with fill colour. Positions are given as
 a two-part value of: the inner image edge to align, and the alignment position.
@@ -232,12 +239,14 @@ happening. See the [cropping](#option_left) function if you wish to achieve this
 
 If you do not specify alignment values, the inner image will be centred.
 
-A padded image with the right edge of the inner image aligned to the right:
+![Premium Edition](images/icon-premium-16.png) A padded image with the right edge of
+the inner image aligned to the right:
 
 <code class="imagecode">&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&format=jpg&left=0.235&right=0.8&fill=auto**&width=200&height=150&halign=R1**"></code>
 ![](//images.example.com/image?src=buildings/cathedral.jpg&stats=0&format=jpg&left=0.235&right=0.8&fill=auto&width=200&height=150&halign=R1)
 
-A padded image with the left edge of the inner image aligned to the left:
+![Premium Edition](images/icon-premium-16.png) A padded image with the left edge of
+the inner image aligned to the left:
 
 <code class="imagecode">&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&format=jpg&left=0.235&right=0.8&fill=auto**&width=200&height=150&halign=L0**"></code>
 ![](//images.example.com/image?src=buildings/cathedral.jpg&stats=0&format=jpg&left=0.235&right=0.8&fill=auto&width=200&height=150&halign=L0)
@@ -330,42 +339,44 @@ Examples: red, ff0000, rgb(255,0,0). If you do not specify a fill colour, white 
 For image formats that support transparency, such as `png` and `gif`, you may use the value:
 none or transparent.
 
-You may also use the special value: auto. Setting the fill to auto causes the server to
-analyse the image and make a guess at a suitable fill colour. This is most effective for images
-that have a consistent colour around the edges.
+![Premium Edition](images/icon-premium-16.png) In Premium Edition you may also use the special
+value: auto. Setting the fill to auto causes the server to analyse the image and make a guess
+at a suitable fill colour. This is most effective for images that have a consistent colour
+around the edges.
 
 The image resized as a square, using a dark grey fill colour:
 
 <code class="imagecode">&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&format=jpg**&width=200&height=200&fill=333333**"></code>
 ![](//images.example.com/image?src=buildings/cathedral.jpg&stats=0&format=jpg&width=200&height=200&fill=333333)
 
-The image rotated 20&deg;, using an automatic fill colour:
+![Premium Edition](images/icon-premium-16.png) The image rotated 20&deg;, using an automatic fill colour:
 
 <code class="imagecode">&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&format=jpg&width=200**&angle=20&fill=auto**"></code>
 ![](//images.example.com/image?src=buildings/cathedral.jpg&stats=0&format=jpg&width=200&angle=20&fill=auto)
 
 <a name="option_sharpen"></a>
-### sharpen
+### sharpen ![Premium Edition](images/icon-premium-16.png)
 Applies a routine to either sharpen or blur the image. Valid values are -500 (heavy blur) to 0 (no effect) to 
 500 (heavy sharpening). A small amount of sharpening (e.g. 50) sometimes enhances a resized or rotated image.
 
-A resized portion of the sample image without sharpening:
+![Premium Edition](images/icon-premium-16.png) A resized portion of the sample image without sharpening:
 
 <code class="imagecode">&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&format=jpg&width=200&bottom=0.6&left=0.27&right=0.77"></code>
 ![](//images.example.com/image?src=buildings/cathedral.jpg&stats=0&format=jpg&width=200&bottom=0.6&left=0.27&right=0.77)
 
-With a small amount of sharpening applied, the edges in the image appear more distinct,
-but the image appears brighter and some detail has been lost:
+![Premium Edition](images/icon-premium-16.png) With a small amount of sharpening applied,
+the edges in the image appear more distinct, but the image appears brighter and some detail
+has been lost:
 
 <code class="imagecode">&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&format=jpg&width=200&bottom=0.6&left=0.27&right=0.77**&sharpen=50**"></code>
 ![](//images.example.com/image?src=buildings/cathedral.jpg&stats=0&format=jpg&width=200&bottom=0.6&left=0.27&right=0.77&sharpen=50)
 
-Maximum sharpening produces an interesting special effect:
+![Premium Edition](images/icon-premium-16.png) Maximum sharpening produces an interesting special effect:
 
 <code class="imagecode">&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&format=jpg&width=200&bottom=0.6&left=0.27&right=0.77**&sharpen=500**"></code>
 ![](//images.example.com/image?src=buildings/cathedral.jpg&stats=0&format=jpg&width=200&bottom=0.6&left=0.27&right=0.77&sharpen=500)
 
-The image with blur applied produces an out-of-focus effect:
+![Premium Edition](images/icon-premium-16.png) The image with blur applied produces an out-of-focus effect:
 
 <code class="imagecode">&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&format=jpg&width=200&bottom=0.6&left=0.27&right=0.77**&sharpen=-200**"></code>
 ![](//images.example.com/image?src=buildings/cathedral.jpg&stats=0&format=jpg&width=200&bottom=0.6&left=0.27&right=0.77&sharpen=-200)
@@ -419,7 +430,7 @@ will result in an image length of 1000 pixels (dots). For `pdf` file conversions
 the DPI value, the larger the resulting image.
 
 <a name="option_overlay"></a>
-### overlay
+### overlay ![Premium Edition](images/icon-premium-16.png)
 Provides the path of a second image to overlay on top of the first. This must be a local image server path, 
 in the same format as [src](#option_src). By default the overlay image is centred and sized to fit
 the width or height of the main image. To change this, see [ovsize](#option_ovsize), 
@@ -435,13 +446,13 @@ overlay path, or by removing the template parameter from the image URL. If this 
 could pre-generate your watermarked images and save them in a new folder, and serve those
 images instead.
 
-Adding a logo to an image:
+![Premium Edition](images/icon-premium-16.png) Adding a logo to an image:
 
 <code class="imagecode">&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&width=200**&overlay=logos/quru.png**"></code>
 ![](//images.example.com/image?src=buildings/cathedral.jpg&stats=0&width=200&overlay=logos/quru.png)
 
 <a name="option_ovsize"></a>
-### ovsize
+### ovsize ![Premium Edition](images/icon-premium-16.png)
 Valid only when an overlay is being applied, specifies the size of the
 overlay image relative to the main image. Valid values are from 0.0 to 1.0,
 where 1.0 means "use the full width or height of the main image", 0.5 means
@@ -453,13 +464,14 @@ this would cause it to become blurred or blocky in appearance. For a size of
 1.0 you therefore need to ensure that your overlay image has dimensions
 that match or exceed your largest main image.
 
-Setting the logo width to &frac14; of the main image width:
+![Premium Edition](images/icon-premium-16.png) Setting the logo width to &frac14;
+of the main image width:
 
 <code class="imagecode">&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&width=200**&overlay=logos/quru.png&ovsize=0.25**"></code>
 ![](//images.example.com/image?src=buildings/cathedral.jpg&stats=0&width=200&overlay=logos/quru.png&ovsize=0.25)
 
 <a name="option_ovpos"></a>
-### ovpos
+### ovpos ![Premium Edition](images/icon-premium-16.png)
 Valid only when an overlay is being applied, specifies the position of
 the overlay image inside the main image. Valid values are one of the compass points:
 N, S, E, W, NE, SE, SW, NW; or C to centre. If you do not specify a value,
@@ -469,25 +481,27 @@ If you wish to align the overlay but also have a border around it,
 this can be achieved by providing a transparent border inside the
 overlay image itself. This is demonstrated in the example below.
 
-A logo containing an integral border, aligned to the North West:
+![Premium Edition](images/icon-premium-16.png) A logo containing an integral border,
+aligned to the North West:
 
 <code class="imagecode">&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&width=200**&overlay=logos/quru-padded.png&ovsize=0.4&ovpos=NW**"></code>
 ![](//images.example.com/image?src=buildings/cathedral.jpg&stats=0&width=200&overlay=logos/quru-padded.png&ovsize=0.4&ovpos=NW)
 
-<a name="option_ovpos"></a>
-### ovopacity
+<a name="option_ovopacity"></a>
+### ovopacity ![Premium Edition](images/icon-premium-16.png)
 Valid only when an overlay is being applied, defines the opacity level of the overlay,
 and to what degree it blends into the main image. Valid values are from 0.0 to 1.0,
 where 0.0 is fully transparent and 1.0 is fully opaque. If you do not specify a value,
 1.0 is used.
 
-Setting the logo to be semi-transparent, useful as a watermark effect:
+![Premium Edition](images/icon-premium-16.png) Setting the logo to be semi-transparent,
+useful as a watermark effect:
 
 <code class="imagecode">&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&width=200**&overlay=logos/quru.png&ovopacity=0.3**"></code>
 ![](//images.example.com/image?src=buildings/cathedral.jpg&stats=0&width=200&overlay=logos/quru.png&ovopacity=0.3)
 
 <a name="option_icc"></a><a name="option_intent"></a>
-### icc (colour profile) / intent
+### icc (colour profile) / intent ![Premium Edition](images/icon-premium-16.png)
 These options are intended only for advanced users.
 
 Attaches and applies an International Color Consortium (ICC) colour profile to the
@@ -514,31 +528,34 @@ If you want to remove the colour profile from the image after applying it, enabl
 the [strip](#option_strip) option. This is often appropriate for RGB images, but not
 in general for CMYK images.
 
-The sample image, with a greyscale conversion applied with 'perceptual' intent:
+![Premium Edition](images/icon-premium-16.png) The sample image, with a
+greyscale conversion applied with 'perceptual' intent:
 
 <code class="imagecode">&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&width=200**&icc=greyscale&intent=perceptual**"></code>
 ![](//images.example.com/image?src=buildings/cathedral.jpg&stats=0&width=200&icc=greyscale&intent=perceptual)
 
 <a name="option_bpc"></a>
-### bpc (black point compensation)
+### bpc (black point compensation) ![Premium Edition](images/icon-premium-16.png)
 This option is intended only for advanced users.
 
 Valid only when applying an ICC colour profile with the 'relative' rendering intent, 
 determines whether Black Point Compensation is applied during the process.
 Valid values are true or false, 1 or 0.
 
-A print-based colour profile applied with 'relative' intent and without black point compensation:
+![Premium Edition](images/icon-premium-16.png) A print-based colour profile applied
+with 'relative' intent and without black point compensation:
 
 <code class="imagecode">&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&width=200**&icc=UncoatedFOGRA29&intent=relative&bpc=0**&colorspace=rgb"></code>
 ![](//images.example.com/image?src=buildings/cathedral.jpg&stats=0&width=200&icc=UncoatedFOGRA29&intent=relative&bpc=0&colorspace=rgb)
 
-With black point compensation, the image has a tone that more closely matches the original:
+![Premium Edition](images/icon-premium-16.png) With black point compensation,
+the image has a tone that more closely matches the original:
 
 <code class="imagecode">&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&width=200**&icc=UncoatedFOGRA29&intent=relative&bpc=1**&colorspace=rgb"></code>
 ![](//images.example.com/image?src=buildings/cathedral.jpg&stats=0&width=200&icc=UncoatedFOGRA29&intent=relative&bpc=1&colorspace=rgb)
 
 <a name="option_colorspace"></a>
-### colorspace
+### colorspace ![Premium Edition](images/icon-premium-16.png)
 This option is intended only for advanced users.
 
 Converts the internal colour model of the image to either Red-Green-Blue, Cyan-Magenta-Yellow-blacK,
@@ -564,7 +581,8 @@ The unaltered RGB sample image:
 <code class="imagecode">&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&width=200"></code>
 ![](//images.example.com/image?src=buildings/cathedral.jpg&stats=0&width=200)
 
-The sample image with a CMYK print colour profile applied, converted back to RGB for display purposes:
+![Premium Edition](images/icon-premium-16.png) The sample image with a CMYK print
+colour profile applied, converted back to RGB for display purposes:
 
 <code class="imagecode">&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&width=200&icc=USSheetfedUncoated&intent=relative**&colorspace=rgb**"></code>
 ![](//images.example.com/image?src=buildings/cathedral.jpg&stats=0&width=200&icc=USSheetfedUncoated&intent=relative&colorspace=rgb)
@@ -742,10 +760,10 @@ which you specify the commands:
 2. Rotate
 3. Crop
 4. Resize
-5. Overlay
+5. Overlay ![Premium Edition](images/icon-premium-16.png)
 6. Tile
-7. Apply ICC profile
-8. Set colorspace
+7. Apply ICC profile ![Premium Edition](images/icon-premium-16.png)
+8. Set colorspace ![Premium Edition](images/icon-premium-16.png)
 9. Strip
 
 Therefore, a request for <code>**src=myimage&width=200&left=0.2&right=0.8&angle=45**</code>

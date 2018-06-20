@@ -171,7 +171,7 @@ def image_help():
             'quru-padded.png': logo_pad_image_attrs.filename(with_path=False),
             'logos': logo_image_attrs.folder_path(),
             'View this page from within QIS to see the '
-            'default image settings for your server.': default_settings_html
+            'current image settings for your server.': default_settings_html
         }
     )
 
@@ -856,6 +856,8 @@ def _standard_help_page(template_file, embed=None, extra_subs=None):
     subs = {
         # Replace images.example.com everywhere with the local server name
         '//images.example.com/': server_url,
+        # Replace image references with the static/images URL
+        '(images/': '(' + internal_url_for('static', filename='images/'),
         # Replace cross-document links with working URLs to the equivalent web pages
         'api_help.md': internal_url_for('api.api_help'),
         'image_help.md': internal_url_for('image_help'),

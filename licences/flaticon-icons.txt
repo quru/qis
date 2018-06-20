@@ -1,6 +1,11 @@
-This application includes modified and unmodified icons designed by Madebyoliver from Flaticon.
-http://www.flaticon.com/authors/madebyoliver
+This application includes modified and unmodified icons designed by Madebyoliver at Flaticon.
+https://www.flaticon.com/authors/madebyoliver
 Icon sets: essential collection, interaction assets
+
+Premium edition icon by Freepik at Flaticon.
+https://www.flaticon.com/authors/freepik
+Icon set: enterprise
+
 
 This file in this location is currently the closest thing the application has to a
 "credits or acknowledgements" section.

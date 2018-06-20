@@ -357,36 +357,41 @@ class ImageServerTestsWebPages(main_tests.BaseTestCase):
         )
 
     # Test that the markdown substitutions are working
-    def test_markdown_subs(self):
-        # API help - it's "url = 'http://images.example.com/api/v1/list/'" in the Markdown
+    def test_markdown_subs_api_help(self):
+        # "url = 'http://images.example.com/api/v1/list/'" in the Markdown
+        # should reflect being on 'localhost' after substitutions
         self.call_page_requiring_login(
             '/api/help/',
             False,
             "url = 'http://localhost/api/v1/list/'"
         )
+
+    # Test that the markdown substitutions are working
+    def test_markdown_subs_imaging_help(self):
         # Image help
-        self.login('webuser', 'webuser')
-        rv = self.app.get('/help/')
-        self.assertEqual(rv.status_code, 200)
+        rv = self.call_page_requiring_login('/help/')
+        page_text = rv.data.decode('utf8')
         # Image help - subs //images.example.com/
-        self.assertNotIn('//images.example.com/', rv.data.decode('utf8'))
-        self.assertIn('//localhost/', rv.data.decode('utf8'))
+        self.assertNotIn('//images.example.com/', page_text)
+        self.assertIn('//localhost/', page_text)
         # Image help - subs buildings
-        self.assertNotIn('buildings', rv.data.decode('utf8'))
-        self.assertIn('test_images', rv.data.decode('utf8'))
+        self.assertNotIn('buildings', page_text)
+        self.assertIn('test_images', page_text)
         # Image help - subs quru.png
-        self.assertNotIn('quru.png', rv.data.decode('utf8'))
-        self.assertIn('quru110.png', rv.data.decode('utf8'))
+        self.assertNotIn('quru.png', page_text)
+        self.assertIn('quru110.png', page_text)
         # Image help - subs quru-padded.png
-        self.assertNotIn('quru-padded.png', rv.data.decode('utf8'))
-        self.assertIn('quru470.png', rv.data.decode('utf8'))
+        self.assertNotIn('quru-padded.png', page_text)
+        self.assertIn('quru470.png', page_text)
         # Image help - subs logos
-        self.assertNotIn('logos', rv.data.decode('utf8'))
-        self.assertIn('test_images', rv.data.decode('utf8'))
+        self.assertNotIn('logos', page_text)
+        self.assertIn('test_images', page_text)
         # Image help - subs the server-specific settings placeholder text
-        self.assertNotIn('View this page from within QIS to see the default '
-                         'image settings for your server.', rv.data.decode('utf8'))
-        self.assertIn('The following settings are active on your server.', rv.data.decode('utf8'))
+        self.assertNotIn('View this page from within QIS to see the current '
+                         'image settings for your server.', page_text)
+        self.assertIn('The following settings are active on your server.', page_text)
+        # v4 Basic Edition (as set in unit_tests.py) should include upgrade suggestion
+        self.assertIn('Premium Edition supports a larger number of image types.', page_text)
 
     # The simple viewer help + demo
     def test_simple_viewer_page(self):
