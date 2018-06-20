@@ -118,6 +118,7 @@ GroupList.onInit = function() {
 var TemplateEdit = {};
 TemplateEdit.onInit = function() {
 	GenericPopup.initButtons();
+	addEventEx('cancel2', 'click', GenericPopup.closePage);
 	setAjaxJsonForm(
 		'editform',
 		TemplateEdit.validate,

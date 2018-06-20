@@ -87,6 +87,15 @@
 					{{ help('option_expires') }}
 				</div>
 			</fieldset>
+
+			<fieldset>
+				<div>
+					<label></label>
+					<input type="button" id="cancel2" value="Cancel">
+					<input type="submit" id="submit2" {{ disabled if not allow_edit }}
+					       value="&nbsp;Apply&nbsp;">
+				</div>
+			</fieldset>
 		</form>
 
 		{% include "inc_preview_popup.html" %}
