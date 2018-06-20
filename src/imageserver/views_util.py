@@ -176,9 +176,9 @@ def register_template_funcs():
 
 def app_edition():
     """
-    Returns whether the application is running in "Free" or "Premium" mode.
+    Returns whether the application is running in "Standard" or "Premium" mode.
     """
-    return "Premium" if imaging.get_backend() == "imagemagick" else "Free"
+    return "Premium" if imaging.get_backend() == "imagemagick" else "Standard"
 
 
 def wrap_is_permitted(flag):
