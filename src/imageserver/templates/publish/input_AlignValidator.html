@@ -1,4 +1,5 @@
-<select name="{{ web_name }}" id="publish_field_{{ key }}" class="publish_field" autocomplete="off">
+<select name="{{ web_name }}" id="publish_field_{{ key }}" class="publish_field"
+        autocomplete="off" {% if not enabled %}disabled="disabled"{% endif %}>
 	{% if validator.edge_choices|join == 'lcr' %}
 	<option value="L0"    {% if default == 'l0' %}selected{% endif %}>Left</option>
 	<option value="L0.25" {% if default == 'l0.25' %}selected{% endif %}>Left edge at 25%</option>

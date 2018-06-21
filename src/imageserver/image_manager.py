@@ -220,6 +220,8 @@ class ImageManager(object):
             self._memo_supported_ops['icc_profile'] = be_ops.get('icc_data', False)
             if 'icc_data' in be_ops:
                 del be_ops['icc_data']
+            # Add in template support
+            self._memo_supported_ops['template'] = True
         return self._memo_supported_ops
 
     def put_image(self, current_user, file_wrapper,

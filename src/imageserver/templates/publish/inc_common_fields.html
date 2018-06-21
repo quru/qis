@@ -3,6 +3,7 @@
   Requires inc_field_macros.html to be already included.
   Requires variable "fields" to be the output of ImageAttrs.validators() or TemplateAttrs.validators().
   Requires variable "field_values" to be a similar dictionary of initial values.
+  Requires variable "supported_fields" to be a similar dictionary of image engine support (booleans).
   Set "include_units_tool" to include the sizing units tool.
   Set "include_crop_tool" to include the cropping tool.
 #}
@@ -10,8 +11,8 @@
 			<h3>Page</h3>
 			<fieldset class="subtlebg">
 				<div>
-					<label>Page number:</label>
-					{{ input(fields, field_values, 'page') }}
+					<label>Page number {{ premium_icon(supported_fields, 'page') }}</label>
+					{{ input(fields, field_values, supported_fields, 'page') }}
 					{{ help('option_page') }}
 				</div>
 			</fieldset>
@@ -20,7 +21,7 @@
 			<fieldset class="subtlebg">
 				{% if include_units_tool %}
 				<div>
-					<label>Sizing units:</label>
+					<label>Sizing units</label>
 					<select id="sizing_units" autocomplete="off">
 						<option value="px">Pixels</option>
 						<option value="mm">Millimetres</option>
@@ -29,8 +30,8 @@
 				</div>
 				{% endif %}
 				<div id="group_width">
-					<label>Width:</label>
-					{{ input(fields, field_values, 'width') }}
+					<label>Width {{ premium_icon(supported_fields, 'width') }}</label>
+					{{ input(fields, field_values, supported_fields, 'width') }}
 					{{ help('option_width') }}
 					<span class="field_default">
 						{% if image_info and image_info.width %}
@@ -39,8 +40,8 @@
 					</span>
 				</div>
 				<div id="group_height">
-					<label>Height:</label>
-					{{ input(fields, field_values, 'height') }}
+					<label>Height {{ premium_icon(supported_fields, 'height') }}</label>
+					{{ input(fields, field_values, supported_fields, 'height') }}
 					{{ help('option_height', 'hidden') }}
 					<span class="field_default">
 						{% if image_info and image_info.height %}
@@ -49,8 +50,8 @@
 					</span>
 				</div>
 				<div>
-					<label>DPI:</label>
-					{{ input(fields, field_values, 'dpi_x') }}
+					<label>DPI {{ premium_icon(supported_fields, 'dpi_x') }}</label>
+					{{ input(fields, field_values, supported_fields, 'dpi_x') }}
 					{{ help('option_dpi') }}
 				</div>
 			</fieldset>
@@ -58,51 +59,53 @@
 			<h3>Padding</h3>
 			<fieldset class="subtlebg">
 				<div>
-					<label>Prevent padding:</label>
-					{{ input(fields, field_values, 'size_fit') }}
+					<label>Prevent padding {{ premium_icon(supported_fields, 'size_fit') }}</label>
+					{{ input(fields, field_values, supported_fields, 'size_fit') }}
 					{{ help('option_autosizefit') }}
 				</div>
 				<div id="group_fill">
-					<label>Padding colour:</label>
-					{{ input(fields, field_values, 'fill') }}
+					<label>Padding colour {{ premium_icon(supported_fields, 'fill') }}</label>
+					{{ input(fields, field_values, supported_fields, 'fill') }}
 					{{ help('option_fill') }}<br>
 					<label></label>
 					<input type="checkbox" name="autofill" id="publish_field_autofill"
 					       class="publish_field" value="auto" autocomplete="off"
-					       {% if field_values.fill == 'auto' %}checked{% endif %}>
+						   {% if field_values.fill == 'auto' %}checked{% endif %}
+						   {% if not supported_fields['fill'] %}disabled{% endif %}>
 					       <label for="publish_field_autofill">auto</label><br>
 					<label></label>
 					<input type="checkbox" name="transfill" id="publish_field_transfill"
 					       class="publish_field" value="none" autocomplete="off"
-					       {% if field_values.fill == 'none' %}checked{% endif %}>
+						   {% if field_values.fill == 'none' %}checked{% endif %}
+						   {% if not supported_fields['fill'] %}disabled{% endif %}>
 					       <label for="publish_field_transfill">transparent</label>
 				</div>
 				<div>
-					<label>Image position:</label>
-					{{ input(fields, field_values, "align_h") }}
+					<label>Image position {{ premium_icon(supported_fields, 'align_h') }}</label>
+					{{ input(fields, field_values, supported_fields, "align_h") }}
 					{{ help('option_halign') }}
 				</div>
 				<div>
 					<label></label>
-					{{ input(fields, field_values, "align_v") }}
+					{{ input(fields, field_values, supported_fields, "align_v") }}
 				</div>
 			</fieldset>
 
 			<h3>Image processing</h3>
 			<fieldset class="subtlebg">
 				<div>
-					<label>Flip image:</label>
-					{{ input(fields, field_values, 'flip') }}
+					<label>Flip image {{ premium_icon(supported_fields, 'flip') }}</label>
+					{{ input(fields, field_values, supported_fields, 'flip') }}
 					{{ help('option_flip') }}
 				</div>
 				<div>
-					<label>Rotate image:</label>
-					{{ input(fields, field_values, "rotation") }}
+					<label>Rotate image {{ premium_icon(supported_fields, 'rotation') }}</label>
+					{{ input(fields, field_values, supported_fields, "rotation") }}
 					{{ help('option_angle') }}
 				</div>
 				<div>
-					<label>Sharpen / blur:</label>
-					{{ input(fields, field_values, "sharpen") }}
+					<label>Sharpen / blur {{ premium_icon(supported_fields, 'sharpen') }}</label>
+					{{ input(fields, field_values, supported_fields, "sharpen") }}
 					{{ help('option_sharpen') }}
 				</div>
 			</fieldset>
@@ -116,11 +119,11 @@
 			<fieldset class="subtlebg">
 				{% if include_crop_tool %}
 				<div>
-					<label>Current aspect ratio:</label>
+					<label>Current aspect ratio</label>
 					<span id="crop_aspect">&ndash;</span>
 				</div>
 				<div>
-					<label>Fix aspect ratio:</label>
+					<label>Fix aspect ratio</label>
 					<select id="crop_fix_aspect" autocomplete="off">
 						<option value="">None</option>
 						<option value="1:1">1:1 (square)</option>
@@ -132,25 +135,25 @@
 				</div>
 				{% endif %}
 				<div>
-					<label>Left:</label>
-					{{ input(fields, field_values, 'left') }}
+					<label>Left {{ premium_icon(supported_fields, 'left') }}</label>
+					{{ input(fields, field_values, supported_fields, 'left') }}
 					{{ help('option_top') }}
 				</div>
 				<div>
-					<label>Top:</label>
-					{{ input(fields, field_values, 'top') }}
+					<label>Top {{ premium_icon(supported_fields, 'top') }}</label>
+					{{ input(fields, field_values, supported_fields, 'top') }}
 				</div>
 				<div>
-					<label>Right:</label>
-					{{ input(fields, field_values, 'right') }}
+					<label>Right {{ premium_icon(supported_fields, 'right') }}</label>
+					{{ input(fields, field_values, supported_fields, 'right') }}
 				</div>
 				<div>
-					<label>Bottom:</label>
-					{{ input(fields, field_values, 'bottom') }}
+					<label>Bottom {{ premium_icon(supported_fields, 'bottom') }}</label>
+					{{ input(fields, field_values, supported_fields, 'bottom') }}
 				</div>
 				<div>
-					<label>Minimise padding:</label>
-					{{ input(fields, field_values, 'crop_fit') }}
+					<label>Minimise padding {{ premium_icon(supported_fields, 'crop_fit') }}</label>
+					{{ input(fields, field_values, supported_fields, 'crop_fit') }}
 					{{ help('option_autocropfit') }}
 				</div>
 			</fieldset>
@@ -158,27 +161,28 @@
 			<h3>Overlay / Watermark</h3>
 			<fieldset class="subtlebg">
 				<div>
-					<label>Overlay image:</label>
-					{{ input(fields, field_values, 'overlay_src', '/path/to/your-image.jpg') }}
+					<label>Overlay image {{ premium_icon(supported_fields, 'overlay_src') }}</label>
+					{{ input(fields, field_values, supported_fields, 'overlay_src', '/path/to/your-image.jpg') }}
 					<button id="overlay_src_browse"
 					        type="button"
-					        data-browse-url="{{ url_for('folder_browse', path=path, embed=1, show_files=1, msg='Select the overlay image file:') }}"
+							data-browse-url="{{ url_for('folder_browse', path=path, embed=1, show_files=1, msg='Select the overlay image file:') }}"
+							{% if not supported_fields['overlay_src'] %}disabled{% endif %}
 					        >Browse...</button>
 					{{ help('option_overlay') }}
 				</div>
 				<div>
-					<label>Relative size:</label>
-					{{ input(fields, field_values, "overlay_size") }}
+					<label>Relative size {{ premium_icon(supported_fields, 'overlay_size') }}</label>
+					{{ input(fields, field_values, supported_fields, "overlay_size") }}
 					{{ help('option_ovsize') }}
 				</div>
 				<div>
-					<label>Position:</label>
-					{{ input(fields, field_values, "overlay_pos") }}
+					<label>Position {{ premium_icon(supported_fields, 'overlay_pos') }}</label>
+					{{ input(fields, field_values, supported_fields, "overlay_pos") }}
 					{{ help('option_ovpos') }}
 				</div>
 				<div>
-					<label>Opacity:</label>
-					{{ input(fields, field_values, "overlay_opacity") }}
+					<label>Opacity {{ premium_icon(supported_fields, 'overlay_opacity') }}</label>
+					{{ input(fields, field_values, supported_fields, "overlay_opacity") }}
 					{{ help('option_ovopacity') }}
 				</div>
 			</fieldset>
@@ -186,18 +190,18 @@
 			<h3>Colour processing</h3>
 			<fieldset class="subtlebg">
 				<div id="group_icc">
-					<label>Colour profile:</label>
-					{{ input(fields, field_values, "icc_profile") }}
+					<label>Colour profile {{ premium_icon(supported_fields, 'icc_profile') }}</label>
+					{{ input(fields, field_values, supported_fields, "icc_profile") }}
 					{{ help('option_icc') }}
 				</div>
 				<div>
-					<label>Intent:</label>
-					{{ input(fields, field_values, "icc_intent") }}
+					<label>Intent {{ premium_icon(supported_fields, 'icc_intent') }}</label>
+					{{ input(fields, field_values, supported_fields, "icc_intent") }}
 					{{ help('option_intent') }}
 				</div>
 				<div>
-					<label>Black point compensation:</label>
-					{{ input(fields, field_values, "icc_bpc") }}
+					<label>Black point compensation {{ premium_icon(supported_fields, 'icc_bpc') }}</label>
+					{{ input(fields, field_values, supported_fields, "icc_bpc") }}
 					{{ help('option_bpc') }}
 				</div>
 			</fieldset>
@@ -205,23 +209,23 @@
 			<h3>File options</h3>
 			<fieldset class="subtlebg">
 				<div id="group_strip">
-					<label>Strip meta-data:</label>
-					{{ input(fields, field_values, "strip") }}
+					<label>Strip meta-data {{ premium_icon(supported_fields, 'strip') }}</label>
+					{{ input(fields, field_values, supported_fields, "strip") }}
 					{{ help('option_strip') }}
 				</div>
 				<div>
-					<label>File format:</label>
-					{{ input(fields, field_values, "format") }}
+					<label>File format {{ premium_icon(supported_fields, 'format') }}</label>
+					{{ input(fields, field_values, supported_fields, "format") }}
 					{{ help('option_format') }}
 				</div>
 				<div>
-					<label>JPG quality /<br/>PNG compression:</label>
-					{{ input(fields, field_values, "quality") }}
+					<label>JPG quality /<br/>PNG compression {{ premium_icon(supported_fields, 'quality') }}</label>
+					{{ input(fields, field_values, supported_fields, "quality") }}
 					{{ help('option_quality') }}
 				</div>
 				<div id="group_colorspace">
-					<label>Colour model:</label>
-					{{ input(fields, field_values, "colorspace") }}
+					<label>Colour model {{ premium_icon(supported_fields, 'colorspace') }}</label>
+					{{ input(fields, field_values, supported_fields, "colorspace") }}
 					{{ help('option_colorspace') }}
 				</div>
 			</fieldset>
@@ -229,13 +233,13 @@
 			<h3>Browser handling options</h3>
 			<fieldset class="subtlebg">
 				<div>
-					<label>Download file instead of displaying image:</label>
-					{{ input(fields, field_values, 'attachment') }}
+					<label>Download file instead of displaying image</label>
+					{{ input(fields, field_values, supported_fields, 'attachment') }}
 					{{ help('option_attach') }}
 				</div>
 				<div>
-					<label>Count requests in server statistics:</label>
-					{{ input(fields, field_values, 'record_stats') }}
+					<label>Count requests in server statistics</label>
+					{{ input(fields, field_values, supported_fields, 'record_stats') }}
 					{{ help('option_stats') }}
 				</div>
 			</fieldset>

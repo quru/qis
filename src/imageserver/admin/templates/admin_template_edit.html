@@ -1,6 +1,6 @@
 {% extends "admin_base.html" %}
 
-{% from "publish/inc_field_macros.html" import input, help with context %}
+{% from "publish/inc_field_macros.html" import input, help, premium_icon with context %}
 
 {% block copyright %}
 <!-- 
@@ -77,13 +77,18 @@
 			<br/>
 			<h2>Template options</h2>
 			All values are optional and can be left blank.
+			{% if app_edition() == 'Standard' %}
+			Items marked with a
+			<img src="{{ url_for('static', filename='images/icon-premium-16.png') }}" alt="Premium Edition">
+			icon are only supported in the Premium Edition.
+			{% endif %}
 
 			{% include "publish/inc_common_fields.html" %}
 
 			<fieldset class="fieldset_merge subtlebg">
 				<div>
-					<label>Client caching duration:</label>
-					{{ input(fields, field_values, 'expiry_secs') }} seconds
+					<label>Client caching duration</label>
+					{{ input(fields, field_values, supported_fields, 'expiry_secs') }} seconds
 					{{ help('option_expires') }}
 				</div>
 			</fieldset>

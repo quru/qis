@@ -2,21 +2,34 @@
   Outputs the HTML form element for an image parameter.
   Param "fields" is the output of ImageAttrs.validators() or TemplateAttrs.validators().
   Param "defaults" is a dictionary of default field values.
-  Param "key" is a key into "fields" and "defaults".
+  Param "supported_fields" is a dictionary of booleans of supported fields.
+  Param "key" is a key into "fields", "defaults", and "supported_fields".
 #}
-{% macro input(fields, defaults, key, placeholder="") %}
+{% macro input(fields, defaults, supported_fields, key, placeholder="") -%}
 	{% set validator = fields[key][0] %}
 	{% set web_name = fields[key][1] %}
 	{% set typename = validator.__class__.__name__ %}
 	{% set default = defaults[key] if defaults[key] is not none else '' %}
+	{% set enabled = supported_fields[key] %}
 	{% include ["publish/input_%s.html" % key,
 	            "publish/input_%s.html" % typename,
 	            "publish/input_default.html"] %}
-{% endmacro %}
+{%- endmacro %}
 
 {#
   Outputs the HTML for a help icon.
 #}
-{% macro help(anchor, classes="") %}
-	<img src="{{ url_for('static', filename='images/icon-help.png') }}" class="clickable help {{ classes }}" data-anchor="{{ anchor }}" />
-{% endmacro %}
+{% macro help(anchor, classes="") -%}
+	<img src="{{ url_for('static', filename='images/icon-help.png') }}" class="clickable help {{ classes }}" data-anchor="{{ anchor }}">
+{%- endmacro %}
+
+{#
+  Outputs the HTML for the Premium Edition icon, if supported_fields[key] is false or non-existent.
+  Param "supported_fields" is a dictionary of booleans of supported image operations.
+  Param "key" is a key into "supported_fields".
+#}
+{% macro premium_icon(supported_fields, key) -%}
+	{% if not supported_fields[key] %}
+	<img src="{{ url_for('static', filename='images/icon-premium-16.png') }}" alt="Premium Edition" title="Requires Premium Edition">
+	{% endif %}
+{%- endmacro %}

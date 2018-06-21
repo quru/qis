@@ -117,6 +117,7 @@ def template_edit(template_id):
         'admin_template_edit.html',
         fields=fields,
         field_values=field_values,
+        supported_fields=image_engine.get_supported_operations(),
         embed=embed,
         template=db_template,
         err_msg=err_msg

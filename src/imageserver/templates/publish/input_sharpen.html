@@ -1,4 +1,5 @@
-<select name="{{ web_name }}_choices" id="publish_field_{{ key }}_choices" autocomplete="off">
+<select name="{{ web_name }}_choices" id="publish_field_{{ key }}_choices"
+        autocomplete="off" {% if not enabled %}disabled="disabled"{% endif %}>
 	<option value="-500" {% if default == -500 %}selected{% endif %}>Blur +5</option>
 	<option value="-300" {% if default == -300 %}selected{% endif %}>Blur +4</option>
 	<option value="-200" {% if default == -200 %}selected{% endif %}>Blur +3</option>

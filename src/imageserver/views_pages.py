@@ -521,6 +521,7 @@ def publish():
         'publish.html',
         fields=fields,
         field_values=field_values,
+        supported_fields=image_engine.get_supported_operations(),
         include_crop_tool=True,
         include_units_tool=True,
         image_info=image_engine.get_image_properties(src, False),
@@ -833,7 +834,9 @@ def playground():
         return render_template(
             'playground.html',
             image_list=image_list,
-            overlay_image=overlay_img_path
+            overlay_image=overlay_img_path,
+            supported_ops=image_engine.get_supported_operations(),
+            supported_formats=image_engine.get_image_formats(supported_only=True)
         )
     except Exception as e:
         log_security_error(e, request)
