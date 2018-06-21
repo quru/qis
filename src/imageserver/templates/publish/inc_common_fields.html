@@ -11,7 +11,7 @@
 			<h3>Page</h3>
 			<fieldset class="subtlebg">
 				<div>
-					<label>Page number {{ premium_icon(supported_fields, 'page') }}</label>
+					<label {{ disp_class(supported_fields, 'page') }}>Page number</label>
 					{{ input(fields, field_values, supported_fields, 'page') }}
 					{{ help('option_page') }}
 				</div>
@@ -30,7 +30,7 @@
 				</div>
 				{% endif %}
 				<div id="group_width">
-					<label>Width {{ premium_icon(supported_fields, 'width') }}</label>
+					<label {{ disp_class(supported_fields, 'width') }}>Width</label>
 					{{ input(fields, field_values, supported_fields, 'width') }}
 					{{ help('option_width') }}
 					<span class="field_default">
@@ -40,7 +40,7 @@
 					</span>
 				</div>
 				<div id="group_height">
-					<label>Height {{ premium_icon(supported_fields, 'height') }}</label>
+					<label {{ disp_class(supported_fields, 'height') }}>Height</label>
 					{{ input(fields, field_values, supported_fields, 'height') }}
 					{{ help('option_height', 'hidden') }}
 					<span class="field_default">
@@ -50,7 +50,7 @@
 					</span>
 				</div>
 				<div>
-					<label>DPI {{ premium_icon(supported_fields, 'dpi_x') }}</label>
+					<label {{ disp_class(supported_fields, 'dpi_x') }}>DPI</label>
 					{{ input(fields, field_values, supported_fields, 'dpi_x') }}
 					{{ help('option_dpi') }}
 				</div>
@@ -59,12 +59,12 @@
 			<h3>Padding</h3>
 			<fieldset class="subtlebg">
 				<div>
-					<label>Prevent padding {{ premium_icon(supported_fields, 'size_fit') }}</label>
+					<label {{ disp_class(supported_fields, 'size_fit') }}>Prevent padding</label>
 					{{ input(fields, field_values, supported_fields, 'size_fit') }}
 					{{ help('option_autosizefit') }}
 				</div>
 				<div id="group_fill">
-					<label>Padding colour {{ premium_icon(supported_fields, 'fill') }}</label>
+					<label {{ disp_class(supported_fields, 'fill') }}>Padding colour</label>
 					{{ input(fields, field_values, supported_fields, 'fill') }}
 					{{ help('option_fill') }}<br>
 					<label></label>
@@ -81,7 +81,7 @@
 					       <label for="publish_field_transfill">transparent</label>
 				</div>
 				<div>
-					<label>Image position {{ premium_icon(supported_fields, 'align_h') }}</label>
+					<label {{ disp_class(supported_fields, 'align_h') }}>Image position</label>
 					{{ input(fields, field_values, supported_fields, "align_h") }}
 					{{ help('option_halign') }}
 				</div>
@@ -94,17 +94,17 @@
 			<h3>Image processing</h3>
 			<fieldset class="subtlebg">
 				<div>
-					<label>Flip image {{ premium_icon(supported_fields, 'flip') }}</label>
+					<label {{ disp_class(supported_fields, 'flip') }}>Flip image</label>
 					{{ input(fields, field_values, supported_fields, 'flip') }}
 					{{ help('option_flip') }}
 				</div>
 				<div>
-					<label>Rotate image {{ premium_icon(supported_fields, 'rotation') }}</label>
+					<label {{ disp_class(supported_fields, 'rotation') }}>Rotate image</label>
 					{{ input(fields, field_values, supported_fields, "rotation") }}
 					{{ help('option_angle') }}
 				</div>
 				<div>
-					<label>Sharpen / blur {{ premium_icon(supported_fields, 'sharpen') }}</label>
+					<label {{ disp_class(supported_fields, 'sharpen') }}>Sharpen / blur</label>
 					{{ input(fields, field_values, supported_fields, "sharpen") }}
 					{{ help('option_sharpen') }}
 				</div>
@@ -135,24 +135,24 @@
 				</div>
 				{% endif %}
 				<div>
-					<label>Left {{ premium_icon(supported_fields, 'left') }}</label>
+					<label {{ disp_class(supported_fields, 'left') }}>Left</label>
 					{{ input(fields, field_values, supported_fields, 'left') }}
 					{{ help('option_top') }}
 				</div>
 				<div>
-					<label>Top {{ premium_icon(supported_fields, 'top') }}</label>
+					<label {{ disp_class(supported_fields, 'top') }}>Top</label>
 					{{ input(fields, field_values, supported_fields, 'top') }}
 				</div>
 				<div>
-					<label>Right {{ premium_icon(supported_fields, 'right') }}</label>
+					<label {{ disp_class(supported_fields, 'right') }}>Right</label>
 					{{ input(fields, field_values, supported_fields, 'right') }}
 				</div>
 				<div>
-					<label>Bottom {{ premium_icon(supported_fields, 'bottom') }}</label>
+					<label {{ disp_class(supported_fields, 'bottom') }}>Bottom</label>
 					{{ input(fields, field_values, supported_fields, 'bottom') }}
 				</div>
 				<div>
-					<label>Minimise padding {{ premium_icon(supported_fields, 'crop_fit') }}</label>
+					<label {{ disp_class(supported_fields, 'crop_fit') }}>Minimise padding</label>
 					{{ input(fields, field_values, supported_fields, 'crop_fit') }}
 					{{ help('option_autocropfit') }}
 				</div>
@@ -161,7 +161,7 @@
 			<h3>Overlay / Watermark</h3>
 			<fieldset class="subtlebg">
 				<div>
-					<label>Overlay image {{ premium_icon(supported_fields, 'overlay_src') }}</label>
+					<label {{ disp_class(supported_fields, 'overlay_src') }}>Overlay image</label>
 					{{ input(fields, field_values, supported_fields, 'overlay_src', '/path/to/your-image.jpg') }}
 					<button id="overlay_src_browse"
 					        type="button"
@@ -171,17 +171,17 @@
 					{{ help('option_overlay') }}
 				</div>
 				<div>
-					<label>Relative size {{ premium_icon(supported_fields, 'overlay_size') }}</label>
+					<label {{ disp_class(supported_fields, 'overlay_size') }}>Relative size</label>
 					{{ input(fields, field_values, supported_fields, "overlay_size") }}
 					{{ help('option_ovsize') }}
 				</div>
 				<div>
-					<label>Position {{ premium_icon(supported_fields, 'overlay_pos') }}</label>
+					<label {{ disp_class(supported_fields, 'overlay_pos') }}>Position</label>
 					{{ input(fields, field_values, supported_fields, "overlay_pos") }}
 					{{ help('option_ovpos') }}
 				</div>
 				<div>
-					<label>Opacity {{ premium_icon(supported_fields, 'overlay_opacity') }}</label>
+					<label {{ disp_class(supported_fields, 'overlay_opacity') }}>Opacity</label>
 					{{ input(fields, field_values, supported_fields, "overlay_opacity") }}
 					{{ help('option_ovopacity') }}
 				</div>
@@ -190,17 +190,17 @@
 			<h3>Colour processing</h3>
 			<fieldset class="subtlebg">
 				<div id="group_icc">
-					<label>Colour profile {{ premium_icon(supported_fields, 'icc_profile') }}</label>
+					<label {{ disp_class(supported_fields, 'icc_profile') }}>Colour profile</label>
 					{{ input(fields, field_values, supported_fields, "icc_profile") }}
 					{{ help('option_icc') }}
 				</div>
 				<div>
-					<label>Intent {{ premium_icon(supported_fields, 'icc_intent') }}</label>
+					<label {{ disp_class(supported_fields, 'icc_intent') }}>Intent</label>
 					{{ input(fields, field_values, supported_fields, "icc_intent") }}
 					{{ help('option_intent') }}
 				</div>
 				<div>
-					<label>Black point compensation {{ premium_icon(supported_fields, 'icc_bpc') }}</label>
+					<label {{ disp_class(supported_fields, 'icc_bpc') }}>Black point compensation</label>
 					{{ input(fields, field_values, supported_fields, "icc_bpc") }}
 					{{ help('option_bpc') }}
 				</div>
@@ -209,22 +209,22 @@
 			<h3>File options</h3>
 			<fieldset class="subtlebg">
 				<div id="group_strip">
-					<label>Strip meta-data {{ premium_icon(supported_fields, 'strip') }}</label>
+					<label {{ disp_class(supported_fields, 'strip') }}>Strip meta-data</label>
 					{{ input(fields, field_values, supported_fields, "strip") }}
 					{{ help('option_strip') }}
 				</div>
 				<div>
-					<label>File format {{ premium_icon(supported_fields, 'format') }}</label>
+					<label {{ disp_class(supported_fields, 'format') }}>File format</label>
 					{{ input(fields, field_values, supported_fields, "format") }}
 					{{ help('option_format') }}
 				</div>
 				<div>
-					<label>JPG quality /<br/>PNG compression {{ premium_icon(supported_fields, 'quality') }}</label>
+					<label {{ disp_class(supported_fields, 'quality') }}>JPG quality /<br/>PNG compression</label>
 					{{ input(fields, field_values, supported_fields, "quality") }}
 					{{ help('option_quality') }}
 				</div>
 				<div id="group_colorspace">
-					<label>Colour model {{ premium_icon(supported_fields, 'colorspace') }}</label>
+					<label {{ disp_class(supported_fields, 'colorspace') }}>Colour model</label>
 					{{ input(fields, field_values, supported_fields, "colorspace") }}
 					{{ help('option_colorspace') }}
 				</div>

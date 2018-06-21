@@ -24,12 +24,12 @@
 {%- endmacro %}
 
 {#
-  Outputs the HTML for the Premium Edition icon, if supported_fields[key] is false or non-existent.
+  Outputs HTML attributes for class="disabled_premium", if supported_fields[key] is false or non-existent.
   Param "supported_fields" is a dictionary of booleans of supported image operations.
   Param "key" is a key into "supported_fields".
 #}
-{% macro premium_icon(supported_fields, key) -%}
-	{% if not supported_fields[key] %}
-	<img src="{{ url_for('static', filename='images/icon-premium-16.png') }}" alt="Premium Edition" title="Requires Premium Edition">
-	{% endif %}
+{% macro disp_class(supported_fields, key) -%}
+	{% if not supported_fields[key] -%}
+	class="disabled_premium" title="Requires Premium Edition"
+	{%- endif %}
 {%- endmacro %}

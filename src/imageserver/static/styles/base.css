@@ -276,6 +276,25 @@ img.disabled {
 	filter: alpha(opacity=60);
 }
 
+.disabled_premium {
+	color: #888888;
+}
+.disabled_premium.highlight,
+.disabled_premium .highlight {
+	color: #ff7777;
+}
+label.disabled_premium::after {
+	content: "";
+	display: inline-block;
+	background-image: url("../images/icon-premium-16.png");
+	background-position: center;
+	background-repeat: no-repeat;
+	width: 16px;
+	height: 16px;
+	margin-left: 6px;
+	vertical-align: middle;
+}
+
 .subtlebg {
 	background-color: #f0f0f0;  /* same as tr.odd */
 }
