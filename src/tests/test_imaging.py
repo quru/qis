@@ -54,9 +54,7 @@ from imageserver.flask_app import data_engine as dm
 from imageserver.flask_app import image_engine as im
 from imageserver.flask_app import task_engine as tm
 from imageserver.flask_app import reconfigure_app_for_imaging_backend
-from imageserver.filesystem_manager import (
-    get_abs_path, delete_dir, delete_file, path_exists
-)
+from imageserver.filesystem_manager import get_abs_path, delete_dir, delete_file
 from imageserver.filesystem_sync import auto_sync_file, auto_sync_existing_file
 from imageserver.image_attrs import ImageAttrs
 from imageserver.imaging_magick import ImageMagickBackend
@@ -79,23 +77,6 @@ def setUpModule():
     main_tests.init_tests()
 def tearDownModule():
     main_tests.cleanup_tests()
-
-
-# Utility - selects or switches the Pillow / ImageMagick back end
-def select_backend(back_end):
-    imaging.init(
-        back_end,
-        flask_app.config['GHOSTSCRIPT_PATH'],
-        flask_app.config['TEMP_DIR'],
-        flask_app.config['PDF_BURST_DPI']
-    )
-    # VERY IMPORTANT! Clear any images cached from the previous back end
-    cm.clear()
-    # The image manager does not expect the back end to change,
-    # we need to clear its internal caches too
-    im._memo_image_formats_all = None
-    im._memo_image_formats_supported = None
-    im._memo_supported_ops = None
 
 
 # Utility - returns a tuple of (width, height) of a PNG image
@@ -216,6 +197,11 @@ class CommonImageTests(main_tests.BaseTestCase, ImagingTestCase):
         super(CommonImageTests, cls).setUpClass()
         if imaging.backend_supported('imagemagick'):
             CommonImageTests.Backends += ['imagemagick']
+
+    @classmethod
+    def tearDownClass(cls):
+        super(CommonImageTests, cls).tearDownClass()
+        main_tests.select_backend(flask_app.config['IMAGE_BACKEND'])
 
     # Test attachment option (generated image) - back end independent
     def test_attach_image(self):
@@ -417,7 +403,7 @@ class CommonImageTests(main_tests.BaseTestCase, ImagingTestCase):
     # Test reading image profile data
     def test_image_profile_properties(self):
         for be in CommonImageTests.Backends:
-            select_backend(be)
+            main_tests.select_backend(be)
             with self.subTest(backend=be):
                 profile_data = im.get_image_properties('test_images/cathedral.jpg', True)
                 self.assertIn('width', profile_data)
@@ -431,7 +417,7 @@ class CommonImageTests(main_tests.BaseTestCase, ImagingTestCase):
     # Test serving of plain image
     def test_serve_plain_image(self):
         for be in CommonImageTests.Backends:
-            select_backend(be)
+            main_tests.select_backend(be)
             with self.subTest(backend=be):
                 rv = self.app.get('/image?src=test_images/cathedral.jpg')
                 self.assertEqual(rv.status_code, 200)
@@ -443,7 +429,7 @@ class CommonImageTests(main_tests.BaseTestCase, ImagingTestCase):
     # Test serving of original image
     def test_serve_original_image(self):
         for be in CommonImageTests.Backends:
-            select_backend(be)
+            main_tests.select_backend(be)
             with self.subTest(backend=be):
                 rv = self.app.get('/original?src=test_images/cathedral.jpg')
                 self.assertEqual(rv.status_code, 200)
@@ -454,7 +440,7 @@ class CommonImageTests(main_tests.BaseTestCase, ImagingTestCase):
     # Test stripping of metadata
     def test_info_strip(self):
         for be in CommonImageTests.Backends:
-            select_backend(be)
+            main_tests.select_backend(be)
             with self.subTest(backend=be):
                 rv = self.app.get('/image?src=test_images/cathedral.jpg&width=200&strip=0')
                 self.assertEqual(rv.status_code, 200)
@@ -468,7 +454,7 @@ class CommonImageTests(main_tests.BaseTestCase, ImagingTestCase):
     # #4705 Test that stripping of RGB colour profiles does not cause major colour loss
     def test_rgb_profile_strip(self):
         for be in CommonImageTests.Backends:
-            select_backend(be)
+            main_tests.select_backend(be)
             with self.subTest(backend=be):
                 rv = self.app.get('/image?src=test_images/profile-pro-photo.jpg&width=900&height=600&format=png&quality=9&strip=0')
                 self.assertEqual(rv.status_code, 200)
@@ -487,7 +473,7 @@ class CommonImageTests(main_tests.BaseTestCase, ImagingTestCase):
     # Test simple resize
     def test_resize_image(self):
         for be in CommonImageTests.Backends:
-            select_backend(be)
+            main_tests.select_backend(be)
             with self.subTest(backend=be):
                 rv = self.app.get('/image?src=test_images/cathedral.jpg&format=png&width=500')
                 self.assertEqual(rv.status_code, 200)
@@ -511,7 +497,7 @@ class CommonImageTests(main_tests.BaseTestCase, ImagingTestCase):
     # v1.24 #2219 http://www.4p8.com/eric.brasseur/gamma.html
     def test_resize_image_gamma(self):
         for be in CommonImageTests.Backends:
-            select_backend(be)
+            main_tests.select_backend(be)
             with self.subTest(backend=be):
                 rv = self.app.get('/image?src=test_images/gamma_dalai_lama_gray_tft.jpg&format=png&width=150')
                 self.assertEqual(rv.status_code, 200)
@@ -523,7 +509,7 @@ class CommonImageTests(main_tests.BaseTestCase, ImagingTestCase):
     # Test resized, cropped, filled image
     def test_cropped_image(self):
         for be in CommonImageTests.Backends:
-            select_backend(be)
+            main_tests.select_backend(be)
             with self.subTest(backend=be):
                 url = '/image?src=test_images/cathedral.jpg&format=png&width=500&height=500&top=0.1&bottom=0.9&left=0.1&right=0.9&fill=0000ff'
                 rv = self.app.get(url)
@@ -538,7 +524,7 @@ class CommonImageTests(main_tests.BaseTestCase, ImagingTestCase):
     # Test tiled image
     def test_tiled_image(self):
         for be in CommonImageTests.Backends:
-            select_backend(be)
+            main_tests.select_backend(be)
             with self.subTest(backend=be):
                 # Test by comparing tiles vs the equivalent crops
                 url_topleft_crop = '/image?src=test_images/cathedral.jpg&format=png&right=0.5&bottom=0.5'
@@ -577,7 +563,7 @@ class CommonImageTests(main_tests.BaseTestCase, ImagingTestCase):
     # Test rotated image
     def test_rotated_image(self):
         for be in CommonImageTests.Backends:
-            select_backend(be)
+            main_tests.select_backend(be)
             with self.subTest(backend=be):
                 rv = self.app.get('/image?src=test_images/cathedral.jpg&format=png&width=500&angle=-90')
                 self.assertEqual(rv.status_code, 200)
@@ -589,7 +575,7 @@ class CommonImageTests(main_tests.BaseTestCase, ImagingTestCase):
     # Test flipped image
     def test_flipped_image(self):
         for be in CommonImageTests.Backends:
-            select_backend(be)
+            main_tests.select_backend(be)
             with self.subTest(backend=be):
                 rv = self.app.get('/image?src=test_images/dorset.jpg&format=png&width=500&flip=h')
                 self.assertEqual(rv.status_code, 200)
@@ -601,7 +587,7 @@ class CommonImageTests(main_tests.BaseTestCase, ImagingTestCase):
     # Test change of format
     def test_format_image(self):
         for be in CommonImageTests.Backends:
-            select_backend(be)
+            main_tests.select_backend(be)
             with self.subTest(backend=be):
                 test_url = '/image?src=test_images/cathedral.jpg&width=500&format=png'
                 rv = self.app.get(test_url)
@@ -612,7 +598,7 @@ class CommonImageTests(main_tests.BaseTestCase, ImagingTestCase):
     # Progressive JPG tests
     def test_pjpeg_format(self):
         for be in CommonImageTests.Backends:
-            select_backend(be)
+            main_tests.select_backend(be)
             with self.subTest(backend=be):
                 bl_rv = self.app.get('/image?src=test_images/dorset.jpg&strip=0&quality=100')
                 prog_rv = self.app.get('/image?src=test_images/dorset.jpg&strip=0&quality=100&format=pjpg')
@@ -641,7 +627,7 @@ class CommonImageTests(main_tests.BaseTestCase, ImagingTestCase):
     # Issue #528 - converting a PNG with transparency to JPG should not alter the image dimensions
     def test_alpha_png_to_jpeg(self):
         for be in CommonImageTests.Backends:
-            select_backend(be)
+            main_tests.select_backend(be)
             with self.subTest(backend=be):
                 test_url = '/image?src=/test_images/quru470.png&width=300&height=300&format=jpg&quality=100'
                 rv = self.app.get(test_url)
@@ -652,7 +638,7 @@ class CommonImageTests(main_tests.BaseTestCase, ImagingTestCase):
     # Issue #648 - crop + rotate should do the right thing
     def test_crop_and_rotate(self):
         for be in CommonImageTests.Backends:
-            select_backend(be)
+            main_tests.select_backend(be)
             with self.subTest(backend=be):
                 test_url = '/image?src=/test_images/dorset.jpg&angle=45&top=0.2&bottom=0.8&format=png'
                 rv = self.app.get(test_url)
@@ -671,7 +657,7 @@ class CommonImageTests(main_tests.BaseTestCase, ImagingTestCase):
     # Issue #648 - crop + rotate + resize should also do the right thing
     def test_crop_and_rotate_and_resize(self):
         for be in CommonImageTests.Backends:
-            select_backend(be)
+            main_tests.select_backend(be)
             with self.subTest(backend=be):
                 test_url = '/image?src=/test_images/dorset.jpg&angle=45&top=0.2&bottom=0.8&width=450&height=450&format=png'
                 rv = self.app.get(test_url)
@@ -687,7 +673,7 @@ class CommonImageTests(main_tests.BaseTestCase, ImagingTestCase):
     # Issue #513 - performing sequence of cropping + rotation should give consistent results
     def test_crop_and_rotate_sequence(self):
         for be in CommonImageTests.Backends:
-            select_backend(be)
+            main_tests.select_backend(be)
             with self.subTest(backend=be):
                 # Load a cropped image with no rotation
                 test_url = '/image?src=/test_images/dorset.jpg&angle=0&top=0.2&bottom=0.8&width=450&height=450&format=png'
@@ -709,7 +695,7 @@ class CommonImageTests(main_tests.BaseTestCase, ImagingTestCase):
     # Test that the resize settings take effect
     def test_resize_system_setting(self):
         for be in CommonImageTests.Backends:
-            select_backend(be)
+            main_tests.select_backend(be)
             with self.subTest(backend=be):
                 test_url = '/image?src=test_images/dorset.jpg&format=png&width=800'
                 flask_app.config['IMAGE_RESIZE_QUALITY'] = 3
@@ -735,7 +721,7 @@ class PillowTests(main_tests.BaseTestCase, ImagingTestCase):
     @classmethod
     def setUpClass(cls):
         super(PillowTests, cls).setUpClass()
-        select_backend('pillow')
+        main_tests.select_backend('pillow')
 
     # Tests that the image manager knows Pillow's file types
     def test_image_formats(self):
@@ -775,7 +761,12 @@ class ImageMagickTests(main_tests.BaseTestCase, ImagingTestCase):
     @classmethod
     def setUpClass(cls):
         super(ImageMagickTests, cls).setUpClass()
-        select_backend('imagemagick')
+        main_tests.select_backend('imagemagick')
+
+    @classmethod
+    def tearDownClass(cls):
+        super(ImageMagickTests, cls).tearDownClass()
+        main_tests.select_backend(flask_app.config['IMAGE_BACKEND'])
 
     # Utility - returns the first of paths+app_name that exists, else app_name
     @staticmethod
@@ -1187,18 +1178,28 @@ class ImageMagickTaskTests(main_tests.BaseTestCase, ImagingTestCase):
     @classmethod
     def setUpClass(cls):
         super(ImageMagickTaskTests, cls).setUpClass()
-        select_backend('imagemagick')
-        # Restart the task server with the ImageMagick back end,
-        # as it was probably launched with the Pillow back end
-        _stop_aux_processes()
+        main_tests.select_backend('imagemagick')
+
+    @classmethod
+    def tearDownClass(cls):
+        super(ImageMagickTaskTests, cls).tearDownClass()
+        main_tests.select_backend(flask_app.config['IMAGE_BACKEND'])
+
+    # Restarts the task server so that a change in the back end here
+    # takes effect in the other process too
+    @staticmethod
+    def restart_task_server():
+        _stop_aux_processes(service_list=['tasks'])
         time.sleep(1.5)
-        launch_aux_processes()
+        launch_aux_processes(service_list=['tasks'])
+        time.sleep(0.5)
 
     # Tests PDF bursting
     def test_pdf_bursting(self):
         # Configure to burst PDFs
         flask_app.config['PDF_BURST_TO_PNG'] = True
         flask_app.config['PDF_BURST_DPI'] = 150
+        ImageMagickTaskTests.restart_task_server()
 
         # At 150 DPI the result varies between 1237x1650 and 1238x1650
         expect = (1238, 1650)
@@ -1215,24 +1216,19 @@ class ImageMagickTaskTests(main_tests.BaseTestCase, ImagingTestCase):
             shutil.copy(src_file, dest_file)
             rv = self.file_upload(self.app, dest_file, 'test_images')
             self.assertEqual(rv.status_code, 200)
-            # Wait a short time for task to start
-            time.sleep(15)
-            # Check PDF images directory created
-            self.assertTrue(
-                path_exists(burst_path, require_directory=True),
-                'Burst folder has not been created'
-            )
-            # Converting pdftest.pdf takes about 15 seconds
-            time.sleep(20)
-            # Check page 1 exists and looks like we expect
+            # Wait for the task to start / check that PDF images directory is created
+            self.wait_for_path_existence(burst_path, True, 20)
+            # Converting pdftest.pdf takes about 15 seconds, finishes with page 27
+            self.wait_for_path_existence(burst_path + '/page-00027.png', True, 20)
+            # Check page 1 looks like we expect
             rv = self.app.get('/original?src=' + burst_path + '/page-00001.png')
             self.assertEqual(rv.status_code, 200)
             self.assertImageMatch(rv.data, self.get_test_image_path('pdf-page-1-%d.png' % expect[0]))
-            # Check page 1 actual dimensions - depends on PDF_BURST_DPI
+            # Check page 1 dimensions - which depends on PDF_BURST_DPI
             (w, h) = get_png_dimensions(rv.data)
             self.assertEqual(w, expect[0], 'Expected PDF dimensions of %dx%d @ 150 DPI' % expect)
             self.assertEqual(h, expect[1], 'Expected PDF dimensions of %dx%d @ 150 DPI' % expect)
-            # Check page 27 exists and looks like we expect
+            # Check page 27 looks like we expect
             rv = self.app.get('/original?src=' + burst_path + '/page-00027.png')
             self.assertEqual(rv.status_code, 200)
             # There is a thicker line in gs 9.16 than there was in 9.10

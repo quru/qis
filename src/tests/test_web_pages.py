@@ -56,6 +56,11 @@ class ImageServerTestsWebPages(main_tests.BaseTestCase):
         super(ImageServerTestsWebPages, cls).setUpClass()
         main_tests.setup_user_account('webuser', 'none')
 
+    @classmethod
+    def tearDownClass(cls):
+        super(ImageServerTestsWebPages, cls).tearDownClass()
+        main_tests.select_backend(flask_app.config['IMAGE_BACKEND'])
+
     # Utility to call a page requiring login, with and without login,
     # returns the response of the requested URL after logging in.
     def call_page_requiring_login(self, url, admin_login=False,

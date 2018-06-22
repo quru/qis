@@ -261,13 +261,13 @@ def on_first_request():
     _launch_aux_processes(['stats', 'tasks'])  # logging already started above
 
 
-def launch_aux_processes():
+def launch_aux_processes(service_list='all'):
     """
-    Manually starts the aux processes (logging, stats, and tasks) outside of a
-    web server context.
+    Manually starts one or all of the aux processes
+    (default ['logging', 'stats', 'tasks']) outside of a web server context.
     """
     with app.app_context():
-        _launch_aux_processes()
+        _launch_aux_processes(service_list)
 
 
 def _launch_aux_processes(service_list='all'):
@@ -296,19 +296,22 @@ def _launch_aux_processes(service_list='all'):
         )
 
 
-def _stop_aux_processes(nicely=True):
+def _stop_aux_processes(service_list='all', nicely=True):
     """
-    Manually stops all the aux processes (logging, stats, and tasks) if they are
-    running locally. Ignores any errors and does not check that the PID numbers
-    in the PID files are actually child processes of this process.
+    Manually stops one or all of the aux processes
+    (default ['logging', 'stats', tasks']) if they are running locally.
+    Ignores any errors and does not check that the PID numbers in the PID
+    files are actually child processes of this process.
 
     Unlike launch_aux_processes(), this method is "private" because the only
     safe(ish) use of it is during development and testing.
     """
     from imageserver.auxiliary import util as aux_util
 
+    if service_list == 'all':
+        service_list = ['tasks', 'stats', 'logging']
     use_signal = signal.SIGTERM if nicely else signal.SIGKILL
-    for proc_name in ('tasks', 'stats', 'logging'):
+    for proc_name in service_list:
         try:
             last_pid = aux_util.get_pid(proc_name)
             if last_pid:

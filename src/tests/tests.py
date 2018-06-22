@@ -72,7 +72,7 @@ from imageserver.errors import AlreadyExistsError
 from imageserver.filesystem_manager import (
     get_abs_path, copy_file, delete_dir, delete_file
 )
-from imageserver.filesystem_manager import path_exists, make_dirs
+from imageserver.filesystem_manager import get_abs_path, path_exists, make_dirs
 from imageserver.filesystem_sync import (
     auto_sync_existing_file, auto_sync_folder
 )
@@ -87,6 +87,7 @@ from imageserver.session_manager import get_session_user
 from imageserver.scripts.cache_util import delete_image_ids
 from imageserver.template_attrs import TemplateAttrs
 from imageserver.util import secure_filename
+from imageserver import imaging
 
 
 # Module level setUp and tearDown
@@ -169,6 +170,23 @@ def reset_default_image_template():
     im.reset_templates()
 
 
+# Utility - selects or switches the Pillow / ImageMagick back end
+def select_backend(back_end):
+    imaging.init(
+        back_end,
+        flask_app.config['GHOSTSCRIPT_PATH'],
+        flask_app.config['TEMP_DIR'],
+        flask_app.config['PDF_BURST_DPI']
+    )
+    # VERY IMPORTANT! Clear any images cached from the previous back end
+    cm.clear()
+    # The image manager does not expect the back end to change,
+    # we need to clear its internal caches too
+    im._memo_image_formats_all = None
+    im._memo_image_formats_supported = None
+    im._memo_supported_ops = None
+
+
 # Utility - create/reset and return a test user having a certain system permission.
 #           the returned user is a member of the standard "everyone" group and also
 #           a separate group that is used for setting the custom system permission.
@@ -238,13 +256,6 @@ def setup_user_account(login_name, user_type='none', allow_api=False):
         pm.reset()
 
 
-# Utility - return the interesting bit of a login page HTML
-def get_login_error(html):
-    fromidx = html.find("<div class=\"error")
-    toidx = html.find("</div>", fromidx)
-    return html[fromidx:toidx + 6]
-
-
 class FlaskTestCase(unittest.TestCase):
     def setUp(self):
         # Reset the app settings before each test
@@ -268,7 +279,7 @@ class BaseTestCase(FlaskTestCase):
         # 302 = success redirect, 200 = login page with error message
         self.assertEqual(
             rv.status_code, 302,
-            'Login failed with response: ' + get_login_error(rv.data.decode('utf8'))
+            'Login failed with response: ' + self.get_login_error(rv.data.decode('utf8'))
         )
 
     # Utility - gets an API token
@@ -317,6 +328,24 @@ class BaseTestCase(FlaskTestCase):
         if db_img is not None:
             dm.delete_image(db_img, True)
 
+    # Utility - waits for a file path (relative to IMAGES_BASE_DIR else absolute)
+    # to exist, or else raises a timeout and fails the test
+    def wait_for_path_existence(self, fpath, path_relative, timeout_secs):
+        abs_path = get_abs_path(fpath) if path_relative else fpath
+        start_time = time.time()
+        while not os.path.exists(abs_path) and time.time() < (start_time + timeout_secs):
+            time.sleep(1)
+        self.assertTrue(
+            os.path.exists(abs_path),
+            'Path \'%s\' was not created within %.1f seconds' % (fpath, timeout_secs)
+        )
+
+    # Utility - return the interesting bit of a failed login page
+    def get_login_error(self, html):
+        fromidx = html.find("<div class=\"error")
+        toidx = html.find("</div>", fromidx)
+        return html[fromidx:toidx + 6]
+
 
 class ImageServerTestsSlow(BaseTestCase):
     # Test xref parameter
@@ -334,19 +363,20 @@ class ImageServerTestsSlow(BaseTestCase):
         # Create a subprocess to handle the xref-generated http request
         temp_env = os.environ
         temp_env['QIS_SETTINGS'] = TESTING_SETTINGS
+        temp_env['FLASK_ENV'] = 'production'
         rs_path = 'src/runserver.py' if os.path.exists('src/runserver.py') else 'runserver.py'
         inner_server = subprocess.Popen('python ' + rs_path, cwd='.', shell=True, env=temp_env)
-        time.sleep(5)
-        # Set the xref base URL so it will get generated if we pass the right thing as width
+        time.sleep(2)
+        # Set the xref base URL so that we will generate image A if we pass 50 as width
         flask_app.config['DEBUG'] = True
         flask_app.config['XREF_TRACKING_URL'] = \
             'http://127.0.0.1:5000' + \
             '/image?src=test_images/cathedral.jpg&strip=0&dpi=0&format=jpg&quality=75&colorspace=rgb&width='
-        # Call a different image B passing in xref of 50
+        # Call a different image B passing in the xref of 50
         rv = self.app.get('/image?src=test_images/dorset.jpg&xref=50')
         assert rv.status_code == 200
         # Wait a little for the background xref handling thread to complete
-        time.sleep(5)
+        time.sleep(3)
         # and kill the temporary subprocess
         inner_server.terminate()
         # Now the test image A should have been created
@@ -410,7 +440,7 @@ class ImageServerBackgroundTaskTests(BaseTestCase):
             assert rv.status_code == 404
             # This should have triggered a background task to delete all data for temp_folder.
             # Wait a short time for the task to complete.
-            time.sleep(20)
+            time.sleep(15)
             # The db records should all now be present but with status deleted,
             # including the folder and other image
             db_folder = dm.get_folder(folder_path=temp_folder)
@@ -474,7 +504,7 @@ class ImageServerBackgroundTaskTests(BaseTestCase):
         rv = self.app.get('/image?src=test_images/dorset.jpg&tile=1:4')
         assert rv.status_code == 200
         # Wait a bit for the pyramiding to finish
-        time.sleep(25)
+        time.sleep(15)
         # Now check the cache again for a base for the 500 version
         base = im._get_base_image(w500_attrs)
         assert base is not None, 'Auto-pyramid did not generate a smaller image'
