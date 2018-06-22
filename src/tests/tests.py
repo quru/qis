@@ -170,7 +170,7 @@ def reset_default_image_template():
     im.reset_templates()
 
 
-# Utility - selects or switches the Pillow / ImageMagick back end
+# Utility - selects or switches the Pillow / ImageMagick imaging back end
 def select_backend(back_end):
     imaging.init(
         back_end,
@@ -347,7 +347,7 @@ class BaseTestCase(FlaskTestCase):
         return html[fromidx:toidx + 6]
 
 
-class ImageServerTestsSlow(BaseTestCase):
+class ImageServerBackgroundTaskTests(BaseTestCase):
     # Test xref parameter
     def test_xref_parameter(self):
         # Make sure we have no test image A at width 50
@@ -383,8 +383,6 @@ class ImageServerTestsSlow(BaseTestCase):
         cache_img = cm.get(test_image_attrs.get_cache_key())
         assert cache_img is not None, 'Failed to find ' + test_image_attrs.get_cache_key() + '. xref URL did not appear to be invoked.'
 
-
-class ImageServerBackgroundTaskTests(BaseTestCase):
     # Tests that the anonymous stats upload task works
     def test_upload_usage_stats(self):
         from imageserver.tasks import upload_usage_stats
@@ -514,7 +512,7 @@ class ImageServerBackgroundTaskTests(BaseTestCase):
         assert base.attrs().width() < 1600 and base.attrs().width() >= 500
 
 
-class ImageServerTestsFast(BaseTestCase):
+class ImageServerMiscTests(BaseTestCase):
     # Test basic caching
     def test_basic_caching(self):
         test_url = '/image?src=test_images/cathedral.jpg&width=413&format=png'

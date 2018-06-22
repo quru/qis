@@ -32,10 +32,12 @@
 
 import os
 import shutil
+import unittest
 
 from . import tests as main_tests
 
 from imageserver import __about__
+from imageserver import imaging
 from imageserver.flask_app import app as flask_app
 from imageserver.flask_app import cache_engine as cm
 from imageserver.filesystem_manager import (
@@ -50,16 +52,11 @@ def tearDownModule():
     main_tests.cleanup_tests()
 
 
-class ImageServerTestsWebPages(main_tests.BaseTestCase):
+class WebPageTests(main_tests.BaseTestCase):
     @classmethod
     def setUpClass(cls):
-        super(ImageServerTestsWebPages, cls).setUpClass()
+        super(WebPageTests, cls).setUpClass()
         main_tests.setup_user_account('webuser', 'none')
-
-    @classmethod
-    def tearDownClass(cls):
-        super(ImageServerTestsWebPages, cls).tearDownClass()
-        main_tests.select_backend(flask_app.config['IMAGE_BACKEND'])
 
     # Utility to call a page requiring login, with and without login,
     # returns the response of the requested URL after logging in.
@@ -454,3 +451,110 @@ class ImageServerTestsWebPages(main_tests.BaseTestCase):
         rv_data = rv.data.decode('utf8')
         self.assertIn('not found', rv_data)
         self.assertIn('value of the DEMO_IMAGE_PATH setting', rv_data)
+
+
+# v4 Test pages that have per-edition changes
+class WebPageEditionTests(WebPageTests):
+    @classmethod
+    def tearDownClass(cls):
+        super(WebPageEditionTests, cls).tearDownClass()
+        main_tests.select_backend(flask_app.config['IMAGE_BACKEND'])
+
+    # The image publish page in standard edition
+    def test_publish_page_standard(self):
+        main_tests.select_backend('pillow')
+        rv = self.call_page_requiring_login('/publish/?src=test_images/cathedral.jpg')
+        rv_data = rv.data.decode('utf8')
+        self.assertIn('only supported in the Premium Edition', rv_data)
+        # Available formats should not include SVG
+        start_idx = rv_data.find('<select name="format"')
+        end_idx = rv_data.find('</select>', start_idx)
+        self.assertTrue(rv_data[start_idx:end_idx], rv_data)
+        self.assertNotIn('svg', rv_data[start_idx:end_idx].lower())
+        # Colour profile should be disabled
+        start_idx = rv_data.find('<select name="icc"')
+        end_idx = rv_data.find('</select>', start_idx)
+        self.assertTrue(rv_data[start_idx:end_idx])
+        self.assertIn('disabled', rv_data[start_idx:end_idx].lower())
+        self.assertIn('disabled_premium', rv_data[start_idx - 100:start_idx].lower())
+
+    # The image publish page in premium edition
+    @unittest.skipIf(not imaging.backend_supported('imagemagick'), 'Premium Edition not available')
+    def test_publish_page_premium(self):
+        main_tests.select_backend('imagemagick')
+        rv = self.call_page_requiring_login('/publish/?src=test_images/cathedral.jpg')
+        rv_data = rv.data.decode('utf8')
+        self.assertNotIn('only supported in the Premium Edition', rv_data)
+        # Available formats SHOULD include SVG
+        start_idx = rv_data.find('<select name="format"')
+        end_idx = rv_data.find('</select>', start_idx)
+        self.assertTrue(rv_data[start_idx:end_idx])
+        self.assertIn('svg', rv_data[start_idx:end_idx].lower())
+        # Colour profile SHOULD NOT be disabled
+        start_idx = rv_data.find('<select name="icc"')
+        end_idx = rv_data.find('</select>', start_idx)
+        self.assertTrue(rv_data[start_idx:end_idx])
+        self.assertNotIn('disabled', rv_data[start_idx:end_idx].lower())
+        self.assertNotIn('disabled_premium', rv_data[start_idx - 100:start_idx].lower())
+
+    # The template admin page in standard edition
+    def test_template_admin_standard(self):
+        main_tests.select_backend('pillow')
+        rv = self.call_page_requiring_login('/admin/templates/1/', True)
+        rv_data = rv.data.decode('utf8')
+        self.assertIn('only supported in the Premium Edition', rv_data)
+        # Available formats should not include SVG
+        start_idx = rv_data.find('<select name="format"')
+        end_idx = rv_data.find('</select>', start_idx)
+        self.assertTrue(rv_data[start_idx:end_idx])
+        self.assertNotIn('svg', rv_data[start_idx:end_idx].lower())
+        # Colour profile should be disabled
+        start_idx = rv_data.find('<select name="icc"')
+        end_idx = rv_data.find('</select>', start_idx)
+        self.assertTrue(rv_data[start_idx:end_idx])
+        self.assertIn('disabled', rv_data[start_idx:end_idx].lower())
+        self.assertIn('disabled_premium', rv_data[start_idx - 100:start_idx].lower())
+
+    # The template admin page in premium edition
+    @unittest.skipIf(not imaging.backend_supported('imagemagick'), 'Premium Edition not available')
+    def test_template_admin_premium(self):
+        main_tests.select_backend('imagemagick')
+        rv = self.call_page_requiring_login('/admin/templates/1/', True)
+        rv_data = rv.data.decode('utf8')
+        self.assertNotIn('only supported in the Premium Edition', rv_data)
+        # Available formats SHOULD include SVG
+        start_idx = rv_data.find('<select name="format"')
+        end_idx = rv_data.find('</select>', start_idx)
+        self.assertTrue(rv_data[start_idx:end_idx])
+        self.assertIn('svg', rv_data[start_idx:end_idx].lower())
+        # Colour profile SHOULD NOT be disabled
+        start_idx = rv_data.find('<select name="icc"')
+        end_idx = rv_data.find('</select>', start_idx)
+        self.assertTrue(rv_data[start_idx:end_idx])
+        self.assertNotIn('disabled', rv_data[start_idx:end_idx].lower())
+        self.assertNotIn('disabled_premium', rv_data[start_idx - 100:start_idx].lower())
+
+    # The public demo page in standard edition
+    def test_demo_page_standard(self):
+        main_tests.select_backend('pillow')
+        flask_app.config['DEMO_IMAGE_PATH'] = 'test_images/cathedral.jpg'
+        rv = self.app.get('/demo/')
+        self.assertEqual(rv.status_code, 200)
+        rv_data = rv.data.decode('utf8')
+        self.assertIn('only supported in the Premium Edition', rv_data)
+        # BMP format should be disabled
+        start_idx = rv_data.find('>BMP<')
+        self.assertIn('disabled_premium', rv_data[start_idx - 100:start_idx].lower())
+
+    # The public demo page in premium edition
+    @unittest.skipIf(not imaging.backend_supported('imagemagick'), 'Premium Edition not available')
+    def test_demo_page_premium(self):
+        main_tests.select_backend('imagemagick')
+        flask_app.config['DEMO_IMAGE_PATH'] = 'test_images/cathedral.jpg'
+        rv = self.app.get('/demo/')
+        self.assertEqual(rv.status_code, 200)
+        rv_data = rv.data.decode('utf8')
+        self.assertNotIn('only supported in the Premium Edition', rv_data)
+        # BMP format SHOULD NOT be disabled
+        start_idx = rv_data.find('>BMP<')
+        self.assertNotIn('disabled_premium', rv_data[start_idx - 100:start_idx].lower())
