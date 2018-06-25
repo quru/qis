@@ -542,23 +542,35 @@ class WebPageEditionTests(WebPageTestCase):
     def test_demo_page_standard(self):
         main_tests.select_backend('pillow')
         flask_app.config['DEMO_IMAGE_PATH'] = 'test_images/cathedral.jpg'
+        flask_app.config['DEMO_OVERLAY_IMAGE_PATH'] = 'test_images/quru470.png'
         rv = self.app.get('/demo/')
         self.assertEqual(rv.status_code, 200)
         rv_data = rv.data.decode('utf8')
         self.assertIn('only supported in the Premium Edition', rv_data)
+        # Overlay buttons should be disabled
+        start_idx = rv_data.find('>Watermark sm<')
+        self.assertNotEqual(start_idx, -1, rv_data)
+        self.assertIn('disabled_premium', rv_data[start_idx - 200:start_idx].lower())
         # BMP format should be disabled
         start_idx = rv_data.find('>BMP<')
-        self.assertIn('disabled_premium', rv_data[start_idx - 100:start_idx].lower())
+        self.assertNotEqual(start_idx, -1)
+        self.assertIn('disabled_premium', rv_data[start_idx - 200:start_idx].lower())
 
     # The public demo page in premium edition
     @unittest.skipIf(not imaging.backend_supported('imagemagick'), 'Premium Edition not available')
     def test_demo_page_premium(self):
         main_tests.select_backend('imagemagick')
         flask_app.config['DEMO_IMAGE_PATH'] = 'test_images/cathedral.jpg'
+        flask_app.config['DEMO_OVERLAY_IMAGE_PATH'] = 'test_images/quru470.png'
         rv = self.app.get('/demo/')
         self.assertEqual(rv.status_code, 200)
         rv_data = rv.data.decode('utf8')
         self.assertNotIn('only supported in the Premium Edition', rv_data)
+        # Overlay buttons SHOULD NOT be disabled
+        start_idx = rv_data.find('>Watermark sm<')
+        self.assertNotEqual(start_idx, -1)
+        self.assertNotIn('disabled_premium', rv_data[start_idx - 200:start_idx].lower())
         # BMP format SHOULD NOT be disabled
         start_idx = rv_data.find('>BMP<')
-        self.assertNotIn('disabled_premium', rv_data[start_idx - 100:start_idx].lower())
+        self.assertNotEqual(start_idx, -1)
+        self.assertNotIn('disabled_premium', rv_data[start_idx - 200:start_idx].lower())
