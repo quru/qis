@@ -258,9 +258,8 @@ def setup_user_account(login_name, user_type='none', allow_api=False):
 
 class FlaskTestCase(unittest.TestCase):
     def setUp(self):
-        # Reset the app settings before each test
+        # Reset the app configuration before each test and create a Flask test client
         self.reset_settings()
-        # Create a test client for our tests
         self.app = flask_app.test_client()
 
     def reset_settings(self):
@@ -350,38 +349,42 @@ class BaseTestCase(FlaskTestCase):
 class ImageServerBackgroundTaskTests(BaseTestCase):
     # Test xref parameter
     def test_xref_parameter(self):
-        # Make sure we have no test image A at width 50
-        test_img = auto_sync_existing_file('test_images/cathedral.jpg', dm, tm)
-        test_image_attrs = ImageAttrs(
-            test_img.src, test_img.id, width=50,
-            strip=False, dpi=0, iformat='jpg', quality=75,
-            colorspace='rgb'
-        )
-        im.finalise_image_attrs(test_image_attrs)
-        cache_img = cm.get(test_image_attrs.get_cache_key())
-        assert cache_img is None, 'Test image was already in cache - cannot run test!'
-        # Create a subprocess to handle the xref-generated http request
-        temp_env = os.environ
-        temp_env['QIS_SETTINGS'] = TESTING_SETTINGS
-        temp_env['FLASK_ENV'] = 'production'
-        rs_path = 'src/runserver.py' if os.path.exists('src/runserver.py') else 'runserver.py'
-        inner_server = subprocess.Popen('python ' + rs_path, cwd='.', shell=True, env=temp_env)
-        time.sleep(2)
-        # Set the xref base URL so that we will generate image A if we pass 50 as width
-        flask_app.config['DEBUG'] = True
-        flask_app.config['XREF_TRACKING_URL'] = \
-            'http://127.0.0.1:5000' + \
-            '/image?src=test_images/cathedral.jpg&strip=0&dpi=0&format=jpg&quality=75&colorspace=rgb&width='
-        # Call a different image B passing in the xref of 50
-        rv = self.app.get('/image?src=test_images/dorset.jpg&xref=50')
-        assert rv.status_code == 200
-        # Wait a little for the background xref handling thread to complete
-        time.sleep(3)
-        # and kill the temporary subprocess
-        inner_server.terminate()
-        # Now the test image A should have been created
-        cache_img = cm.get(test_image_attrs.get_cache_key())
-        assert cache_img is not None, 'Failed to find ' + test_image_attrs.get_cache_key() + '. xref URL did not appear to be invoked.'
+        inner_server = None
+        try:
+            # Make sure we have no test image A at width 50
+            test_img = auto_sync_existing_file('test_images/cathedral.jpg', dm, tm)
+            test_image_attrs = ImageAttrs(
+                test_img.src, test_img.id, width=50,
+                strip=False, dpi=0, iformat='jpg', quality=75,
+                colorspace='rgb'
+            )
+            im.finalise_image_attrs(test_image_attrs)
+            cache_img = cm.get(test_image_attrs.get_cache_key())
+            assert cache_img is None, 'Test image was already in cache - cannot run test!'
+            # Create a subprocess to handle the xref-generated http request
+            temp_env = os.environ
+            temp_env['QIS_SETTINGS'] = TESTING_SETTINGS
+            temp_env['FLASK_ENV'] = 'production'
+            rs_path = 'src/runserver.py' if os.path.exists('src/runserver.py') else 'runserver.py'
+            inner_server = subprocess.Popen('python ' + rs_path, cwd='.', shell=True, env=temp_env)
+            time.sleep(2)
+            # Set the xref base URL so that we will generate image A if we pass 50 as width
+            flask_app.config['XREF_TRACKING_URL'] = \
+                'http://127.0.0.1:5000' + \
+                '/image?src=test_images/cathedral.jpg&strip=0&dpi=0&format=jpg&quality=75&colorspace=rgb&width='
+            # Call a different image B passing in the xref of 50
+            rv = self.app.get('/image?src=test_images/dorset.jpg&xref=50')
+            assert rv.status_code == 200
+            # Wait a little for the background xref handling thread to complete
+            time.sleep(3)
+            # Now the test image A should have been created
+            cache_img = cm.get(test_image_attrs.get_cache_key())
+            assert cache_img is not None, 'Failed to find ' + test_image_attrs.get_cache_key() + '. xref URL did not appear to be invoked.'
+        finally:
+            # Kill the temporary server subprocess
+            if inner_server:
+                inner_server.terminate()
+                time.sleep(1)
 
     # Tests that the anonymous stats upload task works
     def test_upload_usage_stats(self):
