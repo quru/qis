@@ -30,6 +30,14 @@
 #}
 {% macro disp_class(supported_fields, key) -%}
 	{% if not supported_fields[key] -%}
-	class="disabled_premium" title="Requires Premium Edition"
+	disabled="disabled" class="disabled_premium" title="Requires Premium Edition"
+	{%- endif %}
+{%- endmacro %}
+{#
+  As for disp_class() but outputs the HTML attributes if value is not in a_list.
+#}
+{% macro disp_class_2(a_list, value) -%}
+	{% if value not in a_list -%}
+	disabled="disabled" class="disabled_premium" title="Requires Premium Edition"
 	{%- endif %}
 {%- endmacro %}

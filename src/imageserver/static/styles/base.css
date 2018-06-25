@@ -283,7 +283,8 @@ img.disabled {
 .disabled_premium .highlight {
 	color: #ff7777;
 }
-label.disabled_premium::after {
+label.disabled_premium::after,
+button.disabled_premium::after {
 	content: "";
 	display: inline-block;
 	background-image: url("../images/icon-premium-16.png");
@@ -291,10 +292,9 @@ label.disabled_premium::after {
 	background-repeat: no-repeat;
 	width: 16px;
 	height: 16px;
-	margin-left: 6px;
+	margin-left: 4px;
 	vertical-align: middle;
 }
-
 .subtlebg {
 	background-color: #f0f0f0;  /* same as tr.odd */
 }
