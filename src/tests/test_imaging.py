@@ -201,6 +201,7 @@ class CommonImageTests(main_tests.BaseTestCase, ImagingTestCase):
     @classmethod
     def tearDownClass(cls):
         super(CommonImageTests, cls).tearDownClass()
+        # Restore the configured imaging back end when done
         main_tests.select_backend(flask_app.config['IMAGE_BACKEND'])
 
     # Test attachment option (generated image) - back end independent

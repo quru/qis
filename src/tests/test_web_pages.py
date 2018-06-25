@@ -52,11 +52,12 @@ def tearDownModule():
     main_tests.cleanup_tests()
 
 
-class WebPageTests(main_tests.BaseTestCase):
+class WebPageTestCase(main_tests.BaseTestCase):
     @classmethod
     def setUpClass(cls):
-        super(WebPageTests, cls).setUpClass()
+        super(WebPageTestCase, cls).setUpClass()
         main_tests.setup_user_account('webuser', 'none')
+        main_tests.setup_user_account('admin_webuser', 'admin_all')
 
     # Utility to call a page requiring login, with and without login,
     # returns the response of the requested URL after logging in.
@@ -67,7 +68,7 @@ class WebPageTests(main_tests.BaseTestCase):
         self.assertEqual(rv.status_code, 302)
         # Login
         if admin_login:
-            self.login('admin', 'admin')
+            self.login('admin_webuser', 'admin_webuser')
         else:
             self.login('webuser', 'webuser')
         # Call the requested page
@@ -77,6 +78,8 @@ class WebPageTests(main_tests.BaseTestCase):
             self.assertIn(required_text, rv.data.decode('utf8'))
         return rv
 
+
+class WebPageTests(WebPageTestCase):
     # Login page
     def test_login_page(self):
         rv = self.app.get('/login/')
@@ -84,7 +87,7 @@ class WebPageTests(main_tests.BaseTestCase):
 
     # Login action
     def test_login(self):
-        self.login('admin', 'admin')
+        self.login('admin_webuser', 'admin_webuser')
 
     # Logout action
     def test_logout(self):
@@ -121,7 +124,7 @@ class WebPageTests(main_tests.BaseTestCase):
 
     # File upload complete page, populated
     def test_file_upload_complete_page(self):
-        self.login('admin', 'admin')
+        self.login('admin_webuser', 'admin_webuser')
         # Copy a test file to upload
         src_file = get_abs_path('test_images/cathedral.jpg')
         dst_file = '/tmp/qis_uploadfile.jpg'
@@ -325,7 +328,7 @@ class WebPageTests(main_tests.BaseTestCase):
         rv = self.app.get('/account/')
         self.assertEqual(rv.status_code, 200)
         # Logged in, with access
-        self.login('admin', 'admin')
+        self.login('admin_webuser', 'admin_webuser')
         test_pages(200)
         rv = self.app.get('/account/')
         self.assertEqual(rv.status_code, 200)
@@ -342,7 +345,7 @@ class WebPageTests(main_tests.BaseTestCase):
         rv = self.app.get('/admin/templates/1/')
         self.assertEqual(rv.status_code, 200)
         self.assertIn('''id="submit" disabled="disabled"''', rv.data.decode('utf8'))
-        self.login('admin', 'admin')
+        self.login('admin_webuser', 'admin_webuser')
         rv = self.app.get('/admin/templates/')
         self.assertEqual(rv.status_code, 200)
         self.assertIn('delete', rv.data.decode('utf8'))
@@ -454,10 +457,11 @@ class WebPageTests(main_tests.BaseTestCase):
 
 
 # v4 Test pages that have per-edition changes
-class WebPageEditionTests(WebPageTests):
+class WebPageEditionTests(WebPageTestCase):
     @classmethod
     def tearDownClass(cls):
         super(WebPageEditionTests, cls).tearDownClass()
+        # Restore the configured imaging back end when done
         main_tests.select_backend(flask_app.config['IMAGE_BACKEND'])
 
     # The image publish page in standard edition
