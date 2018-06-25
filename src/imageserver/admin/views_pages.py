@@ -31,13 +31,12 @@
 
 import os.path
 
-from flask import request
+from flask import request, render_template
 from datetime import datetime, timedelta
 
 from imageserver.admin import blueprint
 from imageserver.errors import DoesNotExistError
 from imageserver.flask_app import app, data_engine, image_engine, permissions_engine
-from imageserver.flask_util import render_template
 from imageserver.image_attrs import ImageAttrs
 from imageserver.template_attrs import TemplateAttrs
 from imageserver.models import Folder, Group, ImageTemplate, Property, User

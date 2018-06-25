@@ -34,10 +34,8 @@
 from functools import wraps
 
 from flask import jsonify, make_response, redirect, request, session, url_for
-from flask import render_template as f_render_template
 from werkzeug.urls import url_encode
 
-from . import __about__
 from .api_util import make_api_error_response
 from .flask_app import app, permissions_engine
 from .errors import AuthenticationError, SecurityError
@@ -187,19 +185,6 @@ def _check_ssl_request(request, from_web):
                 'HTTPS must be used to access this function'
             ))
     return None
-
-
-def render_template(template_path, **kwargs):
-    """
-    Extended version of Flask's render_template function that adds in
-    standard/common application parameters.
-    """
-    return f_render_template(
-        template_path,
-        about=__about__,
-        settings=app.config,
-        **kwargs
-    )
 
 
 def make_json_response(status_code, *args, **kwargs):

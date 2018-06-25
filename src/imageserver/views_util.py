@@ -40,6 +40,7 @@ import markdown
 from jinja2 import Markup
 from werkzeug.urls import url_quote_plus
 
+from . import __about__
 from . import imaging
 from .errors import SecurityError
 from .flask_app import app, logger, permissions_engine
@@ -154,7 +155,8 @@ def inject_template_vars():
     Sets the custom variables that are available inside templates.
     """
     return {
-        'config': app.config,
+        'about': __about__,
+        'settings': app.config,
         'logged_in': logged_in(),
         'user': get_session_user(),
         'FolderPermission': FolderPermission,

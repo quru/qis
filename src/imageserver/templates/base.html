@@ -27,7 +27,7 @@
 						<li><a href="{{ url_for('gallery_view_help') }}">JavaScript - gallery viewer</a> (<a href="{{ url_for('gallery_view_index') }}">demo</a>)</li>
 						<li><a href="{{ url_for('slideshow_view_help') }}">JavaScript - slideshow</a> (<a href="{{ url_for('slideshow_view_index') }}">demo</a>)</li>
 						<!-- Playground -->
-						{% if config.DEMO_IMAGE_PATH %}
+						{% if settings.DEMO_IMAGE_PATH %}
 						<li class="spacer">&nbsp;</li>
 						<li><a href="{{ url_for('playground') }}">Image playground</a></li>
 						{% endif %}

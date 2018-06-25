@@ -31,11 +31,10 @@
 
 from datetime import datetime, timedelta
 
-from flask import request
+from flask import request, render_template
 from werkzeug.exceptions import InternalServerError
 
 from imageserver.flask_app import app, data_engine
-from imageserver.flask_util import render_template
 from imageserver.reports import blueprint
 from imageserver.util import get_timezone_code, get_timezone_offset, to_iso_datetime
 from imageserver.util import parse_boolean, parse_int, parse_iso_datetime, parse_long

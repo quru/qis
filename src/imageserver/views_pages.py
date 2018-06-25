@@ -33,7 +33,7 @@ from datetime import datetime, timedelta
 import os.path
 from time import sleep
 
-from flask import abort, make_response, redirect, request, session
+from flask import abort, make_response, render_template, redirect, request, session
 
 from . import imaging
 from .errors import DoesNotExistError
@@ -44,7 +44,7 @@ from .filesystem_manager import DirectoryInfo
 from .filesystem_sync import auto_sync_file, auto_sync_folder
 from .flask_app import app, logger
 from .flask_app import cache_engine, data_engine, image_engine, permissions_engine, task_engine
-from .flask_util import external_url_for, internal_url_for, render_template
+from .flask_util import external_url_for, internal_url_for
 from .flask_util import login_point, login_required
 from .image_attrs import ImageAttrs
 from .template_attrs import TemplateAttrs
