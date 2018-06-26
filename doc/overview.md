@@ -11,30 +11,56 @@ in a variety of ways. A built-in web interface provides repository browsing, rep
 and system administration facilities. Software developers can also use the built-in
 API to use the image server as a back-end for creating automated imaging workflows.
 
+## Editions
+
+Quru offers the image server in 2 editions - the fully open source Standard Edition,
+and the Premium Edition that requires an [annual subscription](https://quru.com/qis/).
+
+The Standard Edition uses the Python-Pillow imaging library, which is well suited
+to basic image resizing and cropping, and offers good performance when colour
+accuracy is not critical and when only support for the most common file types is
+required.
+
+The Premium Edition swaps Pillow for a proprietary interface to the ImageMagick,
+Ghostscript and LibRaw packages, bringing these advantages:
+
+* Support for image conversion to and from PDF files
+* Support for reading various digital camera RAW file formats
+* Support for applying ICC / ICM colour profiles
+* Support for additional file types, such as PSD and SVG
+* 16 bits per pixel colour processing (instead of 8),
+  giving more accurate colour conversions and avoiding clipping
+* Better retention of file metadata, such as EXIF and TIFF tags
+* Gamma corrected resizing with a minimal performance difference
+* Eligibility for professional services and commercial support from Quru
+
 ## Image processing
 
-QIS uses the popular ImageMagick package for its core image processing engine,
-along with enhancements for the handling of RAW image files and PDF documents.
+QIS uses either the Python-Pillow library, or the popular ImageMagick package
+for its core image processing engine, along with enhancements in the Premium
+Edition for the handling of RAW image files and PDF documents. 
 Imaging operations can be combined together, saved as templates, and include:
 
 * Resizing
 * Rotation
 * Cropping, tiling
 * Vertical and horizontal flip
-* Overlays / watermarking
-* Sharpen and blur
+* Overlays / watermarking (Premium Edition)
+* Sharpen and blur (Premium Edition)
 * Image format conversion (e.g. PNG to JPG)
-* Image colorspace conversion (RGB, CMYK, and GRAY)
-* ICC / ICM colour profile conversion and removal (for print publishing)
+* Image colorspace conversion - RGB, CMYK, and GRAY (Premium Edition)
 * Stripping of image metadata (e.g. EXIF profiles) to reduce file sizes
-* PDF conversion to and from images
+* ICC / ICM colour profile conversion and removal for print publishing (Premium Edition)
+* PDF conversion to and from images (Premium Edition)
 
 These operations never change the original image file, instead the resulting
 image is cached in memory for future reuse. For examples of how one image can
 be presented in many different ways, see the [imaging guide](image_help.md).
 
-The supported file types vary depending on the installed version of ImageMagick,
-but the following file formats are enabled by default:
+The Standard Edition supports file types: _gif, jpg, png, tif_.
+
+The supported file types in the Premium Edition vary depending on the installed
+version of ImageMagick, but the following file formats are enabled by default:
 
 * General image formats: _bmp, dcm, gif, jpg, png, ppm, psd, svg, tga, tif, xcf_
 * RAW image formats: _arw, cr2, mrw, nef, nrw, orf, rw2, raw, raf, x3f_

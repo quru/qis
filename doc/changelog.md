@@ -1,13 +1,13 @@
 # v4.0.0
-_Changes: New QIS free/premium model. Adds new Python-Pillow imaging back-end
+_Changes: New QIS Standard/Premium editions. Adds new Python-Pillow imaging back-end
 (with reduced functionality) so that QIS runs without requiring qismagick.so.
-Add new IMAGE_RESIZE_GAMMA_CORRECT setting. Updated Python libraries, including
-Flask v1.0_
+Add new IMAGE_RESIZE_GAMMA_CORRECT setting, remove DEBUG setting.
+Updated Python libraries, including Flask to v1.0_
 
 * Update the Python and web code (the `src` folder)
-* Update the Python libraries (replace not overwrite)
-* Update the `qismagick` library to v4.0 (newly optional - if installed/required)
-* Delete `src/imageserver/imagemagick.py`
+* Update the Python libraries (replace not overwrite, due to a bug in pip/python-ldap)
+* Update the `qismagick` library to v4.0 (now optional - if installed/required)
+* Delete file `src/imageserver/imagemagick.py`
 * Restart the Apache service
 
 # v3.1.0

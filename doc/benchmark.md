@@ -8,15 +8,20 @@ in parallel to simulate multiple clients. The requests include:
 
 * Image thumbnail generation
 * Image cropping
-* PDF to image thumbnails
+* PDF to image thumbnails (if supported)
 * Original image downloads
-* API calls
+* Zooming image viewer API calls
 
 The script - `src/imageserver/scripts/bench.py` - has no dependencies other
 than Python 3.4 or above, so you can copy it to wherever you want to run the
 test from.
 
-## Set up
+## Setup
+
+The script requests images from the `test_images` folder on the server, so this
+needs to be restored if it has been removed. In the folder permissions, you need
+to enable _View and download_ permission for the `test_images` folder and the
+`Public` group.
 
 To suppress HTTP 503 errors and allow the test script to clear cached images
 as it goes, add the `BENCHMARKING` setting to your `local_settings.py` file.
@@ -24,8 +29,8 @@ Remember to remove it when you have finished:
 
 	BENCHMARKING = True
 
-At present you also need to clear the server's cache before each test run,
-by restarting the Memcached service:
+You also need to clear the server's image cache before each test run, by
+restarting the Memcached service:
 
 	$ sudo systemctl restart memcached
 
@@ -49,32 +54,33 @@ Run the script without any parameters to see the available options:
 	image requests, the number of simultaneous requests, and the percentage of
 	requests to return from cache. Repeating the test with the same parameters
 	will generate the same set of requests so that timings can be compared.
-	
+
 	Usage:
-	       python3 bench.py [options] server_url [num_requests] [cache_percent] [num_clients]
-	
+		python bench.py [options] server_url [num_requests] [cache_percent] [num_clients]
+
 	Where:
-	       server_url is e.g. http://images.example.com/
-	       num_requests is the number of server requests to make, default 1000
-	       cache_percent is the percentage of images to return from cache, default 90
-	       num_clients is the number of simultaneous requests to make, default 4
-	
+		server_url is e.g. http://images.example.com/
+		num_requests is the number of server requests to make, default 1000
+		cache_percent is the percentage of images to return from cache, default 90
+		num_clients is the number of simultaneous requests to make, default 4
+
 	Options:
-	       --verbose to output more detailed status logs
-	       --only-warm to only warm the cache then skip the actual tests
-	       --skip-warm to skip the cache warming and run the tests immediately
-	
+		--verbose to output more detailed status logs
+		--only-warm to only warm the cache then skip the actual tests
+		--skip-warm to skip the cache warming and run the tests immediately
+		--no-pdf to not perform tests of PDF to image conversion
+
 	Examples:
-	       python3 bench.py http://images.example.com/
-	       python3 bench.py --verbose http://images.example.com/ 5000 80 10
-	
+		python bench.py http://images.example.com/
+		python bench.py --verbose http://images.example.com/ 5000 80 10
+
 	Notes:
 	Set cache_percent to 0 to re-generate every image every time. This is very
 	CPU intensive on the image server and tests performance under load. Set
 	cache_percent to 100 to serve every image from cache where possible*. This
 	tests the level of throughput under ideal conditions. The default value of
 	90 represents a typical workload.
-	
+
 	* The tests also include some URLs that are never returned from cache.
 
 To test the best possible server performance, request 100% of images to come
@@ -126,7 +132,7 @@ on-the-fly, and represents a fairly heavy workload. The average response time of
 indicating that the server struggled with this load in places.
 
 You can find out what percentage of images are coming from cache on your own
-server from the QIS _system statistics_.
+server from the _system statistics_ reports menu in QIS.
 
 ## Example benchmark results
 
@@ -163,7 +169,7 @@ are with 2 mod_wsgi processes.
 
 ### High powered server
 
-A 10 CPU core Intel Xeon @ 2.9Ghz, way more RAM than required here,
+A 10 CPU core Intel Xeon @ 2.9Ghz, way more RAM than is required here,
 running Red Hat Enterprise Linux 6.5, Apache, Postgres, and Memcached.
 
 	|    mod_wsgi    |    bench.py   | requests/  | worst response |
@@ -209,7 +215,7 @@ throughput is better for 5 and 7 mod_wsgi processes (145 requests/s) than for 10
 (125 requests/s). With 50 clients, the throughput is nearly the same for 5, 7,
 and 10 mod_wsgi processes, but the lowest worst case is for 7.
 
-## Conclusion
+## Conclusions
 
 It is better to have too few mod_wsgi processes/threads than too many, to avoid
 overwhelming the server when many images need to be generated simultaneously.
@@ -222,105 +228,183 @@ per remaining CPU core. Or on a 1 or 2 core server, do not define more than 1 or
 
 Apart from benchmarking your Apache/mod_wsgi capacity, you can also use `bench.py`
 alongside the tuning guide, to see if for a given server load there is any effect
-from changing the other application settings.
+when changing the other application settings.
 
 ---
 
 ## Appendix - Development benchmarks
 
-Note that the Flask development server is single threaded by default, and therefore
-there is no benefit in running more than 1 request in parallel (it works, but the
-wait time doubles for 2 clients, triples for 3 clients, so that the overall throughput
-remains the same).
+Running the benchmark against QIS's development server is of limited value,
+but it does help to identify any major performance improvements or regressions
+when developing new features.
 
-Machine and software spec:
+As of Flask v1.0 (in QIS v4.0 onwards) the development server is capable of
+handling simultaneous client requests where previously it was single-threaded.
+It is recommended to run these tests with only a single client (setting
+`num_clients` to 1) so that the timings reflect a sum of linear operations,
+a more predictable and consistent value than timing parallel operations.
+However it is now also possible to test with multiple clients, if you
+specifically want to test the handling of parallel requests.
+
+Machine and software versions:
 
 * 2012 MacBook Pro 2.9 GHz Intel Core i7, 16 GB 1600 MHz DDR3
-* Python 3.4.4
+* Python 3.5.4
 * ImageMagick 6.8.8-10 Q16 x86_64
 * Memcached 1.4.34
 * PostgreSQL 9.5.2
-* QIS v3.0.0
+* QIS v4.0.0
 
-Setup (folder permissions):
+Setup:
 
 * Enable _View and download_ permission for the `test_images` folder and the `Public` group
+* Add to your `conf/local_settings.py` file, the line: `BENCHMARKING = True`
+* Restart the Memcached service
+* Run the development server with debug mode disabled:  
+  `$ export FLASK_ENV=production`  
+  `$ make runserver`
 
-Setup (add to your `local_settings.py` file):
+### Standard Edition (Pillow library), default settings
 
-	BENCHMARKING = True
+Default test:
 
-Setup (every time):
+	$ python3 src/imageserver/scripts/bench.py --no-pdf http://127.0.0.1:5000/ 1000 90 1
+	LOG   81858 - Checking connectivity to http://127.0.0.1:5000/
+	LOG   81858 - Building request list
+	LOG   81858 - Pre-warming the image cache
+	LOG   81858 - Creating clients, running tests
+	LOG   81858 - Complete
 
-	$ memcached -m 512
-	$ export FLASK_ENV=production
-	$ python3 src/runserver.py
+	Results
+	=======
+	1000 successful requests, 0 errors.
+	Run time 99.734788 seconds = 10.026592 requests/sec.
+
+	Average response 0.099538 seconds
+	* 195 non-cached responses
+		* Average app time 0.491758 seconds
+		* Average response 0.493961 seconds
+		* Worst response 1.880010 seconds
+	* 805 cached responses
+		* Average app time 0.001899 seconds
+		* Average response 0.003994 seconds
+		* Worst response 0.008710 seconds
+
+100% cached test (fastest scenario):
+
+	$ python3 src/imageserver/scripts/bench.py --no-pdf http://127.0.0.1:5000/ 1000 100 1
+	LOG   81942 - Checking connectivity to http://127.0.0.1:5000/
+	LOG   81942 - Building request list
+	LOG   81942 - Pre-warming the image cache
+	LOG   81942 - Creating clients, running tests
+	LOG   81942 - Complete
+
+	Results
+	=======
+	1000 successful requests, 0 errors.
+	Run time 4.453783 seconds = 224.528225 requests/sec.
+
+	Average response 0.004289 seconds
+	* 98 non-cached responses
+		* Average app time 0.003090 seconds
+		* Average response 0.005231 seconds
+		* Worst response 0.009317 seconds
+	* 902 cached responses
+		* Average app time 0.002013 seconds
+		* Average response 0.004186 seconds
+		* Worst response 0.006511 seconds
+
+Heavy processing test (slowest scenario):
+
+	$ python3 src/imageserver/scripts/bench.py --no-pdf http://127.0.0.1:5000/ 100 0 1
+	LOG   81985 - Checking connectivity to http://127.0.0.1:5000/
+	LOG   81985 - Building request list
+	LOG   81985 - NOTE! You need to manually clear your image cache if you have previously run these tests.
+	LOG   81985 - Creating clients, running tests
+	LOG   81985 - Complete
+
+	Results
+	=======
+	100 successful requests, 0 errors.
+	Run time 80.693159 seconds = 1.239262 requests/sec.
+
+	Average response 0.806010 seconds
+	* 100 non-cached responses
+		* Average app time 0.803680 seconds
+		* Average response 0.806010 seconds
+		* Worst response 1.770991 seconds
+	* 0 from cache
+
+### Premium Edition (ImageMagick library), default settings
 
 Default test:
 
 	$ python3 src/imageserver/scripts/bench.py http://127.0.0.1:5000/ 1000 90 1
-	LOG   36180 - Checking connectivity to http://127.0.0.1:5000/
-	LOG   36180 - Building request list
-	LOG   36180 - Pre-warming the image cache
-	LOG   36180 - Creating clients, running tests
-	LOG   36180 - Complete
-	
+	LOG   81471 - Checking connectivity to http://127.0.0.1:5000/
+	LOG   81471 - Checking PDF conversion support
+	LOG   81471 - Building request list
+	LOG   81471 - Pre-warming the image cache
+	LOG   81471 - Creating clients, running tests
+	LOG   81471 - Complete
+
 	Results
 	=======
 	1000 successful requests, 0 errors.
-	Run time 45.782942 seconds = 21.842196 requests/sec.
-	
-	Average response 0.045620 seconds
-	  * 189 non-cached responses
-	      * Average app time 0.226146 seconds
-	      * Average response 0.227909 seconds
-	      * Worst response 1.336114 seconds
-	  * 811 cached responses
-	      * Average app time 0.001535 seconds
-	      * Average response 0.003139 seconds
-	      * Worst response 0.004765 seconds
+	Run time 54.857844 seconds = 18.228934 requests/sec.
 
-All cached test:
+	Average response 0.054686 seconds
+	* 195 non-cached responses
+		* Average app time 0.260914 seconds
+		* Average response 0.263169 seconds
+		* Worst response 1.308715 seconds
+	* 805 cached responses
+		* Average app time 0.001979 seconds
+		* Average response 0.004185 seconds
+		* Worst response 0.012576 seconds
+
+100% cached test (fastest scenario):
 
 	$ python3 src/imageserver/scripts/bench.py http://127.0.0.1:5000/ 1000 100 1
-	LOG   36213 - Checking connectivity to http://127.0.0.1:5000/
-	LOG   36213 - Building request list
-	LOG   36213 - Pre-warming the image cache
-	LOG   36213 - Creating clients, running tests
-	LOG   36213 - Complete
-	
+	LOG   81616 - Checking connectivity to http://127.0.0.1:5000/
+	LOG   81616 - Checking PDF conversion support
+	LOG   81616 - Building request list
+	LOG   81616 - Pre-warming the image cache
+	LOG   81616 - Creating clients, running tests
+	LOG   81616 - Complete
+
 	Results
 	=======
 	1000 successful requests, 0 errors.
-	Run time 3.457407 seconds = 289.234100 requests/sec.
-	
-	Average response 0.003285 seconds
-	  * 98 non-cached responses
-	      * Average app time 0.002930 seconds
-	      * Average response 0.004567 seconds
-	      * Worst response 0.009750 seconds
-	  * 902 cached responses
-	      * Average app time 0.001540 seconds
-	      * Average response 0.003146 seconds
-	      * Worst response 0.013970 seconds
+	Run time 4.655934 seconds = 214.779672 requests/sec.
 
-Heavy processing test:
+	Average response 0.004488 seconds
+	* 98 non-cached responses
+		* Average app time 0.003133 seconds
+		* Average response 0.005388 seconds
+		* Worst response 0.009511 seconds
+	* 902 cached responses
+		* Average app time 0.002094 seconds
+		* Average response 0.004390 seconds
+		* Worst response 0.007552 seconds
+
+Heavy processing test (slowest scenario):
 
 	$ python3 src/imageserver/scripts/bench.py http://127.0.0.1:5000/ 100 0 1
-	LOG   36302 - Checking connectivity to http://127.0.0.1:5000/
-	LOG   36302 - Building request list
-	LOG   36302 - NOTE! You need to manually clear your image cache if you have previously run these tests.
-	LOG   36302 - Creating clients, running tests
-	LOG   36302 - Complete
-	
+	LOG   81717 - Checking connectivity to http://127.0.0.1:5000/
+	LOG   81717 - Checking PDF conversion support
+	LOG   81717 - Building request list
+	LOG   81717 - NOTE! You need to manually clear your image cache if you have previously run these tests.
+	LOG   81717 - Creating clients, running tests
+	LOG   81717 - Complete
+
 	Results
 	=======
 	100 successful requests, 0 errors.
-	Run time 40.146712 seconds = 2.490864 requests/sec.
-	
-	Average response 0.401155 seconds
-	  * 100 non-cached responses
-	      * Average app time 0.399180 seconds
-	      * Average response 0.401155 seconds
-	      * Worst response 0.989410 seconds
-	  * 0 from cache
+	Run time 38.963857 seconds = 2.566481 requests/sec.
+
+	Average response 0.388679 seconds
+	* 100 non-cached responses
+		* Average app time 0.386199 seconds
+		* Average response 0.388679 seconds
+		* Worst response 0.962977 seconds
+	* 0 from cache
