@@ -8,14 +8,14 @@ with open(os.path.join(package_dir, "imageserver", "__about__.py")) as fp:
     exec(fp.read(), about)
 
 setup(
-    name=about["__title__"],
+    name=about["__tag__"],
     version=about["__version__"],
-
-    description=about["__summary__"],
+    description=about["__title__"] + ' - ' + about["__summary__"],
     long_description=about["__description__"],
-    license=about["__license__"],
+
     url=about["__uri__"],
     download_url=about["__source_uri__"],
+    license=about["__license__"],
     platforms=about["__platforms__"],
 
     author=about["__author__"],

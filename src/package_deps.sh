@@ -11,11 +11,11 @@
 #
 
 PYTHON_VER=$1
-VENV=venv
 DIST_DIR=$(pwd)/dist
 BUILD_DIR=$(pwd)/build
 WHEELS_DIR=$BUILD_DIR/wheels
 CACHE_DIR=$BUILD_DIR/cache
+VENV_DIR=$BUILD_DIR/venv
 
 if [ "$PYTHON_VER" = "" ]; then
 	echo "You must specify which python version to use, e.g. package_deps.sh python3.5"
@@ -34,10 +34,8 @@ echo -e '\nCreating new build environment'
 mkdir $BUILD_DIR
 mkdir $WHEELS_DIR
 mkdir $CACHE_DIR
-cd $BUILD_DIR
-virtualenv --python=$PYTHON_VER $VENV
-. $VENV/bin/activate
-cd ..
+virtualenv --python=$PYTHON_VER $VENV_DIR
+. $VENV_DIR/bin/activate
 
 echo -e '\nUpgrading pip and setuptools'
 pip install --upgrade pip setuptools wheel
@@ -61,12 +59,10 @@ echo -e '\nInstalling all wheels into the build environment'
 find $WHEELS_DIR -type f -name '*.whl' -exec wheel install --force {} \;
 
 # Remove the pyc and pyo files
-cd $BUILD_DIR
-rm `find $VENV -name '*.py[co]'`
-cd ..
+rm `find $VENV_DIR -name '*.py[co]'`
 
 # Package the virtualenv's lib directory for distribution
 echo -e '\nTarballing the virtualenv lib folder'
 [ -d $DIST_DIR ] || mkdir $DIST_DIR
 cd $BUILD_DIR
-tar -C $VENV -czf $DIST_DIR/QIS-libs.tar.gz lib
+tar -C $VENV_DIR -czf $DIST_DIR/QIS-libs.tar.gz lib
