@@ -354,14 +354,13 @@ by default
 
 ## Roadmap
 
-Topics under consideration for future versions:
+Topics under consideration for future versions, in no particular order:
 
 * Image portfolios user interface
   * Addition of "add to basket" while image browsing in the admin interface
   * Addition of portfolios administration to the admin interface
   * Portfolio publishing (to zip) from the admin interface
   * Viewing a portfolio from the gallery and slideshow viewers
-* Improve the image generation architecture for more consistent performance under load
 * Optional long image URL to tiny URL conversion
   * New checkbox in the image publisher
   * Add to REST API
@@ -387,3 +386,6 @@ Topics under consideration for future versions:
   * HDRI, wide colour / Display P3 color spaces
 * Cloud storage integration (Dropbox, Google Drive, ...)
 * Social media integration (Instagram, Flickr, Pinterest, ...)
+* Improve the image generation architecture for more consistent performance under load
+* Replace Memcached with Redis and ditch the `qis-cache` database
+* Deployment on Nginx Unit instead of Apache + mod_wsgi
