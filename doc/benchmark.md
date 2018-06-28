@@ -3,7 +3,7 @@
 **TL;DR** Skip to the _conclusions_ section below.
 
 QIS comes with a Python script you can use for load testing your image server
-and to fine tune the settings. It performs a number of "normal" http requests,
+and to fine tune the settings. It performs a number of "normal" HTTP requests,
 in parallel to simulate multiple clients. The requests include:
 
 * Image thumbnail generation

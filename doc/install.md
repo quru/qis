@@ -607,7 +607,7 @@ at one of the various log files.
 * If Apache will not start, check `/var/log/httpd/error_log`
 * If Apache is started but you cannot reach the QIS home page (`http://images.example.com/`),
   also check the Apache `error_log`
-* If QIS runs in http but not https, also check the Apache `error_log`
+* If QIS runs in HTTP but not HTTPS, also check the Apache `error_log`
 * For any other problem, check `/opt/qis/logs/qis.log` and the Apache `error_log`
 
 ## Upgrading to the Premium Edition
