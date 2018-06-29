@@ -10,20 +10,20 @@
 # Outputs: $DIST_DIR/QIS-libs.tar.gz
 #
 
-PYTHON_VER=$1
+PYTHON_BIN=$1
 DIST_DIR=$(pwd)/dist
 BUILD_DIR=$(pwd)/build
 WHEELS_DIR=$BUILD_DIR/wheels
 CACHE_DIR=$BUILD_DIR/cache
 VENV_DIR=$BUILD_DIR/venv
 
-if [ "$PYTHON_VER" = "" ]; then
+if [ "$PYTHON_BIN" = "" ]; then
 	echo "You must specify which python version to use, e.g. package_deps.sh python3.5"
 	exit 1
 fi
 
-if ! [ -x "$(command -v $PYTHON_VER)" ]; then
-	echo "$PYTHON_VER does not seem to be installed"
+if ! [ -x "$(command -v $PYTHON_BIN)" ]; then
+	echo "$PYTHON_BIN does not seem to be installed"
 	exit 1
 fi
 
@@ -34,7 +34,7 @@ echo -e '\nCreating new build environment'
 mkdir $BUILD_DIR
 mkdir $WHEELS_DIR
 mkdir $CACHE_DIR
-virtualenv --python=$PYTHON_VER $VENV_DIR
+virtualenv --python=$PYTHON_BIN $VENV_DIR
 . $VENV_DIR/bin/activate
 
 echo -e '\nUpgrading pip and setuptools'
@@ -60,6 +60,11 @@ find $WHEELS_DIR -type f -name '*.whl' -exec wheel install --force {} \;
 
 # Remove the pyc and pyo files
 rm `find $VENV_DIR -name '*.py[co]'`
+
+# Temporary - patch Pillow 5.1.0 for PR #3147
+echo -e '\nPatching Pillow library'
+patch --reject-file=pil-image.rej --forward $VENV_DIR/lib/$PYTHON_BIN/site-packages/PIL/Image.py deploy/patches/pil-image.patch || true
+rm -f pil-image.rej
 
 # Package the virtualenv's lib directory for distribution
 echo -e '\nTarballing the virtualenv lib folder'

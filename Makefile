@@ -32,6 +32,9 @@ webpack:
 venv: ${VENV_PATH}/bin/activate setup.py doc/requirements.txt
 	${VENV_ACTIVATE} ; pip install --upgrade pip setuptools wheel
 	${VENV_ACTIVATE} ; pip install --upgrade -r doc/requirements.txt
+	# Temporary - patch Pillow 5.1.0 for PR #3147
+	patch --reject-file=pil-image.rej --forward lib/${PYTHON}/site-packages/PIL/Image.py deploy/patches/pil-image.patch || true
+	rm -f pil-image.rej
 
 testing_env: ${VENV_PATH}/bin/flake8 ${VENV_PATH}/bin/coverage
 
