@@ -3334,12 +3334,14 @@ class UtilityTests(unittest.TestCase):
     def test_image_attrs_serialisation(self):
         ia = ImageAttrs('some/path', -1, page=2, iformat='psd', template='smalljpeg',
                         width=1000, height=1000, size_fit=False,
-                        fill='black', colorspace='rgb', strip=False)
+                        fill='black', colorspace='rgb', strip=False,
+                        tile_spec=(3, 16))
         ia_dict = ia.to_dict()
         self.assertEqual(ia_dict['template'], 'smalljpeg')
         self.assertEqual(ia_dict['fill'], 'black')
         self.assertEqual(ia_dict['page'], 2)
         self.assertEqual(ia_dict['size_fit'], False)
+        self.assertEqual(ia_dict['tile'], (3, 16))
         rev = ImageAttrs.from_dict(ia_dict)
         rev_dict = rev.to_dict()
         self.assertEqual(ia_dict, rev_dict)
@@ -3365,11 +3367,13 @@ class UtilityTests(unittest.TestCase):
         ta = TemplateAttrs('abcdef', {
             'width': {'value': 1000},
             'height': {'value': 1000},
+            'tile': {'value': (3, 16)},
             'expiry_secs': {'value': 50000},
             'record_stats': {'value': True}
         })
         self.assertEqual(ta.name(), 'abcdef')
         self.assertEqual(ta.get_image_attrs().filename(), 'abcdef')
+        self.assertEqual(ta.get_image_attrs().tile_spec(), (3, 16))
         self.assertEqual(ta.expiry_secs(), 50000)
         self.assertEqual(ta.record_stats(), True)
         self.assertIsNone(ta.attachment())
@@ -3377,6 +3381,7 @@ class UtilityTests(unittest.TestCase):
         ta_dict = ta.get_values_dict()
         self.assertEqual(ta_dict['filename'], 'abcdef')
         self.assertEqual(ta_dict['width'], 1000)
+        self.assertEqual(ta_dict['tile'], (3, 16))
         self.assertEqual(ta_dict['expiry_secs'], 50000)
         self.assertEqual(ta_dict['record_stats'], True)
 
