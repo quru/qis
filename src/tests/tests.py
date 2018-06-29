@@ -2356,7 +2356,8 @@ class UtilityTests(unittest.TestCase):
     def test_image_attrs_serialisation(self):
         ia = ImageAttrs('some/path', -1, page=2, iformat='gif', template='smalljpeg',
                         width=2000, height=1000, size_fit=False,
-                        fill='black', colorspace='rgb', strip=False)
+                        fill='black', colorspace='rgb', strip=False,
+                        tile_spec=(3, 16))
         ia_dict = ia.to_dict()
         self.assertEqual(ia_dict['template'], 'smalljpeg')
         self.assertEqual(ia_dict['fill'], 'black')
@@ -2366,6 +2367,7 @@ class UtilityTests(unittest.TestCase):
         self.assertEqual(ia_dict['colorspace'], 'rgb')
         self.assertEqual(ia_dict['width'], 2000)
         self.assertEqual(ia_dict['height'], 1000)
+        self.assertEqual(ia_dict['tile'], (3, 16))
         rev = ImageAttrs.from_dict(ia_dict)
         rev_dict = rev.to_dict()
         self.assertEqual(ia_dict, rev_dict)
@@ -2389,24 +2391,26 @@ class UtilityTests(unittest.TestCase):
     def test_template_attrs_serialisation(self):
         # Test the standard constructor
         ta = TemplateAttrs('abcdef', {
-            'width': {'value': 1000},
+            'width': {'value': 2000},
             'height': {'value': 1000},
+            'tile': {'value': (3, 16)},
             'expiry_secs': {'value': 50000},
             'record_stats': {'value': True}
         })
         self.assertEqual(ta.name(), 'abcdef')
         self.assertEqual(ta.get_image_attrs().filename(), 'abcdef')
+        self.assertEqual(ta.get_image_attrs().tile_spec(), (3, 16))
         self.assertEqual(ta.expiry_secs(), 50000)
         self.assertEqual(ta.record_stats(), True)
         self.assertIsNone(ta.attachment())
         # Test values dict
         ta_dict = ta.get_values_dict()
         self.assertEqual(ta_dict['filename'], 'abcdef')
-        self.assertEqual(ta_dict['width'], 1000)
+        self.assertEqual(ta_dict['width'], 2000)
+        self.assertEqual(ta_dict['height'], 1000)
+        self.assertEqual(ta_dict['tile'], (3, 16))
         self.assertEqual(ta_dict['expiry_secs'], 50000)
         self.assertEqual(ta_dict['record_stats'], True)
-
-    # TODO Add a test for serialising the tile tuple - I suspect it's broken
 
     def test_template_attrs_bad_serialisation(self):
         # Old dict format

@@ -1012,6 +1012,9 @@ class ImageAttrs():
                     setattr(self, obj_key, dict_val)
         self._normalise_strings()
         self._normalise_floats()
+        # Special case: convert tile [a, b] to (a, b) in case the dict came from JSON
+        if isinstance(self._tile, list) and len(self._tile) == 2:
+            self._tile = tuple(self._tile)
         if validate:
             self.validate()
         if normalise:

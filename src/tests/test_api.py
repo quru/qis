@@ -776,14 +776,20 @@ class ImageServerAPITests(main_tests.BaseTestCase):
         rv = self.app.post('/api/admin/templates/', data={
             'name': 'new template',
             'description': 'new template desc',
-            'template': '''{ "format": {"value": "png"} }'''
+            'template': '''
+                { "format": {"value": "png"}, 
+                  "tile": {"value": [3, 16]}
+                }'''
         })
         self.assertEqual(rv.status_code, API_CODES.SUCCESS)
         obj = json.loads(rv.data.decode('utf8'))['data']
         self.assertEqual(obj['name'], 'new template')
         new_tmp_id = obj['id']
         self.assertGreater(new_tmp_id, 0)
-        self.assertEqual(strip_dict(obj['template']), {'format': {'value': 'png'}})
+        self.assertEqual(
+            strip_dict(obj['template']),
+            {'format': {'value': 'png'}, 'tile': {'value': [3, 16]}}
+        )
         # We should be able to use it immediately
         rv = self.app.get('/image?src=test_images/cathedral.jpg&width=200&tmp=new template')
         self.assertEqual(rv.status_code, 200)

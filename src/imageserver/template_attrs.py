@@ -49,6 +49,7 @@ class TemplateAttrs(object):
     {
         "width": { "value": 800 },
         "flip": { "value": "v" },
+        "tile": { "value": [1, 16] },
         "attachment": { "value": False },
     }
     Later versions are expected to add new elements alongside "value".
