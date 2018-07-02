@@ -61,11 +61,6 @@ find $WHEELS_DIR -type f -name '*.whl' -exec wheel install --force {} \;
 # Remove the pyc and pyo files
 rm `find $VENV_DIR -name '*.py[co]'`
 
-# Temporary - patch Pillow 5.1.0 for PR #3147
-echo -e '\nPatching Pillow library'
-patch --reject-file=pil-image.rej --forward $VENV_DIR/lib/$PYTHON_BIN/site-packages/PIL/Image.py deploy/patches/pil-image.patch || true
-rm -f pil-image.rej
-
 # Package the virtualenv's lib directory for distribution
 echo -e '\nTarballing the virtualenv lib folder'
 [ -d $DIST_DIR ] || mkdir $DIST_DIR
