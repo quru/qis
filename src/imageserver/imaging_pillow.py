@@ -189,6 +189,16 @@ class PillowBackend(object):
                 image.height if image_spec['rotation'] == 0.0 else max_dimension
             )
 
+            # Palette based images - there are a number of operations that assume RGB
+            # (fill colour object, apply ICC profile (later), overlay transparency (later))
+            # so convert to RGB first and then back to palette if necessary at the end
+            if image.mode == 'P':
+                image = self._image_change_mode(
+                    image,
+                    'RGBA' if ('transparency' in original_info) else 'RGB'
+                )
+                self._restore_pillow_info(image, original_info)
+
             # If the target format supports transparency and we need it,
             # upgrade the image to RGBA
             if image_spec['fill'] == 'none' or image_spec['fill'] == 'transparent':
@@ -226,7 +236,8 @@ class PillowBackend(object):
                 image = self._image_rotate(
                     image,
                     image_spec['rotation'],
-                    image_spec['resize_type'], fill_rgb
+                    image_spec['resize_type'],
+                    fill_rgb
                 )
                 self._restore_pillow_info(image, original_info)
             # (3) Crop
