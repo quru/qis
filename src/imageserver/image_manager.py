@@ -485,8 +485,8 @@ class ImageManager(object):
                         image_attrs
                     )
                 except ImageError as e:
-                    # Image generation failed. Carry on and cache the fact that it's
-                    # broken so that other clients don't repeatedly try to re-generate.
+                    # Image generation failed. Continue, cache the error so that
+                    # other clients don't repeatedly try to re-generate it.
                     ret_image_data = ImageManager.IMAGE_ERROR_HEADER + str(e)
 
                 # Add it to cache for next time
@@ -789,6 +789,10 @@ class ImageManager(object):
                 # See if this one is still in the cache
                 base_data = self._cache.get(result_key)
                 if base_data is not None:
+                    # Check that the object is an image and not a cached error message
+                    if (isinstance(base_data, str) and
+                        base_data.startswith(ImageManager.IMAGE_ERROR_HEADER)):
+                        continue
                     # Success
                     return ImageWrapper(base_data, result_attrs, True)
             elif self._settings['DEBUG']:
