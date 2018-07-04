@@ -1180,7 +1180,7 @@ class ImageManager(object):
                     image_ops
                 )
             except Exception as e:
-                raise ImageError(str(e))
+                raise ImageError(str(e)) if not self._settings['DEBUG'] else e
         else:
             # There are no attributes to change
             return base_image_data
