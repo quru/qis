@@ -2,7 +2,8 @@
 _Changes: New QIS Standard/Premium editions. Adds new Python-Pillow imaging back-end
 (with reduced functionality) so that QIS runs without requiring qismagick.so.
 Add new IMAGE_RESIZE_GAMMA_CORRECT setting, remove DEBUG setting.
-Updated Python libraries, including Flask to v1.0_
+Updated Python libraries, including Flask to v1.0. Bug fix to prevent enlargements
+with rotation, bug fix to prevent errors when using `tile` in a template._
 
 * Update the Python and web code (the `src` folder)
 * Update the Python libraries (replace not overwrite, due to a bug in pip/python-ldap)

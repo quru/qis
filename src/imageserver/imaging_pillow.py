@@ -175,23 +175,19 @@ class PillowBackend(object):
             if 0 in image.size:
                 raise ValueError('Image dimensions are zero')
 
-            # Prevent enlargements, using largest of width/height to allow for rotation.
+            # Prevent enlargements, but allowing for rotation.
             # If enabling enlargements, enforce some max value to prevent server attacks.
-            max_dimension = max(image.size)
-            new_width = _limit_number(
-                image_spec['width'],
-                0,
-                image.width if image_spec['rotation'] == 0.0 else max_dimension
-            )
-            new_height = _limit_number(
-                image_spec['height'],
-                0,
-                image.height if image_spec['rotation'] == 0.0 else max_dimension
-            )
+            if image_spec['rotation'] == 0.0:
+                new_width = _limit_number(image_spec['width'], 0, image.width)
+                new_height = _limit_number(image_spec['height'], 0, image.height)
+            else:
+                rot_size = _rotated_size(image.width, image.height, image_spec['rotation'])
+                new_width = _limit_number(image_spec['width'], 0, rot_size[0] + 2)
+                new_height = _limit_number(image_spec['height'], 0, rot_size[1] + 2)
 
             # Palette based images - there are a number of operations that assume RGB
             # (fill colour object, apply ICC profile (later), overlay transparency (later))
-            # so convert to RGB first and then back to palette if necessary at the end
+            # so convert to RGB first and then back to palette if necessary at the end
             if image.mode == 'P':
                 image = self._image_change_mode(
                     image,
@@ -1304,6 +1300,43 @@ LINEAR_RGB_ICC_PROFILE = (b'\x00\x00\x01\xE0\x41\x44\x42\x45\x02\x10\x00\x00\x6D
                           b'\x00\x00\x03\x90\x58\x59\x5A\x20\x00\x00\x00\x00\x00\x00\x62\x96\x00\x00\xB7\x87\x00'
                           b'\x00\x18\xDA\x58\x59\x5A\x20\x00\x00\x00\x00\x00\x00\x24\x9F\x00\x00\x0F\x84\x00\x00'
                           b'\xB6\xC2\x63\x75\x72\x76\x00\x00\x00\x00\x00\x00\x00\x01\x01\x00\x00\x00')
+
+# TODO we can simplify this to just work from 4 points
+
+def _rotated_size(w, h, angle):
+    """
+    Returns the corner-to-corner width and height as (new_w, new_h) for a rectangle
+    of size w, h after being rotated by an angle in degrees (-360 to +360 clockwise)
+    around its centre point.
+    """
+    edges = [((0, h), (w, h)), ((w, h), (w, 0)), ((w, 0), (0, 0)), ((0, 0), (0, h))]
+    cp = (w / 2, h / 2)
+    edges2 = [_rot_line(e[0], e[1], cp, angle) for e in edges]
+    edges2_points = [p for points in edges2 for p in points]
+    # Pillow and ImageMagick seem to round the points before calculating w,h
+    min_x = round(min(p[0] for p in edges2_points))
+    max_x = round(max(p[0] for p in edges2_points))
+    min_y = round(min(p[1] for p in edges2_points))
+    max_y = round(max(p[1] for p in edges2_points))
+    return (max_x - min_x, max_y - min_y)
+
+
+def _rot_line(p1, p2, cp, angle):
+    """
+    Rotates a line at points p1 (x, y) to p2 (x, y) by an angle in degrees (-360
+    to +360 clockwise) around point cp (x, y), returning the new points p1 and p2.
+    """
+    ret = []
+    theta = math.radians(angle)
+    cos_ang = math.cos(theta)
+    sin_ang = math.sin(theta)
+    # cp = ((p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2)  # centre point
+    for p in (p1, p2):
+        # Translate cp to origin, rotate, translate back to original position
+        x = ((p[0] - cp[0]) * cos_ang) + ((p[1] - cp[1]) * sin_ang) + cp[0]
+        y = (-(p[0] - cp[0]) * sin_ang) + ((p[1] - cp[1]) * cos_ang) + cp[1]
+        ret.append((x, y))
+    return (ret[0], ret[1])
 
 
 def _limit_number(val, min_val, max_val):

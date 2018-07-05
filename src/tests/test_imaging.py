@@ -712,6 +712,44 @@ class CommonImageTests(main_tests.BaseTestCase, ImagingTestCase):
                 self.assertIn('image/png', img2.headers['Content-Type'])
                 self.assertLess(len(img2.data), len(img1.data))
 
+    # v4.0 Test that rotation does not allow strange enlargements
+    def test_rotate_size_limits(self):
+        for be in CommonImageTests.Backends:
+            main_tests.select_backend(be)
+            with self.subTest(backend=be):
+                # The image is 110x58. Without rotation the height is limited to 58.
+                # With rotation of 1 deg the code used to allow a height of up to 110.
+                # Correct behaviour is to allow up to 58 + rotational height change.
+                for test_url in [
+                    '/image?src=test_images/quru110.png&format=png&angle=10',
+                    '/image?src=test_images/quru110.png&format=png&angle=10&height=78',
+                    '/image?src=test_images/quru110.png&format=png&angle=10&height=110'
+                ]:
+                    cm.clear()
+                    rv = self.app.get(test_url)
+                    self.assertEqual(rv.status_code, 200)
+                    self.assertIn('image/png', rv.headers['Content-Type'])
+                    self.assertEqual(get_png_dimensions(rv.data), (120, 78))
+
+    # v4.0 Test that rotation does allow natural enlargements
+    def test_rotate_natural_size(self):
+        for be in CommonImageTests.Backends:
+            main_tests.select_backend(be)
+            with self.subTest(backend=be):
+                # The image is 110x58. With rotation of 45 deg the natural size
+                # becomes 120x120. This was correct with no width/height params,
+                # but when specifying width=120+ it used to get limited to 110.
+                for test_url in [
+                    '/image?src=test_images/quru110.png&format=png&angle=45',
+                    '/image?src=test_images/quru110.png&format=png&angle=45&width=120',
+                    '/image?src=test_images/quru110.png&format=png&angle=45&width=180'
+                ]:
+                    cm.clear()
+                    rv = self.app.get(test_url)
+                    self.assertEqual(rv.status_code, 200)
+                    self.assertIn('image/png', rv.headers['Content-Type'])
+                    self.assertEqual(get_png_dimensions(rv.data), (120, 120))
+
 
 # Tests that should be run only on the Pillow back end
 @unittest.skipIf(
