@@ -1301,7 +1301,6 @@ LINEAR_RGB_ICC_PROFILE = (b'\x00\x00\x01\xE0\x41\x44\x42\x45\x02\x10\x00\x00\x6D
                           b'\x00\x18\xDA\x58\x59\x5A\x20\x00\x00\x00\x00\x00\x00\x24\x9F\x00\x00\x0F\x84\x00\x00'
                           b'\xB6\xC2\x63\x75\x72\x76\x00\x00\x00\x00\x00\x00\x00\x01\x01\x00\x00\x00')
 
-# TODO we can simplify this to just work from 4 points
 
 def _rotated_size(w, h, angle):
     """
@@ -1309,34 +1308,30 @@ def _rotated_size(w, h, angle):
     of size w, h after being rotated by an angle in degrees (-360 to +360 clockwise)
     around its centre point.
     """
-    edges = [((0, h), (w, h)), ((w, h), (w, 0)), ((w, 0), (0, 0)), ((0, 0), (0, h))]
+    points = [(0, 0), (0, h), (w, h), (w, 0)]
     cp = (w / 2, h / 2)
-    edges2 = [_rot_line(e[0], e[1], cp, angle) for e in edges]
-    edges2_points = [p for points in edges2 for p in points]
+    rot_points = [_rot_point(p, cp, angle) for p in points]
     # Pillow and ImageMagick seem to round the points before calculating w,h
-    min_x = round(min(p[0] for p in edges2_points))
-    max_x = round(max(p[0] for p in edges2_points))
-    min_y = round(min(p[1] for p in edges2_points))
-    max_y = round(max(p[1] for p in edges2_points))
+    min_x = round(min(p[0] for p in rot_points))
+    max_x = round(max(p[0] for p in rot_points))
+    min_y = round(min(p[1] for p in rot_points))
+    max_y = round(max(p[1] for p in rot_points))
     return (max_x - min_x, max_y - min_y)
 
 
-def _rot_line(p1, p2, cp, angle):
+def _rot_point(p, cp, angle):
     """
-    Rotates a line at points p1 (x, y) to p2 (x, y) by an angle in degrees (-360
-    to +360 clockwise) around point cp (x, y), returning the new points p1 and p2.
+    Rotates a point p (x, y) around centre point cp (x, y) by an angle in degrees
+    (-360 to +360 clockwise), returning the new point position.
     """
     ret = []
     theta = math.radians(angle)
     cos_ang = math.cos(theta)
     sin_ang = math.sin(theta)
-    # cp = ((p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2)  # centre point
-    for p in (p1, p2):
-        # Translate cp to origin, rotate, translate back to original position
-        x = ((p[0] - cp[0]) * cos_ang) + ((p[1] - cp[1]) * sin_ang) + cp[0]
-        y = (-(p[0] - cp[0]) * sin_ang) + ((p[1] - cp[1]) * cos_ang) + cp[1]
-        ret.append((x, y))
-    return (ret[0], ret[1])
+    # Translate cp to origin, rotate, translate back to original position
+    x = ((p[0] - cp[0]) * cos_ang) + ((p[1] - cp[1]) * sin_ang) + cp[0]
+    y = (-(p[0] - cp[0]) * sin_ang) + ((p[1] - cp[1]) * cos_ang) + cp[1]
+    return (x, y)
 
 
 def _limit_number(val, min_val, max_val):
