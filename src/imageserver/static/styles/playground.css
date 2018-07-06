@@ -92,15 +92,16 @@ h2 {
 }
 .controls label {
 	display: inline-block;
-	width: 8em;
+	width: 7em;
 	vertical-align: top;
 	margin-top: 0.5em;
 }
 .controls fieldset {
-	max-width: 29.5em;
+	max-width: 30.5em;
 }
 .controls button {
-	width: 11em;
+	width: 11.5em;
+	white-space: nowrap;
 }
 .controls button.active {
 	font-weight: bold;  /* the only thing that preserves platform-native button styling */
@@ -157,4 +158,9 @@ h2 {
 }
 .crop_container button {  /* Space for Lasso.Crop grab handles */
 	margin-top: 10px;
+}
+
+.actions label {
+	width: initial;
+	white-space: nowrap;
 }

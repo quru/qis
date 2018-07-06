@@ -44,6 +44,7 @@ import threading
 import time
 
 from . import exif
+from . import imaging
 
 from .errors import DBDataError, DoesNotExistError, ImageError, ServerTooBusyError
 from .filesystem_manager import (
@@ -53,9 +54,6 @@ from .filesystem_manager import (
 from .filesystem_sync import auto_sync_file, set_image_properties
 from .image_attrs import ImageAttrs
 from .image_wrapper import ImageWrapper
-from .imagemagick import imagemagick_init
-from .imagemagick import imagemagick_adjust_image, imagemagick_get_image_profile_data
-from .imagemagick import imagemagick_get_image_dimensions, imagemagick_get_version_info
 from .models import FolderPermission, Image, ImageHistory, Task
 from .template_manager import ImageTemplateManager
 from .util import default_value, get_file_extension
@@ -82,13 +80,14 @@ class ImageManager(object):
         self._templates = ImageTemplateManager(data_manager, logger)
         self.__icc_profiles = None
         self._icc_load_lock = threading.Lock()
-        # Load C back-end
-        imagemagick_init(
+        # Load imaging library
+        imaging.init(
+            settings['IMAGE_BACKEND'],
             settings['GHOSTSCRIPT_PATH'],
             settings['TEMP_DIR'],
             settings['PDF_BURST_DPI']
         )
-        logger.info('Loaded imaging library: ' + imagemagick_get_version_info())
+        logger.info('Loaded imaging library: ' + imaging.get_version_info())
 
     def finalise_image_attrs(self, image_attrs):
         """
@@ -178,12 +177,52 @@ class ImageManager(object):
         """
         return list(set(v[0] for v in self._icc_profiles.values()))
 
-    def get_image_formats(self):
+    def get_image_formats(self, supported_only=True):
         """
-        Returns a lower case list of supported image formats
-        (as file extensions) e.g. ['jpg','png']
+        Returns a list of either known or supported image formats as lower case
+        file extensions, e.g. ['jpg', 'png', 'gif']. When supported_only is False,
+        this is the list of file types defined by the IMAGE_FORMATS system setting.
+        When supported_only is True (the default), that list is filtered to return
+        only the image formats that the imaging back end claims to support.
         """
-        return list(self._settings['IMAGE_FORMATS'].keys())
+        if (
+            not getattr(self, '_memo_image_formats_supported', None) or
+            not getattr(self, '_memo_image_formats_all', None)
+        ):
+            self._memo_image_formats_all = sorted([
+                ext.lower() for ext in self._settings['IMAGE_FORMATS'].keys()
+            ])
+            self._memo_image_formats_supported = list(self._memo_image_formats_all)
+            restrict_types = imaging.supported_file_types()
+            if restrict_types:
+                self._memo_image_formats_supported = [
+                    ext for ext in self._memo_image_formats_supported
+                    if ext in restrict_types
+                ]
+        return (
+            self._memo_image_formats_supported
+            if supported_only else self._memo_image_formats_all
+        )
+
+    def get_supported_operations(self):
+        """
+        Returns a dictionary of {key: boolean} values for which imaging operations
+        are supported by the current imaging back end. The key names are the same
+        as those common to the ImageAttrs and TemplateAttrs dictionaries.
+        """
+        if not getattr(self, '_memo_supported_ops', None):
+            be_ops = dict(imaging.supported_operations())
+            self._memo_supported_ops = be_ops
+            # Convert the overlay/icc profile keys from data support to filename support
+            self._memo_supported_ops['overlay_src'] = be_ops.get('overlay_data', False)
+            if 'overlay_data' in be_ops:
+                del be_ops['overlay_data']
+            self._memo_supported_ops['icc_profile'] = be_ops.get('icc_data', False)
+            if 'icc_data' in be_ops:
+                del be_ops['icc_data']
+            # Add in template support
+            self._memo_supported_ops['template'] = True
+        return self._memo_supported_ops
 
     def put_image(self, current_user, file_wrapper,
                   dest_folder_path, dest_filename, overwrite_flag):
@@ -226,9 +265,13 @@ class ImageManager(object):
         validate_filename(dest_filename)
         # and the extension must be supported
         file_name_extension = get_file_extension(dest_filename)
-        if file_name_extension not in self.get_image_formats():
-            raise ImageError('The file is not a supported image format. ' +
-                             'Supported types are: ' + ', '.join(self.get_image_formats()) + '.')
+        # v4.0 we'll allow uploads of any KNOWN image type, even if it's not
+        # necessarily supported now (then upgrading the back end is always an option)
+        if file_name_extension not in self.get_image_formats(supported_only=False):
+            raise ImageError(
+                'The file is not an allowed image type. '
+                'Allowed types are: ' + ', '.join(self.get_image_formats(False)) + '.'
+            )
 
         # Require upload permission or file admin
         self._permissions.ensure_folder_permitted(
@@ -302,7 +345,7 @@ class ImageManager(object):
 
         # Check the filename first
         file_name_extension = get_file_extension(image_attrs.filename())
-        if file_name_extension not in self.get_image_formats():
+        if file_name_extension not in self.get_image_formats(supported_only=True):
             raise ImageError('The file is not a supported image format')
 
         file_data = get_file_data(image_attrs.filename())
@@ -442,8 +485,8 @@ class ImageManager(object):
                         image_attrs
                     )
                 except ImageError as e:
-                    # Image generation failed. Carry on and cache the fact that it's
-                    # broken so that other clients don't repeatedly try to re-generate.
+                    # Image generation failed. Continue, cache the error so that
+                    # other clients don't repeatedly try to re-generate it.
                     ret_image_data = ImageManager.IMAGE_ERROR_HEADER + str(e)
 
                 # Add it to cache for next time
@@ -574,8 +617,8 @@ class ImageManager(object):
         was an error reading the image.
         """
         try:
-            (width, height) = imagemagick_get_image_dimensions(image_data, image_format)
-            file_properties = imagemagick_get_image_profile_data(image_data, image_format)
+            (width, height) = imaging.get_image_dimensions(image_data, image_format)
+            file_properties = imaging.get_image_profile_data(image_data, image_format)
         except Exception as e:
             self._logger.error('Error reading image properties: %s' % str(e))
             return {}
@@ -612,7 +655,7 @@ class ImageManager(object):
         or (0, 0) if the image type is unsupported or could not be read.
         """
         try:
-            return imagemagick_get_image_dimensions(image_data, image_format)
+            return imaging.get_image_dimensions(image_data, image_format)
         except:
             return (0, 0)
 
@@ -746,6 +789,10 @@ class ImageManager(object):
                 # See if this one is still in the cache
                 base_data = self._cache.get(result_key)
                 if base_data is not None:
+                    # Check that the object is an image and not a cached error message
+                    if (isinstance(base_data, str) and
+                        base_data.startswith(ImageManager.IMAGE_ERROR_HEADER)):
+                        continue
                     # Success
                     return ImageWrapper(base_data, result_attrs, True)
             elif self._settings['DEBUG']:
@@ -920,7 +967,7 @@ class ImageManager(object):
             )
             return
         # Is image large enough to meet the threshold?
-        (w, h) = imagemagick_get_image_dimensions(
+        (w, h) = imaging.get_image_dimensions(
             original_data,
             original_type
         )
@@ -1007,7 +1054,6 @@ class ImageManager(object):
             fill = default_value(new_image_attrs.fill(), '#ffffff')
             cquality = default_value(new_image_attrs.quality(), 0)
             sharpen = default_value(new_image_attrs.sharpen(), 0)
-            rquality = self._settings['IMAGE_RESIZE_QUALITY']
             overlay_src = new_image_attrs.overlay_src()
             overlay_size = default_value(new_image_attrs.overlay_size(), 1.0)
             overlay_pos = new_image_attrs.overlay_pos()
@@ -1094,22 +1140,47 @@ class ImageManager(object):
             icc_profile_data = self._icc_profiles[icc_profile_name][1] if icc_profile_name else None
 
             # Finally, generate a new image from base_image_data
+            image_ops = {
+                'page': page,
+                'width': width,
+                'height': height,
+                'size_fit': autosizefit,
+                'align_h': align_h,
+                'align_v': align_v,
+                'rotation': rotation,
+                'flip': flip,
+                'sharpen': sharpen,
+                'dpi_x': dpi,
+                'dpi_y': dpi,
+                'fill': fill,
+                'top': top,
+                'left': left,
+                'bottom': bottom,
+                'right': right,
+                'crop_fit': autocropfit,
+                'overlay_data': overlay_image_data,
+                'overlay_size': overlay_size,
+                'overlay_pos': overlay_pos,
+                'overlay_opacity': overlay_opacity,
+                'icc_data': icc_profile_data,
+                'icc_intent': icc_profile_intent,
+                'icc_bpc': icc_profile_bpc,
+                'tile': tile_spec,
+                'colorspace': colorspace,
+                'format': iformat,
+                'quality': cquality,
+                'resize_type': self._settings['IMAGE_RESIZE_QUALITY'],
+                'resize_gamma': self._settings['IMAGE_RESIZE_GAMMA_CORRECT'],
+                'strip': strip_info
+            }
             try:
-                return imagemagick_adjust_image(
+                return imaging.adjust_image(
                     base_image_data,
                     base_image_attrs.format(),
-                    page, iformat,
-                    width, height, autosizefit,
-                    align_h, align_v, rotation, flip,
-                    top, left, bottom, right, autocropfit,
-                    fill, rquality, cquality, sharpen,
-                    dpi, strip_info,
-                    overlay_image_data, overlay_size, overlay_pos, overlay_opacity,
-                    icc_profile_data, icc_profile_intent, icc_profile_bpc,
-                    colorspace, tile_spec
+                    image_ops
                 )
             except Exception as e:
-                raise ImageError(str(e))
+                raise ImageError(str(e)) if not self._settings['DEBUG'] else e
         else:
             # There are no attributes to change
             return base_image_data

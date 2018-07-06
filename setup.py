@@ -1,21 +1,21 @@
 import os.path
 from setuptools import setup, find_packages
 
-package_dir = "src/"
+package_dir = "src"
 
 about = {}
-with open(os.path.join(package_dir, "imageserver/__about__.py")) as fp:
+with open(os.path.join(package_dir, "imageserver", "__about__.py")) as fp:
     exec(fp.read(), about)
 
 setup(
-    name=about["__title__"],
+    name=about["__tag__"],
     version=about["__version__"],
-
-    description=about["__summary__"],
+    description=about["__title__"] + ' - ' + about["__summary__"],
     long_description=about["__description__"],
-    license=about["__license__"],
+
     url=about["__uri__"],
     download_url=about["__source_uri__"],
+    license=about["__license__"],
     platforms=about["__platforms__"],
 
     author=about["__author__"],
@@ -23,27 +23,25 @@ setup(
 
     package_dir={"": package_dir},
     packages=find_packages(package_dir, exclude=["tests", "tests.*"]),
+    test_suite="tests",
 
     install_requires=[
-        "qismagick>=3.0.0",
-        "Flask==0.12.2",
-        "pyldap==2.4.45",
+        "Pillow==5.2.0",
+        "Flask==1.0.2",
+        "python-ldap==3.1.0",
         "pylibmc==1.5.2",
-        "psycopg2==2.6.2",
-        "SQLAlchemy==1.1.18",
-        "requests==2.18.4",
-        "psutil==5.4.1",
-        "itsdangerous==0.24",
-        "markdown==2.6.10"
+        "psycopg2==2.7.5",
+        "SQLAlchemy==1.2.8",
+        "requests==2.19.0",
+        "psutil==5.4.6",
+        "markdown==2.6.11"
     ],
 
     setup_requires=[
         "wheel",
-        "nose"
     ],
 
     tests_require=[
-        "mock",
         "coverage",
         "flake8"
     ],

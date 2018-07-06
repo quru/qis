@@ -42,7 +42,7 @@
 	{% if err_msg %}
 		<div class="error">{{ err_msg|newlines }}</div>
 	{% else %}
-		<form id="editform" _method="put" action="{{ url_for('api.admin.image', image_id=db_info.id) }}" >
+		<form id="editform" _method="put" action="{{ url_for('api.admin-image', image_id=db_info.id) }}" >
 			<div>
 				<label>Title:</label>
 				<input type="text" name="title" id="title" value="{{ db_info.title }}" maxlength="255" />

@@ -55,6 +55,7 @@ class LogManager(object):
         server_host - the name or IP address of the logging server
         server_port - the port number of the logging server
 
+        The log functions connect to the logging server automatically.
         Logging can be disabled by providing an empty string for server_host
         and/or 0 for the port number.
         """
@@ -62,14 +63,15 @@ class LogManager(object):
         self.logging_engine = None
         self._host = server_host
         self._port = server_port
-        self.set_name(logger_name)
+        self._client_connect(logger_name)
         self.set_debug_mode(debug_mode)
         # Do not log if we have no host name or port
         self.set_enabled(server_host and (server_port > 0))
 
-    def set_name(self, logger_name):
+    def _client_connect(self, logger_name):
         """
-        Resets the logging client with a new name.
+        (Re-)establishes the connection to the server and sets the logging
+        client name.
         """
         is_disabled = False
         is_debug = False
@@ -86,6 +88,25 @@ class LogManager(object):
         self.logging_engine.addHandler(self.logging_handler)
         self.set_debug_mode(is_debug)
         self.set_enabled(not is_disabled)
+
+    def _client_close(self):
+        """
+        Disconnects from the server. The connection will try to re-establish
+        automatically if a log function is subsequently called.
+        """
+        if self.logging_handler and self.logging_handler.sock:
+            try:
+                self.logging_handler.sock.close()
+            except (IOError, OSError):
+                pass
+            finally:
+                self.logging_handler.sock = None
+
+    def reconnect(self, logger_name):
+        """
+        Resets the connection to the server with a new logging client name.
+        """
+        self._client_connect(logger_name)
 
     def set_enabled(self, enabled):
         self.logging_engine.disabled = not enabled

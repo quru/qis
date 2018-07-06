@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Quru Image Server
 #
@@ -33,10 +32,12 @@
 
 import os
 import shutil
+import unittest
 
 from . import tests as main_tests
-from .tests import BaseTestCase, setup_user_account
 
+from imageserver import __about__
+from imageserver import imaging
 from imageserver.flask_app import app as flask_app
 from imageserver.flask_app import cache_engine as cm
 from imageserver.filesystem_manager import (
@@ -44,12 +45,19 @@ from imageserver.filesystem_manager import (
 )
 
 
-class ImageServerTestsWebPages(BaseTestCase):
+# Module level setUp and tearDown
+def setUpModule():
+    main_tests.init_tests()
+def tearDownModule():
+    main_tests.cleanup_tests()
+
+
+class WebPageTestCase(main_tests.BaseTestCase):
     @classmethod
     def setUpClass(cls):
-        super(ImageServerTestsWebPages, cls).setUpClass()
-        main_tests.init_tests()
-        setup_user_account('webuser', 'none')
+        super(WebPageTestCase, cls).setUpClass()
+        main_tests.setup_user_account('webuser', 'none')
+        main_tests.setup_user_account('admin_webuser', 'admin_all')
 
     # Utility to call a page requiring login, with and without login,
     # returns the response of the requested URL after logging in.
@@ -60,7 +68,7 @@ class ImageServerTestsWebPages(BaseTestCase):
         self.assertEqual(rv.status_code, 302)
         # Login
         if admin_login:
-            self.login('admin', 'admin')
+            self.login('admin_webuser', 'admin_webuser')
         else:
             self.login('webuser', 'webuser')
         # Call the requested page
@@ -70,6 +78,8 @@ class ImageServerTestsWebPages(BaseTestCase):
             self.assertIn(required_text, rv.data.decode('utf8'))
         return rv
 
+
+class WebPageTests(WebPageTestCase):
     # Login page
     def test_login_page(self):
         rv = self.app.get('/login/')
@@ -77,7 +87,7 @@ class ImageServerTestsWebPages(BaseTestCase):
 
     # Login action
     def test_login(self):
-        self.login('admin', 'admin')
+        self.login('admin_webuser', 'admin_webuser')
 
     # Logout action
     def test_logout(self):
@@ -85,12 +95,19 @@ class ImageServerTestsWebPages(BaseTestCase):
 
     # Home page
     def test_index_page(self):
-        from imageserver import __about__
         rv = self.app.get('/')
         self.assertEqual(rv.status_code, 200)
         self.assertIn(
             __about__.__title__ + ' v' + __about__.__version__,
             rv.data.decode('utf8')
+        )
+
+    # About page
+    def test_about_page(self):
+        self.call_page_requiring_login(
+            '/about/',
+            False,
+            'About ' + __about__.__title__
         )
 
     # Help page
@@ -107,7 +124,7 @@ class ImageServerTestsWebPages(BaseTestCase):
 
     # File upload complete page, populated
     def test_file_upload_complete_page(self):
-        self.login('admin', 'admin')
+        self.login('admin_webuser', 'admin_webuser')
         # Copy a test file to upload
         src_file = get_abs_path('test_images/cathedral.jpg')
         dst_file = '/tmp/qis_uploadfile.jpg'
@@ -311,7 +328,7 @@ class ImageServerTestsWebPages(BaseTestCase):
         rv = self.app.get('/account/')
         self.assertEqual(rv.status_code, 200)
         # Logged in, with access
-        self.login('admin', 'admin')
+        self.login('admin_webuser', 'admin_webuser')
         test_pages(200)
         rv = self.app.get('/account/')
         self.assertEqual(rv.status_code, 200)
@@ -320,7 +337,7 @@ class ImageServerTestsWebPages(BaseTestCase):
     def test_template_admin_page(self):
         # test_system_permission_pages() already tests that the pages work
         # so here we test that non-super users cannot edit templates
-        setup_user_account('lister', 'admin_files')
+        main_tests.setup_user_account('lister', 'admin_files')
         self.login('lister', 'lister')
         rv = self.app.get('/admin/templates/')
         self.assertEqual(rv.status_code, 200)
@@ -328,7 +345,7 @@ class ImageServerTestsWebPages(BaseTestCase):
         rv = self.app.get('/admin/templates/1/')
         self.assertEqual(rv.status_code, 200)
         self.assertIn('''id="submit" disabled="disabled"''', rv.data.decode('utf8'))
-        self.login('admin', 'admin')
+        self.login('admin_webuser', 'admin_webuser')
         rv = self.app.get('/admin/templates/')
         self.assertEqual(rv.status_code, 200)
         self.assertIn('delete', rv.data.decode('utf8'))
@@ -345,36 +362,41 @@ class ImageServerTestsWebPages(BaseTestCase):
         )
 
     # Test that the markdown substitutions are working
-    def test_markdown_subs(self):
-        # API help - it's "url = 'http://images.example.com/api/v1/list/'" in the Markdown
+    def test_markdown_subs_api_help(self):
+        # "url = 'http://images.example.com/api/v1/list/'" in the Markdown
+        # should reflect being on 'localhost' after substitutions
         self.call_page_requiring_login(
             '/api/help/',
             False,
             "url = 'http://localhost/api/v1/list/'"
         )
+
+    # Test that the markdown substitutions are working
+    def test_markdown_subs_imaging_help(self):
         # Image help
-        self.login('webuser', 'webuser')
-        rv = self.app.get('/help/')
-        self.assertEqual(rv.status_code, 200)
+        rv = self.call_page_requiring_login('/help/')
+        page_text = rv.data.decode('utf8')
         # Image help - subs //images.example.com/
-        self.assertNotIn('//images.example.com/', rv.data.decode('utf8'))
-        self.assertIn('//localhost/', rv.data.decode('utf8'))
+        self.assertNotIn('//images.example.com/', page_text)
+        self.assertIn('//localhost/', page_text)
         # Image help - subs buildings
-        self.assertNotIn('buildings', rv.data.decode('utf8'))
-        self.assertIn('test_images', rv.data.decode('utf8'))
+        self.assertNotIn('buildings', page_text)
+        self.assertIn('test_images', page_text)
         # Image help - subs quru.png
-        self.assertNotIn('quru.png', rv.data.decode('utf8'))
-        self.assertIn('quru110.png', rv.data.decode('utf8'))
+        self.assertNotIn('quru.png', page_text)
+        self.assertIn('quru110.png', page_text)
         # Image help - subs quru-padded.png
-        self.assertNotIn('quru-padded.png', rv.data.decode('utf8'))
-        self.assertIn('quru470.png', rv.data.decode('utf8'))
+        self.assertNotIn('quru-padded.png', page_text)
+        self.assertIn('quru470.png', page_text)
         # Image help - subs logos
-        self.assertNotIn('logos', rv.data.decode('utf8'))
-        self.assertIn('test_images', rv.data.decode('utf8'))
+        self.assertNotIn('logos', page_text)
+        self.assertIn('test_images', page_text)
         # Image help - subs the server-specific settings placeholder text
-        self.assertNotIn('View this page from within QIS to see the default '
-                         'image settings for your server.', rv.data.decode('utf8'))
-        self.assertIn('The following settings are active on your server.', rv.data.decode('utf8'))
+        self.assertNotIn('View this page from within QIS to see the current '
+                         'image settings for your server.', page_text)
+        self.assertIn('The following settings are active on your server.', page_text)
+        # v4 Basic Edition (as set in unit_tests.py) should include upgrade suggestion
+        self.assertIn('Premium Edition supports a larger number of image types.', page_text)
 
     # The simple viewer help + demo
     def test_simple_viewer_page(self):
@@ -432,3 +454,123 @@ class ImageServerTestsWebPages(BaseTestCase):
         rv_data = rv.data.decode('utf8')
         self.assertIn('not found', rv_data)
         self.assertIn('value of the DEMO_IMAGE_PATH setting', rv_data)
+
+
+# v4 Test pages that have per-edition changes
+class WebPageEditionTests(WebPageTestCase):
+    @classmethod
+    def tearDownClass(cls):
+        super(WebPageEditionTests, cls).tearDownClass()
+        # Restore the configured imaging back end when done
+        main_tests.select_backend(flask_app.config['IMAGE_BACKEND'])
+
+    # The image publish page in standard edition
+    def test_publish_page_standard(self):
+        main_tests.select_backend('pillow')
+        rv = self.call_page_requiring_login('/publish/?src=test_images/cathedral.jpg')
+        rv_data = rv.data.decode('utf8')
+        self.assertIn('only supported in the Premium Edition', rv_data)
+        # Available formats should not include SVG
+        start_idx = rv_data.find('<select name="format"')
+        end_idx = rv_data.find('</select>', start_idx)
+        self.assertTrue(rv_data[start_idx:end_idx], rv_data)
+        self.assertNotIn('svg', rv_data[start_idx:end_idx].lower())
+        # Colour profile should be disabled
+        start_idx = rv_data.find('<select name="icc"')
+        end_idx = rv_data.find('</select>', start_idx)
+        self.assertTrue(rv_data[start_idx:end_idx])
+        self.assertIn('disabled', rv_data[start_idx:end_idx].lower())
+        self.assertIn('disabled_premium', rv_data[start_idx - 100:start_idx].lower())
+
+    # The image publish page in premium edition
+    @unittest.skipIf(not imaging.backend_supported('imagemagick'), 'Premium Edition not available')
+    def test_publish_page_premium(self):
+        main_tests.select_backend('imagemagick')
+        rv = self.call_page_requiring_login('/publish/?src=test_images/cathedral.jpg')
+        rv_data = rv.data.decode('utf8')
+        self.assertNotIn('only supported in the Premium Edition', rv_data)
+        # Available formats SHOULD include SVG
+        start_idx = rv_data.find('<select name="format"')
+        end_idx = rv_data.find('</select>', start_idx)
+        self.assertTrue(rv_data[start_idx:end_idx])
+        self.assertIn('svg', rv_data[start_idx:end_idx].lower())
+        # Colour profile SHOULD NOT be disabled
+        start_idx = rv_data.find('<select name="icc"')
+        end_idx = rv_data.find('</select>', start_idx)
+        self.assertTrue(rv_data[start_idx:end_idx])
+        self.assertNotIn('disabled', rv_data[start_idx:end_idx].lower())
+        self.assertNotIn('disabled_premium', rv_data[start_idx - 100:start_idx].lower())
+
+    # The template admin page in standard edition
+    def test_template_admin_standard(self):
+        main_tests.select_backend('pillow')
+        rv = self.call_page_requiring_login('/admin/templates/1/', True)
+        rv_data = rv.data.decode('utf8')
+        self.assertIn('only supported in the Premium Edition', rv_data)
+        # Available formats should not include SVG
+        start_idx = rv_data.find('<select name="format"')
+        end_idx = rv_data.find('</select>', start_idx)
+        self.assertTrue(rv_data[start_idx:end_idx])
+        self.assertNotIn('svg', rv_data[start_idx:end_idx].lower())
+        # Colour profile should be disabled
+        start_idx = rv_data.find('<select name="icc"')
+        end_idx = rv_data.find('</select>', start_idx)
+        self.assertTrue(rv_data[start_idx:end_idx])
+        self.assertIn('disabled', rv_data[start_idx:end_idx].lower())
+        self.assertIn('disabled_premium', rv_data[start_idx - 100:start_idx].lower())
+
+    # The template admin page in premium edition
+    @unittest.skipIf(not imaging.backend_supported('imagemagick'), 'Premium Edition not available')
+    def test_template_admin_premium(self):
+        main_tests.select_backend('imagemagick')
+        rv = self.call_page_requiring_login('/admin/templates/1/', True)
+        rv_data = rv.data.decode('utf8')
+        self.assertNotIn('only supported in the Premium Edition', rv_data)
+        # Available formats SHOULD include SVG
+        start_idx = rv_data.find('<select name="format"')
+        end_idx = rv_data.find('</select>', start_idx)
+        self.assertTrue(rv_data[start_idx:end_idx])
+        self.assertIn('svg', rv_data[start_idx:end_idx].lower())
+        # Colour profile SHOULD NOT be disabled
+        start_idx = rv_data.find('<select name="icc"')
+        end_idx = rv_data.find('</select>', start_idx)
+        self.assertTrue(rv_data[start_idx:end_idx])
+        self.assertNotIn('disabled', rv_data[start_idx:end_idx].lower())
+        self.assertNotIn('disabled_premium', rv_data[start_idx - 100:start_idx].lower())
+
+    # The public demo page in standard edition
+    def test_demo_page_standard(self):
+        main_tests.select_backend('pillow')
+        flask_app.config['DEMO_IMAGE_PATH'] = 'test_images/cathedral.jpg'
+        flask_app.config['DEMO_OVERLAY_IMAGE_PATH'] = 'test_images/quru470.png'
+        rv = self.app.get('/demo/')
+        self.assertEqual(rv.status_code, 200)
+        rv_data = rv.data.decode('utf8')
+        self.assertIn('only supported in the Premium Edition', rv_data)
+        # Overlay buttons should be disabled
+        start_idx = rv_data.find('>Watermark sm<')
+        self.assertNotEqual(start_idx, -1, rv_data)
+        self.assertIn('disabled_premium', rv_data[start_idx - 200:start_idx].lower())
+        # BMP format should be disabled
+        start_idx = rv_data.find('>BMP<')
+        self.assertNotEqual(start_idx, -1)
+        self.assertIn('disabled_premium', rv_data[start_idx - 200:start_idx].lower())
+
+    # The public demo page in premium edition
+    @unittest.skipIf(not imaging.backend_supported('imagemagick'), 'Premium Edition not available')
+    def test_demo_page_premium(self):
+        main_tests.select_backend('imagemagick')
+        flask_app.config['DEMO_IMAGE_PATH'] = 'test_images/cathedral.jpg'
+        flask_app.config['DEMO_OVERLAY_IMAGE_PATH'] = 'test_images/quru470.png'
+        rv = self.app.get('/demo/')
+        self.assertEqual(rv.status_code, 200)
+        rv_data = rv.data.decode('utf8')
+        self.assertNotIn('only supported in the Premium Edition', rv_data)
+        # Overlay buttons SHOULD NOT be disabled
+        start_idx = rv_data.find('>Watermark sm<')
+        self.assertNotEqual(start_idx, -1)
+        self.assertNotIn('disabled_premium', rv_data[start_idx - 200:start_idx].lower())
+        # BMP format SHOULD NOT be disabled
+        start_idx = rv_data.find('>BMP<')
+        self.assertNotEqual(start_idx, -1)
+        self.assertNotIn('disabled_premium', rv_data[start_idx - 200:start_idx].lower())

@@ -33,8 +33,9 @@ from datetime import datetime, timedelta
 import os.path
 from time import sleep
 
-from flask import abort, make_response, redirect, request, session
+from flask import abort, make_response, render_template, redirect, request, session
 
+from . import imaging
 from .errors import DoesNotExistError
 from .exif import get_exif_geo_position
 from .filesystem_manager import get_upload_directory, get_file_info
@@ -43,7 +44,7 @@ from .filesystem_manager import DirectoryInfo
 from .filesystem_sync import auto_sync_file, auto_sync_folder
 from .flask_app import app, logger
 from .flask_app import cache_engine, data_engine, image_engine, permissions_engine, task_engine
-from .flask_util import external_url_for, internal_url_for, render_template
+from .flask_util import external_url_for, internal_url_for
 from .flask_util import login_point, login_required
 from .image_attrs import ImageAttrs
 from .template_attrs import TemplateAttrs
@@ -57,7 +58,7 @@ from .util import strip_seps
 from .views_util import log_security_error
 
 
-# The "About" page
+# The index page
 @app.route('/')
 def index():
     return render_template(
@@ -140,7 +141,8 @@ def image_help():
     logo_pad_image_attrs = ImageAttrs('test_images/quru470.png')
 
     default_template = image_engine.get_default_template()
-    available_formats = sorted(image_engine.get_image_formats())
+    available_formats = image_engine.get_image_formats(supported_only=True)
+    available_image_ops = image_engine.get_supported_operations()
     available_templates = image_engine.get_template_names()
     available_templates.sort()
     available_iccs = {}
@@ -154,7 +156,9 @@ def image_help():
         formats=available_formats,
         templates=available_templates,
         default_template=default_template,
-        iccs=available_iccs
+        iccs=available_iccs,
+        image_lib=imaging.get_backend(),
+        image_ops=available_image_ops
     )
 
     return _standard_help_page(
@@ -167,8 +171,32 @@ def image_help():
             'quru-padded.png': logo_pad_image_attrs.filename(with_path=False),
             'logos': logo_image_attrs.folder_path(),
             'View this page from within QIS to see the '
-            'default image settings for your server.': default_settings_html
+            'current image settings for your server.': default_settings_html
         }
+    )
+
+
+# The "About" page
+@app.route('/about/')
+@login_required
+def about():
+    default_template = image_engine.get_default_template()
+    all_formats = image_engine.get_image_formats(supported_only=False)
+    available_formats = image_engine.get_image_formats(supported_only=True)
+    available_image_ops = image_engine.get_supported_operations()
+    available_templates = image_engine.get_template_names()
+    available_templates.sort()
+    available_iccs = image_engine.get_icc_profile_names()
+    available_iccs.sort()
+    return render_template(
+        'about.html',
+        formats=available_formats,
+        other_formats=[f for f in all_formats if f not in available_formats],
+        templates=available_templates,
+        default_template=default_template,
+        iccs=available_iccs,
+        image_lib=imaging.get_backend(),
+        image_ops=available_image_ops
     )
 
 
@@ -388,7 +416,7 @@ def browse():
 
         return render_template(
             'list.html',
-            image_formats=image_engine.get_image_formats(),
+            image_formats=image_engine.get_image_formats(supported_only=True),
             pathsep=os.path.sep,
             timezone=get_timezone_code(),
             directory_info=directory_info,
@@ -493,6 +521,7 @@ def publish():
         'publish.html',
         fields=fields,
         field_values=field_values,
+        supported_fields=image_engine.get_supported_operations(),
         include_crop_tool=True,
         include_units_tool=True,
         image_info=image_engine.get_image_properties(src, False),
@@ -732,7 +761,7 @@ def folder_browse():
 
         return render_template(
             'folder_list.html',
-            image_formats=image_engine.get_image_formats(),
+            image_formats=image_engine.get_image_formats(supported_only=True),
             embed=embed,
             msg=msg,
             name=filepath_filename(from_path),
@@ -805,7 +834,9 @@ def playground():
         return render_template(
             'playground.html',
             image_list=image_list,
-            overlay_image=overlay_img_path
+            overlay_image=overlay_img_path,
+            supported_ops=image_engine.get_supported_operations(),
+            supported_formats=image_engine.get_image_formats(supported_only=True)
         )
     except Exception as e:
         log_security_error(e, request)
@@ -830,6 +861,8 @@ def _standard_help_page(template_file, embed=None, extra_subs=None):
     subs = {
         # Replace images.example.com everywhere with the local server name
         '//images.example.com/': server_url,
+        # Replace image references with the static/images URL
+        '(images/': '(' + internal_url_for('static', filename='images/'),
         # Replace cross-document links with working URLs to the equivalent web pages
         'api_help.md': internal_url_for('api.api_help'),
         'image_help.md': internal_url_for('image_help'),

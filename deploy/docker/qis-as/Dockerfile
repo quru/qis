@@ -27,7 +27,7 @@ RUN apt-get update && \
 RUN locale-gen en_GB.UTF-8 && update-locale LANG=en_GB.UTF-8 LC_ALL=en_GB.UTF-8
 
 # Build variables
-ARG QIS_VERSION=3.0.0
+ARG QIS_VERSION=4.0.0
 ARG QIS_USER=qis
 ARG QIS_INSTALL_DIR=/opt/qis
 ARG WEB_USER=www-data
@@ -83,8 +83,6 @@ RUN curl -L "https://github.com/quru/qis/releases/download/v$QIS_VERSION/QIS-lib
     tar -zxvf /tmp/qis-libs.tar.gz && \
     rm /tmp/qis-libs.tar.gz && \
     chown -R $QIS_USER:$QIS_USER lib
-
-# TODO Install qismagick.so package
 
 # Configure Apache
 RUN ln -s /etc/apache2/mods-available/ssl.load /etc/apache2/mods-enabled/ssl.load && \

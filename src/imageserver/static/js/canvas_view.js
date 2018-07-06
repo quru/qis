@@ -570,7 +570,7 @@ ImgGrid.prototype.calcGridTiles = function(width, height, gridLen) {
 		};
 	}
 	else {
-		// This section is based on a port of the server code from qismagick
+		// This section is based on a port of the imaging server code
 		var iGridAxisLen = Math.round(Math.sqrt(gridLen));
 		// Get tile sizes
 		var iTileWidth  = Math.floor(width / iGridAxisLen),

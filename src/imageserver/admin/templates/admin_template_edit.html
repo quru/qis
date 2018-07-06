@@ -1,6 +1,6 @@
 {% extends "admin_base.html" %}
 
-{% from "publish/inc_field_macros.html" import input, help with context %}
+{% from "publish/inc_field_macros.html" import input, help, disp_class with context %}
 
 {% block copyright %}
 <!-- 
@@ -47,7 +47,7 @@
 		<div class="error">{{ err_msg|newlines }}</div>
 	{% else %}
 		{% set form_method = 'put' if template else 'post' %}
-		{% set form_action = url_for('api.admin.template', template_id=template.id) if template else url_for('api.admin.template') %}
+		{% set form_action = url_for('api.admin-template', template_id=template.id) if template else url_for('api.admin-template') %}
 		{% set allow_edit = is_permitted(SystemPermission.PERMIT_SUPER_USER) %}
 		{% set disabled = 'disabled="disabled"'|safe %}
 		
@@ -77,14 +77,28 @@
 			<br/>
 			<h2>Template options</h2>
 			All values are optional and can be left blank.
+			{% if app_edition() == 'Standard' %}
+			Items marked with a
+			<img src="{{ url_for('static', filename='images/icon-premium-16.png') }}" alt="Premium Edition">
+			icon are only supported in the Premium Edition.
+			{% endif %}
 
 			{% include "publish/inc_common_fields.html" %}
 
 			<fieldset class="fieldset_merge subtlebg">
 				<div>
-					<label>Client caching duration:</label>
-					{{ input(fields, field_values, 'expiry_secs') }} seconds
+					<label>Client caching duration</label>
+					{{ input(fields, field_values, supported_fields, 'expiry_secs') }} seconds
 					{{ help('option_expires') }}
+				</div>
+			</fieldset>
+
+			<fieldset>
+				<div>
+					<label></label>
+					<input type="button" id="cancel2" value="Cancel">
+					<input type="submit" id="submit2" {{ disabled if not allow_edit }}
+					       value="&nbsp;Apply&nbsp;">
 				</div>
 			</fieldset>
 		</form>

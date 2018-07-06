@@ -17,7 +17,7 @@ has been re-compiled for the Python 3, e.g. `qismagick-3.0.0-cp35-cp35m-linux_x8
 
 Install new packages:
 
-	$ sudp apt-get remove libapache2-mod-wsgi
+	$ sudo apt-get remove libapache2-mod-wsgi
 	$ sudo apt-get install -y python3 libapache2-mod-wsgi-py3 python3-pip
 
 ### CentOS 7

@@ -30,6 +30,8 @@
 #
 
 import os
+import signal
+
 import flask
 from . import __about__
 
@@ -101,6 +103,25 @@ def configure_app(app):
             configs_used.append(env_settings)
 
     app.config['_SETTINGS_IN_USE'] = ' + '.join(configs_used)
+
+
+def reconfigure_app_for_imaging_backend(app):
+    """
+    Disables and warns about settings enabled in app.config that are not supported
+    by the installed imaging back end.
+    """
+    supported_files = app.image_engine.get_image_formats(supported_only=True)
+    supported_ops = app.image_engine.get_supported_operations()
+    if app.config['IMAGE_RESIZE_GAMMA_CORRECT'] and not supported_ops.get('resize_gamma', False):
+        app.config['IMAGE_RESIZE_GAMMA_CORRECT'] = False
+        app.log.warning(
+            'Disabled IMAGE_RESIZE_GAMMA_CORRECT as it is not supported by the imaging library'
+        )
+    if app.config['PDF_BURST_TO_PNG'] and 'pdf' not in supported_files:
+        app.config['PDF_BURST_TO_PNG'] = False
+        app.log.warning(
+            'Disabled PDF_BURST_TO_PNG as it is not supported by the imaging library'
+        )
 
 
 # Create main web app
@@ -198,6 +219,8 @@ with app.app_context():
             logger
         )
         app.image_engine = image_engine
+        # v4.0 Adjust configuration for supported imaging operations
+        reconfigure_app_for_imaging_backend(app)
 
         # Import app views and template filters
         from . import views                                      # @UnusedImport
@@ -228,18 +251,23 @@ with app.app_context():
         raise
 
 
-# Auto-start the aux processes when web requests come in. When this module is
-# imported from other places (e.g. unit tests, the aux processes themselves),
-# call launch_aux_processes() as required.
 @app.before_first_request
 def on_first_request():
-    _launch_aux_processes(['stats', 'tasks'])  # logs already started above
+    """
+    Auto-starts the aux processes when the first web request comes in.
+    When this module is imported from other places (e.g. from tests, or the
+    aux processes themselves), use launch_aux_processes() instead.
+    """
+    _launch_aux_processes(['stats', 'tasks'])  # logging already started above
 
 
-# Manually starts the aux processes outside of a web server context
-def launch_aux_processes():
+def launch_aux_processes(service_list='all'):
+    """
+    Manually starts one or all of the aux processes
+    (default ['logging', 'stats', 'tasks']) outside of a web server context.
+    """
     with app.app_context():
-        _launch_aux_processes()
+        _launch_aux_processes(service_list)
 
 
 def _launch_aux_processes(service_list='all'):
@@ -247,7 +275,7 @@ def _launch_aux_processes(service_list='all'):
     app.data_engine._reset_pool()
     app.cache_engine._reset_pool()
     # ...spawn the requested services
-    if (service_list == 'all') or ('logs' in service_list):
+    if (service_list == 'all') or ('logging' in service_list):
         LogManager.run_server(
             app.config['LOGGING_SERVER'],
             app.config['LOGGING_SERVER_PORT'],
@@ -266,3 +294,27 @@ def _launch_aux_processes(service_list='all'):
             app.config['TASK_SERVER_PORT'],
             app.config['DEBUG']
         )
+
+
+def _stop_aux_processes(service_list='all', nicely=True):
+    """
+    Manually stops one or all of the aux processes
+    (default ['logging', 'stats', tasks']) if they are running locally.
+    Ignores any errors and does not check that the PID numbers in the PID
+    files are actually child processes of this process.
+
+    Unlike launch_aux_processes(), this method is "private" because the only
+    safe(ish) use of it is during development and testing.
+    """
+    from imageserver.auxiliary import util as aux_util
+
+    if service_list == 'all':
+        service_list = ['tasks', 'stats', 'logging']
+    use_signal = signal.SIGTERM if nicely else signal.SIGKILL
+    for proc_name in service_list:
+        try:
+            last_pid = aux_util.get_pid(proc_name)
+            if last_pid:
+                os.kill(int(last_pid), use_signal)
+        except (IOError, OSError):
+            pass

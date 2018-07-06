@@ -800,7 +800,7 @@ api_add_url_rules([
 
 # Define portfolio content API views
 _papi_portfoliocontent_views = api_permission_required(
-    PortfolioContentAPI.as_view('portfolio.content'),
+    PortfolioContentAPI.as_view('portfolio-content'),
     require_login=False
 )
 api_add_url_rules([
@@ -820,7 +820,7 @@ api_add_url_rules([
 
 # Define portfolio reordering API views
 _papi_portfolioreorder_views = api_permission_required(
-    PortfolioReorderAPI.as_view('portfolio.reorder'),
+    PortfolioReorderAPI.as_view('portfolio-reorder'),
     require_login=False  # Could be True but would be the only URL returning HTTP 401
 )
 api_add_url_rules([
@@ -833,7 +833,7 @@ api_add_url_rules([
 
 # Define portfolio export API views
 _papi_portfolioexport_views = api_permission_required(
-    PortfolioExportAPI.as_view('portfolio.export'),
+    PortfolioExportAPI.as_view('portfolio-export'),
     require_login=False
 )
 api_add_url_rules([

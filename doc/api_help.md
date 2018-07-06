@@ -6,6 +6,9 @@ software developers can integrate QIS into their own web sites and imaging solut
 The API consists a number of HTTP [RESTful web services](https://en.wikipedia.org/wiki/Representational_state_transfer#RESTful_web_services),
 most of which return data in the [JSON](https://www.json.org/) format.
 
+Features labelled with the ![Premium Edition](images/icon-premium-16.png) icon are only
+available in the Premium Edition, they are ignored in the Basic Edition.
+
 ## Contents
 
 * [About JSON](#json)
@@ -1615,10 +1618,14 @@ as described in the [imaging guide](image_help.md#option_tmp).
 * For `POST` and `PUT`:
 	* `name` - Mandatory, text - A unique name for the template
 	* `description` - Mandatory, text - A description for the template
-	* `template` - Mandatory, JSON text - A set of field/value-object pairs
-	    that define the preset imaging operations. See the examples below for
-	    the list of possible field names. Fields to remain unchanged can either
-	    have their values set to `null` or simply be omitted from the JSON.
+	* `template` - Mandatory, JSON text - A set of parameter-name/value-object
+	    pairs that define the imaging operations to apply. See the examples below
+			for the list of possible parameter names. Operations to be skipped can 
+			either have their values set to `null` or simply be omitted from the JSON.
+
+![Premium Edition](images/icon-premium-16.png) The template JSON can contain any
+parameter name that is valid in the Premium Edition. When used in the Basic Edition,
+any unsupported parameters are simply ignored by the imaging engine.
 
 ### Permissions required
 * None for `GET`
@@ -1653,7 +1660,7 @@ more recent versions of the software.
 	      "crop_fit": { "value": false },
 	      "dpi_x": { "value": null },
 	      "dpi_y": { "value": null },
-	      "expiry_secs": { "value": null },
+	      "expiry_secs": { "value": 604800 },
 	      "fill": { "value": "#ffffff" },
 	      "flip": { "value": "" },
 	      "format": { "value": "jpg" },
@@ -1668,7 +1675,7 @@ more recent versions of the software.
 	      "overlay_src": { "value": "" },
 	      "page": { "value": null },
 	      "quality": { "value": 80 },
-	      "record_stats": { "value": false },
+	      "record_stats": { "value": true },
 	      "right": { "value": null },
 	      "rotation": { "value": null },
 	      "sharpen": { "value": null },
@@ -1685,7 +1692,7 @@ more recent versions of the software.
 
 	$ curl -X POST -u <token>:unused -F 'name=grey-thumb' \
 	       -F 'description=Defines a greyscale thumbnail with a black fill' \
-	       -F 'template={ "colorspace":{"value":"grey"}, "width":{"value":400}, "height":{"value":400}, "fill":{"value":"black"} }' \
+	       -F 'template={ "colorspace":{"value":"gray"}, "width":{"value":400}, "height":{"value":400}, "fill":{"value":"black"} }' \
 	       'https://images.example.com/api/v1/admin/templates/'
 	{
 	  "data": {
@@ -1693,7 +1700,7 @@ more recent versions of the software.
 	    "id": 3,
 	    "name": "grey-thumb",
 	    "template": {
-	      "colorspace": { "value": "grey" },
+	      "colorspace": { "value": "gray" },
 	      "fill": { "value": "black" },
 	      "height": { "value": 400 },
 	      "width": { "value": 400 }

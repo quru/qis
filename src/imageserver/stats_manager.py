@@ -56,6 +56,7 @@ class StatsManager(object):
         server_host  - the name or IP address of the stats server
         server_port  - the port number of the stats server
 
+        The log functions connect to the stats server automatically.
         Statistics can be disabled by providing an empty string for server_host
         and/or 0 for the port number.
         """
@@ -70,8 +71,9 @@ class StatsManager(object):
 
     def _client_connect(self):
         """
-        Re-connects the connection to the server, if it is not connected
-        and RECONNECT_WAIT_SECS seconds have passed since the last attempt.
+        (Re-)establishes the connection to the server, if RECONNECT_WAIT_SECS
+        seconds have passed since the last attempt.
+        Only one thread at a time should try to connect.
         """
         now_secs = int(time.time())
         if (now_secs - self._sock_last_connect >= RECONNECT_WAIT_SECS):
@@ -89,28 +91,36 @@ class StatsManager(object):
 
     def _client_close(self):
         """
-        Disconnects from the the server.
+        Disconnects from the server. The connection will try to re-establish
+        automatically if a log function is subsequently called.
         """
         if self._sock is not None:
             try:
                 self._sock.close()
-            except:
+            except (IOError, OSError):
                 pass
-        self._sock = None
+            finally:
+                self._sock = None
 
     def _send(self, data):
         """
         Internal function that sends an object to the stats server.
         Returns a boolean indicating success.
+        Due to TCP buffering it is possible for a few objects to be accepted
+        for sending (and returning success) after the remote end of the connection
+        has actually been closed.
         """
         if not self._enabled:
             return False
 
         try:
+            # Auto-connect when required
             if not self._sock:
-                self._client_connect()
-                if not self._sock:
-                    return False
+                with self._sock_lock:       # one thread at a time
+                    if not self._sock:      # if another thread didn't connect
+                        self._client_connect()
+                        if not self._sock:  # if this thread didn't connect
+                            return False
 
             with self._sock_lock:
                 self._sock.send(bytes(json.dumps(data) + "\r\n", "utf8"))
@@ -118,7 +128,8 @@ class StatsManager(object):
 
         except Exception as e:
             self._logger.error('Connection to stats server failed: ' + str(e))
-            self._client_close()
+            with self._sock_lock:
+                self._client_close()
             return False
 
     def set_enabled(self, enabled):

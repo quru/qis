@@ -1,3 +1,4 @@
 <input type="number" name="{{ web_name }}" id="publish_field_{{ key }}" class="publish_field"
        min="{{ validator.min }}" max="{{ validator.max }}"
-       value="{{ default }}" placeholder="{{ placeholder }}" step="0.00001" autocomplete="off">
+       value="{{ default }}" placeholder="{{ placeholder }}" step="0.00001"
+       autocomplete="off" {% if not enabled %}disabled="disabled"{% endif %}>

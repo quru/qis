@@ -71,7 +71,7 @@
 			<td>
 				{% if is_permitted(SystemPermission.PERMIT_ADMIN_PERMISSIONS) and
 				      group.group_type != GROUP_TYPE_SYSTEM %}
-				<form id="delform_{{ group.id }}" class="delform" action="{{ url_for('api.admin.group', group_id=group.id) }}" _method="delete">
+				<form id="delform_{{ group.id }}" class="delform" action="{{ url_for('api.admin-group', group_id=group.id) }}" _method="delete">
 					<input type="hidden" name="del_name" value="{{ group.name }}" />
 					(<a class="action" href="#" onclick="return submitParentForm(this)">delete</a>)
 				</form>

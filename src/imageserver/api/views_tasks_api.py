@@ -151,7 +151,7 @@ class TaskAPI(MethodView):
 
 # Add URL routing and minimum required system permissions
 
-_tapi_task_views = api_permission_required(TaskAPI.as_view('admin.task'))
+_tapi_task_views = api_permission_required(TaskAPI.as_view('admin-task'))
 api_add_url_rules(
     [url_version_prefix + '/admin/tasks/<int:task_id>/',
      '/admin/tasks/<int:task_id>/'],

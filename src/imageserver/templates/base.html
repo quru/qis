@@ -16,6 +16,7 @@
 				&nbsp;|&nbsp;&nbsp;
 				<div id="help_action_menu" class="action_menu border shadow fix_right">
 					<ul>
+						<li><a href="{{ url_for('about') }}">About</a></li>
 						<li><a href="{{ url_for('overview_help') }}">Introduction and overview</a></li>
 						<li><a href="{{ url_for('image_help') }}">Imaging user's guide</a></li>
 						<li><a href="{{ url_for('api.api_help') }}">REST API user's guide</a></li>
@@ -24,9 +25,9 @@
 						<li><a href="{{ url_for('simple_view_help') }}">JavaScript - simple viewer</a> (<a href="{{ url_for('simple_view_index') }}">demo</a>)</li>
 						<li><a href="{{ url_for('canvas_view_help') }}">JavaScript - HTML5 viewer</a> (<a href="{{ url_for('canvas_view_index') }}">demo</a>)</li>
 						<li><a href="{{ url_for('gallery_view_help') }}">JavaScript - gallery viewer</a> (<a href="{{ url_for('gallery_view_index') }}">demo</a>)</li>
-						<li><a href="{{ url_for('slideshow_view_help') }}">JavaScript - image slideshow</a> (<a href="{{ url_for('slideshow_view_index') }}">demo</a>)</li>
+						<li><a href="{{ url_for('slideshow_view_help') }}">JavaScript - slideshow</a> (<a href="{{ url_for('slideshow_view_index') }}">demo</a>)</li>
 						<!-- Playground -->
-						{% if config.DEMO_IMAGE_PATH %}
+						{% if settings.DEMO_IMAGE_PATH %}
 						<li class="spacer">&nbsp;</li>
 						<li><a href="{{ url_for('playground') }}">Image playground</a></li>
 						{% endif %}

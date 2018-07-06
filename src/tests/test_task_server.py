@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Quru Image Server
 #
@@ -33,19 +32,21 @@
 from datetime import datetime, timedelta
 import time
 
-import tests.tests as main_tests
+from . import tests as main_tests
 
 from imageserver.flask_app import data_engine as dm
 from imageserver.flask_app import task_engine as tm
 from imageserver.models import SystemStats, Task
 
 
-class TaskServerTests(main_tests.FlaskTestCase):
-    @classmethod
-    def setUpClass(cls):
-        super(TaskServerTests, cls).setUpClass()
-        main_tests.init_tests()
+# Module level setUp and tearDown
+def setUpModule():
+    main_tests.init_tests()
+def tearDownModule():
+    main_tests.cleanup_tests()
 
+
+class TaskServerTests(main_tests.FlaskTestCase):
     def test_task_server(self):
         # Create some stats
         t_now = datetime.utcnow()

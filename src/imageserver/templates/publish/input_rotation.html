@@ -1,4 +1,5 @@
-<select name="{{ web_name }}_choices" id="publish_field_{{ key }}_choices" autocomplete="off">
+<select name="{{ web_name }}_choices" id="publish_field_{{ key }}_choices"
+        autocomplete="off" {% if not enabled %}disabled="disabled"{% endif %}>
 	<option value=""    {% if not default %}selected{% endif %}>None</option>
 	<option value="-90" {% if default == -90 %}selected{% endif %}>90&deg; left</option>
 	<option value="90"  {% if default == 90 %}selected{% endif %}>90&deg; right</option>

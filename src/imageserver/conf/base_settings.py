@@ -19,37 +19,48 @@ APPLICATION_ROOT = "/"
 # Whether to default image URLs to http or https
 PREFERRED_URL_SCHEME = "http"
 
-# Debug mode (do not enable this in production)
-DEBUG = False
-
 # Benchmark mode (do not enable this in production)
 BENCHMARKING = False
 
 # Session encryption key. Set your own in local_settings.py and KEEP IT SECRET!
 SECRET_KEY = "\xc7\x9b\xed9Q\x89\xb0\x19\xad\x80\x85+r\xaat:U#\x9bi\xc9\x99zY"
 
-# Supported image formats, as lower case file extension: (name, mime type).
-# Note it is the server's build of ImageMagick that determines which
-# formats are actually supported.
+# Which imaging back-end to load (new in v4.0).
+# Use 'pillow' for basic imaging, 'imagemagick' for premium imaging
+# (requires qismagick.so), or 'auto' for automatic detection/selection.
+IMAGE_BACKEND = 'auto'
+
+# Allowed image types, in the format {file extension: (name, mime type), ...}.
+# Only the image types in this list will be allowed to be uploaded and displayed
+# in the admin area. Note it is the imaging back-end that determines which formats
+# are actually supported. In the case of ImageMagick, the build flags and installed
+# delegate libraries also affect this (e.g. how well SVG is supported).
 IMAGE_FORMATS = {
+    # Common image files - Pillow or ImageMagick
+    "gif": ("GIF image", "image/gif"),
+    "jpg": ("JPEG image", "image/jpeg"),
+    "jpe": ("JPEG image", "image/jpeg"),
+    "jfif": ("JPEG image", "image/jpeg"),
+    "jif": ("JPEG image", "image/jpeg"),
+    "jpeg": ("JPEG image", "image/jpeg"),
+    "pjpg": ("Progressive JPEG image", "image/jpeg"),   # virtual format
+    "pjpeg": ("Progressive JPEG image", "image/jpeg"),  # virtual format
+    "png": ("PNG image", "image/png"),
+    "tif": ("TIFF image", "image/tiff"),
+    "tiff": ("TIFF image", "image/tiff"),
+
+    # Extra image files - requires qismagick.so
     "bmp": ("Bitmap image", "image/bmp"),
     "dcm": ("DICOM image", "application/dicom"),
-    "gif": ("GIF image", "image/gif"),
     "eps": ("Encapsulated PostScript", "application/postscript"),
-    "jpg": ("JPEG image", "image/jpeg"),
-    "jpeg": ("JPEG image", "image/jpeg"),
-    "pjpg": ("Progressive JPEG image", "image/jpeg"),
-    "pjpeg": ("Progressive JPEG image", "image/jpeg"),
     "pdf": ("PDF file", "application/pdf"),
-    "png": ("PNG image", "image/png"),
     "ppm": ("Portable PixMap image", "image/x-portable-pixmap"),
     "psd": ("Photoshop image", "image/psd"),
     "svg": ("SVG image", "image/svg+xml"),
     "tga": ("Truevision TARGA image", "image/tga"),
-    "tif": ("TIFF image", "image/tiff"),
-    "tiff": ("TIFF image", "image/tiff"),
     "xcf": ("GIMP image", "image/xcf"),
 
+    # RAW image files - requires qismagick.so
     "arw": ("Sony Alpha RAW image", "image/arw"),
     "cr2": ("Canon RAW image", "image/cr2"),
     "mrw": ("Minolta RAW image", "image/mrw"),
@@ -62,8 +73,12 @@ IMAGE_FORMATS = {
     "x3f": ("Sigma RAW image", "image/x3f"),
 }
 
-# Resize algorithm (1 fast/good, 2 better, 3 slow/best)
+# Resize algorithm (1 fastest/good, 2 better, 3 slowest/best)
 IMAGE_RESIZE_QUALITY = 3
+# Whether to gamma correct sRGB images when resizing. Should be True for the
+# best image quality. Adds a small overhead with the ImageMagick back-end but
+# incurs a heavy performance penalty with the Pillow back-end.
+IMAGE_RESIZE_GAMMA_CORRECT = True
 
 # Maximum image width/height parameter value to accept
 # E.g. 15k x 15k x 32bpp = 900MB memory required for processing
@@ -151,9 +166,9 @@ LOGGING_BASE_DIR = INSTALL_DIR + "logs/"
 # Prefix the name with a single dot/period to hide it in the admin interface.
 FOLIO_EXPORTS_DIR = ".folio_exports"
 
-# The path where temporary imaging files are stored.
-# Old temporary files will be periodically deleted.
-TEMP_DIR = "/tmp"
+# A path where temporary imaging files can be created, or an empty string to
+# use the operating system's default directory (e.g. "/tmp").
+TEMP_DIR = ""
 
 # Whether to allow alphanumeric unicode characters in filenames.
 # If False, all file names are coerced to the nearest ASCII equivalents.

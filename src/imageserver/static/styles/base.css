@@ -276,6 +276,25 @@ img.disabled {
 	filter: alpha(opacity=60);
 }
 
+.disabled_premium {
+	color: #888888;
+}
+.disabled_premium.highlight,
+.disabled_premium .highlight {
+	color: #ff7777;
+}
+label.disabled_premium::after,
+button.disabled_premium::after {
+	content: "";
+	display: inline-block;
+	background-image: url("../images/icon-premium-16.png");
+	background-position: center;
+	background-repeat: no-repeat;
+	width: 16px;
+	height: 16px;
+	margin-left: 4px;
+	vertical-align: middle;
+}
 .subtlebg {
 	background-color: #f0f0f0;  /* same as tr.odd */
 }
@@ -293,6 +312,9 @@ a:hover .highlight {
 
 .center {
 	text-align: center;
+}
+.vmiddle {
+	vertical-align: middle;
 }
 .left {
 	text-align: left;
@@ -412,6 +434,19 @@ a:hover .highlight {
 .dropzone.active {
 	color: black;
 	border: 4px black dashed;
+}
+
+.padded_table td {
+	padding: 0.1em 1em 0.1em 1em;
+}
+.padded_table.border td {
+	border-bottom: 1px solid #bbbbbb;
+}
+.padded_table.border tr:last-child td {
+	border-bottom: none;
+}
+.padded_table .inline_table td {
+	padding-left: 0;
 }
 
 /* Base template styles

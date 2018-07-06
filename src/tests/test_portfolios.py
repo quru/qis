@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Quru Image Server
 #
@@ -37,6 +36,7 @@ import zipfile
 from datetime import datetime, timedelta
 
 from . import tests as main_tests
+from . import test_imaging as imaging_tests
 
 from imageserver.flask_app import app as flask_app
 from imageserver.flask_app import data_engine as dm
@@ -58,11 +58,17 @@ from imageserver.models import (
 from imageserver.util import AttrObject, to_iso_datetime
 
 
+# Module level setUp and tearDown
+def setUpModule():
+    main_tests.init_tests()
+def tearDownModule():
+    main_tests.cleanup_tests()
+
+
 class PortfoliosAPITests(main_tests.BaseTestCase):
     @classmethod
     def setUpClass(cls):
         super(PortfoliosAPITests, cls).setUpClass()
-        main_tests.init_tests()
         assert 'test' in flask_app.config['FOLIO_EXPORTS_DIR'], \
             'Testing settings have not been applied, main_tests should do this!'
         # Preload all the API code as some of these tests need consistent run times
@@ -713,7 +719,7 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
             self.assertEqual(entries[1].filename, 'image2.png')
             for fname in ['image1.png', 'image2.png']:
                 img_file = exzip.open(fname, 'r')
-                png_dims = main_tests.get_png_dimensions(img_file.read())
+                png_dims = imaging_tests.get_png_dimensions(img_file.read())
                 self.assertEqual(png_dims[0], 100)
         finally:
             exzip.close()

@@ -25,13 +25,16 @@ This template applies the following settings:
 {% set template_show_blank=False %}
 {% include "inc_template_ul.html" %}
 
-<p>PDF files will be converted to images at <code>{{ settings.PDF_BURST_DPI }}</code> DPI by default.</p>
+<p>
+	<img src="{{ url_for('static', filename='images/icon-premium-16.png') }}" alt="Premium Edition"> 
+	PDF files will be converted to images at <code>{{ settings.PDF_BURST_DPI }}</code> DPI by default.
+</p>
 
 <h3>Public width and height limits</h3>
 Public-facing images can optionally be restricted in size when requested by unknown, untrusted users.
 <p>
 {% if not settings.PUBLIC_MAX_IMAGE_WIDTH and not settings.PUBLIC_MAX_IMAGE_HEIGHT %}
-	Currently no limit is defined, and unknown users can access full versions of public-facing images.
+	Currently no limit is defined, and unknown users can access full sized versions of public-facing images.
 {% elif settings.PUBLIC_MAX_IMAGE_WIDTH and settings.PUBLIC_MAX_IMAGE_HEIGHT %}
 	Currently unknown users will be denied image requests larger than
 	width <code>{{ settings.PUBLIC_MAX_IMAGE_WIDTH }}</code>
@@ -55,35 +58,38 @@ Public-facing images can optionally be restricted in size when requested by unkn
 The following image formats are available for you to use:
 <p>
 <code>
-	{% for f in formats %}
-		{{ f }}{% if not loop.last %}, {% endif %}
+	{% if formats %}
+		{{ formats|join(', ') }}
 	{% else %}
 		None
-	{% endfor %}
+	{% endif %}
 </code>
 </p>
+{% if app_edition() == 'Standard' %}
+<img src="{{ url_for('static', filename='images/icon-premium-16.png') }}" alt="Premium Edition"> 
+Premium Edition supports a larger number of image types.
+{% endif %}
 
 <h3>Available image templates</h3>
 The following templates are available for you to use:
 <p>
 <code>
-	{% for t in templates %}
-		{{ t }}{% if not loop.last %}, {% endif %}
+	{% if templates %}
+		{{ templates|join(', ') }}
 	{% else %}
 		None
-	{% endfor %}
+	{% endif %}
 </code>
 </p>
 
 <h3>Available ICC profiles</h3>
+<img src="{{ url_for('static', filename='images/icon-premium-16.png') }}" alt="Premium Edition"> 
 The following ICC profiles are available for you to use:
 {% for colorspace in iccs %}
 	<p>
-		<i>{{ colorspace }}:</i>&nbsp;&nbsp;{% if loop.last %}&nbsp;&nbsp;{% endif %}
+		<i>{{ colorspace }}:</i>&nbsp;&nbsp;
 		<code>
-			{% for name in iccs[colorspace] %}
-				{{ name }}{% if not loop.last %}, {% endif %}
-			{% endfor %}
+			{{ iccs[colorspace]|join(', ') }}
 		</code>
 	</p>
 {% else %}

@@ -7,9 +7,6 @@
 # Yes we are
 TESTING = True
 
-# Test the production code
-DEBUG = False
-
 # Tests run locally
 PUBLIC_HOST_NAME = "localhost"
 
@@ -19,8 +16,12 @@ CACHE_DATABASE_POOL_SIZE = 2
 MGMT_DATABASE_CONNECTION = "postgresql+psycopg2:///qis-mgmt-test"
 MGMT_DATABASE_POOL_SIZE = 2
 
+# Use the Pillow imaging back end by default
+IMAGE_BACKEND = 'pillow'
+PDF_BURST_TO_PNG = False
+
 # Set testing image directories
-INSTALL_DIR = "../"
+INSTALL_DIR = ""
 DOCS_BASE_DIR = INSTALL_DIR + "doc/"
 ICC_BASE_DIR = INSTALL_DIR + "icc/"
 IMAGES_BASE_DIR = INSTALL_DIR + "images/"
@@ -28,10 +29,6 @@ LOGGING_BASE_DIR = INSTALL_DIR + "logs/"
 
 # Export portfolios to a separate directory that is safe to delete
 FOLIO_EXPORTS_DIR = '.test_folio_exports'
-
-# Test automatic PDF bursting
-PDF_BURST_TO_PNG = True
-PDF_BURST_DPI = 150
 
 # Don't run stats tidy tasks
 STATS_KEEP_DAYS = 0

@@ -29,10 +29,12 @@
 # =========  ====  ============================================================
 #
 
+from flask import render_template
+
 from imageserver.api_util import create_api_error_dict
 from imageserver.errors import DoesNotExistError
 from imageserver.flask_app import app, data_engine, permissions_engine
-from imageserver.flask_util import login_required, render_template
+from imageserver.flask_util import login_required
 from imageserver.models import FolderPermission, FolioPermission
 from imageserver.portfolios import blueprint
 from imageserver.session_manager import get_session_user

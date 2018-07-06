@@ -748,7 +748,7 @@ def _check_for_user_lockout(original_object):
 # Add URL routing and minimum required system permissions
 #          (some classes add further permission checking)
 
-_dapi_image_views = api_permission_required(ImageAPI.as_view('admin.image'))
+_dapi_image_views = api_permission_required(ImageAPI.as_view('admin-image'))
 api_add_url_rules(
     [url_version_prefix + '/admin/images/<int:image_id>/',
      '/admin/images/<int:image_id>/'],
@@ -756,7 +756,7 @@ api_add_url_rules(
     methods=['GET', 'PUT']
 )
 
-_dapi_user_views = _user_api_permission_required(UserAPI.as_view('admin.user'))
+_dapi_user_views = _user_api_permission_required(UserAPI.as_view('admin-user'))
 api_add_url_rules(
     [url_version_prefix + '/admin/users/',
      '/admin/users/'],
@@ -770,7 +770,7 @@ api_add_url_rules(
     methods=['GET', 'PUT', 'DELETE']
 )
 
-_dapi_group_views = api_permission_required(GroupAPI.as_view('admin.group'),
+_dapi_group_views = api_permission_required(GroupAPI.as_view('admin-group'),
                                             required_flag=SystemPermissions.PERMIT_ADMIN_USERS)
 api_add_url_rules(
     [url_version_prefix + '/admin/groups/',
@@ -785,7 +785,7 @@ api_add_url_rules(
     methods=['GET', 'PUT', 'DELETE']
 )
 
-_dapi_usergroup_views = api_permission_required(UserGroupAPI.as_view('admin.usergroup'),
+_dapi_usergroup_views = api_permission_required(UserGroupAPI.as_view('admin-usergroup'),
                                                 required_flag=SystemPermissions.PERMIT_ADMIN_USERS)
 api_add_url_rules(
     [url_version_prefix + '/admin/groups/<int:group_id>/members/',
@@ -800,7 +800,7 @@ api_add_url_rules(
     methods=['DELETE']
 )
 
-_dapi_fperm_views = api_permission_required(FolderPermissionAPI.as_view('admin.folderpermission'),
+_dapi_fperm_views = api_permission_required(FolderPermissionAPI.as_view('admin-folderpermission'),
                                             required_flag=SystemPermissions.PERMIT_ADMIN_PERMISSIONS)
 api_add_url_rules(
     [url_version_prefix + '/admin/permissions/',
@@ -815,7 +815,7 @@ api_add_url_rules(
     methods=['GET', 'PUT', 'DELETE']
 )
 
-_dapi_template_views = api_permission_required(TemplateAPI.as_view('admin.template'))
+_dapi_template_views = api_permission_required(TemplateAPI.as_view('admin-template'))
 api_add_url_rules(
     [url_version_prefix + '/admin/templates/',
      '/admin/templates/'],
@@ -829,7 +829,7 @@ api_add_url_rules(
     methods=['GET', 'PUT', 'DELETE']
 )
 
-_dapi_property_views = api_permission_required(PropertyAPI.as_view('admin.property'),
+_dapi_property_views = api_permission_required(PropertyAPI.as_view('admin-property'),
                                                required_flag=SystemPermissions.PERMIT_SUPER_USER)
 api_add_url_rules(
     [url_version_prefix + '/admin/properties/<property_id>/',

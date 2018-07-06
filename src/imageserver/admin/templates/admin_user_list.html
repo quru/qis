@@ -62,7 +62,7 @@
 			<td><a class="popuplink" href="{{ edit_url }}">{{ user.email }}</a></td>
 			<td>
 				{% if user.id != 1 and user.status != 0 %}
-				<form id="delform_{{ user.id }}" class="delform" action="{{ url_for('api.admin.user', user_id=user.id) }}" _method="delete">
+				<form id="delform_{{ user.id }}" class="delform" action="{{ url_for('api.admin-user', user_id=user.id) }}" _method="delete">
 					<input type="hidden" name="del_name" value="{{ user.get_full_name() }}" />
 					(<a class="action" href="#" onclick="return submitParentForm(this)">delete</a>)
 				</form>

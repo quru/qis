@@ -309,6 +309,6 @@
 	<input type="hidden" id="image_folder_path" value="{{ path }}" />
 	<input type="hidden" id="path_sep" value="{{ pathsep }}" />
 	{% if db_info %}
-	<input type="hidden" id="image_admin_url" value="{{ url_for('api.admin.file.image', image_id=db_info.id) }}" />
+	<input type="hidden" id="image_admin_url" value="{{ url_for('api.admin-file-image', image_id=db_info.id) }}" />
 	{% endif %}
 {% endblock %}

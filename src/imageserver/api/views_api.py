@@ -163,12 +163,12 @@ def imagelist():
 
         # Create the response
         file_list = directory_info.contents()
-        img_types = image_engine.get_image_formats()
+        supported_img_types = image_engine.get_image_formats(supported_only=True)
         base_folder = add_sep(directory_info.name())
         for f in file_list:
             # v2.6.4 Return unsupported files too. If you want to reverse this change,
             # the filtering needs to be elsewhere for 'start' and 'limit' to work properly
-            supported_file = get_file_extension(f['filename']) in img_types
+            supported_file = get_file_extension(f['filename']) in supported_img_types
             file_path = base_folder + f['filename']
             file_url = (
                 external_url_for('image', src=file_path, **image_params)
@@ -225,7 +225,9 @@ def imagedetails():
         raise ParameterError(e)
 
     # v2.6.4 Don't allow this call to populate the database with unsupported files
-    supported_file = get_file_extension(src) in image_engine.get_image_formats()
+    supported_file = (
+        get_file_extension(src) in image_engine.get_image_formats(supported_only=True)
+    )
     if not supported_file and path_exists(src, require_file=True):
         raise ImageError('The file is not a supported image format')
 

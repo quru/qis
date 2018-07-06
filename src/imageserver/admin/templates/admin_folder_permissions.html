@@ -132,8 +132,8 @@
 					
 					{% set create = (not current_permissions) or permissions_inherited %}
 					{% set form_method = 'post' if create else 'put' %}
-					{% set form_action = url_for('api.admin.folderpermission') if create else 
-					                     url_for('api.admin.folderpermission', permission_id=current_permissions.id) %}
+					{% set form_action = url_for('api.admin-folderpermission') if create else 
+					                     url_for('api.admin-folderpermission', permission_id=current_permissions.id) %}
 					<form id="editform" _method="{{ form_method }}" action="{{ form_action }}">
 						<fieldset class="inline_form">
 						<input type="hidden" name="folder_id" value="{{ folder.id }}" />
@@ -174,7 +174,7 @@
 				<h3>Reset permissions</h3>
 				<div class="tall">
 					Clear the override on this folder so that it reverts to standard permissions.<br/>
-					<form id="deleteform" _method="delete" action="{{ url_for('api.admin.folderpermission', permission_id=current_permissions.id) }}">
+					<form id="deleteform" _method="delete" action="{{ url_for('api.admin-folderpermission', permission_id=current_permissions.id) }}">
 						<fieldset class="inline_form">
 						<input type="submit" value="&nbsp;Reset permissions&nbsp;" />
 						</fieldset>

@@ -1,6 +1,6 @@
 {% if embed %}{% extends "base_blank_js.html" %}{% else %}{% extends "base.html" %}{% endif %}
 
-{% from "publish/inc_field_macros.html" import input, help with context %}
+{% from "publish/inc_field_macros.html" import input, help, disp_class with context %}
 
 {% block copyright %}
 <!-- 
@@ -41,7 +41,7 @@
 			external_image_url: '{{ external_url_for('image') }}',
 			external_static_url: '{{ external_url_for('static', filename='') }}',
 			help_url: '{{ url_for('image_help', embed=1) }}',
-			template_api_url: '{{ url_for('api.admin.template', template_id=0) }}',
+			template_api_url: '{{ url_for('api.admin-template', template_id=0) }}',
 			warn_icon_url: '{{ url_for('static', filename='images/icon-warning.png') }}'
 		};
 
@@ -91,8 +91,8 @@
 			<h3>Template</h3>
 			<fieldset class="subtlebg">
 				<div>
-					<label>Base on template:</label>
-					{{ input(fields, field_values, 'template') }}   {# Note that input_template.html requires {{ template_list }} #}
+					<label>Base on template</label>
+					{{ input(fields, field_values, supported_fields, 'template') }}   {# Note that input_template.html requires {{ template_list }} #}
 					{{ help('option_tmp') }}
 				</div>
 				<div id="template_fields" class="tall">
@@ -100,6 +100,14 @@
 			</fieldset>
 
 			{% include "publish/inc_common_fields.html" %}
+
+			{% if app_edition() == 'Standard' %}
+			<p>
+				<br>Items marked with a
+				<img src="{{ url_for('static', filename='images/icon-premium-16.png') }}" alt="Premium Edition">
+				icon are only supported in the Premium Edition.
+			</p>
+			{% endif %}
 		</div>
 
 		<div class="column sticky">
@@ -114,11 +122,11 @@
 			<h3>Publish</h3>
 			<fieldset class="inline_form">
 				<div>
-					<label>Publish to file:</label>
+					<label>Publish to file</label>
 					<button id="publish_download" type="button" data-url="">Download final image</button>
 				</div>
 				<div>
-					<label>Publish to web:</label>
+					<label>Publish to web</label>
 					<select id="publish_type">
 						<option value="plain">Plain image URL</option>
 						<option value="img_tag">HTML image tag, static</option>

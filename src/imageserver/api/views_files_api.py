@@ -247,14 +247,14 @@ class FolderAPI(MethodView):
 # Add URL routing and minimum required permissions
 # (class functions will add further permission checking)
 
-_fapi_file_views = api_permission_required(ImageFileAPI.as_view('admin.file.image'))
+_fapi_file_views = api_permission_required(ImageFileAPI.as_view('admin-file-image'))
 api_add_url_rules(
     [url_version_prefix + '/admin/filesystem/images/<int:image_id>/',
      '/admin/filesystem/images/<int:image_id>/'],
     view_func=_fapi_file_views
 )
 
-_fapi_folder_views = api_permission_required(FolderAPI.as_view('admin.file.folder'))
+_fapi_folder_views = api_permission_required(FolderAPI.as_view('admin-file-folder'))
 api_add_url_rules(
     [url_version_prefix + '/admin/filesystem/folders/',
      '/admin/filesystem/folders/'],

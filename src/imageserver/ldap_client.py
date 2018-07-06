@@ -38,7 +38,7 @@ try:
     import ldap
     ldap_installed = True
     ldap_tls_installed = ldap.TLS_AVAIL
-except:
+except ImportError:
     pass
 
 

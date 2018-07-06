@@ -31,13 +31,12 @@
 
 import os.path
 
-from flask import request
+from flask import request, render_template
 from datetime import datetime, timedelta
 
 from imageserver.admin import blueprint
 from imageserver.errors import DoesNotExistError
 from imageserver.flask_app import app, data_engine, image_engine, permissions_engine
-from imageserver.flask_util import render_template
 from imageserver.image_attrs import ImageAttrs
 from imageserver.template_attrs import TemplateAttrs
 from imageserver.models import Folder, Group, ImageTemplate, Property, User
@@ -117,6 +116,7 @@ def template_edit(template_id):
         'admin_template_edit.html',
         fields=fields,
         field_values=field_values,
+        supported_fields=image_engine.get_supported_operations(),
         embed=embed,
         template=db_template,
         err_msg=err_msg

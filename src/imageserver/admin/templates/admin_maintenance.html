@@ -53,7 +53,7 @@
 	{%- endmacro %}
 	<p>
 		<h3>Purge image statistics</h3>
-		<form id="purge_istats_form" method="post" action="{{ url_for('api.admin.task', function_name='purge_image_stats') }}">
+		<form id="purge_istats_form" method="post" action="{{ url_for('api.admin-task', function_name='purge_image_stats') }}">
 			<div class="tall">
 				{{ auto_purge_message() }}
 			</div>
@@ -74,7 +74,7 @@
 
 	<p>
 		<h3>Purge system statistics</h3>
-		<form id="purge_sstats_form" method="post" action="{{ url_for('api.admin.task', function_name='purge_system_stats') }}">
+		<form id="purge_sstats_form" method="post" action="{{ url_for('api.admin-task', function_name='purge_system_stats') }}">
 			<div class="tall">
 				{{ auto_purge_message() }}
 			</div>
@@ -94,7 +94,7 @@
 
 	<p>
 		<h3>Purge deleted image data</h3>
-		<form id="purge_data_form" method="post" action="{{ url_for('api.admin.task', function_name='purge_deleted_folder_data') }}">
+		<form id="purge_data_form" method="post" action="{{ url_for('api.admin-task', function_name='purge_deleted_folder_data') }}">
 			<div class="tall">
 				Erase the retained image data for deleted images in
 			</div>

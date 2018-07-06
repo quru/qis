@@ -109,6 +109,7 @@ def _run_server(debug_mode):
     IDLE_WAIT = 5       # All in seconds
     CLEANUP_EVERY = 10  #
 
+    proc_mutex = None
     try:
         num_threads = app.config['TASK_SERVER_THREADS']
         if num_threads < 1:
@@ -117,14 +118,14 @@ def _run_server(debug_mode):
         # Hold open a port. Without messing around with lock files
         # (and where to put them, and how to lock them), this appears to be the
         # only easy cross platform way of emulating Windows' named global mutex.
-        dummy = socket()
-        dummy.bind((app.config['TASK_SERVER'], app.config['TASK_SERVER_PORT']))
+        proc_mutex = socket()
+        proc_mutex.bind((app.config['TASK_SERVER'], app.config['TASK_SERVER_PORT']))
 
         # If here, we opened the port so we're the only task server running locally
         shutdown_ev = Event()
         logger = app.log
         data_engine = app.data_engine
-        logger.set_name('tasks_' + str(os.getpid()))
+        logger.reconnect('tasks_' + str(os.getpid()))
         logger.info('Task server running')
 
         # Get the previous and the new process ID
@@ -185,11 +186,13 @@ def _run_server(debug_mode):
                     # Lock it to our process
                     locked = data_engine.lock_task(task, lock_id)
                     if not locked:
-                        logger.warning('Failed to lock task ID %d \'%s\'' %
-                                    (task.id, task.name))
+                        logger.warning('Failed to lock task ID %d \'%s\'' % (
+                            task.id, task.name)
+                        )
                     else:
-                        logger.debug('Launching task ID %d \'%s\' as thread %d' %
-                                     (task.id, task.name, thread_id))
+                        logger.debug('Launching task ID %d \'%s\' as thread %d' % (
+                                task.id, task.name, thread_id)
+                        )
                         # Go
                         t = threading.Thread(
                             target=run_task,
@@ -232,6 +235,9 @@ def _run_server(debug_mode):
             print("Task server exited")
         else:
             print("Task server exited: " + str(e))
+    finally:
+        if proc_mutex:
+            proc_mutex.close()
     sys.exit()
 
 

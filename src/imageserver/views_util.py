@@ -40,6 +40,8 @@ import markdown
 from jinja2 import Markup
 from werkzeug.urls import url_quote_plus
 
+from . import __about__
+from . import imaging
 from .errors import SecurityError
 from .flask_app import app, logger, permissions_engine
 from .flask_util import internal_url_for, external_url_for
@@ -104,8 +106,8 @@ def filename_filter(filepath):
 @app.template_filter('decamelcase')
 def de_camelcase_filter(cc):
     """
-    A template filter to add spaces to a CamelCase word, so that
-    e.g. "MyXYZWord" becomes "My XYZ Word"
+    A template filter to add spaces to a CamelCase word, so that e.g.
+    "MyXYZWord" becomes "My XYZ Word" and "ArticleBy-line" becomes "Article Byline"
     """
     ret = ''
     len_cc = len(cc)
@@ -115,7 +117,7 @@ def de_camelcase_filter(cc):
         ):
             ret += ' '
         ret += cc[i]
-    return ret
+    return ret.replace('-', '')
 
 
 @app.template_filter('newlines')
@@ -153,7 +155,8 @@ def inject_template_vars():
     Sets the custom variables that are available inside templates.
     """
     return {
-        'config': app.config,
+        'about': __about__,
+        'settings': app.config,
         'logged_in': logged_in(),
         'user': get_session_user(),
         'FolderPermission': FolderPermission,
@@ -165,11 +168,19 @@ def register_template_funcs():
     """
     Sets the custom functions to make available inside templates.
     """
+    app.add_template_global(app_edition, 'app_edition')
     app.add_template_global(wrap_is_permitted, 'is_permitted')
     app.add_template_global(wrap_is_folder_permitted, 'is_folder_permitted')
     app.add_template_global(internal_url_for, 'url_for')
     app.add_template_global(external_url_for, 'external_url_for')
     app.add_template_global(url_for_thumbnail, 'url_for_thumbnail')
+
+
+def app_edition():
+    """
+    Returns whether the application is running in "Standard" or "Premium" mode.
+    """
+    return "Premium" if imaging.get_backend() == "imagemagick" else "Standard"
 
 
 def wrap_is_permitted(flag):

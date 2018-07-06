@@ -141,7 +141,7 @@ class StatsSocketServer(socketserver.ThreadingTCPServer):
         util.store_pid('stats', proc_id)
 
         self.logger = app.log
-        self.logger.set_name('stats_' + proc_id)
+        self.logger.reconnect('stats_' + proc_id)
         self.database = app.data_engine
         self.tasks = app.task_engine
         self.data_cache = app.cache_engine
@@ -196,7 +196,8 @@ class StatsSocketServer(socketserver.ThreadingTCPServer):
         self.logger.info('Stats server running')
         while not self.shutdown_ev.is_set():
             self._sleep(60)
-            self._flush()
+            if not self.shutdown_ev.is_set():
+                self._flush()
         self.logger.info('Stats server exited')
 
     def stats_tidyup_thread(self, keep_days=0):
@@ -209,6 +210,8 @@ class StatsSocketServer(socketserver.ThreadingTCPServer):
 
         while not self.shutdown_ev.is_set():
             self._sleep(60)
+            if self.shutdown_ev.is_set():
+                break
             # Run tasks once per day
             if (datetime.utcnow() - self.tidy_last) > timedelta(hours=24):
                 if keep_days < 1:
@@ -257,6 +260,8 @@ class StatsSocketServer(socketserver.ThreadingTCPServer):
         """
         while not self.shutdown_ev.is_set():
             self._sleep(60)
+            if self.shutdown_ev.is_set():
+                break
             # Get time since last flush
             with self.sys_cache_lock:
                 dt_last_flush = self.caches_started
@@ -275,7 +280,8 @@ class StatsSocketServer(socketserver.ThreadingTCPServer):
 
     def _lock_reset_caches(self):
         """
-        Acquires the cache locks, clears the current image and system stats caches.
+        Acquires the cache locks, clears the current image and system stats
+        caches without saving them.
         """
         with self.sys_cache_lock:
             with self.img_cache_lock:

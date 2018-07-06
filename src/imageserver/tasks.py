@@ -305,15 +305,17 @@ def delete_old_temp_files(**kwargs):
     """
     import glob
     import stat
+    import tempfile
     from .flask_app import app
 
-    temp_file_patterns = ['magick*', 'libpdf*', 'libraw*']
+    temp_path = app.config['TEMP_DIR'] or tempfile.gettempdir()
+    temp_file_patterns = ['qis*', 'magick*', 'libpdf*', 'libraw*']
     delete_before_time = datetime.now() - timedelta(days=1)
     tf_count = 0
     tf_removed = 0
     tf_errors = 0
     for pattern in temp_file_patterns:
-        temp_files = glob.glob(os.path.join(app.config['TEMP_DIR'], pattern))
+        temp_files = glob.glob(os.path.join(temp_path, pattern))
         for temp_file in temp_files:
             try:
                 tf_count += 1
@@ -372,9 +374,9 @@ def burst_pdf(**kwargs):
     from .filesystem_manager import get_abs_path, get_burst_path, get_file_data
     from .filesystem_manager import delete_dir, make_dirs, path_exists
     from .filesystem_sync import delete_folder
-    from .imagemagick import imagemagick_burst_pdf
     from .models import Folder
     from .util import get_file_extension
+    from . import imaging
 
     (src, ) = _extract_parameters(['src'], **kwargs)
     burst_folder_rel = get_burst_path(src)
@@ -382,6 +384,10 @@ def burst_pdf(**kwargs):
     # Ensure src is a PDF
     if get_file_extension(src) not in app.config['PDF_FILE_TYPES']:
         app.log.warning('Cannot burst non-PDF file: ' + src)
+        return
+    if get_file_extension(src) not in app.image_engine.get_image_formats(supported_only=True):
+        app.log.warning('Cannot burst PDF file: ' + src +
+                        ' - this file type is not supported by the imaging library')
         return
 
     # See if the burst folder already exists (in the database and on disk)
@@ -403,9 +409,7 @@ def burst_pdf(**kwargs):
     if pdf_data is not None:
         make_dirs(burst_folder_rel)
         burst_folder_abs = get_abs_path(burst_folder_rel)
-        if not imagemagick_burst_pdf(
-            pdf_data, burst_folder_abs, app.config['PDF_BURST_DPI']
-        ):
+        if not imaging.burst_pdf(pdf_data, burst_folder_abs, app.config['PDF_BURST_DPI']):
             app.log.warning('Failed to burst PDF: ' + src)
     else:
         app.log.warning('Cannot burst PDF, file not found: ' + src)
@@ -479,6 +483,7 @@ def export_portfolio(**kwargs):
     A task that exports all the image files that make up a portfolio and stores
     them in a single zip file.
     """
+    import tempfile
     import zipfile
     from .errors import DoesNotExistError
     from .filesystem_manager import (
@@ -508,7 +513,8 @@ def export_portfolio(**kwargs):
         app.log.warning('Portfolio ID %d is empty, cannot export it' % folio.id)
         return folio_export
 
-    temp_dir = os.path.join(app.config['TEMP_DIR'], 'qis_export', str(export_id))
+    temp_path = app.config['TEMP_DIR'] or tempfile.gettempdir()
+    temp_dir = os.path.join(temp_path, 'qis_export', str(export_id))
     zip_obj = None
     try:
         # Make a temp dir for assembling the zip, then if anything goes wrong
