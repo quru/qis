@@ -10,6 +10,8 @@ export LC_ALL=en_GB.UTF-8
 runserver: venv
 	${VENV_ACTIVATE} ; python src/runserver.py
 
+jenkins: test_with_stats distribute
+
 test: venv
 	${VENV_ACTIVATE} ; python setup.py test
 
@@ -19,12 +21,14 @@ test_with_stats: venv testing_env
 	${VENV_ACTIVATE} ; coverage run --source src/imageserver -m src.tests.junitxml -t src -s src/tests -o src/junit.xml
 	coverage xml -o src/coverage.xml
 
-distribute: venv webpack
+distribute: clean venv webpack
 	src/package_deps.sh ${PYTHON}
 	${VENV_ACTIVATE} ; python setup.py sdist
-	echo 'The packaged application and libraries are now in the "dist" folder'
+	@echo 'The packaged application and libraries are now in the "dist" folder'
 
-jenkins: test_with_stats distribute
+clean:
+	rm -rf build/*
+	rm -f dist/*
 
 webpack:
 	src/compress_js.sh
@@ -47,4 +51,4 @@ ${VENV_PATH}/bin/coverage: ${VENV_PATH}/bin/activate
 ${VENV_PATH}/bin/activate:
 	virtualenv --python=${PYTHON} ${VENV_PATH}
 
-.PHONY: runserver test test_with_stats distribute jenkins webpack venv testing_env flake8.txt
+.PHONY: runserver jenkins test test_with_stats distribute clean webpack venv testing_env flake8.txt
