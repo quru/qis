@@ -1,8 +1,15 @@
 # Upgrading QIS
 
 Most releases only require replacement application files and a restart of the
-web server, as described in the [change log](changelog.md). Occasionally however
-a more involved upgrade is required; these releases will be documented here.
+web server:
+
+    $ cd /opt/qis
+    $ sudo -u qis tar -xvf /path/to/QIS-libs.tar.gz
+    $ sudo -u qis tar --strip-components=1 -xvf /path/to/QIS-x.y.z.tar.gz
+    $ sudo systemctl restart httpd
+
+Occasionally however a more involved upgrade is required. These releases are
+flagged in the [change log](changelog.md) and will be documented here.
 
 ## v2.x to v3.0
 
