@@ -31,7 +31,8 @@ RUN yum -y install https://rhel$(rpm -E '%{rhel}').iuscommunity.org/ius-release.
 # Start again with a standard build script
 FROM registered_system
 
-MAINTAINER Matt Fozard <matt@quru.com>
+LABEL maintainer="matt@quru.com" \
+      description="QIS build and test environment on Red Hat Enterprise Linux"
 
 # Build variables
 ARG BUILD_USER=build

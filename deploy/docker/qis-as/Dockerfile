@@ -14,7 +14,9 @@
 #   HTTPS_THREADS - Optional - set the number of mod_wsgi threads per process for HTTPS
 #
 FROM ubuntu:16.04
-MAINTAINER Matt Fozard <matt@quru.com>
+
+LABEL maintainer="matt@quru.com" \
+      description="QIS web application server"
 
 # Base o/s + app layer
 RUN apt-get update && \

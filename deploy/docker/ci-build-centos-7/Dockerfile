@@ -4,7 +4,8 @@
 #
 FROM centos:7.5.1804
 
-MAINTAINER Matt Fozard <matt@quru.com>
+LABEL maintainer="matt@quru.com" \
+      description="QIS build and test environment on CentOS"
 
 # Build variables
 ARG BUILD_USER=build

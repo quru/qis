@@ -6,7 +6,9 @@
 #   MEMCACHED_SIZE - Optional - default 512
 #
 FROM ubuntu:16.04
-MAINTAINER Matt Fozard <matt@quru.com>
+
+LABEL maintainer="matt@quru.com" \
+      description="QIS Memcached service"
 
 # Base o/s + app layer
 RUN apt-get update && \

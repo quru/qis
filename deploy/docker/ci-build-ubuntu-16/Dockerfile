@@ -4,7 +4,8 @@
 #
 FROM ubuntu:16.04
 
-MAINTAINER Matt Fozard <matt@quru.com>
+LABEL maintainer="matt@quru.com" \
+      description="QIS build and test environment on Ubuntu"
 
 # Build variables
 ARG BUILD_USER=build

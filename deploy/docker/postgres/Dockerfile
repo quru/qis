@@ -11,7 +11,9 @@
 #   PGDATA - Optional - the path at which to create the QIS database
 #
 FROM ubuntu:16.04
-MAINTAINER Matt Fozard <matt@quru.com>
+
+LABEL maintainer="matt@quru.com" \
+      description="QIS Postgres service"
 
 # Base o/s + app layer
 RUN apt-get update && \
