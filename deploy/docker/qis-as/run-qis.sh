@@ -14,6 +14,8 @@ APACHE_APP1_CONF_FILE=/etc/apache2/sites-available/001-qis.conf
 APACHE_APP2_CONF_FILE=/etc/apache2/sites-available/002-qis-ssl.conf
 
 if [ ! -f "$FIRST_RUN_LOG_FILE" ]; then
+
+	echo "Performing one-time initialization"
 	
 	# Set Apache tuning parameters (for event or worker MPM)
 	APACHE_WORKERS_MAX=$(expr $HTTP_THREADS \* $HTTP_PROCESSES + $HTTPS_THREADS \* $HTTPS_PROCESSES \* 4)
@@ -52,6 +54,10 @@ if [ ! -f "$FIRST_RUN_LOG_FILE" ]; then
 	chown $HTTP_USER:$HTTP_USER $SETTINGS_FILE
 	
 	echo "Configured $SETTINGS_FILE at $(date)" > "$FIRST_RUN_LOG_FILE"
+
+	# First time around, bad things happen if this starts up before the database is created
+	echo "Waiting 30 seconds for the Postgres database to be created"
+	sleep 30s
 fi
 
 # Run the main Docker process (the container exits when this returns)
