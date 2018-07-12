@@ -2,7 +2,7 @@
 #
 # CentOS build and testing environment.
 #
-FROM centos:7.4.1708
+FROM centos:7.5.1804
 
 MAINTAINER Matt Fozard <matt@quru.com>
 
