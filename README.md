@@ -174,6 +174,8 @@ If you are familiar with Docker commands, see the
 [docker-compose](deploy/docker/docker-compose.yml) script and the
 [application server image notes](deploy/docker/qis-as/README.md) for more information.
 
+You can find pre-built QIS images on the [Docker Hub](https://hub.docker.com/u/quru/).
+
 ## Development
 
 To run QIS in a development environment, you will need a Memcached and a PostgreSQL
