@@ -209,25 +209,25 @@ and from Quru obtain the latest ImageMagick interface for your platform:
 ### Installation and upgrade
 
 * Back up the old `/opt/qis` directory (the `images` sub-directory can be skipped)
-
+```
     $ mkdir qis-backup && cd qis-backup
     $ sudo rsync -a /opt/qis/* . --exclude images
-
+```
 * Copy the above build files to `/tmp`
 * Stop the Apache service
 * Install the v2 QIS files (standard upgrade procedure):
-
+```
     $ sudo pip install -U pip
     $ cd /opt/qis/
     $ sudo -u qis tar --strip-components=1 -xvf /tmp/Quru\ Image\ Server-2.4.0.tar.gz
     $ sudo -u qis tar -xvf /tmp/QIS-libs.tar.gz
     $ sudo -u qis pip install --prefix /opt/qis /tmp/qismagick-2.1.0-cp27-cp27mu-linux_x86_64.whl
-
+```
 * Run the v2 upgrade script:
-
+```
     $ cd /opt/qis/src/imageserver/scripts
     $ sudo -u qis python v2_upgrade.py
-
+```
 * Read through the `v2_upgrade.py` output carefully for advisory and error information.
   If there are any errors you can just re-run the `v2_upgrade.py` script again
   after taking remedial action.
