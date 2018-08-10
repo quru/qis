@@ -683,6 +683,14 @@ def object_to_dict_dict(obj, ignore_attrs=None, _r_stack=None):
     return ret_dict
 
 
+def ensure_string(val):
+    """
+    Returns a bytes value as a string (assuming UTF-8 encoding),
+    or returns the value unchanged if it is already a string.
+    """
+    return val.decode('utf8') if isinstance(val, bytes) else val
+
+
 def unicode_to_ascii(ustr):
     """
     Returns an ascii string from a unicode string. Some characters will be

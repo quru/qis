@@ -142,6 +142,7 @@ class _LDAP_Client(object):
 
         On success, a list of tuples is returned, with the format
           [ (dn, { attr_name: [attr_value, ...], ... }), ... ]
+        and where attribute values may be returned as either str (for DNs) or bytes.
         An empty list is returned if there were no search matches.
 
         An LDAP_Error is raised on failure.
@@ -181,14 +182,20 @@ class OpenLDAP_Client(_LDAP_Client):
         self.posix_accounts = posix_accounts
 
     def get_all_groups(self):
-        """Returns a list of posix group DNs, and selected attributes for each"""
+        """
+        Returns a list of posix group DNs (as str),
+        and selected attributes for each (as bytes).
+        """
         return self._ldap_search(
             "(objectClass=posixGroup)",
             ["dn", "cn", "gidNumber", "member"]
         )
 
     def get_all_OUs(self):
-        """Returns a list of organizational unit DNs, and selected attributes for each"""
+        """
+        Returns a list of organizational unit DNs (as str),
+        and selected attributes for each (as bytes).
+        """
         return self._ldap_search(
             "(objectClass=organizationalUnit)",
             ["dn", "ou"]
@@ -196,9 +203,9 @@ class OpenLDAP_Client(_LDAP_Client):
 
     def get_user_attributes(self, username):
         """
-        Returns a dictionary of attributes, each having a list of values, for
-        the named LDAP user account. Returns None if the username was not found
-        on the LDAP server.
+        Returns a dictionary of attributes, each having a list of values
+        (as either str or bytes), for the named LDAP user account.
+        Returns None if the username was not found on the LDAP server.
         """
         object_class = "posixAccount" if self.posix_accounts else "organizationalPerson"
         result = self._ldap_search(
@@ -239,11 +246,16 @@ class AppleLDAP_Client(OpenLDAP_Client):
     Note than any method may raise an LDAP_Error on failure.
     """
     def __init__(self, settings):
-        """Creates an Apple LDAP client configured by an LDAP_Settings object."""
+        """
+        Creates an Apple LDAP client configured by an LDAP_Settings object.
+        """
         OpenLDAP_Client.__init__(self, settings)
 
     def get_all_groups(self):
-        """Returns a list of Apple group DNs, and selected attributes for each"""
+        """
+        Returns a list of Apple group DNs (as str),
+        and selected attributes for each (as bytes).
+        """
         return self._ldap_search(
             "(objectClass=apple-group)",
             ["dn", "cn", "gidNumber", "apple-generateduid",
@@ -251,7 +263,10 @@ class AppleLDAP_Client(OpenLDAP_Client):
         )
 
     def get_all_OUs(self):
-        """Returns a list of organizational unit DNs, and selected attributes for each"""
+        """
+        Returns a list of organizational unit DNs (as str),
+        and selected attributes for each (as bytes).
+        """
         return self._ldap_search(
             "(objectClass=container)",
             ["dn", "cn"]
@@ -259,9 +274,9 @@ class AppleLDAP_Client(OpenLDAP_Client):
 
     def get_user_attributes(self, username):
         """
-        Returns a dictionary of attributes, each having a list of values, for
-        the named LDAP user account. Returns None if the username was not found
-        on the LDAP server.
+        Returns a dictionary of attributes, each having a list of values
+        (as either str or bytes), for the named LDAP user account.
+        Returns None if the username was not found on the LDAP server.
         """
         result = self._ldap_search(
             "(&(objectClass=apple-user)(uid=" + username + "))",
@@ -276,18 +291,26 @@ class Windows2008R2_Client(_LDAP_Client):
     Note than any method may raise an LDAP_Error on failure.
     """
     def __init__(self, settings):
-        """Creates an OpenLDAP client configured by an LDAP_Settings object."""
+        """
+        Creates an OpenLDAP client configured by an LDAP_Settings object.
+        """
         _LDAP_Client.__init__(self, settings)
 
     def get_all_groups(self):
-        """Returns a list of user group DNs, and selected attributes for each"""
+        """
+        Returns a list of user group DNs (as str),
+        and selected attributes (as bytes) for each.
+        """
         return self._ldap_search(
             "(objectClass=group)",
             ["dn", "cn", "primaryGroupToken"]
         )
 
     def get_all_OUs(self):
-        """Returns a list of organizational unit DNs, and selected attributes for each"""
+        """
+        Returns a list of organizational unit DNs (as str),
+        and selected attributes (as bytes) for each.
+        """
         return self._ldap_search(
             "(objectClass=organizationalUnit)",
             ["dn", "ou"]
@@ -295,9 +318,9 @@ class Windows2008R2_Client(_LDAP_Client):
 
     def get_user_attributes(self, username):
         """
-        Returns a dictionary of attributes, each having a list of values, for
-        the named LDAP user account. Returns None if the username was not found
-        on the LDAP server.
+        Returns a dictionary of attributes, each having a list of values
+        (as either str or bytes), for the named LDAP user account.
+        Returns None if the username was not found on the LDAP server.
         """
         result = self._ldap_search(
             "(&(objectClass=user)(sAMAccountName=" + username + "))",

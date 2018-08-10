@@ -1,3 +1,6 @@
+# Next release
+_Changes: Bug fix to creation of new user accounts using LDAP authentication._
+
 # v4.0.0
 _Changes: New QIS Standard/Premium editions. Adds new Python-Pillow imaging back-end
 (with reduced functionality) so that QIS runs without requiring qismagick.so.

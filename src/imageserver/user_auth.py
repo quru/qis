@@ -34,7 +34,7 @@ from . import ldap_client
 from .errors import AuthenticationError
 from .flask_app import app
 from .models import User
-from .util import generate_password
+from .util import ensure_string, generate_password
 
 
 def authenticate_user(username, password, data_engine, logger):
@@ -112,13 +112,13 @@ def authenticate_user(username, password, data_engine, logger):
 
 def _get_firstname_lastname(ldap_user_attrs):
     """
-    Returns a tuple of (forename, surname) from the supplied dictionary of
-    user attributes. This is taken from the cn attribute is possible, otherwise
-    the givenName and sn attributes.
+    Returns a string tuple of (forename, surname) from the supplied dictionary
+    of user attributes. This is taken from the cn attribute is possible,
+    otherwise from the givenName and sn attributes.
     """
-    cn = ldap_user_attrs.get('cn', ['Unknown'])[0]
-    gn = ldap_user_attrs.get('givenName', ['Unknown'])[0]
-    sn = ldap_user_attrs.get('sn', ['Unknown'])[0]
+    cn = ensure_string(ldap_user_attrs.get('cn', ['Unknown'])[0])
+    gn = ensure_string(ldap_user_attrs.get('givenName', ['Unknown'])[0])
+    sn = ensure_string(ldap_user_attrs.get('sn', ['Unknown'])[0])
     parts = cn.split(' ')
     if len(parts) == 2:
         gn = parts[0]
