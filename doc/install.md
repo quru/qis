@@ -100,7 +100,7 @@ Install the package:
 
 Initialise a new Postgres database collection:
 
-	$ sudo -u postgres initdb -D /var/lib/pgsql/data --auth-host=md5 --auth-local=trust
+	$ sudo -u postgres initdb -D /var/lib/pgsql/data --auth-host=md5 --auth-local=peer
 
 Set the Postgres tuning options in `/var/lib/pgsql/data/postgresql.conf`.
 This is an advanced topic, see the tuning guide and the
