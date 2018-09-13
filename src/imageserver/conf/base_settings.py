@@ -53,6 +53,7 @@ IMAGE_FORMATS = {
     "bmp": ("Bitmap image", "image/bmp"),
     "dcm": ("DICOM image", "application/dicom"),
     "eps": ("Encapsulated PostScript", "application/postscript"),
+    "ico": ("Microsoft icon", "image/x-icon"),
     "pdf": ("PDF file", "application/pdf"),
     "ppm": ("Portable PixMap image", "image/x-portable-pixmap"),
     "psd": ("Photoshop image", "image/psd"),
