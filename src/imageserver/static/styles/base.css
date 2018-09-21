@@ -454,6 +454,13 @@ a:hover .highlight {
 #header .logo {
 	min-height: 1em;      /* if no logo image */
 	margin-bottom: 1.5em; /* match body top padding */
+    position: relative;
+    left: -22px;
+    float: left;
+}
+
+#header .logo a {
+    border: none;
 }
 #header .menu_group {
 	float: right;
