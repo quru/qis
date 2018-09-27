@@ -16,6 +16,8 @@
 
     # Allow other domains to query the data API (required for canvas/zoom image viewer)
     Header set Access-Control-Allow-Origin "*"
+    # Allow other domains to see the returned image headers
+    Header set Access-Control-Expose-Headers "Content-Length, X-From-Cache, X-Time-Taken"
 
     # Enable keep-alive, but don't hold connections open for long
     KeepAlive On
