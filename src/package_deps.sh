@@ -36,8 +36,16 @@ mkdir $BUILD_DIR
 mkdir $WHEELS_DIR
 mkdir $CACHE_DIR
 cd $BUILD_DIR
-virtualenv --python=$PYTHON_VER $VENV
-. $VENV/bin/activate
+if [ "$PYTHON_VER" = "python2.6" ]; then
+    virtualenv --python=$PYTHON_VER --no-pip $VENV
+    . $VENV/bin/activate
+    curl https://bootstrap.pypa.io/2.6/get-pip.py -o get-pip.py
+    python get-pip.py
+    rm get-pip.py
+else
+    virtualenv --python=$PYTHON_VER $VENV
+    . $VENV/bin/activate
+fi
 cd ..
 
 # Upgrade or downgrade setuptools for known bugs or issues
