@@ -34,16 +34,22 @@ ${VENV_PATH}/bin/flake8: venv
 
 venv: ${VENV_PATH}/bin/activate setup.py doc/requirements.txt ${QISMAGICK_SO}
 ifeq (${PYTHON},python2.6)
-	${VENV_ACTIVATE} ; pip install --upgrade "pip<10" "setuptools<37"
+	${VENV_ACTIVATE} ; pip install --upgrade "pip<10" "setuptools<37" "wheel<0.30"
 else
 	${VENV_ACTIVATE} ; pip install --upgrade pip setuptools
 endif
 	${VENV_ACTIVATE} ; pip install --upgrade -r doc/requirements.txt
 
 ${QISMAGICK_SO}: setup.py doc/requirements.txt
-	${VENV_ACTIVATE} ; pip install --upgrade --no-index --find-links file://$(QISMAGICK_WHEEL_DIR) qismagick
+	${VENV_ACTIVATE} ; pip install --upgrade --no-index --find-links file://$(QISMAGICK_WHEEL_DIR) qismagick || echo "qismagick library not found at $(QISMAGICK_WHEEL_DIR)"
 
 ${VENV_PATH}/bin/activate:
+ifeq (${PYTHON},python2.6)
+	virtualenv --python=${PYTHON} --no-pip ${VENV_PATH}
+	${VENV_ACTIVATE} ; curl https://bootstrap.pypa.io/2.6/get-pip.py -o get-pip.py
+	${VENV_ACTIVATE} ; python get-pip.py
+else
 	virtualenv --python=${PYTHON} ${VENV_PATH}
+endif
 
 .PHONY: distribute jenkins test runtests runserver webpack flake8.txt venv
