@@ -2272,14 +2272,16 @@ that if you rename a folder, this changes the paths of all the images contained 
 
 ### Returns
 For `GET`, returns the folder's database object including one level of sub-folders
-in the `children` attribute.
-The folder `status` field has value `1` for active, or `0` for deleted.
+in the `children` attribute. The folder `status` field has value `1` for active,
+or `0` for deleted.
 
 For `POST`, returns the new folder's database object.
 
-For `PUT` and `DELETE`, if the function completes in less than 30 seconds, returns the
-folder's updated database object. If however the function is ongoing after 30 seconds, returns
-status `202` and a task object that you can track using the [system tasks](#api_tasks) API.
+For `PUT` and `DELETE`, if the function completes in less than 30 seconds,
+returns the folder's updated database object. If however the function is still
+ongoing after 30 seconds, returns status `202` and a task object that you can
+track using the [system tasks](#api_tasks) API. The task ID in this case is found
+in the returned task object's `id` field.
 
 ### Examples
 
@@ -2345,7 +2347,9 @@ status `202` and a task object that you can track using the [system tasks](#api_
 	  "status": 200
 	}
 
-If the operation takes more than 30 seconds, status `202` and an ongoing task object are returned:
+If the operation takes more than 30 seconds, status `202` and an ongoing task
+object are returned. The task ID is the object's `id` field, and so `288` in this
+example:
 
 	$ curl -X PUT -u <token>:unused -F 'path=/renamed-large-folder' 'https://images.example.com/api/v1/admin/filesystem/folders/23/'
 	{
@@ -2383,7 +2387,7 @@ If the operation takes more than 30 seconds, status `202` and an ongoing task ob
 
 <a name="api_tasks"></a>
 ## system tasks
-Initiates or polls the status of a background system task.
+Initiates or polls the status of a background task.
 
 ### URL
 * `/api/v1/admin/tasks/[function name]/` for `POST`
