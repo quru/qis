@@ -208,6 +208,10 @@ You can then override these defaults later at the sub-folder level.
 If at any point the _Public_ access level is greater than a logged-in user's
 access via their groups, the more permissive public access level will be applied.
 
+Finally it is worth noting that if a group has _files and folders administration_
+permission enabled, this overrides the normal folder permissions and grants
+members of that group full (delete!) access to all folders.
+
 <a name="api"></a>
 ## Developer API
 

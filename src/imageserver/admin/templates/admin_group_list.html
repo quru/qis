@@ -36,7 +36,9 @@
 		administration functions. Secondly, the ability to control whether images can be
 		viewed, uploaded, changed or deleted, is controlled by setting an access level in
 		the <a href="{{ url_for('admin.folder_permissions') }}">folder permissions area</a>
-		for an <em>image folder and group</em> pair.
+		for an <em>image folder and group</em> pair. Note that if you grant the
+		<em>files and folders administration</em> permission to a group, this overrides
+		the normal folder permissions and allows full access to all files and folders.
 	</p>
 	<p>
 		There are 3 built-in groups that cannot be deleted (though you can rename them
@@ -47,7 +49,7 @@
 		is created it is automatically added into <em>Normal Users</em>.
 		Lastly the <em>Public</em> group is a virtual group that represents anonymous users
 		- those who are not logged in to the image server. The <em>Public</em> group does
-		not have a list of members and does not define any system permissions (they are
+		not have a list of members and does not provide any system permissions (they are
 		all set to <em>deny</em>). However the <em>Public</em> group plays a very important
 		role in setting the <a href="{{ url_for('admin.folder_permissions') }}">folder permissions</a>,
 		where it is used to control whether or not images are visible to the public.

@@ -1843,7 +1843,7 @@ controls.
 	* `access_admin_users` - Mandatory, boolean - Whether the group provides user administration
 	  permission (and basic group administration)
 	* `access_admin_files` - Mandatory, boolean - Whether the group provides file administration
-	  permission (change and delete any file or folder, regardless of folder permissions)
+	  permission (change or delete any file or folder, regardless of folder permissions)
 	* `access_admin_folios` - Mandatory, boolean - Whether the group provides portfolio
 	  administration permission (create, change and delete any user's portfolios)
 	* `access_admin_permissions` - Mandatory, boolean - Whether the group provides permissions
@@ -2074,6 +2074,9 @@ folders.
 
 The permission record for the root folder `/` and the _Public_ group determines whether your
 images default to being publicly visible or not.
+
+If a group has _file administration_ permission enabled, this overrides the normal
+folder permissions and grants members of the group full access to all folders.
 
 ### URL
 * `/api/v1/admin/permissions/` for `GET` (list permissions) and `POST`
