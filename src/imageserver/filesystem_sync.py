@@ -580,7 +580,7 @@ def delete_file(db_image, user_account, data_manager, permissions_manager):
         filesystem_manager.delete_file(db_image.src)
 
         # Update database
-        if db_image.status == Image.STATUS_ACTIVE:
+        if db_image.status != Image.STATUS_DELETED:
             data_manager.delete_image(
                 db_image,
                 purge=False,
@@ -909,20 +909,25 @@ def delete_folder(db_folder, user_account, data_manager, permissions_manager, lo
         filesystem_manager.delete_dir(db_folder.path, recursive=True)
 
         # Now delete all the data
-        data_manager.delete_folder(
-            db_folder,
-            purge=False,
-            history_user=user_account,
-            history_info='Folder deleted by user',
-            _db_session=db_session,
-            _commit=False
-        )
+        if db_folder.status != Folder.STATUS_DELETED:
+            data_manager.delete_folder(
+                db_folder,
+                purge=False,
+                history_user=user_account,
+                history_info='Folder deleted by user',
+                _db_session=db_session,
+                _commit=False
+            )
+            logger.info(
+                'Disk folder %s successfully deleted by %s' %
+                (db_folder.path, user_account.username if user_account else 'System')
+            )
+        else:
+            logger.warning(
+                'Disk folder %s was already marked as deleted' % db_folder.path
+            )
 
         # OK!
-        logger.info(
-            'Disk folder %s successfully deleted by %s' %
-            (db_folder.path, user_account.username if user_account else 'System')
-        )
         success = True
         return db_folder
 

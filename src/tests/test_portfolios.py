@@ -1062,3 +1062,13 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         # c) Check that folio permissions don't list group users
         self.assertIn('permissions', folio)
         self.assertNotIn('group', folio['permissions'])
+
+    # v4.1 #10 Deleting a portfolio twice should give 200 then 404
+    def test_folio_double_delete(self):
+        db_folio = dm.get_portfolio(human_id='private')
+        api_url = '/api/portfolios/' + str(db_folio.id) + '/'
+        self.login('foliouser', 'foliouser')
+        rv = self.app.delete(api_url)
+        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        rv = self.app.delete(api_url)
+        self.assertEqual(rv.status_code, API_CODES.NOT_FOUND)

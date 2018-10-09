@@ -1143,9 +1143,9 @@ class DataManager(object):
                 db_session.delete(db_folder)
             else:
                 # Flag as deleted
-                db_folder.status = Image.STATUS_DELETED
+                db_folder.status = Folder.STATUS_DELETED
                 # Update the supplied object too
-                folder.status = Image.STATUS_DELETED
+                folder.status = Folder.STATUS_DELETED
 
             # Flush pending ops after every folder
             db_session.flush()

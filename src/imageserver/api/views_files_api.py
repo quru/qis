@@ -38,12 +38,13 @@ from imageserver.api import api_add_url_rules, url_version_prefix
 from imageserver.api_util import add_api_error_handler, add_parameter_error_handler
 from imageserver.api_util import make_api_success_response
 from imageserver.errors import DoesNotExistError, ParameterError, TimeoutError
+from imageserver.filesystem_manager import path_exists
 from imageserver.filesystem_sync import delete_file, move_file
 from imageserver.filesystem_sync import create_folder, auto_sync_folder
 from imageserver.flask_app import logger
 from imageserver.flask_app import data_engine, image_engine, permissions_engine, task_engine
 from imageserver.flask_util import api_permission_required
-from imageserver.models import FolderPermission, Task
+from imageserver.models import Folder, FolderPermission, Image, Task
 from imageserver.session_manager import get_session_user
 from imageserver.util import object_to_dict, validate_string
 
@@ -91,6 +92,11 @@ class ImageFileAPI(MethodView):
         db_img = data_engine.get_image(image_id=image_id)
         if not db_img:
             raise DoesNotExistError(str(image_id))
+        # v4.1 #10 delete_file() doesn't care whether the file exists, but we
+        #          want the API to return a "not found" if the file doesn't exist
+        #          (and as long as the database is already in sync with that)
+        if not path_exists(db_img.src, require_file=True) and db_img.status == Image.STATUS_DELETED:
+            raise DoesNotExistError(db_img.src)
         # Delete
         db_img = delete_file(db_img, get_session_user(), data_engine, permissions_engine)
         # Remove cached images for old path
@@ -187,6 +193,14 @@ class FolderAPI(MethodView):
     @add_api_error_handler
     def delete(self, folder_id):
         """ Deletes a disk folder """
+        # v4.1 #10 delete_folder() doesn't care whether it exists, but we want the
+        #          API to return a "not found" if the folder doesn't exist on disk
+        #          (and as long as the database is already in sync with that)
+        db_folder = data_engine.get_folder(folder_id)
+        if db_folder is None:
+            raise DoesNotExistError(str(folder_id))
+        if not path_exists(db_folder.path, require_directory=True) and db_folder.status == Folder.STATUS_DELETED:
+            raise DoesNotExistError(db_folder.path)
         # Run this as a background task in case it takes a long time
         task = task_engine.add_task(
             get_session_user(),
@@ -240,7 +254,7 @@ class FolderAPI(MethodView):
                 try:
                     # Delete the task so another API call can be made immediately
                     data_engine.delete_object(task)
-                except:
+                except Exception:
                     pass
 
 

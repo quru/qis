@@ -57,7 +57,7 @@ from imageserver.filesystem_manager import (
     get_abs_path, ensure_path_exists, path_exists
 )
 from imageserver.filesystem_sync import (
-    auto_sync_existing_file, auto_sync_file
+    auto_sync_existing_file, auto_sync_file, auto_sync_folder
 )
 from imageserver.flask_util import internal_url_for
 from imageserver.models import (
@@ -1635,3 +1635,93 @@ class ImageServerAPITests(main_tests.BaseTestCase):
             self.assertEqual(rv.status_code, API_CODES.INVALID_PARAM)
             rv = self.app.post(url + "/")
             self.assertEqual(rv.status_code, API_CODES.INVALID_PARAM)
+
+    # v4.1 #10 Deleting a group twice should give 200 then 404
+    def test_group_double_delete(self):
+        self.login('admin', 'admin')
+        group_data = {
+            'name': 'Group DD test',
+            'description': 'This is a test group',
+            'group_type': Group.GROUP_TYPE_LOCAL
+        }
+        rv = self.app.post('/api/admin/groups/', data=group_data)
+        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        obj = json.loads(rv.data.decode('utf8'))
+        group_id = obj['data']['id']
+        api_url = '/api/admin/groups/' + str(group_id) + '/'
+        rv = self.app.delete(api_url)
+        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        rv = self.app.delete(api_url)
+        self.assertEqual(rv.status_code, API_CODES.NOT_FOUND)
+
+    # v4.1 #10 Deleting a disk file twice should give 200 then 404
+    #         (the db record exists status:0 but the lack of disk file should take precedence)
+    def test_file_double_delete(self):
+        temp_file = 'test_file_dd.jpg'
+        try:
+            copy_file('test_images/cathedral.jpg', temp_file)
+            db_image = auto_sync_file(temp_file, dm, tm)
+            self.assertIsNotNone(db_image)
+            api_url = '/api/admin/filesystem/images/' + str(db_image.id) + '/'
+            self.login('admin', 'admin')
+            rv = self.app.delete(api_url)
+            self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+            rv = self.app.delete(api_url)
+            self.assertEqual(rv.status_code, API_CODES.NOT_FOUND)
+        finally:
+            delete_file(temp_file)
+
+    # v4.1 #10 Deleting a disk folder twice should give 200 then 404
+    #         (the db record exists status:0 but the lack of disk folder should take precedence)
+    def test_folder_double_delete(self):
+        temp_folder = 'test_folder_dd'
+        make_dirs(temp_folder)
+        try:
+            db_folder = auto_sync_folder(temp_folder, dm, tm)
+            self.assertIsNotNone(db_folder)
+            api_url = '/api/admin/filesystem/folders/' + str(db_folder.id) + '/'
+            self.login('admin', 'admin')
+            rv = self.app.delete(api_url)
+            self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+            rv = self.app.delete(api_url)
+            self.assertEqual(rv.status_code, API_CODES.NOT_FOUND)
+        finally:
+            delete_dir(temp_folder)
+
+    # v4.1 #10 Moving a deleted file should give a 404
+    #         (the db record exists status:0 but there is no disk file to move)
+    def test_move_deleted_file(self):
+        temp_file = 'test_file_mdf.jpg'
+        renamed_temp_file = 'renamed_file_mdf.jpg'
+        try:
+            copy_file('test_images/cathedral.jpg', temp_file)
+            db_image = auto_sync_file(temp_file, dm, tm)
+            self.assertIsNotNone(db_image)
+            api_url = '/api/admin/filesystem/images/' + str(db_image.id) + '/'
+            self.login('admin', 'admin')
+            rv = self.app.delete(api_url)
+            self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+            rv = self.app.put(api_url, data={'path': renamed_temp_file})
+            self.assertEqual(rv.status_code, API_CODES.NOT_FOUND)
+        finally:
+            delete_file(temp_file)
+            delete_file(renamed_temp_file)
+
+    # v4.1 #10 Moving a deleted folder should give a 404
+    #         (the db record exists status:0 but there is no disk folder to move)
+    def test_move_deleted_folder(self):
+        temp_folder = 'test_folder_mdf'
+        renamed_temp_folder = 'renamed_folder_mdf'
+        make_dirs(temp_folder)
+        try:
+            db_folder = auto_sync_folder(temp_folder, dm, tm)
+            self.assertIsNotNone(db_folder)
+            api_url = '/api/admin/filesystem/folders/' + str(db_folder.id) + '/'
+            self.login('admin', 'admin')
+            rv = self.app.delete(api_url)
+            self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+            rv = self.app.put(api_url, data={'path': renamed_temp_folder})
+            self.assertEqual(rv.status_code, API_CODES.NOT_FOUND)
+        finally:
+            delete_dir(temp_folder)
+            delete_dir(renamed_temp_folder)
