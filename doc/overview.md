@@ -11,6 +11,17 @@ in a variety of ways. A built-in web interface provides repository browsing, rep
 and system administration facilities. Software developers can also use the built-in
 API to use the image server as a back-end for creating automated imaging workflows.
 
+## Contents
+
+* [Application editions](#editions)
+* [Image processing](#processing)
+* [Image viewers](#viewers)
+* [Repository management](#repository)
+* [Access control](#access)
+* [Developer API](#api)
+* [Design goals](#goals)
+
+<a name="editions"></a>
 ## Editions
 
 Quru offers the image server in 2 editions - the fully open source Standard Edition,
@@ -34,6 +45,7 @@ Ghostscript and LibRaw packages, bringing these advantages:
 * Gamma corrected resizing with a minimal performance difference
 * Eligibility for professional services and commercial support from Quru
 
+<a name="processing"></a>
 ## Image processing
 
 QIS uses either the Python-Pillow library, or the popular ImageMagick package
@@ -69,6 +81,7 @@ version of ImageMagick, but the following file formats are enabled by default:
 QIS has an image publishing tool in the web interface that allows you to experiment
 with different imaging operations, showing a preview of the resulting image.
 
+<a name="viewers"></a>
 ## Embeddable image viewers
 
 Processed (or unprocessed!) images can be displayed or made available for download
@@ -110,6 +123,7 @@ HTML code for each library, which you can then customise.
 For the adventurous, the image server's flexible APIs make it possible build your
 own image viewers!
 
+<a name="repository"></a>
 ## Image repository management
 
 As well as serving up images, the image server acts as a central place for storing,
@@ -139,6 +153,7 @@ the web interface include:
     * User and group management
     * User access control and image permissions
 
+<a name="access"></a>
 ## Access control
 
 The image server holds a database of users and groups (which can act like _roles_
@@ -193,6 +208,7 @@ You can then override these defaults later at the sub-folder level.
 If at any point the _Public_ access level is greater than a logged-in user's
 access via their groups, the more permissive public access level will be applied.
 
+<a name="api"></a>
 ## Developer API
 
 Everything that QIS does can be controlled programmatically through its Application
@@ -214,6 +230,7 @@ provided includes:
 For more information, technical details and examples of use, see the
 [API guide](api_help.md).
 
+<a name="goals"></a>
 ## Design goals and philosophy
 
 The image server was developed with a few goals in mind. A discussion of these
