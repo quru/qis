@@ -29,6 +29,7 @@
 # =========  ====  ============================================================
 # 13Jan2015  Matt  Upload API to take and return multiple files
 # 10Mar2015  Matt  Use signed tokens to access the API
+# 04Dec2017  Matt  Allow URL trailing slashes for consistency with the others
 #
 
 from time import sleep
@@ -62,10 +63,8 @@ from imageserver.util import validate_number, validate_string
 
 
 # API login - generates a token to use the API outside of the web site
-@blueprint.route('/token', methods=['POST'])
-@blueprint.route(url_version_prefix + '/token', methods=['POST'])  # Legacy (no slash)
-@blueprint.route('/token/', methods=['POST'], strict_slashes=False)
-@blueprint.route(url_version_prefix + '/token/', methods=['POST'], strict_slashes=False)  # v2.6.1 onwards
+@blueprint.route('/token', methods=['POST'], strict_slashes=False)
+@blueprint.route(url_version_prefix + '/token', methods=['POST'], strict_slashes=False)
 @csrf_exempt
 @login_point(from_web=False)
 @add_api_error_handler
@@ -114,10 +113,8 @@ def token():
 # Returns a JSON encoded list of files in a folder (max 1000),
 # optionally with the title, description, width, height attributes of each.
 # Any additional parameters are passed on for inclusion in the returned image URLs.
-@blueprint.route('/list', methods=['GET'])
-@blueprint.route(url_version_prefix + '/list', methods=['GET'])  # Legacy (no slash)
-@blueprint.route('/list/', methods=['GET'], strict_slashes=False)
-@blueprint.route(url_version_prefix + '/list/', methods=['GET'], strict_slashes=False)  # v2.6.1 onwards
+@blueprint.route('/list', methods=['GET'], strict_slashes=False)
+@blueprint.route(url_version_prefix + '/list', methods=['GET'], strict_slashes=False)
 @add_api_error_handler
 def imagelist():
     # Check parameters
@@ -211,10 +208,8 @@ def imagelist():
 
 
 # Returns JSON encoded basic image attributes.
-@blueprint.route('/details', methods=['GET'])
-@blueprint.route(url_version_prefix + '/details', methods=['GET'])  # Legacy (no slash)
-@blueprint.route('/details/', methods=['GET'], strict_slashes=False)
-@blueprint.route(url_version_prefix + '/details/', methods=['GET'], strict_slashes=False)  # v2.6.1 onwards
+@blueprint.route('/details', methods=['GET'], strict_slashes=False)
+@blueprint.route(url_version_prefix + '/details', methods=['GET'], strict_slashes=False)
 @add_api_error_handler
 def imagedetails():
     # Get/check parameters
@@ -249,10 +244,8 @@ def imagedetails():
 # Raw image(s) upload. Returns a dict of original filename to image details
 # (as for /details), or original filename to error message on failure, with
 # one dict entry for every file in 'files'.
-@blueprint.route('/upload', methods=['POST'])
-@blueprint.route(url_version_prefix + '/upload', methods=['POST'])  # Legacy (no slash)
-@blueprint.route('/upload/', methods=['POST'], strict_slashes=False)
-@blueprint.route(url_version_prefix + '/upload/', methods=['POST'], strict_slashes=False)  # v2.6.1 onwards
+@blueprint.route('/upload', methods=['POST'], strict_slashes=False)
+@blueprint.route(url_version_prefix + '/upload', methods=['POST'], strict_slashes=False)
 @api_permission_required
 @add_api_error_handler
 def upload():
