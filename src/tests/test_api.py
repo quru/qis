@@ -1756,3 +1756,5 @@ class ImageServerAPITests(main_tests.BaseTestCase):
         self.login('admin', 'admin')
         rv = self.app.get('/api/admin/users')  # Should have a trailing /
         self.assert_json_response_code(rv, 301)
+        obj = json.loads(rv.data.decode('utf8'))
+        self.assertTrue(obj['data'].endswith('/users/'))

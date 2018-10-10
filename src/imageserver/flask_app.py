@@ -32,10 +32,10 @@
 import os
 import signal
 
-from flask import Flask, request
+from flask import Flask, jsonify, request
 
 from . import __about__
-from .api_util import make_api_error_response
+from .api_util import create_api_dict, make_api_error_response
 
 
 def extend_app(app):
@@ -333,18 +333,39 @@ def _stop_aux_processes(service_list='all', nicely=True):
 @app.errorhandler(503)
 def on_unhandled_error(exc):
     """
-    Global handler for uncaught exceptions.
-    This is intended to handle errors thrown by either the Flask framework or by
-    middleware, which are difficult or impossible to handle in normal application
-    code.
+    Global handler for uncaught exceptions. This is intended to handle errors
+    thrown by either the Flask framework or by middleware, which are difficult
+    or impossible to handle in normal application code.
     """
     if request.path.startswith('/api/'):
-        # This was an API request. I would rather handle this in the API blueprint
-        # but the Flask documentation says you can't (for 404 and 405 at least),
-        # so checking for path.startswith('/api/') is actually the documented way
-        # of doing it: http://flask.pocoo.org/docs/1.0/blueprints/#error-handlers
+        # v4.1 #10 Return JSON from the API on error instead of HTML.
+        # I would rather handle this in the API blueprint but the Flask
+        # documentation says you can't (for 404 and 405 at least), so checking
+        # for path.startswith('/api/') is actually the documented way of doing it:
+        # http://flask.pocoo.org/docs/1.0/blueprints/#error-handlers
         return make_api_error_response(exc, logger)
 
     # Most of the other errors are triggered by the /image and /original URLs
     # where Flask's default handler (returning brief HTML) already works well
     return exc
+
+
+@app.after_request
+def on_request_complete(response):
+    """
+    Global handler for the post-request / before-response event.
+    """
+    if (response.status_code == 301 and
+        request.path.startswith('/api/') and
+        'html' in response.mimetype):
+        # v4.1 #10 Return JSON from the API on redirects instead of HTML.
+        # Like the error handler above, this response is produced by Flask and
+        # not by our application code. Therefore to correct the response type we
+        # have to catch it here and replace the old response with a new one.
+        new_url = response.headers.get('Location', '', type=str)
+        jr = jsonify(create_api_dict(301, 'Moved Permanently', new_url))
+        jr.status_code = 301
+        jr.headers.add('Location', new_url)
+        return jr
+
+    return response
