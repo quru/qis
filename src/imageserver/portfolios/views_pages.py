@@ -33,7 +33,7 @@ from flask import render_template
 
 from imageserver.api_util import create_api_error_dict
 from imageserver.errors import DoesNotExistError
-from imageserver.flask_app import app, data_engine, permissions_engine
+from imageserver.flask_app import app, logger, data_engine, permissions_engine
 from imageserver.flask_util import login_required
 from imageserver.models import FolderPermission, FolioPermission
 from imageserver.portfolios import blueprint
@@ -147,7 +147,7 @@ def portfolio_view(human_id):
         # Although this isn't a JSON API, we're still using it like a viewing API,
         # so get the correct HTTP status code to return. create_api_error_dict() also
         # logs security errors so we don't need to do that separately here.
-        error_dict = create_api_error_dict(e)
+        error_dict = create_api_error_dict(e, logger)
         if app.config['DEBUG']:
             raise
         return render_template(

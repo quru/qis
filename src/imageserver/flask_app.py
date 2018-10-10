@@ -32,8 +32,10 @@
 import os
 import signal
 
-import flask
+from flask import Flask, request
+
 from . import __about__
+from .api_util import make_api_error_response
 
 
 def extend_app(app):
@@ -125,7 +127,7 @@ def reconfigure_app_for_imaging_backend(app):
 
 
 # Create main web app
-app = flask.Flask(__name__)
+app = Flask(__name__)
 configure_app(app)
 extend_app(app)
 
@@ -318,3 +320,31 @@ def _stop_aux_processes(service_list='all', nicely=True):
                 os.kill(int(last_pid), use_signal)
         except (IOError, OSError):
             pass
+
+
+@app.errorhandler(400)
+@app.errorhandler(401)
+@app.errorhandler(403)
+@app.errorhandler(404)
+@app.errorhandler(405)
+@app.errorhandler(413)
+@app.errorhandler(500)
+@app.errorhandler(501)
+@app.errorhandler(503)
+def on_unhandled_error(exc):
+    """
+    Global handler for uncaught exceptions.
+    This is intended to handle errors thrown by either the Flask framework or by
+    middleware, which are difficult or impossible to handle in normal application
+    code.
+    """
+    if request.path.startswith('/api/'):
+        # This was an API request. I would rather handle this in the API blueprint
+        # but the Flask documentation says you can't (for 404 and 405 at least),
+        # so checking for path.startswith('/api/') is actually the documented way
+        # of doing it: http://flask.pocoo.org/docs/1.0/blueprints/#error-handlers
+        return make_api_error_response(exc, logger)
+
+    # Most of the other errors are triggered by the /image and /original URLs
+    # where Flask's default handler (returning brief HTML) already works well
+    return exc

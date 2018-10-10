@@ -31,10 +31,11 @@
 #
 
 import base64
-import json
-import pickle
 import datetime
+import io
+import json
 import os
+import pickle
 import time
 
 from werkzeug.urls import url_quote_plus
@@ -79,28 +80,35 @@ class ImageServerAPITests(main_tests.BaseTestCase):
     def _base64_encode(self, s):
         return base64.b64encode(bytes(s, 'utf8')).decode('ascii')
 
+    # Utility - checks that an API response is JSON with the expected status code
+    def assert_json_response_code(self, response, expected_code):
+        self.assertEqual(response.status_code, expected_code)
+        self.assertIn('application/json', response.headers['Content-Type'])
+        obj = json.loads(response.data.decode('utf8'))
+        self.assertEqual(obj['status'], expected_code)
+
     # API token login - bad parameters
     def test_token_login_bad_params(self):
         # Missing params
         rv = self.app.post('/api/token/')
-        self.assertEqual(rv.status_code, API_CODES.INVALID_PARAM)
+        self.assert_json_response_code(rv, API_CODES.INVALID_PARAM)
         # Invalid username
         rv = self.app.post('/api/token/', data={
             'username': 'unclebulgaria',
             'password': 'wimbledon'
         })
-        self.assertEqual(rv.status_code, API_CODES.UNAUTHORISED)
+        self.assert_json_response_code(rv, API_CODES.UNAUTHORISED)
         # Invalid password
         rv = self.app.post('/api/token/', data={
             'username': 'admin',
             'password': 'wimbledon'
         })
-        self.assertEqual(rv.status_code, API_CODES.UNAUTHORISED)
+        self.assert_json_response_code(rv, API_CODES.UNAUTHORISED)
 
     # API token login - normal with username+password parameters
     def test_token_login(self):
         rv = self.app.get('/api/admin/groups/')
-        self.assertEqual(rv.status_code, API_CODES.REQUIRES_AUTH)
+        self.assert_json_response_code(rv, API_CODES.REQUIRES_AUTH)
         # Login
         main_tests.setup_user_account('kryten', 'admin_all', allow_api=True)
         token = self.api_login('kryten', 'kryten')
@@ -109,7 +117,7 @@ class ImageServerAPITests(main_tests.BaseTestCase):
         rv = self.app.get('/api/admin/groups/', headers={
             'Authorization': 'Basic ' + creds
         })
-        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        self.assert_json_response_code(rv, API_CODES.SUCCESS)
 
     # API token login - normal with username+password http basic auth
     def test_token_login_http_basic_auth(self):
@@ -118,9 +126,7 @@ class ImageServerAPITests(main_tests.BaseTestCase):
         rv = self.app.post('/api/token/', headers={
             'Authorization': 'Basic ' + creds
         })
-        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
-        obj = json.loads(rv.data.decode('utf8'))
-        self.assertEqual(obj['status'], rv.status_code)
+        self.assert_json_response_code(rv, API_CODES.SUCCESS)
 
     # API token login - account disabled
     def test_token_login_user_disabled(self):
@@ -145,9 +151,7 @@ class ImageServerAPITests(main_tests.BaseTestCase):
         rv = self.app.post('/api/token/', headers={
             'Authorization': 'Basic ' + creds
         })
-        self.assertEqual(rv.status_code, API_CODES.UNAUTHORISED)
-        obj = json.loads(rv.data.decode('utf8'))
-        self.assertEqual(obj['status'], rv.status_code)
+        self.assert_json_response_code(rv, API_CODES.UNAUTHORISED)
 
     # Test that tokens expire
     def test_token_expiry(self):
@@ -164,25 +168,19 @@ class ImageServerAPITests(main_tests.BaseTestCase):
             rv = self.app.get('/api/admin/users/', headers={
                 'Authorization': 'Basic ' + creds
             })
-            self.assertEqual(rv.status_code, API_CODES.SUCCESS)
-            obj = json.loads(rv.data.decode('utf8'))
-            self.assertEqual(obj['status'], rv.status_code)
+            self.assert_json_response_code(rv, API_CODES.SUCCESS)
             # That 1 second expiry is anything from 1 to 2s in reality
             time.sleep(2)
             # Token should now be expired
             rv = self.app.get('/api/admin/users/', headers={
                 'Authorization': 'Basic ' + creds
             })
-            self.assertEqual(rv.status_code, API_CODES.REQUIRES_AUTH)
-            obj = json.loads(rv.data.decode('utf8'))
-            self.assertEqual(obj['status'], rv.status_code)
+            self.assert_json_response_code(rv, API_CODES.REQUIRES_AUTH)
             # Also test a POST as this could (but shouldn't) trigger CSRF
             rv = self.app.post('/api/admin/users/', headers={
                 'Authorization': 'Basic ' + creds
             })
-            self.assertEqual(rv.status_code, API_CODES.REQUIRES_AUTH)
-            obj = json.loads(rv.data.decode('utf8'))
-            self.assertEqual(obj['status'], rv.status_code)
+            self.assert_json_response_code(rv, API_CODES.REQUIRES_AUTH)
         finally:
             flask_app.config['API_TOKEN_EXPIRY_TIME'] = old_expiry
             flask_app.config['TESTING'] = True
@@ -200,25 +198,19 @@ class ImageServerAPITests(main_tests.BaseTestCase):
             rv = self.app.get('/api/admin/users/1/', headers={
                 'Authorization': 'Basic ' + creds
             })
-            self.assertEqual(rv.status_code, API_CODES.REQUIRES_AUTH)
-            obj = json.loads(rv.data.decode('utf8'))
-            self.assertEqual(obj['status'], rv.status_code)
+            self.assert_json_response_code(rv, API_CODES.REQUIRES_AUTH)
             # Blank token
             token = ''
             creds = self._base64_encode(token + ':password')
             rv = self.app.get('/api/admin/users/1/', headers={
                 'Authorization': 'Basic ' + creds
             })
-            self.assertEqual(rv.status_code, API_CODES.REQUIRES_AUTH)
-            obj = json.loads(rv.data.decode('utf8'))
-            self.assertEqual(obj['status'], rv.status_code)
+            self.assert_json_response_code(rv, API_CODES.REQUIRES_AUTH)
             # Also test a POST as this could (but shouldn't) trigger CSRF
             rv = self.app.post('/api/admin/users/', headers={
                 'Authorization': 'Basic ' + creds
             })
-            self.assertEqual(rv.status_code, API_CODES.REQUIRES_AUTH)
-            obj = json.loads(rv.data.decode('utf8'))
-            self.assertEqual(obj['status'], rv.status_code)
+            self.assert_json_response_code(rv, API_CODES.REQUIRES_AUTH)
         finally:
             flask_app.config['TESTING'] = True
 
@@ -226,20 +218,13 @@ class ImageServerAPITests(main_tests.BaseTestCase):
     def test_api_list(self):
         # Unauthorised path
         rv = self.app.get('/api/list/?path=../../../etc/')
-        self.assertEqual(rv.status_code, API_CODES.UNAUTHORISED)
-        self.assertIn('application/json', rv.headers['Content-Type'])
-        obj = json.loads(rv.data.decode('utf8'))
-        self.assertEqual(obj['status'], API_CODES.UNAUTHORISED)
+        self.assert_json_response_code(rv, API_CODES.UNAUTHORISED)
         # Invalid path
         rv = self.app.get('/api/list/?path=non-existent')
-        self.assertEqual(rv.status_code, API_CODES.NOT_FOUND)
-        self.assertIn('application/json', rv.headers['Content-Type'])
-        obj = json.loads(rv.data.decode('utf8'))
-        self.assertEqual(obj['status'], API_CODES.NOT_FOUND)
+        self.assert_json_response_code(rv, API_CODES.NOT_FOUND)
         # Valid request
         rv = self.app.get('/api/list/?path=test_images')
-        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
-        self.assertIn('application/json', rv.headers['Content-Type'])
+        self.assert_json_response_code(rv, API_CODES.SUCCESS)
         obj = json.loads(rv.data.decode('utf8'))
         self.assertGreater(len(obj['data']), 0)
         self.assertIn('filename', obj['data'][0])
@@ -260,7 +245,7 @@ class ImageServerAPITests(main_tests.BaseTestCase):
     def test_api_list_paging(self):
         # Maximum 1000
         rv = self.app.get('/api/list/?path=test_images&limit=1001')
-        self.assertEqual(rv.status_code, API_CODES.INVALID_PARAM)
+        self.assert_json_response_code(rv, API_CODES.INVALID_PARAM)
         # Test limit
         rv = self.app.get('/api/list/?path=test_images&limit=3')
         self.assertEqual(rv.status_code, API_CODES.SUCCESS)
@@ -294,8 +279,7 @@ class ImageServerAPITests(main_tests.BaseTestCase):
             copy_file('test_images/cathedral.jpg', temp_folder + '/badfile.docx')
             # Folder list should return 2 files, one supported, and one not, sorted
             rv = self.app.get('/api/list/?path=' + temp_folder)
-            self.assertEqual(rv.status_code, API_CODES.SUCCESS)
-            self.assertIn('application/json', rv.headers['Content-Type'])
+            self.assert_json_response_code(rv, API_CODES.SUCCESS)
             obj = json.loads(rv.data.decode('utf8'))
             self.assertEqual(len(obj['data']), 2)
             f1 = obj['data'][0]
@@ -313,14 +297,13 @@ class ImageServerAPITests(main_tests.BaseTestCase):
     def test_api_details(self):
         # Unauthorised path
         rv = self.app.get('/api/details/?src=../../../etc/')
-        assert rv.status_code == API_CODES.UNAUTHORISED
+        self.assert_json_response_code(rv, API_CODES.UNAUTHORISED)
         # Try requesting a folder
         rv = self.app.get('/api/details/?src=test_images')
         assert rv.status_code == API_CODES.NOT_FOUND
         # Valid request
         rv = self.app.get('/api/details/?src=test_images/cathedral.jpg')
-        assert rv.status_code == API_CODES.SUCCESS
-        assert 'application/json' in rv.headers['Content-Type']
+        self.assert_json_response_code(rv, API_CODES.SUCCESS)
         obj = json.loads(rv.data.decode('utf8'))
         assert obj['data']['width'] == 1600, 'Did not find data.width=1600, got ' + str(obj)
         assert obj['data']['height'] == 1200
@@ -332,7 +315,7 @@ class ImageServerAPITests(main_tests.BaseTestCase):
             f.write('<docx>I am not an image</docx>')
         try:
             rv = self.app.get('/api/details/?src=' + temp_file)
-            assert rv.status_code == API_CODES.IMAGE_ERROR
+            self.assert_json_response_code(rv, API_CODES.IMAGE_ERROR)
         finally:
             delete_file(temp_file)
 
@@ -340,13 +323,13 @@ class ImageServerAPITests(main_tests.BaseTestCase):
     def test_data_api_images(self):
         # Get image ID
         rv = self.app.get('/api/details/?src=test_images/cathedral.jpg')
-        assert rv.status_code == API_CODES.SUCCESS
+        self.assert_json_response_code(rv, API_CODES.SUCCESS)
         image_id = json.loads(rv.data.decode('utf8'))['data']['id']
         # Set API URL
         api_url = '/api/admin/images/' + str(image_id) + '/'
         # Check no access when not logged in
         rv = self.app.get(api_url)
-        assert rv.status_code == API_CODES.REQUIRES_AUTH
+        self.assert_json_response_code(rv, API_CODES.REQUIRES_AUTH)
         # Log in without edit permission
         main_tests.setup_user_account('kryten', 'none')
         self.login('kryten', 'kryten')
@@ -377,7 +360,7 @@ class ImageServerAPITests(main_tests.BaseTestCase):
     def test_data_api_users(self):
         # Not logged in - getting details should fail
         rv = self.app.get('/api/admin/users/2/')
-        assert rv.status_code == API_CODES.REQUIRES_AUTH
+        self.assert_json_response_code(rv, API_CODES.REQUIRES_AUTH)
         #
         # Log in as std user
         #
@@ -740,13 +723,13 @@ class ImageServerAPITests(main_tests.BaseTestCase):
             return dict((k, d[k]) for k in d if d[k]['value'] is not None)
         # Not logged in - getting details should fail
         rv = self.app.get('/api/admin/templates/1/')
-        self.assertEqual(rv.status_code, API_CODES.REQUIRES_AUTH)
+        self.assert_json_response_code(rv, API_CODES.REQUIRES_AUTH)
         # Log in as std user
         main_tests.setup_user_account('kryten', 'none')
         self.login('kryten', 'kryten')
         # Logged in - template details should be available
         rv = self.app.get('/api/admin/templates/2/')
-        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        self.assert_json_response_code(rv, API_CODES.SUCCESS)
         obj = json.loads(rv.data.decode('utf8'))['data']
         self.assertEqual(obj['name'], 'SmallJpeg')
         tdict = obj['template']
@@ -888,7 +871,7 @@ class ImageServerAPITests(main_tests.BaseTestCase):
         # Try to delete it (this shouldn't be allowed)
         self.login('admin', 'admin')
         rv = self.app.delete('/api/admin/templates/' + str(db_template.id) + '/')
-        self.assertEqual(rv.status_code, API_CODES.INVALID_PARAM)
+        self.assert_json_response_code(rv, API_CODES.INVALID_PARAM)
 
     # File admin API - images
     def test_file_api_images(self):
@@ -904,7 +887,7 @@ class ImageServerAPITests(main_tests.BaseTestCase):
             make_dirs(temp_folder)
             copy_file('test_images/cathedral.jpg', temp_image)
             rv = self.app.get('/api/details/?src=' + temp_image)
-            assert rv.status_code == API_CODES.SUCCESS
+            self.assert_json_response_code(rv, API_CODES.SUCCESS)
             temp_image_id = json.loads(rv.data.decode('utf8'))['data']['id']
             temp_folder_id = dm.get_folder(folder_path=temp_folder).id
             orig_folder_id = dm.get_folder(folder_path='test_images').id
@@ -1206,7 +1189,7 @@ class ImageServerAPITests(main_tests.BaseTestCase):
                     '/api/admin/filesystem/folders/',
                     data={'path': temp_folder + fpath}
                 )
-                self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+                self.assert_json_response_code(rv, API_CODES.SUCCESS)
                 json_folder = json.loads(rv.data.decode('utf8'))['data']
                 self.assertEqual(json_folder['path'], temp_folder + '/a/b')  # not /a//b
                 db_folder = dm.get_folder(folder_path=temp_folder + '/a/b')  # not /a//b
@@ -1254,12 +1237,12 @@ class ImageServerAPITests(main_tests.BaseTestCase):
             )
             # A user can query their own task
             rv = self.app.get(task_url + str(user_task.id) + '/')
-            self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+            self.assert_json_response_code(rv, API_CODES.SUCCESS)
             # Another (non super) user cannot query it
             main_tests.setup_user_account('taskuser', 'admin_files')
             self.login('taskuser', 'taskuser')
             rv = self.app.get(task_url + str(user_task.id) + '/')
-            self.assertEqual(rv.status_code, API_CODES.UNAUTHORISED)
+            self.assert_json_response_code(rv, API_CODES.UNAUTHORISED)
             # Prevent this task running during some later test
             tm.cancel_task(user_task)
 
@@ -1275,7 +1258,7 @@ class ImageServerAPITests(main_tests.BaseTestCase):
 
             # Test duplicate task isn't allowed
             rv = self.app.post(purge_url, data={'path': ''})
-            self.assertEqual(rv.status_code, API_CODES.ALREADY_EXISTS)
+            self.assert_json_response_code(rv, API_CODES.ALREADY_EXISTS)
 
             # Test checking task progress
             rv = self.app.get(task_url + str(task_obj['id']) + '/')
@@ -1299,10 +1282,10 @@ class ImageServerAPITests(main_tests.BaseTestCase):
         main_tests.setup_user_account('kryten', 'admin_permissions')
         self.login('kryten', 'kryten')
         rv = self.app.get('/api/admin/properties/' + Property.DEFAULT_TEMPLATE + '/')
-        self.assertEqual(rv.status_code, API_CODES.UNAUTHORISED)
+        self.assert_json_response_code(rv, API_CODES.UNAUTHORISED)
         self.login('admin', 'admin')
         rv = self.app.get('/api/admin/properties/' + Property.DEFAULT_TEMPLATE + '/')
-        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        self.assert_json_response_code(rv, API_CODES.SUCCESS)
         prop_obj = json.loads(rv.data.decode('utf8'))['data']
         self.assertEqual(prop_obj, {
             'key': Property.DEFAULT_TEMPLATE,
@@ -1463,14 +1446,14 @@ class ImageServerAPITests(main_tests.BaseTestCase):
             # Web operations should be blocked without a CSRF token
             rv = self.app.delete('/api/admin/users/' + str(deluser.id) + '/')
             self.assertEqual(rv.status_code, API_CODES.INVALID_PARAM)
-            self.assertIn('missing CSRF token', rv.data.decode('utf8'))
+            self.assertIn('missing CSRF token', rv.data.decode('utf8'))  # HTML
             # But allowed if caller has an API token
             token = self.api_login('kryten', 'kryten')
             creds = self._base64_encode(token + ':password')
             rv = self.app.delete('/api/admin/users/' + str(deluser.id) + '/', headers={
                 'Authorization': 'Basic ' + creds
             })
-            self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+            self.assert_json_response_code(rv, API_CODES.SUCCESS)
         finally:
             flask_app.config['TESTING'] = True
 
@@ -1491,7 +1474,7 @@ class ImageServerAPITests(main_tests.BaseTestCase):
             copy_file('test_images/thames.jpg', temp_file)
             # Test directory listing
             rv = self.app.get(list_url)
-            assert rv.status_code == API_CODES.SUCCESS
+            self.assert_json_response_code(rv, API_CODES.SUCCESS)
             obj = json.loads(rv.data.decode('utf8'))
             assert len(obj['data']) == 1
             entry = obj['data'][0]
@@ -1533,7 +1516,7 @@ class ImageServerAPITests(main_tests.BaseTestCase):
             rv = self.app.post('/api/admin/filesystem/folders/', data={
                 'path': '/bell\x07/etc/* | more/'
             })
-            self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+            self.assert_json_response_code(rv, API_CODES.SUCCESS)
             json_folder = json.loads(rv.data.decode('utf8'))['data']
             self.assertGreater(json_folder['id'], 0)
             # The bell byte, *, | and surrounding spaces should be gone
@@ -1645,14 +1628,14 @@ class ImageServerAPITests(main_tests.BaseTestCase):
             'group_type': Group.GROUP_TYPE_LOCAL
         }
         rv = self.app.post('/api/admin/groups/', data=group_data)
-        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        self.assert_json_response_code(rv, API_CODES.SUCCESS)
         obj = json.loads(rv.data.decode('utf8'))
         group_id = obj['data']['id']
         api_url = '/api/admin/groups/' + str(group_id) + '/'
         rv = self.app.delete(api_url)
-        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        self.assert_json_response_code(rv, API_CODES.SUCCESS)
         rv = self.app.delete(api_url)
-        self.assertEqual(rv.status_code, API_CODES.NOT_FOUND)
+        self.assert_json_response_code(rv, API_CODES.NOT_FOUND)
 
     # v4.1 #10 Deleting a disk file twice should give 200 then 404
     #         (the db record exists status:0 but the lack of disk file should take precedence)
@@ -1665,9 +1648,9 @@ class ImageServerAPITests(main_tests.BaseTestCase):
             api_url = '/api/admin/filesystem/images/' + str(db_image.id) + '/'
             self.login('admin', 'admin')
             rv = self.app.delete(api_url)
-            self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+            self.assert_json_response_code(rv, API_CODES.SUCCESS)
             rv = self.app.delete(api_url)
-            self.assertEqual(rv.status_code, API_CODES.NOT_FOUND)
+            self.assert_json_response_code(rv, API_CODES.NOT_FOUND)
         finally:
             delete_file(temp_file)
 
@@ -1682,9 +1665,9 @@ class ImageServerAPITests(main_tests.BaseTestCase):
             api_url = '/api/admin/filesystem/folders/' + str(db_folder.id) + '/'
             self.login('admin', 'admin')
             rv = self.app.delete(api_url)
-            self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+            self.assert_json_response_code(rv, API_CODES.SUCCESS)
             rv = self.app.delete(api_url)
-            self.assertEqual(rv.status_code, API_CODES.NOT_FOUND)
+            self.assert_json_response_code(rv, API_CODES.NOT_FOUND)
         finally:
             delete_dir(temp_folder)
 
@@ -1700,9 +1683,9 @@ class ImageServerAPITests(main_tests.BaseTestCase):
             api_url = '/api/admin/filesystem/images/' + str(db_image.id) + '/'
             self.login('admin', 'admin')
             rv = self.app.delete(api_url)
-            self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+            self.assert_json_response_code(rv, API_CODES.SUCCESS)
             rv = self.app.put(api_url, data={'path': renamed_temp_file})
-            self.assertEqual(rv.status_code, API_CODES.NOT_FOUND)
+            self.assert_json_response_code(rv, API_CODES.NOT_FOUND)
         finally:
             delete_file(temp_file)
             delete_file(renamed_temp_file)
@@ -1719,9 +1702,57 @@ class ImageServerAPITests(main_tests.BaseTestCase):
             api_url = '/api/admin/filesystem/folders/' + str(db_folder.id) + '/'
             self.login('admin', 'admin')
             rv = self.app.delete(api_url)
-            self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+            self.assert_json_response_code(rv, API_CODES.SUCCESS)
             rv = self.app.put(api_url, data={'path': renamed_temp_folder})
-            self.assertEqual(rv.status_code, API_CODES.NOT_FOUND)
+            self.assert_json_response_code(rv, API_CODES.NOT_FOUND)
         finally:
             delete_dir(temp_folder)
             delete_dir(renamed_temp_folder)
+
+    # v4.1 #10 Flask 401 errors should return JSON not HTML
+    def test_api_no_token(self):
+        rv = self.app.get('/api/admin/users/')
+        self.assert_json_response_code(rv, API_CODES.REQUIRES_AUTH)
+
+    # v4.1 #10 Flask 400 errors should return JSON not HTML
+    def test_api_bad_request(self):
+        self.login('admin', 'admin')
+        rv = self.app.post(
+            '/api/admin/users/',
+            data={'foo': 'bar'},
+            headers={'Content-Type': 'invalid'}
+        )
+        self.assert_json_response_code(rv, API_CODES.INVALID_PARAM)
+        obj = json.loads(rv.data.decode('utf8'))
+        self.assertIn('this server could not understand', obj['message'])
+
+    # v4.1 #10 Flask 404 errors should return JSON not HTML
+    def test_api_not_found(self):
+        rv = self.app.get('/api/non-existent')
+        self.assert_json_response_code(rv, API_CODES.NOT_FOUND)
+
+    # v4.1 #10 Flask 405 errors should return JSON not HTML
+    def test_method_not_allowed(self):
+        rv = self.app.delete('/api/upload')
+        self.assert_json_response_code(rv, 405)
+
+    # v4.1 #10 Flask 413 errors should return JSON not HTML
+    def test_data_too_large(self):
+        old_MAX_CONTENT_LENGTH = flask_app.config['MAX_CONTENT_LENGTH']
+        try:
+            flask_app.config['MAX_CONTENT_LENGTH'] = 100
+            rv = self.app.post('/api/upload/', data={
+                'files': io.BytesIO(b'test' * 200),
+                'path': 'test_images'
+            })
+            self.assert_json_response_code(rv, 413)
+            obj = json.loads(rv.data.decode('utf8'))
+            self.assertIn('exceeds the capacity limit', obj['message'])
+        finally:
+            flask_app.config['MAX_CONTENT_LENGTH'] = old_MAX_CONTENT_LENGTH
+
+    # v4.1 #10 Missing slashes redirect should return JSON not an HTML 301
+    def test_missing_slash(self):
+        self.login('admin', 'admin')
+        rv = self.app.get('/api/admin/users')  # Should have a trailing /
+        self.assert_json_response_code(rv, 301)

@@ -201,6 +201,7 @@ The following status codes may be returned:
 	<tr class="odd"><td>401</td><td>The client must be logged in to use the function</td></tr>
 	<tr class="even"><td>403</td><td>The client does not have permission to perform the requested action</td></tr>
 	<tr class="odd"><td>404</td><td>The requested path or image does not exist</td></tr>
+	<tr class="odd"><td>405</td><td>The requested method (GET, POST, etc) is not supported</td></tr>
 	<tr class="even"><td>409</td><td>The item already exists</td></tr>
 	<tr class="odd"><td>415</td><td>The requested image is invalid or unsupported</td></tr>
 	<tr class="even"><td>500</td><td>Some other error occurred (check the server log files)</td></tr>

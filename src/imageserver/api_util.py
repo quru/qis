@@ -33,9 +33,9 @@ from functools import wraps
 import traceback
 
 from flask import jsonify, request
+from werkzeug.exceptions import HTTPException
 
 from . import errors
-from .flask_app import logger
 from .util import unicode_to_utf8
 
 
@@ -47,6 +47,7 @@ class API_CODES():
     REQUIRES_AUTH = 401
     UNAUTHORISED = 403
     NOT_FOUND = 404
+    METHOD_UNSUPPORTED = 405
     ALREADY_EXISTS = 409
     IMAGE_ERROR = 415
     INTERNAL_ERROR = 500
@@ -60,6 +61,7 @@ API_MESSAGES = {
     401: 'Not authenticated',
     403: 'Unauthorised request',
     404: 'The requested item was not found',
+    405: 'Unsupported method',
     409: 'The specified item already exists',
     415: 'Invalid or unsupported image file',
     500: 'Internal error',
@@ -79,7 +81,8 @@ def add_api_error_handler(f):
         try:
             return f(*args, **kwargs)
         except Exception as e:
-            return make_api_error_response(e)
+            from .flask_app import logger
+            return make_api_error_response(e, logger)
     return decorated_function
 
 
@@ -132,15 +135,19 @@ def create_api_dict(status_code, status_message, data=None):
     return dict(status=status_code, message=status_message, data=data)
 
 
-def create_api_error_dict(exc):
+def create_api_error_dict(exc, logger=None):
     """
     Returns an API standard response dict for the given exception.
     If the exception has an 'api_data' attribute, this will be returned in
     the response's data value, otherwise the data value will be None.
+    If a logger is provided, security errors, bad parameters and unexpected
+    errors are also logged.
     """
     err_no = API_CODES.INTERNAL_ERROR
+    exc_name = ''
     exc_val = '(none)' if exc is None else unicode_to_utf8(str(exc))
 
+    # Try first for our own exceptions
     if isinstance(exc, errors.ParameterError):
         err_no = API_CODES.INVALID_PARAM
     elif isinstance(exc, errors.AlreadyExistsError):
@@ -155,18 +162,27 @@ def create_api_error_dict(exc):
         err_no = API_CODES.UNAUTHORISED
     elif isinstance(exc, errors.ServerTooBusyError):
         err_no = API_CODES.TOO_BUSY
+    elif isinstance(exc, HTTPException):
+        # It's a Flask/Werkzeug HTTP exception
+        err_no = exc.code
+        exc_name = exc.name
+        exc_val = exc.description
 
     # Log interesting errors
-    if err_no == API_CODES.INVALID_PARAM:
-        logger.error('API Parameter error (' + str(exc) + ')')
-    elif err_no == API_CODES.UNAUTHORISED:
-        logger.error('API Security error (' + str(exc) + ')')
-    elif err_no == API_CODES.INTERNAL_ERROR:
-        logger.error('API ' + traceback.format_exc())
+    if logger is not None:
+        if err_no == API_CODES.INVALID_PARAM:
+            logger.error('API Parameter error (' + exc_val + ')')
+        elif err_no == API_CODES.UNAUTHORISED:
+            logger.error('API Security error (' + exc_val + ')')
+        elif err_no == API_CODES.INTERNAL_ERROR:
+            logger.error('API ' + traceback.format_exc())
+
+    if not exc_name:
+        exc_name = API_MESSAGES.get(err_no, 'Unknown Error')
 
     return create_api_dict(
         err_no,
-        API_MESSAGES[err_no] + ' (' + exc_val + ')',
+        exc_name + ' (' + exc_val + ')',
         getattr(exc, 'api_data', None)
     )
 
@@ -187,12 +203,12 @@ def make_api_success_response(data=None, task_accepted=False):
     )
 
 
-def make_api_error_response(exc):
+def make_api_error_response(exc, logger=None):
     """
-    A shortcut that calls create_api_error_dict()
-    and creates a JSON response of the result.
+    A shortcut that calls create_api_error_dict() and creates a JSON response
+    of the result.
     """
-    rd = create_api_error_dict(exc)
+    rd = create_api_error_dict(exc, logger)
     return _to_json_response(rd['status'], rd)
 
 
@@ -204,8 +220,9 @@ def _to_json_response(status_code, response_dict):
     jr.status_code = status_code
     # Don't let IE ignore the content type or you might get XSS for HTML text inside the JSON
     jr.headers['X-Content-Type-Options'] = 'nosniff'
-    # If from an API post targetting a hidden iframe (instead of ajax)
-    if request.form.get('api_json_as_text', '') == 'true':
+    # Legacy browsers - if the API post targets a hidden iframe instead of XHR
+    # (bug: request.form.get breaks on 413 errors so skip it for those)
+    if status_code != 413 and request.form.get('api_json_as_text', '') == 'true':
         if not request.args.get('jsonp'):
             jr.mimetype = 'text/plain'
             # Force a 200 for IE to render the text instead of an error page

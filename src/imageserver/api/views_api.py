@@ -312,7 +312,9 @@ def upload():
                     if put_image_exception is None:
                         put_image_exception = e
                     # This loop failure, add the error info to our return data
-                    ret_dict[original_filepath] = {'error': create_api_error_dict(e)}
+                    ret_dict[original_filepath] = {
+                        'error': create_api_error_dict(e, logger)
+                    }
 
                 if db_image:
                     # Calculate download permission once (all files are going to same folder)

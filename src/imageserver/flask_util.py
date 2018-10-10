@@ -37,7 +37,7 @@ from flask import jsonify, make_response, redirect, request, session, url_for
 from werkzeug.urls import url_encode
 
 from .api_util import make_api_error_response
-from .flask_app import app, permissions_engine
+from .flask_app import app, logger, permissions_engine
 from .errors import AuthenticationError, SecurityError
 from .session_manager import get_session_user, logged_in
 from .util import parse_int
@@ -138,7 +138,7 @@ def _check_internal_request(request, session, from_web, require_login,
                 # Return an error
                 return make_api_error_response(AuthenticationError(
                     'You must be logged in to access this function'
-                ))
+                ), logger)
         # Check admin permission
         if required_permission_flag:
             try:
@@ -150,7 +150,7 @@ def _check_internal_request(request, session, from_web, require_login,
                 if from_web:
                     return make_response(str(e), 403)
                 else:
-                    return make_api_error_response(e)
+                    return make_api_error_response(e, logger)
     # OK
     return None
 
@@ -166,7 +166,7 @@ def _check_port(request, required_port, from_web):
         if from_web:
             return make_response(msg, 401)
         else:
-            return make_api_error_response(AuthenticationError(msg))
+            return make_api_error_response(AuthenticationError(msg), logger)
     return None
 
 
@@ -183,7 +183,7 @@ def _check_ssl_request(request, from_web):
         else:
             return make_api_error_response(AuthenticationError(
                 'HTTPS must be used to access this function'
-            ))
+            ), logger)
     return None
 
 
