@@ -212,13 +212,14 @@ class TimedTokenBasicAuthentication(BaseHttpAuthentication):
         """
         # CORS preflight checks use Access-Control-* headers with the OPTIONS
         # method, and fail if a 401 is returned, so we need to ignore those
-        if request.authorization and request.method != 'OPTIONS':
-            token = request.authorization.username
-            if token:
-                auth_obj = self.decode_auth_token(token)
-                if auth_obj:
-                    self.set_authenticated(auth_obj)
-                    return
+        if request.method != 'OPTIONS':
+            if request.authorization:
+                token = request.authorization.username
+                if token:
+                    auth_obj = self.decode_auth_token(token)
+                    if auth_obj:
+                        self.set_authenticated(auth_obj)
+                        return
 
             # The token was missing/invalid and g.csrf_exempt has not been set.
             # Now if this is an API PUT/POST, we want a JSON 401 response and
