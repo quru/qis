@@ -2234,6 +2234,31 @@ To move this image to the `web` folder:
 	  "status": 200
 	}
 
+Then to delete the file:
+
+	$ curl -X DELETE -u <token>:unused 'https://images.example.com/api/v1/admin/filesystem/images/524/'
+	{
+		"data": {
+			"description": "the description of my sample image",
+			"folder": {
+				"id": 6,
+				"name": "/web",
+				"parent_id": 1,
+				"path": "/web",
+				"status": 1
+			},
+			"folder_id": 6,
+			"height": 1200,
+			"id": 524,
+			"src": "web/Image0007.jpg",
+			"status": 0,
+			"title": "my sample image",
+			"width": 1600
+		},
+		"message": "OK",
+		"status": 200
+	}
+
 <a name="api_disk_folders"></a>
 ## disk folders
 Finds a folder by path or database ID.
