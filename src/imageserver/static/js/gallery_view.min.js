@@ -5,7 +5,6 @@
 	Purpose:       Quru Image Server gallery viewer
 	Requires:      common_view.js
 	               canvas_view.js
-	               Request.JSONP, String.QueryString, URI
 	Copyright:     Quru Ltd (www.quru.com)
 	Licence:
 
