@@ -216,7 +216,7 @@ class ImageTemplateManager(object):
                 # new data otherwise we'll be using an old or empty cache.
                 self._logger.debug('Another thread is loading image templates, waiting for it')
                 if not self._useable.wait(2.0):
-                    self._logger.warning('Timed out waiting for image template data')
+                    self._logger.warn('Timed out waiting for image template data')
                 else:
                     self._logger.debug('Got new image template data, continuing')
 
