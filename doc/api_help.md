@@ -1193,7 +1193,7 @@ crop to be applied to a single image. If image changes are also requested at the
 top of the single image changes.
 
 ### URL
-* `/api/v1/portfolios/images/` for `GET` (list images) and `POST` (add image)
+* `/api/v1/portfolios/[portfolio id]/images/` for `GET` (list images) and `POST` (add image)
 * `/api/v1/portfolios/[portfolio id]/images/[image id]/` for `GET`, `PUT`, and `DELETE`
 * `/api/v1/portfolios/[portfolio id]/images/[image id]/position/` for `PUT` (reorder)
 
@@ -1396,7 +1396,7 @@ expiry date.
 
 ### URL
 * `/api/v1/portfolios/[portfolio id]/exports/` for `GET` (list exports) and `POST`
-* `/api/v1/portfolios/[portfolio id]/images/[export id]/` for `GET` and `DELETE`
+* `/api/v1/portfolios/[portfolio id]/exports/[export id]/` for `GET` and `DELETE`
 
 ### Supported methods
 * `GET`
