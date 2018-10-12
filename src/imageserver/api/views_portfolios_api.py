@@ -35,19 +35,20 @@ import sys
 from flask import request
 from flask.views import MethodView
 
-from imageserver.api import api_add_url_rules, url_version_prefix
+from . import api_add_url_rules, url_version_prefix
+from .helpers import _prep_folio_object, _prep_folioexport_object, _prep_folioimage_object
 from imageserver.api_util import add_api_error_handler, add_parameter_error_handler
 from imageserver.api_util import make_api_success_response
 from imageserver.errors import DoesNotExistError, ParameterError
 from imageserver.filesystem_manager import delete_dir, get_portfolio_directory
 from imageserver.filesystem_sync import auto_sync_file
 from imageserver.flask_app import data_engine, permissions_engine, task_engine
-from imageserver.flask_util import api_permission_required, external_url_for
+from imageserver.flask_util import api_permission_required
 from imageserver.models import (
     Image, FolderPermission, Group, SystemPermissions, Task,
     Folio, FolioExport, FolioImage, FolioPermission, FolioHistory
 )
-from imageserver.portfolios.util import delete_portfolio_export, get_portfolio_image_attrs
+from imageserver.portfolios.util import delete_portfolio_export
 from imageserver.session_manager import get_session_user
 from imageserver.template_attrs import TemplateAttrs
 from imageserver.util import (
@@ -57,8 +58,6 @@ from imageserver.util import (
     validate_number, validate_string,
     secure_filename, secure_url_fragment, AttrObject
 )
-from imageserver.views_util import url_for_image_attrs
-
 
 # These APIs allow public access. The user object contains
 # fields that regular users shouldn't see, so filter them out.
@@ -732,53 +731,6 @@ def _image_params_to_template_dict(json_str):
     _ = TemplateAttrs('Portfolio', image_template_dict)
     # If that worked, the dict is valid
     return image_template_dict
-
-
-def _prep_folio_object(folio):
-    """
-    Modifies a Folio object to add calculated fields.
-    """
-    # Add attribute for public viewing URL
-    folio.url = external_url_for('folios.portfolio_view', human_id=folio.human_id)
-    # Add extra fields to the images
-    if data_engine.attr_is_loaded(folio, 'images'):
-        folio.images = [
-            _prep_folioimage_object(fi) for fi in folio.images
-        ]
-    # Add extra fields to the downloads
-    if data_engine.attr_is_loaded(folio, 'downloads'):
-        folio.downloads = [
-            _prep_folioexport_object(folio, fe) for fe in folio.downloads
-        ]
-    return folio
-
-
-def _prep_folioimage_object(folioimage):
-    """
-    Modifies a FolioImage object to add calculated fields.
-    """
-    # Add attribute for the image viewing URL
-    folioimage.url = url_for_image_attrs(
-        get_portfolio_image_attrs(folioimage, validate=False),
-        external=True
-    )
-    return folioimage
-
-
-def _prep_folioexport_object(folio, folioexport):
-    """
-    Modifies a FolioExport object to add calculated fields.
-    """
-    # Add attribute for the download URL
-    if folioexport.filename:
-        folioexport.url = external_url_for(
-            'folios.portfolio_download',
-            human_id=folio.human_id,
-            filename=folioexport.filename
-        )
-    else:
-        folioexport.url = ''
-    return folioexport
 
 
 # Define portfolio header API views
