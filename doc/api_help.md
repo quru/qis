@@ -1091,6 +1091,7 @@ make changes to the portfolio or [publish it](#api_folios_publish) as a zip file
 	* `human_id` - Optional, text - A unique "friendly" ID that will be used to
 	  identify the portfolio in the [view](#api_folio_view) and [download](#api_folio_download)
 	  URLs. If not supplied or left blank a unique ID will be generated for you.
+		Some characters are disallowed (see below).
 	* `name` - Mandatory, text - A name for the portfolio
 	* `description` - Mandatory, text - A description of the portfolio
 	* `internal_access` - Mandatory, integer - The level of access to allow
@@ -1103,6 +1104,9 @@ make changes to the portfolio or [publish it](#api_folios_publish) as a zip file
 		* `0` - No access (make the portfolio private)
 		* `10` - View permission
 		* `20` - View and download permission
+
+Because it is used inside URLs, the `human_id` value is not allowed to contain
+any of these characters: `% < > & . ? : /`.
 
 ### Permissions required
 * None for `GET` (list portfolios),

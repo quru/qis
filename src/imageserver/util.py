@@ -57,6 +57,10 @@ _filename_unicode_strip_re = re.compile(__sf_chars_strip, re.UNICODE)
 _windows_device_files = ('CON', 'AUX', 'COM1', 'COM2', 'COM3', 'COM4', 'LPT1',
                          'LPT2', 'LPT3', 'PRN', 'NUL')
 
+# Characters that are not safe to allow in URL paths
+__url_chars_strip = r'[%\<\>&\.\?:/]'
+_url_chars_strip_re = re.compile(__url_chars_strip)
+
 
 def etag(*vals):
     """
@@ -725,6 +729,23 @@ def unicode_to_utf8(ustr):
     """
     # Convert to UTF8, ignoring errors
     return unicodedata.normalize('NFKD', ustr).encode('utf8', 'ignore').decode('utf8')
+
+
+def secure_url_fragment(frag, keep_unicode=False):
+    """
+    Pass a string intended for use in a URL and this will return a modified copy
+    of it that cannot be used for creating malicious URLs, e.g. by encoding a
+    '<script>' tag or by changing the path with '../..'.
+    Note that this function simpy removes '/' characters (and others), so you
+    cannot pass whole URLs or whole paths. The final value may be an empty string.
+    """
+    # See secure_filename() for this bit
+    if keep_unicode:
+        frag = normalize('NFC', frag)
+    else:
+        frag = normalize('NFKD', frag).encode('ascii', 'ignore').decode('ascii')
+    # and strip chars that can do things in URLs
+    return _url_chars_strip_re.sub('', frag).strip()
 
 
 def secure_filename(filename, keep_unicode=False):

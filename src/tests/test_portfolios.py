@@ -32,6 +32,7 @@
 import os
 import json
 import time
+import urllib.parse
 import zipfile
 from datetime import datetime, timedelta
 
@@ -242,6 +243,74 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         obj = json.loads(rv.data.decode('utf8'))
         self.assertGreater(len(obj['data']['human_id']), 0)
         self.assertNotEqual(obj['data']['human_id'].strip(), '')
+
+    # v4.1 The human/friendly ID comes from the UI.
+    # Check that it can't be used to create malicious URLs.
+    def test_folio_bad_human_id(self):
+        api_url = '/api/portfolios/'
+        self.login('foliouser', 'foliouser')
+        bad_ids = [
+            '/some/path/name',
+            '.',
+            '..name',
+            '../../../',
+            '../../../name',
+            'some:port',
+            'name?some=query-string',
+            '?some=query-string',
+            '<script>',
+            '%3cscript%3e',
+            '%3Cscript%20',
+            '%253Cscript',
+            '&lt;script&gt;',
+            'javascript:',
+        ]
+        for bad_id in bad_ids:
+            rv = self.app.post(api_url, data={
+                'human_id': bad_id,
+                'name': 'Test portfolio',
+                'description': 'This is a test portfolio',
+                'internal_access': FolioPermission.ACCESS_NONE,
+                'public_access': FolioPermission.ACCESS_NONE
+            })
+            self.assertEqual(
+                rv.status_code,
+                API_CODES.INVALID_PARAM,
+                'Portfolio created with dangerous human ID: ' + bad_id
+            )
+            obj = json.loads(rv.data.decode('utf8'))
+            self.assertEqual(obj['status'], API_CODES.INVALID_PARAM)
+            self.assertIn('human_id', obj['message'])
+
+    # Tests that chars in the human ID are correctly encoded in the portfolio URL
+    def test_folio_human_id_urls(self):
+        self.login('foliouser', 'foliouser')
+        test_ids = [
+            'a test @this *bold*! (but ok) + fin',        # chars that should be % encoded
+            '\u00e2 te\u00dft \u2014 of \u00e7har\u0292'  # unicode is allowed in URLs these days
+        ]
+        for hid in test_ids:
+            hid_encoded = urllib.parse.quote(hid, safe='/+')  # Flask doesn't encode +
+            api_url = '/api/portfolios/'
+            rv = self.app.post(api_url, data={
+                'human_id': hid,
+                'name': 'Test portfolio',
+                'description': 'This is a test portfolio',
+                'internal_access': FolioPermission.ACCESS_NONE,
+                'public_access': FolioPermission.ACCESS_NONE
+            })
+            self.assertEqual(rv.status_code, API_CODES.SUCCESS, str(rv.data))
+            obj = json.loads(rv.data.decode('utf8'))
+            # Check the generated portfolio URL
+            expect_end = '/' + hid_encoded + '/'
+            self.assertTrue(
+                obj['data']['url'].endswith(expect_end),
+                'Folio URL {} but expected ending {}'.format(obj['data']['url'], expect_end)
+            )
+            # Check that it also works for accessing the portfolio
+            api_url = '/portfolios/' + hid + '/'  # test client encodes the URL
+            rv = self.app.get(api_url)
+            self.assertEqual(rv.status_code, API_CODES.SUCCESS)
 
     # Tests adding and removing images from a portfolio
     def test_folio_add_remove_image(self):

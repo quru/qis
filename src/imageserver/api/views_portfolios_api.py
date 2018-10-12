@@ -55,7 +55,7 @@ from imageserver.util import (
     object_to_dict, object_to_dict_list,
     parse_boolean, parse_int, parse_iso_date, parse_iso_datetime,
     validate_number, validate_string,
-    secure_filename, AttrObject
+    secure_filename, secure_url_fragment, AttrObject
 )
 from imageserver.views_util import url_for_image_attrs
 
@@ -248,6 +248,9 @@ class PortfolioAPI(MethodView):
         }
         if params['human_id']:
             validate_string(params['human_id'], 1, 64)
+            if params['human_id'] != secure_url_fragment(params['human_id'], True):
+                raise ValueError('human_id is not allowed to contain characters: %<>&.?:/')
+
         validate_string(params['name'], 0, 255)
         validate_string(params['description'], 0, 5 * 1024)
         # For the first release of portfolios we're limiting access to <= DOWNLOAD
