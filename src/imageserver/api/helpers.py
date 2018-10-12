@@ -29,10 +29,60 @@
 # =========  ====  ============================================================
 #
 
-from imageserver.flask_app import data_engine
+from imageserver.flask_app import data_engine, image_engine, permissions_engine
 from imageserver.flask_util import external_url_for
-from imageserver.views_util import url_for_image_attrs
+from imageserver.models import FolderPermission, Image
 from imageserver.portfolios.util import get_portfolio_image_attrs
+from imageserver.session_manager import get_session_user
+from imageserver.util import filepath_filename, get_file_extension
+from imageserver.views_util import url_for_image_attrs
+
+
+def _prep_image_object(image, can_download=None, **url_params):
+    """
+    Modifies an Image object to add calculated fields.
+    This provides the common data dictionary for the file admin, image admin,
+    image details, upload, and directory listing (with detail) APIs.
+
+    If the download permission is None, it is calculated for the image's folder
+    and the current user. The permissions engine returns this from cache when
+    possible, but it is more efficient to pass in the permission if it is already
+    known, or when handling many images in the same folder.
+
+    If any url_params are provided (as kwargs), these are included in the
+    generated image 'url' attribute.
+    """
+    if can_download is None:
+        can_download = permissions_engine.is_folder_permitted(
+            image.folder,
+            FolderPermission.ACCESS_DOWNLOAD,
+            get_session_user()
+        )
+    image.url = external_url_for('image', src=image.src, **url_params)
+    image.download = can_download
+    image.filename = filepath_filename(image.src)
+    # Unsupported files shouldn't be in the database but it can happen if
+    # support is removed for a file type that was once enabled
+    image.supported = (
+        get_file_extension(image.filename) in
+        image_engine.get_image_formats(supported_only=True)
+    )
+    return image
+
+
+def _prep_blank_image_object():
+    """
+    Returns a blank image object with the same fields as _prep_image_object()
+    but with all empty/zero values.
+    """
+    image = Image('', None, '', '', 0, 0, 0)
+    image.id = 0
+    image.folder_id = 0
+    image.url = ''
+    image.download = False
+    image.filename = ''
+    image.supported = False
+    return image
 
 
 def _prep_folio_object(folio):
@@ -58,11 +108,12 @@ def _prep_folioimage_object(folioimage):
     """
     Modifies a FolioImage object to add calculated fields.
     """
-    # Add attribute for the image viewing URL
+    # Add an attribute for the image URL with portfolio-specific image parameters
     folioimage.url = url_for_image_attrs(
         get_portfolio_image_attrs(folioimage, validate=False),
         external=True
     )
+    folioimage.image = _prep_image_object(folioimage.image)
     return folioimage
 
 

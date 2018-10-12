@@ -34,7 +34,7 @@ import pickle
 from flask import request
 from flask.views import MethodView
 
-from imageserver.api import api_add_url_rules, url_version_prefix
+from . import api_add_url_rules, url_version_prefix
 from imageserver.api_util import add_api_error_handler, add_parameter_error_handler
 from imageserver.api_util import make_api_success_response
 from imageserver.errors import AlreadyExistsError, DoesNotExistError, ParameterError

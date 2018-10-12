@@ -37,7 +37,8 @@ import sys
 from flask import request, session
 from flask.views import MethodView
 
-from imageserver.api import api_add_url_rules, url_version_prefix
+from . import api_add_url_rules, url_version_prefix
+from .helpers import _prep_image_object
 from imageserver.api_util import add_api_error_handler, add_parameter_error_handler
 from imageserver.api_util import make_api_success_response
 from imageserver.errors import DoesNotExistError, ParameterError, SecurityError
@@ -75,7 +76,9 @@ class ImageAPI(MethodView):
                 FolderPermission.ACCESS_VIEW,
                 get_session_user()
             )
-            return make_api_success_response(object_to_dict(db_img))
+            return make_api_success_response(object_to_dict(
+                _prep_image_object(db_img)
+            ))
 
     @add_api_error_handler
     def put(self, image_id):
@@ -131,7 +134,9 @@ class ImageAPI(MethodView):
             ImageHistory.ACTION_EDITED,
             info
         )
-        return make_api_success_response(object_to_dict(db_img))
+        return make_api_success_response(object_to_dict(
+            _prep_image_object(db_img)
+        ))
 
     @add_parameter_error_handler
     def _get_validated_object_parameters(self, data_dict):

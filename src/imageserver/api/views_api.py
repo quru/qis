@@ -30,6 +30,7 @@
 # 13Jan2015  Matt  Upload API to take and return multiple files
 # 10Mar2015  Matt  Use signed tokens to access the API
 # 04Dec2017  Matt  Allow URL trailing slashes for consistency with the others
+# 12Oct2018  Matt  v4.1 Return standard image object dict from all APIs
 #
 
 from time import sleep
@@ -37,8 +38,8 @@ from time import sleep
 from flask import request
 
 from imageserver.api import blueprint, url_version_prefix
-from imageserver.api_util import add_api_error_handler
-from imageserver.api_util import create_api_error_dict
+from imageserver.api.helpers import _prep_blank_image_object, _prep_image_object
+from imageserver.api_util import add_api_error_handler, create_api_error_dict
 from imageserver.api_util import make_api_success_response
 from imageserver.csrf import csrf_exempt
 from imageserver.errors import (
@@ -57,9 +58,11 @@ from imageserver.flask_util import api_permission_required, external_url_for, lo
 from imageserver.models import FolderPermission, Image, User
 from imageserver.session_manager import get_session_user
 from imageserver.user_auth import authenticate_user
-from imageserver.util import add_sep, filepath_filename, get_file_extension, secure_filename
-from imageserver.util import parse_boolean, parse_int
-from imageserver.util import validate_number, validate_string
+from imageserver.util import (
+    add_sep, filepath_filename, get_file_extension, secure_filename,
+    object_to_dict, parse_boolean, parse_int,
+    validate_number, validate_string
+)
 
 
 # API login - generates a token to use the API outside of the web site
@@ -157,6 +160,12 @@ def imagelist():
             FolderPermission.ACCESS_VIEW,
             get_session_user()
         )
+        # Get download permission in case we need to return it later
+        can_download = permissions_engine.is_folder_permitted(
+            db_folder,
+            FolderPermission.ACCESS_DOWNLOAD,
+            get_session_user()
+        )
 
         # Create the response
         file_list = directory_info.contents()
@@ -167,17 +176,9 @@ def imagelist():
             # the filtering needs to be elsewhere for 'start' and 'limit' to work properly
             supported_file = get_file_extension(f['filename']) in supported_img_types
             file_path = base_folder + f['filename']
-            file_url = (
-                external_url_for('image', src=file_path, **image_params)
-                if supported_file else ''
-            )
-            entry = {
-                'filename': f['filename'],
-                'supported': supported_file,
-                'url': file_url
-            }
+
             if want_info:
-                db_entry = None
+                # Need to return the database fields too
                 if supported_file:
                     db_entry = auto_sync_existing_file(
                         file_path,
@@ -186,12 +187,22 @@ def imagelist():
                         burst_pdf=False,  # Don't burst a PDF just by finding it here
                         _db_session=db_session
                     )
-                entry['id'] = db_entry.id if db_entry else 0
-                entry['folder_id'] = db_entry.folder_id if db_entry else 0
-                entry['title'] = db_entry.title if db_entry else ''
-                entry['description'] = db_entry.description if db_entry else ''
-                entry['width'] = db_entry.width if db_entry else 0
-                entry['height'] = db_entry.height if db_entry else 0
+                    db_entry = _prep_image_object(db_entry, can_download, **image_params)
+                else:
+                    db_entry = _prep_blank_image_object()
+                    db_entry.filename = f['filename']
+                    db_entry.supported = False
+                # Return images in full (standard) image dict format
+                entry = object_to_dict(db_entry)
+            else:
+                # Return images in short dict format
+                entry = {
+                    'filename': f['filename'],
+                    'supported': supported_file,
+                    'url': (external_url_for('image', src=file_path, **image_params)
+                            if supported_file else '')
+                }
+
             ret_list.append(entry)
 
         db_commit = True
@@ -238,7 +249,9 @@ def imagedetails():
         get_session_user()
     )
 
-    return make_api_success_response(_image_dict(db_image))
+    return make_api_success_response(object_to_dict(
+        _prep_image_object(db_image)
+    ))
 
 
 # Raw image(s) upload. Returns a dict of original filename to image details
@@ -325,7 +338,9 @@ def upload():
                             get_session_user()
                         )
                     # This loop success
-                    ret_dict[original_filepath] = _image_dict(db_image, can_download)
+                    ret_dict[original_filepath] = object_to_dict(
+                        _prep_image_object(db_image, can_download)
+                    )
             else:
                 logger.warning('Upload received blank filename, ignoring file')
 
@@ -351,29 +366,3 @@ def upload():
 
     # If here, all files were uploaded successfully
     return make_api_success_response(ret_dict)
-
-
-def _image_dict(db_image, can_download=None):
-    """
-    Returns the common data dictionary for the imagedetails and upload APIs.
-    Provide an Image data model object and optionally the pre-calculated
-    boolean download permission. If the download permission is None,
-    it is calculated for the image's folder and the current user.
-    """
-    if can_download is None:
-        can_download = permissions_engine.is_folder_permitted(
-            db_image.folder,
-            FolderPermission.ACCESS_DOWNLOAD,
-            get_session_user()
-        )
-    return {
-        'src': db_image.src,
-        'url': external_url_for('image', src=db_image.src),
-        'id': db_image.id,
-        'folder_id': db_image.folder_id,
-        'title': db_image.title,
-        'description': db_image.description,
-        'width': db_image.width,
-        'height': db_image.height,
-        'download': can_download
-    }

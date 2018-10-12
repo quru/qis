@@ -34,7 +34,8 @@ import pickle
 from flask import request
 from flask.views import MethodView
 
-from imageserver.api import api_add_url_rules, url_version_prefix
+from . import api_add_url_rules, url_version_prefix
+from .helpers import _prep_image_object
 from imageserver.api_util import add_api_error_handler, add_parameter_error_handler
 from imageserver.api_util import make_api_success_response
 from imageserver.errors import DoesNotExistError, ParameterError, TimeoutError
@@ -83,7 +84,9 @@ class ImageFileAPI(MethodView):
         # Remove cached images for the old path
         image_engine._uncache_image_id(db_img.id)
         # Return updated image
-        return make_api_success_response(object_to_dict(db_img))
+        return make_api_success_response(object_to_dict(
+            _prep_image_object(db_img)
+        ))
 
     @add_api_error_handler
     def delete(self, image_id):
@@ -102,7 +105,9 @@ class ImageFileAPI(MethodView):
         # Remove cached images for old path
         image_engine._uncache_image_id(db_img.id)
         # Return updated image
-        return make_api_success_response(object_to_dict(db_img))
+        return make_api_success_response(object_to_dict(
+            _prep_image_object(db_img)
+        ))
 
     @add_parameter_error_handler
     def _get_validated_parameters(self, data_dict):
