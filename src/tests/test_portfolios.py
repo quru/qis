@@ -624,7 +624,6 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         self.assertEqual(rv.status_code, API_CODES.SUCCESS)
         obj = json.loads(rv.data.decode('utf8'))
         folio = obj['data']
-        self.assertTrue('owner' in folio)
         self.assertGreater(len(folio['images']), 0)
         self.assertGreater(len(folio['permissions']), 0)
         self.assertGreater(len(folio['history']), 0)
@@ -1098,21 +1097,19 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         db_folio = dm.get_portfolio(db_folio.id)
         self.assertEqual(db_folio.last_updated, prev_date)
 
-    # Tests that user passwords are not exported in objects that contain a user or owner field
-    def test_folio_user_passwords(self):
+    # v4.1 Tests that user/owner objects are not exported, because portfolios
+    # can be public and we don't want to leak any user information
+    def test_folio_no_user_info(self):
         db_public_folio = dm.get_portfolio(human_id='public')
         api_url = '/api/portfolios/' + str(db_public_folio.id) + '/'
         rv = self.app.get(api_url)
         self.assertEqual(rv.status_code, API_CODES.SUCCESS)
-        obj = json.loads(rv.data.decode('utf8'))
-        folio = obj['data']
+        folio = json.loads(rv.data.decode('utf8'))['data']
         # a) Check folio header - owner field
-        self.assertIn('owner', folio)
-        self.assertNotIn('password', folio['owner'])
+        self.assertNotIn('owner', folio)
         # b) Check folio audit trail - action user
         self.assertIn('history', folio)
-        self.assertIn('user', folio['history'][0])
-        self.assertNotIn('password', folio['history'][0]['user'])
+        self.assertNotIn('user', folio['history'][0])
         # c) Check that folio permissions don't list group users
         self.assertIn('permissions', folio)
         self.assertNotIn('group', folio['permissions'])
@@ -1124,8 +1121,7 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         self.assertEqual(len(obj['data']), 1)
         folio = obj['data'][0]
         # a) Check folio header - owner field
-        self.assertIn('owner', folio)
-        self.assertNotIn('password', folio['owner'])
+        self.assertNotIn('owner', folio)
         # b) Check folio audit trail - not expected from list API
         self.assertNotIn('history', folio)
         # c) Check that folio permissions don't list group users

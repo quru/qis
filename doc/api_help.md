@@ -596,14 +596,6 @@ An array of 0 or more objects ordered by portfolio name.
 	      "id": 2,
 	      "last_updated": "2018-03-09T16:54:51.662994Z",
 	      "name": "Admin favourites",
-	      "owner": {
-	        "email": "",
-	        "first_name": "Administrator",
-	        "id": 1,
-	        "last_name": "",
-	        "status": 1,
-	        "username": "admin"
-	      },
 	      "owner_id": 1,
 	      "permissions": [
 	        {
@@ -642,14 +634,6 @@ An array of 0 or more objects ordered by portfolio name.
 	      "id": 3,
 	      "last_updated": "2018-03-09T16:39:05.342911Z",
 	      "name": "Spring Collection 2018",
-	      "owner": {
-	        "email": "matt@quru.com",
-	        "first_name": "Matt",
-	        "id": 2,
-	        "last_name": "Fozard",
-	        "status": 1,
-	        "username": "matt"
-	      },
 	      "owner_id": 2,
 	      "permissions": [
 	        {
@@ -720,14 +704,6 @@ The full portfolio as a JSON object.
             "action_time": "2018-03-23T12:13:52.214960Z",
             "folio_id": 3,
             "id": 4,
-            "user": {
-              "email": "matt@quru.com",
-              "first_name": "Matt",
-              "id": 3,
-              "last_name": "Fozard",
-              "status": 1,
-              "username": "matt"
-            },
             "user_id": 3
           },
           {
@@ -736,14 +712,6 @@ The full portfolio as a JSON object.
             "action_time": "2018-03-23T12:24:27.452216Z",
             "folio_id": 3,
             "id": 5,
-            "user": {
-              "email": "matt@quru.com",
-              "first_name": "Matt",
-              "id": 3,
-              "last_name": "Fozard",
-              "status": 1,
-              "username": "matt"
-            },
             "user_id": 3
           },
           {
@@ -752,14 +720,6 @@ The full portfolio as a JSON object.
             "action_time": "2018-03-23T12:29:22.849761Z",
             "folio_id": 3,
             "id": 6,
-            "user": {
-              "email": "matt@quru.com",
-              "first_name": "Matt",
-              "id": 3,
-              "last_name": "Fozard",
-              "status": 1,
-              "username": "matt"
-            },
             "user_id": 3
           },
           {
@@ -768,14 +728,6 @@ The full portfolio as a JSON object.
             "action_time": "2018-03-23T12:29:30.137174Z",
             "folio_id": 3,
             "id": 7,
-            "user": {
-              "email": "matt@quru.com",
-              "first_name": "Matt",
-              "id": 3,
-              "last_name": "Fozard",
-              "status": 1,
-              "username": "matt"
-            },
             "user_id": 3
           },
           {
@@ -784,14 +736,6 @@ The full portfolio as a JSON object.
             "action_time": "2018-03-23T12:32:50.556061Z",
             "folio_id": 3,
             "id": 8,
-            "user": {
-              "email": "matt@quru.com",
-              "first_name": "Matt",
-              "id": 3,
-              "last_name": "Fozard",
-              "status": 1,
-              "username": "matt"
-            },
             "user_id": 3
           },
           {
@@ -800,14 +744,6 @@ The full portfolio as a JSON object.
             "action_time": "2018-03-23T12:38:44.265397Z",
             "folio_id": 3,
             "id": 9,
-            "user": {
-              "email": "matt@quru.com",
-              "first_name": "Matt",
-              "id": 3,
-              "last_name": "Fozard",
-              "status": 1,
-              "username": "matt"
-            },
             "user_id": 3
           }
         ],
@@ -907,14 +843,6 @@ The full portfolio as a JSON object.
         ],
         "last_updated": "2018-03-23T12:29:30.137247Z",
         "name": "Spring Collection 2018",
-        "owner": {
-          "email": "matt@quru.com",
-          "first_name": "Matt",
-          "id": 3,
-          "last_name": "Fozard",
-          "status": 1,
-          "username": "matt"
-        },
         "owner_id": 3,
         "permissions": [
           {
@@ -1211,14 +1139,6 @@ for viewing the portfolio.
 	        "action_time": "2018-03-23T12:13:52.214960Z",
 	        "folio_id": 3,
 	        "id": 4,
-	        "user": {
-	          "email": "matt@quru.com",
-	          "first_name": "Matt",
-	          "id": 3,
-	          "last_name": "Fozard",
-	          "status": 1,
-	          "username": "matt"
-	        },
 	        "user_id": 3
 	      }
 	    ],
@@ -1227,14 +1147,6 @@ for viewing the portfolio.
 	    "images": [],
 	    "last_updated": "2018-03-23T12:13:52.206066Z",
 	    "name": "Spring Collection 2018",
-	    "owner": {
-	      "email": "matt@quru.com",
-	      "first_name": "Matt",
-	      "id": 3,
-	      "last_name": "Fozard",
-	      "status": 1,
-	      "username": "matt"
-	    },
 	    "owner_id": 3,
 	    "permissions": [
 	      {

@@ -59,10 +59,10 @@ from imageserver.util import (
     secure_filename, secure_url_fragment, AttrObject
 )
 
-# These APIs allow public access. The user object contains
-# fields that regular users shouldn't see, so filter them out.
+# These APIs allow public access, but the user object contains
+# information that only admins should see, so filter them out.
 _ignore_fields = _object_to_dict_ignore_defaults + [
-    'allow_api', 'auth_type'
+    'user', 'owner'
 ]
 
 

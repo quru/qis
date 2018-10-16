@@ -9,8 +9,8 @@ unnecessarily in the logs, documentation corrections and improvements_
 API changes in more detail:
 
 * 404 not found, 405 method not supported, 301 redirect (missing trailing slash)
-  errors and others now return JSON objects in the standard format instead of
-  HTML error messages
+  errors and many others now return JSON objects in the standard format instead
+  of HTML error messages
 * The `human_id` field on portfolios is no longer allowed to contain any of the
   characters: `%<>&.?:/`
 * Return status 404 instead of 200 when a file or folder is deleted a second time
@@ -18,8 +18,8 @@ API changes in more detail:
 * The `image` object was being returned in 3 different ways and has now been
   standardised. As well as the standard fields it now always includes the calculated
   fields: `url`, `download`, `supported`, and `filename`.
-* The `user` and `owner` objects are no longer returned from the Portfolios and
-  Tasks functions. These were potentially leaking names and email addresses to
+* The `user` and `owner` objects are no longer returned from the Portfolios
+  functions. These were potentially leaking names and email addresses to
   users who should not have access to user information. The remaining `user_id`
   and `owner_id` fields can be used to look up user information if permitted.
 
