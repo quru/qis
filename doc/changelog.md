@@ -1,5 +1,30 @@
-# Next release
-_Changes: Bug fix to creation of new user accounts using LDAP authentication._
+# v4.1.0-dev
+_Changes: Bug fix to creation of new user accounts using LDAP authentication,
+API behaviour made more consistent, fixed several scenarios where the API was
+returning HTML error messages instead of JSON, block malicious use of the
+'friendly' portfolio ID field, remove user information from the portfolios and
+tasks APIs, fix "timed out waiting for image template data" warning triggering
+unnecessarily in the logs, documentation corrections and improvements_
+
+API changes in more detail:
+
+* 404 not found, 405 method not supported, 301 redirect (missing trailing slash)
+  errors and others now return JSON objects in the standard format instead of
+  HTML error messages
+* The `human_id` field on portfolios is no longer allowed to contain any of the
+  characters: `%<>&.?:/`
+* Return status 404 instead of 200 when a file or folder is deleted a second time
+  (since the file/folder no longer exists the second time around)
+* The `image` object was being returned in 3 different ways and has now been
+  standardised. As well as the standard fields it now always includes the calculated
+  fields: `url`, `download`, `supported`, and `filename`.
+* The `user` and `owner` objects are no longer returned from the Portfolios and
+  Tasks functions. These were potentially leaking names and email addresses to
+  users who should not have access to user information. The remaining `user_id`
+  and `owner_id` fields can be used to look up user information if permitted.
+
+* Update the Python and web code (the `src` folder)
+* Restart the Apache service
 
 # v4.0.0
 _Changes: New QIS Standard/Premium editions. Adds new Python-Pillow imaging back-end
