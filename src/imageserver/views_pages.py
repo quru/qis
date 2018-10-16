@@ -54,7 +54,7 @@ from .session_manager import log_in, log_out, logged_in
 from .user_auth import authenticate_user
 from .util import filepath_filename, filepath_parent
 from .util import get_timezone_code, parse_boolean
-from .util import strip_seps
+from .util import filepath_normalize, strip_seps
 from .views_util import log_security_error
 
 
@@ -371,7 +371,7 @@ def slideshow_view_help():
 @app.route('/list/')
 @login_required
 def browse():
-    from_path = request.args.get('path', os.path.sep)
+    from_path = filepath_normalize(request.args.get('path', os.path.sep))
     view_type = request.args.get('view', '')
 
     # #2475 Default this in case of error in get_directory_listing()
@@ -727,7 +727,7 @@ def account():
 @app.route('/folder_list/')
 @login_required
 def folder_browse():
-    from_path = request.args.get('path', os.path.sep)
+    from_path = filepath_normalize(request.args.get('path', os.path.sep))
     show_files = request.args.get('show_files', '')
     embed = request.args.get('embed', '')
     msg = request.args.get('msg', '')
