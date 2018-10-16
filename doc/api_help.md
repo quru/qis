@@ -67,7 +67,7 @@ The following JavaScript snippet illustrates how to call a public API function
 from a web browser.
 
     // URL of the API function
-    var url = 'http://images.example.com/api/v1/list/';
+    var url = 'https://images.example.com/api/v1/list/';
     
     // GET, POST, PUT, or DELETE (as supported by the API call)
     var method = 'GET';
@@ -96,7 +96,7 @@ from a web browser.
 Or to send data to a protected web service:
 
     // URL of the API function
-    var url = 'http://images.example.com/api/v1/admin/filesystem/folders/';
+    var url = 'https://images.example.com/api/v1/admin/filesystem/folders/';
     
     // GET, POST, PUT, or DELETE (as supported by the API call)
     var method = 'POST';
@@ -135,7 +135,7 @@ useful scripts and quickly test individual functions.
 This document will also use curl for most of its examples. In these, the `$` represents the
 command line prompt, and is not to be typed. The curl equivalent of the above HTML example is simply:
 
-	$ curl 'http://images.example.com/api/v1/list/?path=myfolder'
+	$ curl 'https://images.example.com/api/v1/list/?path=myfolder'
 
 This displays the raw JSON text returned by the server, but does not check the values or process
 them.
@@ -253,7 +253,7 @@ status code and HTML text containing an error message.
 
 ### Examples
 
-    $ curl -o myfile.png 'http://images.example.com/image?src=myfolder/myfile.jpg&width=200&format=png'
+    $ curl -o myfile.png 'https://images.example.com/image?src=myfolder/myfile.jpg&width=200&format=png'
 
 <a name="api_original"></a>
 ## original
@@ -282,7 +282,7 @@ On error, returns a non-200 status code and HTML text containing an error messag
 
 ### Examples
 
-    $ curl -o myfile.jpg 'http://images.example.com/original?src=myfolder/myfile.jpg'
+    $ curl -o myfile.jpg 'https://images.example.com/original?src=myfolder/myfile.jpg'
 
 
 <a name="api_folio_group"></a>
@@ -322,7 +322,7 @@ containing an error message.
 ### Example
 
 	In a web browser, open:
-	http://images.example.com/portfolios/the-spring-collection/
+	https://images.example.com/portfolios/the-spring-collection/
 
 <a name="api_folio_download"></a>
 ## download portfolio
@@ -349,7 +349,7 @@ On error, returns a non-200 status code and HTML text containing an error messag
 
 ### Example
 
-    $ curl -o myfile.zip 'http://images.example.com/portfolios/the-spring-collection/downloads/a13d7382f1124b59b62618dd4df154ba.zip'
+    $ curl -o myfile.zip 'https://images.example.com/portfolios/the-spring-collection/downloads/a13d7382f1124b59b62618dd4df154ba.zip'
 
 
 <a name="api_public"></a>
@@ -401,36 +401,36 @@ a second call with the `start` parameter set.
 
 ### Examples
 
-    $ curl 'http://images.example.com/api/v1/list/?path=myfolder&limit=3'
+    $ curl 'https://images.example.com/api/v1/list/?path=myfolder&limit=3'
     {
       "data": [
         {
           "filename": "image1.jpg",
           "supported": true,
-          "url": "http://images.example.com/image?src=myfolder/image1.jpg" 
+          "url": "https://images.example.com/image?src=myfolder/image1.jpg" 
           },
         {
           "filename": "image2.jpg",
           "supported": true,
-          "url": "http://images.example.com/image?src=myfolder/image2.jpg"
+          "url": "https://images.example.com/image?src=myfolder/image2.jpg"
         },
         {
           "filename": "image3.jpg",
           "supported": true,
-          "url": "http://images.example.com/image?src=myfolder/image3.jpg"
+          "url": "https://images.example.com/image?src=myfolder/image3.jpg"
         }
       ],
       "message": "OK",
       "status": 200
     }
 
-    $ curl 'http://images.example.com/api/v1/list/?path=myfolder&start=3&limit=2'
+    $ curl 'https://images.example.com/api/v1/list/?path=myfolder&start=3&limit=2'
     {
       "data": [
         {
           "filename": "image4.jpg",
           "supported": true,
-          "url": "http://images.example.com/image?src=myfolder/image4.jpg"
+          "url": "https://images.example.com/image?src=myfolder/image4.jpg"
           },
           {
             "filename": "misplaced.docx",
@@ -442,7 +442,7 @@ a second call with the `start` parameter set.
       "status": 200
     }
 
-    $ curl 'http://images.example.com/api/v1/list/?path=myfolder&attributes=1&tmp=Thumbnail'
+    $ curl 'https://images.example.com/api/v1/list/?path=myfolder&attributes=1&tmp=Thumbnail'
     {
       "data": [
         {
@@ -463,7 +463,7 @@ a second call with the `start` parameter set.
           "status": 1,
           "supported": true,
           "title": "",
-          "url": "http://images.example.com/image?tmp=Thumbnail&src=myfolder/image1.jpg",
+          "url": "https://images.example.com/image?tmp=Thumbnail&src=myfolder/image1.jpg",
           "width": 3264
         },
         {
@@ -484,7 +484,7 @@ a second call with the `start` parameter set.
           "status": 1,
           "supported": true,
           "title": "",
-          "url": "http://images.example.com/image?tmp=Thumbnail&src=myfolder/image2.jpg",
+          "url": "https://images.example.com/image?tmp=Thumbnail&src=myfolder/image2.jpg",
           "width": 3264
         },
         {
@@ -505,7 +505,7 @@ a second call with the `start` parameter set.
           "status": 1,
           "supported": true,
           "title": "",
-          "url": "http://images.example.com/image?tmp=Thumbnail&src=myfolder/image3.jpg",
+          "url": "https://images.example.com/image?tmp=Thumbnail&src=myfolder/image3.jpg",
           "width": 3264
         }
       ],
@@ -535,7 +535,7 @@ An object containing image attributes, as shown below.
 
 ### Example
 
-    $ curl 'http://images.example.com/api/v1/details/?src=myfolder/image1.jpg'
+    $ curl 'https://images.example.com/api/v1/details/?src=myfolder/image1.jpg'
     {
       "data": {
         "description": "",
@@ -555,7 +555,7 @@ An object containing image attributes, as shown below.
         "status": 1,
         "supported": true,
         "title": "",
-        "url": "http://images.example.com/image?src=myfolder/image1.jpg",
+        "url": "https://images.example.com/image?src=myfolder/image1.jpg",
         "width": 3264
       },
       "message": "OK",
@@ -586,7 +586,7 @@ An array of 0 or more objects ordered by portfolio name.
 
 ### Example
 
-	$ curl 'http://images.example.com/api/v1/portfolios/'
+	$ curl 'https://images.example.com/api/v1/portfolios/'
 	{
 	  "data": [
 	    {
@@ -619,7 +619,7 @@ An array of 0 or more objects ordered by portfolio name.
 	          "id": 4
 	        }
 	      ],
-	      "url": "http://images.example.com/portfolios/408eb84f7cb41a8b/"
+	      "url": "https://images.example.com/portfolios/408eb84f7cb41a8b/"
 	    },
 	    {
 	      "description": "The 2018 Spring Collection",
@@ -635,7 +635,7 @@ An array of 0 or more objects ordered by portfolio name.
 	          "originals": true,
 	          "parameters": {},
 	          "task_id": null,
-	          "url": "http://images.example.com/portfolios/the-spring-collection/downloads/a13d7382f1124b59b62618dd4df154ba.zip"
+	          "url": "https://images.example.com/portfolios/the-spring-collection/downloads/a13d7382f1124b59b62618dd4df154ba.zip"
 	        }
 	      ],
 	      "human_id": "the-spring-collection",
@@ -665,7 +665,7 @@ An array of 0 or more objects ordered by portfolio name.
 	          "id": 2
 	        }
 	      ],
-	      "url": "http://images.example.com/portfolios/the-spring-collection/"
+	      "url": "https://images.example.com/portfolios/the-spring-collection/"
 	    }
 	  ],
 	  "message": "OK",
@@ -694,7 +694,7 @@ The full portfolio as a JSON object.
 
 ### Example
 
-    $ curl 'http://images.example.com/api/v1/portfolios/3/'
+    $ curl 'https://images.example.com/api/v1/portfolios/3/'
     {
       "data": {
         "description": "The 2018 Spring Collection",
@@ -710,7 +710,7 @@ The full portfolio as a JSON object.
             "originals": true,
             "parameters": {},
             "task_id": null,
-            "url": "http://images.example.com/portfolios/the-spring-collection/downloads/a13d7382f1124b59b62618dd4df154ba.zip"
+            "url": "https://images.example.com/portfolios/the-spring-collection/downloads/a13d7382f1124b59b62618dd4df154ba.zip"
           }
         ],
         "history": [
@@ -836,13 +836,13 @@ The full portfolio as a JSON object.
               "status": 1,
               "supported": true,
               "title": "",
-              "url": "http://images.example.com/image?src=products/p1-bags-a0001.jpg",
+              "url": "https://images.example.com/image?src=products/p1-bags-a0001.jpg",
               "width": 1239
             },
             "image_id": 85,
             "order_num": 0,
             "parameters": {},
-            "url": "http://images.example.com/image?src=products/p1-bags-a0001.jpg"
+            "url": "https://images.example.com/image?src=products/p1-bags-a0001.jpg"
           },
           {
             "filename": "",
@@ -866,13 +866,13 @@ The full portfolio as a JSON object.
               "status": 1,
               "supported": true,
               "title": "",
-              "url": "http://images.example.com/image?src=products/p1-bags-a0003.jpg",
+              "url": "https://images.example.com/image?src=products/p1-bags-a0003.jpg",
               "width": 1239
             },
             "image_id": 86,
             "order_num": 1,
             "parameters": {},
-            "url": "http://images.example.com/image?src=products/p1-bags-a0003.jpg"
+            "url": "https://images.example.com/image?src=products/p1-bags-a0003.jpg"
           },
           {
             "filename": "",
@@ -896,13 +896,13 @@ The full portfolio as a JSON object.
               "status": 1,
               "supported": true,
               "title": "",
-              "url": "http://images.example.com/image?src=products/p1-bags-a0002.jpg",
+              "url": "https://images.example.com/image?src=products/p1-bags-a0002.jpg",
               "width": 1239
             },
             "image_id": 84,
             "order_num": 2,
             "parameters": {},
-            "url": "http://images.example.com/image?src=products/p1-bags-a0002.jpg"
+            "url": "https://images.example.com/image?src=products/p1-bags-a0002.jpg"
           }
         ],
         "last_updated": "2018-03-23T12:29:30.137247Z",
@@ -930,7 +930,7 @@ The full portfolio as a JSON object.
             "id": 5
           }
         ],
-        "url": "http://images.example.com/portfolios/the-spring-collection/"
+        "url": "https://images.example.com/portfolios/the-spring-collection/"
       },
       "message": "OK",
       "status": 200
@@ -1076,7 +1076,7 @@ returned data object is `null`.
           "status": 1,
           "supported": true,
           "title": "",
-          "url": "http://images.example.com/image?src=test_images/myimage.jpg",
+          "url": "https://images.example.com/image?src=test_images/myimage.jpg",
           "width": 3000
         }
       },
@@ -1124,7 +1124,7 @@ Running the same command a third time but with `overwrite=rename`:
           "status": 1,
           "supported": true,
           "title": "",
-          "url": "http://images.example.com/image?src=test_images/myimage-001.jpg",
+          "url": "https://images.example.com/image?src=test_images/myimage-001.jpg",
           "width": 3000
         }
       },
@@ -1199,7 +1199,7 @@ for viewing the portfolio.
 	$ curl -X POST -u <token>:unused -F 'human_id=the-spring-collection' \
 	       -F 'name=Spring Collection 2018' -F 'description=The 2018 Spring Collection' \
 	       -F 'internal_access=10' -F 'public_access=10' \
-	       'http://images.example.com/api/v1/portfolios/'
+	       'https://images.example.com/api/v1/portfolios/'
 	{
 	  "data": {
 	    "description": "The 2018 Spring Collection",
@@ -1250,7 +1250,7 @@ for viewing the portfolio.
 	        "id": 6
 	      }
 	    ],
-	    "url": "http://images.example.com/portfolios/the-spring-collection/"
+	    "url": "https://images.example.com/portfolios/the-spring-collection/"
 	  },
 	  "message": "OK",
 	  "status": 200
@@ -1326,7 +1326,7 @@ incorporates the operations given in the `image_parameters` parameter (if any).
 
 Add an image to a portfolio:
 
-    $ curl -X POST -u <token>:unused -F 'image_id=85' 'http://images.example.com/api/v1/portfolios/3/images/'
+    $ curl -X POST -u <token>:unused -F 'image_id=85' 'https://images.example.com/api/v1/portfolios/3/images/'
     {
       "data": {
         "filename": "",
@@ -1350,13 +1350,13 @@ Add an image to a portfolio:
           "status": 1,
           "supported": true,
           "title": "",
-          "url": "http://images.example.com/image?src=products/p1-bags-a0001.jpg",
+          "url": "https://images.example.com/image?src=products/p1-bags-a0001.jpg",
           "width": 1239
         },
         "image_id": 85,
         "order_num": 0,
         "parameters": {},
-        "url": "http://images.example.com/image?src=products/p1-bags-a0001.jpg"
+        "url": "https://images.example.com/image?src=products/p1-bags-a0001.jpg"
       },
       "message": "OK",
       "status": 200
@@ -1364,7 +1364,7 @@ Add an image to a portfolio:
 
 Reorder the portfolio:
 
-    $ curl -X PUT -u <token>:unused -F 'index=2' 'http://images.example.com/api/v1/portfolios/3/images/84/position/'
+    $ curl -X PUT -u <token>:unused -F 'index=2' 'https://images.example.com/api/v1/portfolios/3/images/84/position/'
     {
       "data": [
         {
@@ -1389,13 +1389,13 @@ Reorder the portfolio:
             "status": 1,
             "supported": true,
             "title": "",
-            "url": "http://images.example.com/image?src=products/p1-bags-a0001.jpg",
+            "url": "https://images.example.com/image?src=products/p1-bags-a0001.jpg",
             "width": 1239
           },
           "image_id": 85,
           "order_num": 0,
           "parameters": {},
-          "url": "http://images.example.com/image?src=products/p1-bags-a0001.jpg"
+          "url": "https://images.example.com/image?src=products/p1-bags-a0001.jpg"
         },
         {
           "filename": "",
@@ -1419,13 +1419,13 @@ Reorder the portfolio:
             "status": 1,
             "supported": true,
             "title": "",
-            "url": "http://images.example.com/image?src=products/p1-bags-a0003.jpg",
+            "url": "https://images.example.com/image?src=products/p1-bags-a0003.jpg",
             "width": 1239
           },
           "image_id": 86,
           "order_num": 1,
           "parameters": {},
-          "url": "http://images.example.com/image?src=products/p1-bags-a0003.jpg"
+          "url": "https://images.example.com/image?src=products/p1-bags-a0003.jpg"
         },
         {
           "filename": "",
@@ -1449,13 +1449,13 @@ Reorder the portfolio:
             "status": 1,
             "supported": true,
             "title": "",
-            "url": "http://images.example.com/image?src=products/p1-bags-a0002.jpg",
+            "url": "https://images.example.com/image?src=products/p1-bags-a0002.jpg",
             "width": 1239
           },
           "image_id": 84,
           "order_num": 0,
           "parameters": {},
-          "url": "http://images.example.com/image?src=products/p1-bags-a0002.jpg"
+          "url": "https://images.example.com/image?src=products/p1-bags-a0002.jpg"
         }
       ],
       "message": "OK",
@@ -1538,7 +1538,7 @@ progress will result in a `503 server busy` error.
 Publish the portfolio's original unmodified image files:
 
 	$ curl -X POST -u <token>:unused -F 'description=Originals export' \
-	       -F 'originals=1' -F 'expiry_time=2020-01-01' 'http://images.example.com/api/v1/portfolios/3/exports/'
+	       -F 'originals=1' -F 'expiry_time=2020-01-01' 'https://images.example.com/api/v1/portfolios/3/exports/'
 	{
 	  "data": {
 	    "created": "2018-03-23T12:38:44.264952Z",
@@ -1559,7 +1559,7 @@ Publish the portfolio's original unmodified image files:
 
 After the export task has completed, the filename and URL fields are set:
 
-	$ curl -u <token>:unused 'http://images.example.com/api/v1/portfolios/3/exports/2/'
+	$ curl -u <token>:unused 'https://images.example.com/api/v1/portfolios/3/exports/2/'
 	{
 	  "data": {
 	    "created": "2018-03-23T12:38:44.264952Z",
@@ -1572,7 +1572,7 @@ After the export task has completed, the filename and URL fields are set:
 	    "originals": true,
 	    "parameters": {},
 	    "task_id": null,
-	    "url": "http://images.example.com/portfolios/the-spring-collection/downloads/a13d7382f1124b59b62618dd4df154ba.zip"
+	    "url": "https://images.example.com/portfolios/the-spring-collection/downloads/a13d7382f1124b59b62618dd4df154ba.zip"
 	  },
 	  "message": "OK",
 	  "status": 200
@@ -1582,7 +1582,7 @@ Publish the portfolio with all images resized to 500x500:
 
 	$ curl -X POST -u <token>:unused -F 'description=500x500 thumbnails' \
 	       -F 'originals=0' -F 'image_parameters={"width":{"value":500}, "height":{"value":500}}' \
-	       -F 'expiry_time=2020-01-01' 'http://images.example.com/api/v1/portfolios/3/exports/'
+	       -F 'expiry_time=2020-01-01' 'https://images.example.com/api/v1/portfolios/3/exports/'
 	{
 	  "data": {
 	    "created": "2018-03-26T13:42:40.491120Z",
@@ -1662,7 +1662,7 @@ The image `status` field has value `1` for active, or `0` for deleted.
         "status": 1,
         "supported": true,
         "title": "",
-        "url": "http://images.example.com/image?src=test_images/myimage.jpg",
+        "url": "https://images.example.com/image?src=test_images/myimage.jpg",
         "width": 3000
       },
       "message": "OK",
@@ -1689,7 +1689,7 @@ The image `status` field has value `1` for active, or `0` for deleted.
         "status": 1,
         "supported": true,
         "title": "my sample image",
-        "url": "http://images.example.com/image?src=test_images/myimage.jpg",
+        "url": "https://images.example.com/image?src=test_images/myimage.jpg",
         "width": 3000
       },
       "message": "OK",
@@ -2307,7 +2307,7 @@ To move image ID `141 myimage.jpg` to the `web` folder:
         "status": 1,
         "supported": true,
         "title": "my sample image",
-        "url": "http://images.example.com/image?src=web/myimage.jpg",
+        "url": "https://images.example.com/image?src=web/myimage.jpg",
         "width": 3000
       },
       "message": "OK",
@@ -2336,7 +2336,7 @@ Then to delete the file:
         "status": 0,
         "supported": true,
         "title": "my sample image",
-        "url": "http://images.example.com/image?src=web/myimage.jpg",
+        "url": "https://images.example.com/image?src=web/myimage.jpg",
         "width": 3000
       },
       "message": "OK",
