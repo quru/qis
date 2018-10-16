@@ -327,6 +327,7 @@ def _stop_aux_processes(service_list='all', nicely=True):
 @app.errorhandler(403)
 @app.errorhandler(404)
 @app.errorhandler(405)
+@app.errorhandler(411)
 @app.errorhandler(413)
 @app.errorhandler(500)
 @app.errorhandler(501)
