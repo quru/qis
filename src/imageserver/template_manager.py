@@ -199,26 +199,31 @@ class ImageTemplateManager(object):
         if _force or self._last_check < (datetime.utcnow() - timedelta(seconds=check_secs)):
             # Check for newer data version
             if self._update_lock.acquire(0):  # 0 = nonblocking
-                self._useable.clear()
                 try:
                     old_ver = self._data_version
                     db_ver = self._db.get_object(Property, Property.IMAGE_TEMPLATES_VERSION)
                     if int(db_ver.value) != old_ver:
                         action = 'initialising with' if old_ver == -1 else 'detected new'
                         self._logger.info('Image templates %s version %s' % (action, db_ver.value))
+                        self._useable.clear()
                         self._load_data()
                 finally:
                     self._last_check = datetime.utcnow()
                     self._useable.set()
                     self._update_lock.release()
             else:
-                # Another thread is running the update. We should wait for the
-                # new data otherwise we'll be using an old or empty cache.
-                self._logger.debug('Another thread is loading image templates, waiting for it')
-                if not self._useable.wait(2.0):
-                    self._logger.warning('Timed out waiting for image template data')
-                else:
-                    self._logger.debug('Got new image template data, continuing')
+                # Another thread is checking or updating. When the server is busy,
+                # because the update is time based, many threads get here at the
+                # same time.
+                # v4.1 It is safe to carry on if a check is in place but an update
+                # is not. If an update is in place then the template cache is empty
+                # and we should wait for it to load.
+                if not self._useable.is_set() or self._data_version == -1:
+                    self._logger.debug('Another thread is loading image templates, waiting for it')
+                    if not self._useable.wait(10.0):
+                        self._logger.warning('Timed out waiting for image template data')
+                    else:
+                        self._logger.debug('Got new image template data, continuing')
 
     def _get_cached_names_list(self, sort=False):
         """
