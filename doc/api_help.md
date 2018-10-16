@@ -401,87 +401,117 @@ a second call with the `start` parameter set.
 
 ### Examples
 
-	$ curl 'http://images.example.com/api/v1/list/?path=myfolder&limit=3'
-	{
-	  "data": [
-	    {
-	      "filename": "image1.jpg",
-	      "supported": true,
-	      "url": "http://images.example.com/image?src=myfolder/image1.jpg" 
-        },
-	    {
-	      "filename": "image2.jpg",
-	      "supported": true,
-	      "url": "http://images.example.com/image?src=myfolder/image2.jpg"
-	    },
-	    {
-	      "filename": "image3.jpg",
-	      "supported": true,
-	      "url": "http://images.example.com/image?src=myfolder/image3.jpg"
-	    }
-	  ],
-	  "message": "OK",
-	  "status": 200
-	}
-
-	$ curl 'http://images.example.com/api/v1/list/?path=myfolder&start=3&limit=2'
-	{
-	  "data": [
-	    {
-	      "filename": "image4.jpg",
-	      "supported": true,
-	      "url": "http://images.example.com/image?src=myfolder/image4.jpg"
+    $ curl 'http://images.example.com/api/v1/list/?path=myfolder&limit=3'
+    {
+      "data": [
+        {
+          "filename": "image1.jpg",
+          "supported": true,
+          "url": "http://images.example.com/image?src=myfolder/image1.jpg" 
+          },
+        {
+          "filename": "image2.jpg",
+          "supported": true,
+          "url": "http://images.example.com/image?src=myfolder/image2.jpg"
         },
         {
-          "filename": "misplaced.docx",
-          "supported": false,
-          "url": ""
+          "filename": "image3.jpg",
+          "supported": true,
+          "url": "http://images.example.com/image?src=myfolder/image3.jpg"
         }
-	  ],
-	  "message": "OK",
-	  "status": 200
-	}
+      ],
+      "message": "OK",
+      "status": 200
+    }
 
-	$ curl 'http://images.example.com/api/v1/list/?path=myfolder&attributes=1&tmp=Thumbnail'
-	{
-	  "data": [
-	    {
-	      "url": "http://images.example.com/image?tmp=Thumbnail&src=myfolder/image1.jpg", 
-	      "id": 1000, 
-	      "folder_id": 5,
-	      "title": "", 
-	      "description": "", 
-	      "height": 1200, 
-	      "width": 1600, 
-	      "supported": true,
-	      "filename": "image1.jpg"
+    $ curl 'http://images.example.com/api/v1/list/?path=myfolder&start=3&limit=2'
+    {
+      "data": [
+        {
+          "filename": "image4.jpg",
+          "supported": true,
+          "url": "http://images.example.com/image?src=myfolder/image4.jpg"
+          },
+          {
+            "filename": "misplaced.docx",
+            "supported": false,
+            "url": ""
+          }
+      ],
+      "message": "OK",
+      "status": 200
+    }
+
+    $ curl 'http://images.example.com/api/v1/list/?path=myfolder&attributes=1&tmp=Thumbnail'
+    {
+      "data": [
+        {
+          "description": "",
+          "download": true,
+          "filename": "image1.jpg",
+          "folder": {
+            "id": 23,
+            "name": "/myfolder",
+            "parent_id": 1,
+            "path": "/myfolder",
+            "status": 1
+          },
+          "folder_id": 23,
+          "height": 2448,
+          "id": 114,
+          "src": "myfolder/image1.jpg",
+          "status": 1,
+          "supported": true,
+          "title": "",
+          "url": "http://images.example.com/image?tmp=Thumbnail&src=myfolder/image1.jpg",
+          "width": 3264
         },
-	    {
-	      "url": "http://images.example.com/image?tmp=Thumbnail&src=myfolder/image2.jpg", 
-	      "id": 1001, 
-	      "folder_id": 5,
-	      "title": "", 
-	      "description": "", 
-	      "height": 1200, 
-	      "width": 1600, 
-	      "supported": true,
-	      "filename": "image2.jpg"
-	    },
-	    {
-	      "url": "http://images.example.com/image?tmp=Thumbnail&src=myfolder/image3.jpg", 
-	      "id": 1002, 
-	      "folder_id": 5,
-	      "title": "", 
-	      "description": "", 
-	      "height": 3000, 
-	      "width": 4000, 
-	      "supported": true,
-	      "filename": "image3.jpg"
-	    }
-	  ],
-	  "message": "OK",
-	  "status": 200
-	}
+        {
+          "description": "",
+          "download": true,
+          "filename": "image2.jpg",
+          "folder": {
+            "id": 23,
+            "name": "/myfolder",
+            "parent_id": 1,
+            "path": "/myfolder",
+            "status": 1
+          },
+          "folder_id": 23,
+          "height": 2171,
+          "id": 116,
+          "src": "myfolder/image2.jpg",
+          "status": 1,
+          "supported": true,
+          "title": "",
+          "url": "http://images.example.com/image?tmp=Thumbnail&src=myfolder/image2.jpg",
+          "width": 3264
+        },
+        {
+          "description": "",
+          "download": true,
+          "filename": "image3.jpg",
+          "folder": {
+            "id": 23,
+            "name": "/myfolder",
+            "parent_id": 1,
+            "path": "/myfolder",
+            "status": 1
+          },
+          "folder_id": 23,
+          "height": 2448,
+          "id": 119,
+          "src": "myfolder/image3.jpg",
+          "status": 1,
+          "supported": true,
+          "title": "",
+          "url": "http://images.example.com/image?tmp=Thumbnail&src=myfolder/image3.jpg",
+          "width": 3264
+        }
+      ],
+      "message": "OK",
+      "status": 200
+    }
 
 <a name="api_details"></a>
 ## details
@@ -505,22 +535,32 @@ An object containing image attributes, as shown below.
 
 ### Example
 
-	$ curl 'http://images.example.com/api/v1/details/?src=myfolder/myimage.jpg'
-	{
-	  "data": {
-	    "id": 4,
-	    "title": "",
-	    "description": "",
-	    "download": true,
-	    "folder_id": 5,
-	    "height": 1200,
-	    "src": "myfolder/myimage.jpg",
-	    "url": "http://images.example.com/image?src=myfolder/myimage.jpg",
-	    "width": 1600
-	  },
-	  "message": "OK",
-	  "status": 200
-	}
+    $ curl 'http://images.example.com/api/v1/details/?src=myfolder/image1.jpg'
+    {
+      "data": {
+        "description": "",
+        "download": true,
+        "filename": "image1.jpg",
+        "folder": {
+          "id": 23,
+          "name": "/myfolder",
+          "parent_id": 1,
+          "path": "/myfolder",
+          "status": 1
+        },
+        "folder_id": 23,
+        "height": 2448,
+        "id": 114,
+        "src": "myfolder/image1.jpg",
+        "status": 1,
+        "supported": true,
+        "title": "",
+        "url": "http://images.example.com/image?src=myfolder/image1.jpg",
+        "width": 3264
+      },
+      "message": "OK",
+      "status": 200
+    }
 
 <a name="api_folio_list"></a>
 ## portfolio list
@@ -654,236 +694,247 @@ The full portfolio as a JSON object.
 
 ### Example
 
-	$ curl 'http://images.example.com/api/v1/portfolios/3/'
-	{
-	  "data": {
-	    "description": "The 2018 Spring Collection",
-	    "downloads": [
-	      {
-	        "created": "2018-03-23T12:38:44.264952Z",
-	        "description": "Originals export",
-	        "filename": "a13d7382f1124b59b62618dd4df154ba.zip",
-	        "filesize": 1330490,
-	        "folio_id": 3,
-	        "id": 2,
-	        "keep_until": "2020-01-01T00:00:00Z",
-	        "originals": true,
-	        "parameters": {},
-	        "task_id": null,
-	        "url": "http://images.example.com/portfolios/the-spring-collection/downloads/a13d7382f1124b59b62618dd4df154ba.zip"
-	      }
-	    ],
-	    "history": [
-	      {
-	        "action": 1,
-	        "action_info": "",
-	        "action_time": "2018-03-23T12:13:52.214960Z",
-	        "folio_id": 3,
-	        "id": 4,
-	        "user": {
-	          "email": "matt@quru.com",
-	          "first_name": "Matt",
-	          "id": 3,
-	          "last_name": "Fozard",
-	          "status": 1,
-	          "username": "matt"
-	        },
-	        "user_id": 3
-	      },
-	      {
-	        "action": 3,
-	        "action_info": "products/p1-bags-a0001.jpg added",
-	        "action_time": "2018-03-23T12:24:27.452216Z",
-	        "folio_id": 3,
-	        "id": 5,
-	        "user": {
-	          "email": "matt@quru.com",
-	          "first_name": "Matt",
-	          "id": 3,
-	          "last_name": "Fozard",
-	          "status": 1,
-	          "username": "matt"
-	        },
-	        "user_id": 3
-	      },
-	      {
-	        "action": 3,
-	        "action_info": "products/p1-bags-a0002.jpg added",
-	        "action_time": "2018-03-23T12:29:22.849761Z",
-	        "folio_id": 3,
-	        "id": 6,
-	        "user": {
-	          "email": "matt@quru.com",
-	          "first_name": "Matt",
-	          "id": 3,
-	          "last_name": "Fozard",
-	          "status": 1,
-	          "username": "matt"
-	        },
-	        "user_id": 3
-	      },
-	      {
-	        "action": 3,
-	        "action_info": "products/p1-bags-a0003.jpg added",
-	        "action_time": "2018-03-23T12:29:30.137174Z",
-	        "folio_id": 3,
-	        "id": 7,
-	        "user": {
-	          "email": "matt@quru.com",
-	          "first_name": "Matt",
-	          "id": 3,
-	          "last_name": "Fozard",
-	          "status": 1,
-	          "username": "matt"
-	        },
-	        "user_id": 3
-	      },
-	      {
-	        "action": 3,
-	        "action_info": "products/p1-bags-a0002.jpg moved to position 3",
-	        "action_time": "2018-03-23T12:32:50.556061Z",
-	        "folio_id": 3,
-	        "id": 8,
-	        "user": {
-	          "email": "matt@quru.com",
-	          "first_name": "Matt",
-	          "id": 3,
-	          "last_name": "Fozard",
-	          "status": 1,
-	          "username": "matt"
-	        },
-	        "user_id": 3
-	      },
-	      {
-	        "action": 4,
-	        "action_info": "Originals export (expires Wed Jan  1 00:00:00 2020 UTC, images are unmodified originals)",
-	        "action_time": "2018-03-23T12:38:44.265397Z",
-	        "folio_id": 3,
-	        "id": 9,
-	        "user": {
-	          "email": "matt@quru.com",
-	          "first_name": "Matt",
-	          "id": 3,
-	          "last_name": "Fozard",
-	          "status": 1,
-	          "username": "matt"
-	        },
-	        "user_id": 3
-	      }
-	    ],
-	    "human_id": "the-spring-collection",
-	    "id": 3,
-	    "images": [
-	      {
-	        "filename": "",
-	        "folio_id": 3,
-	        "id": 5,
-	        "image": {
-	          "description": "",
-	          "folder": {
-	            "id": 15,
-	            "name": "/products",
-	            "parent_id": 1,
-	            "path": "/products",
-	            "status": 1
-	          },
-	          "folder_id": 15,
-	          "height": 1754,
-	          "id": 85,
-	          "src": "products/p1-bags-a0001.jpg",
-	          "status": 1,
-	          "title": "",
-	          "width": 1239
-	        },
-	        "image_id": 85,
-	        "order_num": 0,
-	        "parameters": {},
-	        "url": "http://images.example.com/image?src=products/p1-bags-a0001.jpg"
-	      },
-	      {
-	        "filename": "",
-	        "folio_id": 3,
-	        "id": 7,
-	        "image": {
-	          "description": "",
-	          "folder": {
-	            "id": 15,
-	            "name": "/products",
-	            "parent_id": 1,
-	            "path": "/products",
-	            "status": 1
-	          },
-	          "folder_id": 15,
-	          "height": 1754,
-	          "id": 86,
-	          "src": "products/p1-bags-a0003.jpg",
-	          "status": 1,
-	          "title": "",
-	          "width": 1239
-	        },
-	        "image_id": 86,
-	        "order_num": 1,
-	        "parameters": {},
-	        "url": "http://images.example.com/image?src=products/p1-bags-a0003.jpg"
-	      },
-	      {
-	        "filename": "",
-	        "folio_id": 3,
-	        "id": 6,
-	        "image": {
-	          "description": "",
-	          "folder": {
-	            "id": 15,
-	            "name": "/products",
-	            "parent_id": 1,
-	            "path": "/products",
-	            "status": 1
-	          },
-	          "folder_id": 15,
-	          "height": 1754,
-	          "id": 84,
-	          "src": "products/p1-bags-a0002.jpg",
-	          "status": 1,
-	          "title": "",
-	          "width": 1239
-	        },
-	        "image_id": 84,
-	        "order_num": 2,
-	        "parameters": {},
-	        "url": "http://images.example.com/image?src=products/p1-bags-a0002.jpg"
-	      }
-	    ],
-	    "last_updated": "2018-03-23T12:29:30.137247Z",
-	    "name": "Spring Collection 2018",
-	    "owner": {
-	      "email": "matt@quru.com",
-	      "first_name": "Matt",
-	      "id": 3,
-	      "last_name": "Fozard",
-	      "status": 1,
-	      "username": "matt"
-	    },
-	    "owner_id": 3,
-	    "permissions": [
-	      {
-	        "access": 10,
-	        "folio_id": 3,
-	        "group_id": 2,
-	        "id": 6
-	      },
-	      {
-	        "access": 10,
-	        "folio_id": 3,
-	        "group_id": 1,
-	        "id": 5
-	      }
-	    ],
-	    "url": "http://images.example.com/portfolios/the-spring-collection/"
-	  },
-	  "message": "OK",
-	  "status": 200
-	}
-
+    $ curl 'http://images.example.com/api/v1/portfolios/3/'
+    {
+      "data": {
+        "description": "The 2018 Spring Collection",
+        "downloads": [
+          {
+            "created": "2018-03-23T12:38:44.264952Z",
+            "description": "Originals export",
+            "filename": "a13d7382f1124b59b62618dd4df154ba.zip",
+            "filesize": 1330490,
+            "folio_id": 3,
+            "id": 2,
+            "keep_until": "2020-01-01T00:00:00Z",
+            "originals": true,
+            "parameters": {},
+            "task_id": null,
+            "url": "http://images.example.com/portfolios/the-spring-collection/downloads/a13d7382f1124b59b62618dd4df154ba.zip"
+          }
+        ],
+        "history": [
+          {
+            "action": 1,
+            "action_info": "",
+            "action_time": "2018-03-23T12:13:52.214960Z",
+            "folio_id": 3,
+            "id": 4,
+            "user": {
+              "email": "matt@quru.com",
+              "first_name": "Matt",
+              "id": 3,
+              "last_name": "Fozard",
+              "status": 1,
+              "username": "matt"
+            },
+            "user_id": 3
+          },
+          {
+            "action": 3,
+            "action_info": "products/p1-bags-a0001.jpg added",
+            "action_time": "2018-03-23T12:24:27.452216Z",
+            "folio_id": 3,
+            "id": 5,
+            "user": {
+              "email": "matt@quru.com",
+              "first_name": "Matt",
+              "id": 3,
+              "last_name": "Fozard",
+              "status": 1,
+              "username": "matt"
+            },
+            "user_id": 3
+          },
+          {
+            "action": 3,
+            "action_info": "products/p1-bags-a0002.jpg added",
+            "action_time": "2018-03-23T12:29:22.849761Z",
+            "folio_id": 3,
+            "id": 6,
+            "user": {
+              "email": "matt@quru.com",
+              "first_name": "Matt",
+              "id": 3,
+              "last_name": "Fozard",
+              "status": 1,
+              "username": "matt"
+            },
+            "user_id": 3
+          },
+          {
+            "action": 3,
+            "action_info": "products/p1-bags-a0003.jpg added",
+            "action_time": "2018-03-23T12:29:30.137174Z",
+            "folio_id": 3,
+            "id": 7,
+            "user": {
+              "email": "matt@quru.com",
+              "first_name": "Matt",
+              "id": 3,
+              "last_name": "Fozard",
+              "status": 1,
+              "username": "matt"
+            },
+            "user_id": 3
+          },
+          {
+            "action": 3,
+            "action_info": "products/p1-bags-a0002.jpg moved to position 3",
+            "action_time": "2018-03-23T12:32:50.556061Z",
+            "folio_id": 3,
+            "id": 8,
+            "user": {
+              "email": "matt@quru.com",
+              "first_name": "Matt",
+              "id": 3,
+              "last_name": "Fozard",
+              "status": 1,
+              "username": "matt"
+            },
+            "user_id": 3
+          },
+          {
+            "action": 4,
+            "action_info": "Originals export (expires Wed Jan  1 00:00:00 2020 UTC, images are unmodified originals)",
+            "action_time": "2018-03-23T12:38:44.265397Z",
+            "folio_id": 3,
+            "id": 9,
+            "user": {
+              "email": "matt@quru.com",
+              "first_name": "Matt",
+              "id": 3,
+              "last_name": "Fozard",
+              "status": 1,
+              "username": "matt"
+            },
+            "user_id": 3
+          }
+        ],
+        "human_id": "the-spring-collection",
+        "id": 3,
+        "images": [
+          {
+            "filename": "",
+            "folio_id": 3,
+            "id": 5,
+            "image": {
+              "description": "",
+              "download": true,
+              "filename": "p1-bags-a0001.jpg",
+              "folder": {
+                "id": 15,
+                "name": "/products",
+                "parent_id": 1,
+                "path": "/products",
+                "status": 1
+              },
+              "folder_id": 15,
+              "height": 1754,
+              "id": 85,
+              "src": "products/p1-bags-a0001.jpg",
+              "status": 1,
+              "supported": true,
+              "title": "",
+              "url": "http://images.example.com/image?src=products/p1-bags-a0001.jpg",
+              "width": 1239
+            },
+            "image_id": 85,
+            "order_num": 0,
+            "parameters": {},
+            "url": "http://images.example.com/image?src=products/p1-bags-a0001.jpg"
+          },
+          {
+            "filename": "",
+            "folio_id": 3,
+            "id": 7,
+            "image": {
+              "description": "",
+              "download": true,
+              "filename": "p1-bags-a0003.jpg",
+              "folder": {
+                "id": 15,
+                "name": "/products",
+                "parent_id": 1,
+                "path": "/products",
+                "status": 1
+              },
+              "folder_id": 15,
+              "height": 1754,
+              "id": 86,
+              "src": "products/p1-bags-a0003.jpg",
+              "status": 1,
+              "supported": true,
+              "title": "",
+              "url": "http://images.example.com/image?src=products/p1-bags-a0003.jpg",
+              "width": 1239
+            },
+            "image_id": 86,
+            "order_num": 1,
+            "parameters": {},
+            "url": "http://images.example.com/image?src=products/p1-bags-a0003.jpg"
+          },
+          {
+            "filename": "",
+            "folio_id": 3,
+            "id": 6,
+            "image": {
+              "description": "",
+              "download": true,
+              "filename": "p1-bags-a0002.jpg",
+              "folder": {
+                "id": 15,
+                "name": "/products",
+                "parent_id": 1,
+                "path": "/products",
+                "status": 1
+              },
+              "folder_id": 15,
+              "height": 1754,
+              "id": 84,
+              "src": "products/p1-bags-a0002.jpg",
+              "status": 1,
+              "supported": true,
+              "title": "",
+              "url": "http://images.example.com/image?src=products/p1-bags-a0002.jpg",
+              "width": 1239
+            },
+            "image_id": 84,
+            "order_num": 2,
+            "parameters": {},
+            "url": "http://images.example.com/image?src=products/p1-bags-a0002.jpg"
+          }
+        ],
+        "last_updated": "2018-03-23T12:29:30.137247Z",
+        "name": "Spring Collection 2018",
+        "owner": {
+          "email": "matt@quru.com",
+          "first_name": "Matt",
+          "id": 3,
+          "last_name": "Fozard",
+          "status": 1,
+          "username": "matt"
+        },
+        "owner_id": 3,
+        "permissions": [
+          {
+            "access": 10,
+            "folio_id": 3,
+            "group_id": 2,
+            "id": 6
+          },
+          {
+            "access": 10,
+            "folio_id": 3,
+            "group_id": 1,
+            "id": 5
+          }
+        ],
+        "url": "http://images.example.com/portfolios/the-spring-collection/"
+      },
+      "message": "OK",
+      "status": 200
+    }
 
 <a name="api_private"></a>
 # Protected web services
@@ -1004,62 +1055,82 @@ returned data object is `null`.
 
 ### Examples
 
-	$ curl -X POST -u <token>:unused -F files=@myimage.jpg -F path_index=-1 -F path=test_images -F overwrite=false 'https://images.example.com/api/v1/upload/'
-	{
-	  "data": {
-	    "myimage.jpg": {
-	      "id": 524,
-	      "title": "",
-	      "description": "",
-	      "download": true,
-	      "folder_id": 3,
-	      "height": 1200,
-	      "src": "test_images/myimage.jpg",
-	      "url": "http://images.example.com/image?src=test_images/myimage.jpg",
-	      "width": 1600
-	    }
-	  },
-	  "message": "OK",
-	  "status": 200
-	}
+    $ curl -X POST -u <token>:unused -F files=@myimage.jpg -F path=test_images -F overwrite=false 'https://images.example.com/api/v1/upload/'
+    {
+      "data": {
+        "myimage.jpg": {
+          "description": "",
+          "download": true,
+          "filename": "myimage.jpg",
+          "folder": {
+            "id": 2,
+            "name": "/test_images",
+            "parent_id": 1,
+            "path": "/test_images",
+            "status": 1
+          },
+          "folder_id": 2,
+          "height": 1951,
+          "id": 141,
+          "src": "test_images/myimage.jpg",
+          "status": 1,
+          "supported": true,
+          "title": "",
+          "url": "http://images.example.com/image?src=test_images/myimage.jpg",
+          "width": 3000
+        }
+      },
+      "message": "OK",
+      "status": 200
+    }
 
 Running the same command a second time:
 
-	$ curl -X POST -u <token>:unused -F files=@myimage.jpg -F path_index=-1 -F path=test_images -F overwrite=false 'https://images.example.com/api/v1/upload/'
-	{
-	  "data": {
-	    "myimage.jpg": {
-	      "error": {
-	        "data": null,
-	        "message": "The specified item already exists (file path 'test_images/myimage.jpg' already exists)",
-	        "status": 409
-	      }
-	    }
-	  },
-	  "message": "The specified item already exists (file path 'test_images/myimage.jpg' already exists)",
-	  "status": 409
-	}
+    $ curl -X POST -u <token>:unused -F files=@myimage.jpg -F path=test_images -F overwrite=false 'https://images.example.com/api/v1/upload/'
+    {
+      "data": {
+        "myimage.jpg": {
+          "error": {
+            "data": null,
+            "message": "The specified item already exists (file path 'test_images/myimage.jpg' already exists)",
+            "status": 409
+          }
+        }
+      },
+      "message": "The specified item already exists (file path 'test_images/myimage.jpg' already exists)",
+      "status": 409
+    }
 
 Running the same command a third time but with `overwrite=rename`:
 
-	$ curl -X POST -u <token>:unused -F files=@myimage.jpg -F path_index=-1 -F path=test_images -F overwrite=rename 'https://images.example.com/api/v1/upload/'
-	{
-	  "data": {
-	    "myimage.jpg": {
-	      "id": 524,
-	      "title": "",
-	      "description": "",
-	      "download": true,
-	      "folder_id": 3,
-	      "height": 1200,
-	      "src": "test_images/myimage-001.jpg",
-	      "url": "http://images.example.com/image?src=test_images/myimage-001.jpg",
-	      "width": 1600
-	    }
-	  },
-	  "message": "OK",
-	  "status": 200
-	}
+    $ curl -X POST -u <token>:unused -F files=@myimage.jpg -F path=test_images -F overwrite=rename 'https://images.example.com/api/v1/upload/'
+    {
+      "data": {
+        "myimage.jpg": {
+          "description": "",
+          "download": true,
+          "filename": "myimage-001.jpg",
+          "folder": {
+            "id": 2,
+            "name": "/test_images",
+            "parent_id": 1,
+            "path": "/test_images",
+            "status": 1
+          },
+          "folder_id": 2,
+          "height": 1951,
+          "id": 142,
+          "src": "test_images/myimage-001.jpg",
+          "status": 1,
+          "supported": true,
+          "title": "",
+          "url": "http://images.example.com/image?src=test_images/myimage-001.jpg",
+          "width": 3000
+        }
+      },
+      "message": "OK",
+      "status": 200
+    }
 
 <a name="api_folios"></a>
 ## portfolios
@@ -1255,125 +1326,141 @@ incorporates the operations given in the `image_parameters` parameter (if any).
 
 Add an image to a portfolio:
 
-	$ curl -X POST -u <token>:unused -F 'image_id=85' 'http://images.example.com/api/v1/portfolios/3/images/'
-	{
-	  "data": {
-	    "filename": "",
-	    "folio_id": 3,
-	    "id": 5,
-	    "image": {
-	      "description": "",
-	      "folder": {
-	        "id": 15,
-	        "name": "/products",
-	        "parent_id": 1,
-	        "path": "/products",
-	        "status": 1
-	      },
-	      "folder_id": 15,
-	      "height": 1754,
-	      "id": 85,
-	      "src": "products/p1-bags-a0001.jpg",
-	      "status": 1,
-	      "title": "",
-	      "width": 1239
-	    },
-	    "image_id": 85,
-	    "order_num": 0,
-	    "parameters": {},
-	    "url": "http://images.example.com/image?src=products/p1-bags-a0001.jpg"
-	  },
-	  "message": "OK",
-	  "status": 200
-	}
+    $ curl -X POST -u <token>:unused -F 'image_id=85' 'http://images.example.com/api/v1/portfolios/3/images/'
+    {
+      "data": {
+        "filename": "",
+        "folio_id": 3,
+        "id": 5,
+        "image": {
+          "description": "",
+          "download": true,
+          "filename": "p1-bags-a0001.jpg",
+          "folder": {
+            "id": 15,
+            "name": "/products",
+            "parent_id": 1,
+            "path": "/products",
+            "status": 1
+          },
+          "folder_id": 15,
+          "height": 1754,
+          "id": 85,
+          "src": "products/p1-bags-a0001.jpg",
+          "status": 1,
+          "supported": true,
+          "title": "",
+          "url": "http://images.example.com/image?src=products/p1-bags-a0001.jpg",
+          "width": 1239
+        },
+        "image_id": 85,
+        "order_num": 0,
+        "parameters": {},
+        "url": "http://images.example.com/image?src=products/p1-bags-a0001.jpg"
+      },
+      "message": "OK",
+      "status": 200
+    }
 
 Reorder the portfolio:
 
-	$ curl -X PUT -u <token>:unused -F 'index=2' 'http://images.example.com/api/v1/portfolios/3/images/84/position/'
-	{
-	  "data": [
-	    {
-	      "filename": "",
-	      "folio_id": 3,
-	      "id": 5,
-	      "image": {
-	        "description": "",
-	        "folder": {
-	          "id": 15,
-	          "name": "/products",
-	          "parent_id": 1,
-	          "path": "/products",
-	          "status": 1
-	        },
-	        "folder_id": 15,
-	        "height": 1754,
-	        "id": 85,
-	        "src": "products/p1-bags-a0001.jpg",
-	        "status": 1,
-	        "title": "",
-	        "width": 1239
-	      },
-	      "image_id": 85,
-	      "order_num": 0,
-	      "parameters": {},
-	      "url": "http://images.example.com/image?src=products/p1-bags-a0001.jpg"
-	    },
-	    {
-	      "filename": "",
-	      "folio_id": 3,
-	      "id": 7,
-	      "image": {
-	        "description": "",
-	        "folder": {
-	          "id": 15,
-	          "name": "/products",
-	          "parent_id": 1,
-	          "path": "/products",
-	          "status": 1
-	        },
-	        "folder_id": 15,
-	        "height": 1754,
-	        "id": 86,
-	        "src": "products/p1-bags-a0003.jpg",
-	        "status": 1,
-	        "title": "",
-	        "width": 1239
-	      },
-	      "image_id": 86,
-	      "order_num": 1,
-	      "parameters": {},
-	      "url": "http://images.example.com/image?src=products/p1-bags-a0003.jpg"
-	    },
-	    {
-	      "filename": "",
-	      "folio_id": 3,
-	      "id": 6,
-	      "image": {
-	        "description": "",
-	        "folder": {
-	          "id": 15,
-	          "name": "/products",
-	          "parent_id": 1,
-	          "path": "/products",
-	          "status": 1
-	        },
-	        "folder_id": 15,
-	        "height": 1754,
-	        "id": 84,
-	        "src": "products/p1-bags-a0002.jpg",
-	        "status": 1,
-	        "title": "",
-	        "width": 1239
-	      },
-	      "image_id": 84,
-	      "order_num": 0,
-	      "parameters": {},
-	      "url": "http://images.example.com/image?src=products/p1-bags-a0002.jpg"
-	    }
-	  ],
-	  "message": "OK",
-	  "status": 200
-	}
+    $ curl -X PUT -u <token>:unused -F 'index=2' 'http://images.example.com/api/v1/portfolios/3/images/84/position/'
+    {
+      "data": [
+        {
+          "filename": "",
+          "folio_id": 3,
+          "id": 5,
+          "image": {
+            "description": "",
+            "download": true,
+            "filename": "p1-bags-a0001.jpg",
+            "folder": {
+              "id": 15,
+              "name": "/products",
+              "parent_id": 1,
+              "path": "/products",
+              "status": 1
+            },
+            "folder_id": 15,
+            "height": 1754,
+            "id": 85,
+            "src": "products/p1-bags-a0001.jpg",
+            "status": 1,
+            "supported": true,
+            "title": "",
+            "url": "http://images.example.com/image?src=products/p1-bags-a0001.jpg",
+            "width": 1239
+          },
+          "image_id": 85,
+          "order_num": 0,
+          "parameters": {},
+          "url": "http://images.example.com/image?src=products/p1-bags-a0001.jpg"
+        },
+        {
+          "filename": "",
+          "folio_id": 3,
+          "id": 7,
+          "image": {
+            "description": "",
+            "download": true,
+            "filename": "p1-bags-a0003.jpg",
+            "folder": {
+              "id": 15,
+              "name": "/products",
+              "parent_id": 1,
+              "path": "/products",
+              "status": 1
+            },
+            "folder_id": 15,
+            "height": 1754,
+            "id": 86,
+            "src": "products/p1-bags-a0003.jpg",
+            "status": 1,
+            "supported": true,
+            "title": "",
+            "url": "http://images.example.com/image?src=products/p1-bags-a0003.jpg",
+            "width": 1239
+          },
+          "image_id": 86,
+          "order_num": 1,
+          "parameters": {},
+          "url": "http://images.example.com/image?src=products/p1-bags-a0003.jpg"
+        },
+        {
+          "filename": "",
+          "folio_id": 3,
+          "id": 6,
+          "image": {
+            "description": "",
+            "download": true,
+            "filename": "p1-bags-a0002.jpg",
+            "folder": {
+              "id": 15,
+              "name": "/products",
+              "parent_id": 1,
+              "path": "/products",
+              "status": 1
+            },
+            "folder_id": 15,
+            "height": 1754,
+            "id": 84,
+            "src": "products/p1-bags-a0002.jpg",
+            "status": 1,
+            "supported": true,
+            "title": "",
+            "url": "http://images.example.com/image?src=products/p1-bags-a0002.jpg",
+            "width": 1239
+          },
+          "image_id": 84,
+          "order_num": 0,
+          "parameters": {},
+          "url": "http://images.example.com/image?src=products/p1-bags-a0002.jpg"
+        }
+      ],
+      "message": "OK",
+      "status": 200
+    }
 
 <a name="api_folios_publish"></a>
 ## portfolio publishing
@@ -1555,51 +1642,59 @@ The image `status` field has value `1` for active, or `0` for deleted.
 
 ### Examples
 
-	$ curl -u <token>:unused 'https://images.example.com/api/v1/admin/images/524/'
-	{
-	  "data": {
-	    "description": "",
-	    "folder": {
-	      "id": 3,
-	      "name": "/test_images",
-	      "parent_id": 1,
-	      "path": "/test_images",
-	      "status": 1
-	    },
-	    "folder_id": 3,
-	    "height": 1200,
-	    "id": 524,
-	    "src": "test_images/myimage.jpg",
-	    "status": 1,
-	    "title": "",
-	    "width": 1600
-	  },
-	  "message": "OK",
-	  "status": 200
-	}
+    $ curl -u <token>:unused 'https://images.example.com/api/v1/admin/images/141/'
+    {
+      "data": {
+        "description": "",
+        "download": true,
+        "filename": "myimage.jpg",
+        "folder": {
+          "id": 2,
+          "name": "/test_images",
+          "parent_id": 1,
+          "path": "/test_images",
+          "status": 1
+        },
+        "folder_id": 2,
+        "height": 1951,
+        "id": 141,
+        "src": "test_images/myimage.jpg",
+        "status": 1,
+        "supported": true,
+        "title": "",
+        "url": "http://images.example.com/image?src=test_images/myimage.jpg",
+        "width": 3000
+      },
+      "message": "OK",
+      "status": 200
+    }
 
-	$ curl -X PUT -u <token>:unused -F 'title=my sample image' -F 'description=the updated description of my sample image' 'https://images.example.com/api/v1/admin/images/524/'
-	{
-	  "data": {
-	    "description": "the updated description of my sample image",
-	    "folder": {
-	      "id": 3,
-	      "name": "/test_images",
-	      "parent_id": 1,
-	      "path": "/test_images",
-	      "status": 1
-	    },
-	    "folder_id": 3,
-	    "height": 1200,
-	    "id": 524,
-	    "src": "test_images/myimage.jpg",
-	    "status": 1,
-	    "title": "my sample image",
-	    "width": 1600
-	  },
-	  "message": "OK",
-	  "status": 200
-	}
+    $ curl -X PUT -u <token>:unused -F 'title=my sample image' -F 'description=the updated description of my sample image' 'https://images.example.com/api/v1/admin/images/141/'
+    {
+      "data": {
+        "description": "the updated description of my sample image",
+        "download": true,
+        "filename": "myimage.jpg",
+        "folder": {
+          "id": 2,
+          "name": "/test_images",
+          "parent_id": 1,
+          "path": "/test_images",
+          "status": 1
+        },
+        "folder_id": 2,
+        "height": 1951,
+        "id": 141,
+        "src": "test_images/myimage.jpg",
+        "status": 1,
+        "supported": true,
+        "title": "my sample image",
+        "url": "http://images.example.com/image?src=test_images/myimage.jpg",
+        "width": 3000
+      },
+      "message": "OK",
+      "status": 200
+    }
 
 <a name="api_data_templates"></a>
 ## image templates
@@ -2190,78 +2285,63 @@ The image's updated database object.
 
 ### Examples
 
-	$ curl -u <token>:unused 'https://images.example.com/api/v1/admin/images/524/'
-	{
-	  "data": {
-	    "description": "the description of my sample image",
-	    "folder": {
-	      "id": 3,
-	      "name": "/test_images",
-	      "parent_id": 1,
-	      "path": "/test_images",
-	      "status": 1
-	    },
-	    "folder_id": 3,
-	    "height": 1200,
-	    "id": 524,
-	    "src": "test_images/Image0007.jpg",
-	    "status": 1,
-	    "title": "my sample image",
-	    "width": 1600
-	  },
-	  "message": "OK",
-	  "status": 200
-	}
+To move image ID `141 myimage.jpg` to the `web` folder:
 
-To move this image to the `web` folder:
-
-	$ curl -X PUT -u <token>:unused -F 'path=/web/Image0007.jpg' 'https://images.example.com/api/v1/admin/filesystem/images/524/'
-	{
-	  "data": {
-	    "description": "the description of my sample image",
-	    "folder": {
-	      "id": 6,
-	      "name": "/web",
-	      "parent_id": 1,
-	      "path": "/web",
-	      "status": 1
-	    },
-	    "folder_id": 6,
-	    "height": 1200,
-	    "id": 524,
-	    "src": "web/Image0007.jpg",
-	    "status": 1,
-	    "title": "my sample image",
-	    "width": 1600
-	  },
-	  "message": "OK",
-	  "status": 200
-	}
+    $ curl -X PUT -u <token>:unused -F 'path=/web/myimage.jpg' 'https://images.example.com/api/v1/admin/filesystem/images/141/'
+    {
+      "data": {
+        "description": "the updated description of my sample image",
+        "download": true,
+        "filename": "myimage.jpg",
+        "folder": {
+          "id": 24,
+          "name": "/web",
+          "parent_id": 1,
+          "path": "/web",
+          "status": 1
+        },
+        "folder_id": 24,
+        "height": 1951,
+        "id": 141,
+        "src": "web/myimage.jpg",
+        "status": 1,
+        "supported": true,
+        "title": "my sample image",
+        "url": "http://images.example.com/image?src=web/myimage.jpg",
+        "width": 3000
+      },
+      "message": "OK",
+      "status": 200
+    }
 
 Then to delete the file:
 
-	$ curl -X DELETE -u <token>:unused 'https://images.example.com/api/v1/admin/filesystem/images/524/'
-	{
-		"data": {
-			"description": "the description of my sample image",
-			"folder": {
-				"id": 6,
-				"name": "/web",
-				"parent_id": 1,
-				"path": "/web",
-				"status": 1
-			},
-			"folder_id": 6,
-			"height": 1200,
-			"id": 524,
-			"src": "web/Image0007.jpg",
-			"status": 0,
-			"title": "my sample image",
-			"width": 1600
-		},
-		"message": "OK",
-		"status": 200
-	}
+    $ curl -X DELETE -u <token>:unused 'https://images.example.com/api/v1/admin/filesystem/images/141/'
+    {
+      "data": {
+        "description": "the updated description of my sample image",
+        "download": true,
+        "filename": "myimage.jpg",
+        "folder": {
+          "id": 24,
+          "name": "/web",
+          "parent_id": 1,
+          "path": "/web",
+          "status": 1
+        },
+        "folder_id": 24,
+        "height": 1951,
+        "id": 141,
+        "src": "web/myimage.jpg",
+        "status": 0,
+        "supported": true,
+        "title": "my sample image",
+        "url": "http://images.example.com/image?src=web/myimage.jpg",
+        "width": 3000
+      },
+      "message": "OK",
+      "status": 200
+    }
 
 <a name="api_disk_folders"></a>
 ## disk folders
