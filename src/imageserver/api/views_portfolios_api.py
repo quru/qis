@@ -37,8 +37,10 @@ from flask.views import MethodView
 
 from . import api_add_url_rules, url_version_prefix
 from .helpers import _prep_folio_object, _prep_folioexport_object, _prep_folioimage_object
-from imageserver.api_util import add_api_error_handler, add_parameter_error_handler
-from imageserver.api_util import make_api_success_response
+from imageserver.api_util import (
+    api_permission_required, add_api_error_handler,
+    add_parameter_error_handler, make_api_success_response
+)
 from imageserver.errors import DoesNotExistError, ParameterError
 from imageserver.filesystem_manager import delete_dir, get_portfolio_directory
 from imageserver.filesystem_sync import auto_sync_file
@@ -56,7 +58,6 @@ from imageserver.util import (
     validate_number, validate_string,
     secure_filename, secure_url_fragment, AttrObject
 )
-from imageserver.views_util import api_permission_required
 
 # These APIs allow public access, but the user object contains
 # information that only admins should see, so filter them out.

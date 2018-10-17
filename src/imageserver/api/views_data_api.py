@@ -39,8 +39,10 @@ from flask.views import MethodView
 
 from . import api_add_url_rules, url_version_prefix
 from .helpers import _prep_image_object
-from imageserver.api_util import add_api_error_handler, add_parameter_error_handler
-from imageserver.api_util import make_api_success_response
+from imageserver.api_util import (
+    api_permission_required, add_api_error_handler,
+    add_parameter_error_handler, make_api_success_response
+)
 from imageserver.errors import DoesNotExistError, ParameterError, SecurityError
 from imageserver.flask_app import data_engine, image_engine, permissions_engine
 from imageserver.models import Group, ImageHistory, ImageTemplate, User
@@ -52,7 +54,7 @@ from imageserver.util import get_string_changes, generate_password
 from imageserver.util import object_to_dict, object_to_dict_list
 from imageserver.util import parse_boolean, parse_int
 from imageserver.util import validate_number, validate_string
-from imageserver.views_util import api_permission_required, _check_internal_request
+from imageserver.views_util import _check_internal_request
 
 
 class ImageAPI(MethodView):

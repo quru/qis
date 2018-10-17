@@ -39,8 +39,10 @@ from flask import request
 
 from imageserver.api import blueprint, url_version_prefix
 from imageserver.api.helpers import _prep_blank_image_object, _prep_image_object
-from imageserver.api_util import add_api_error_handler, create_api_error_dict
-from imageserver.api_util import make_api_success_response
+from imageserver.api_util import (
+    api_permission_required, add_api_error_handler,
+    create_api_error_dict, make_api_success_response
+)
 from imageserver.csrf import csrf_exempt
 from imageserver.errors import (
     AuthenticationError, DoesNotExistError, ImageError,
@@ -63,7 +65,7 @@ from imageserver.util import (
     object_to_dict, parse_boolean, parse_int,
     validate_number, validate_string
 )
-from imageserver.views_util import api_permission_required, login_point
+from imageserver.views_util import login_point
 
 
 # v4.1 None of the APIs here are specced to return the audit trail in the image

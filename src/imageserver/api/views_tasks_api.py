@@ -35,14 +35,15 @@ from flask import request
 from flask.views import MethodView
 
 from . import api_add_url_rules, url_version_prefix
-from imageserver.api_util import add_api_error_handler, add_parameter_error_handler
-from imageserver.api_util import make_api_success_response
+from imageserver.api_util import (
+    api_permission_required, add_api_error_handler,
+    add_parameter_error_handler, make_api_success_response
+)
 from imageserver.errors import AlreadyExistsError, DoesNotExistError, ParameterError
 from imageserver.flask_app import data_engine, permissions_engine, task_engine
 from imageserver.models import SystemPermissions, Task
 from imageserver.session_manager import get_session_user, get_session_user_id
 from imageserver.util import object_to_dict, parse_iso_date, validate_string
-from imageserver.views_util import api_permission_required
 
 import imageserver.tasks as tasks
 

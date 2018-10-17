@@ -33,7 +33,7 @@ from flask.blueprints import Blueprint
 from flask import request, session
 
 from imageserver.models import SystemPermissions
-from imageserver.views_util import _check_internal_request
+from imageserver import views_util
 
 # Define the admin blueprint
 blueprint = Blueprint('reports', __name__, static_folder='static', template_folder='templates')
@@ -43,7 +43,9 @@ blueprint = Blueprint('reports', __name__, static_folder='static', template_fold
 # and (if the configuration says so) also be on HTTPS
 @blueprint.before_request
 def reports_login_required():
-    return _check_internal_request(request, session, True, True, SystemPermissions.PERMIT_REPORTS)
+    return views_util._check_internal_request(
+        request, session, True, True, SystemPermissions.PERMIT_REPORTS
+    )
 
 # Import reports views
 from . import views
