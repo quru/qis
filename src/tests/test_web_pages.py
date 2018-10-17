@@ -368,7 +368,7 @@ class WebPageTests(WebPageTestCase):
         self.call_page_requiring_login(
             '/api/help/',
             False,
-            "url = 'http://localhost/api/v1/list/'"
+            "url = 'https://localhost/api/v1/list/'"
         )
 
     # Test that the markdown substitutions are working
