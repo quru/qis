@@ -1482,6 +1482,7 @@ class ImageServerMiscTests(BaseTestCase):
             imgdata = obj['/tmp/qis_uploadfile.jpg']
             self.assertEqual(imgdata['src'], 'test_images/qis_uploadfile.jpg')
             self.assertGreater(imgdata['id'], 0)
+            self.assertNotIn('history', imgdata)  # v4.1
             # Make sure it works
             rv = self.app.get('/image?src=test_images/qis_uploadfile.jpg')
             self.assertEqual(rv.status_code, 200)

@@ -614,8 +614,7 @@ def index_of_word_break(val, from_index, forwards=True):
     return len(val) if forwards else 0
 
 
-_object_to_dict_ignore_defaults = ['password']
-
+_object_to_dict_ignore = ['password']
 
 def object_to_dict(obj, ignore_attrs=None, _r_stack=None):
     """
@@ -624,16 +623,17 @@ def object_to_dict(obj, ignore_attrs=None, _r_stack=None):
     lists or user-defined objects.
 
     ignore_attrs is an optional list or tuple of attribute names to omit from
-    the returned dictionary. By default, 'password' attributes are ignored. If
-    you want 'password' attributes returned, provide an empty list.
+    the returned dictionary. Any attributes named 'password' are always omitted.
 
     Detection of nested objects (to prevent infinite recursion) is handled by
     skipping the attribute if creation of an attribute value for the same object
     has already been started. This requires the objects in question to provide
     an __eq__ method.
     """
-    if ignore_attrs is None:
-        ignore_attrs = _object_to_dict_ignore_defaults
+    ignore_attrs = (
+        _object_to_dict_ignore if ignore_attrs is None
+        else _object_to_dict_ignore + list(ignore_attrs)
+    )
     if _r_stack is None:
         _r_stack = []
 

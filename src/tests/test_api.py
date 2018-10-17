@@ -271,6 +271,7 @@ class ImageServerAPITests(main_tests.BaseTestCase):
         self.assertEqual(len(list3), 0)
 
     # v2.6.4 Folder list should now return non-image files
+    # v4.1   Also tests folder list for newly created files
     def test_api_list_non_image(self):
         temp_folder = 'test_list'
         make_dirs(temp_folder)
@@ -284,12 +285,16 @@ class ImageServerAPITests(main_tests.BaseTestCase):
             self.assertEqual(len(obj['data']), 2)
             f1 = obj['data'][0]
             f2 = obj['data'][1]
+            # f1 not supported
             self.assertEqual('badfile.docx', f1['filename'])
             self.assertFalse(f1['supported'])
             self.assertEqual('', f1['url'])
+            self.assertNotIn('history', f1)  # v4.1
+            # f2 supported
             self.assertEqual('valid.jpg', f2['filename'])
             self.assertTrue(f2['supported'])
             self.assertIn('valid.jpg', f2['url'])
+            self.assertNotIn('history', f2)  # v4.1
         finally:
             delete_dir(temp_folder, recursive=True)
 
@@ -307,6 +312,22 @@ class ImageServerAPITests(main_tests.BaseTestCase):
         obj = json.loads(rv.data.decode('utf8'))
         assert obj['data']['width'] == 1600, 'Did not find data.width=1600, got ' + str(obj)
         assert obj['data']['height'] == 1200
+
+    # v4.1 Image details for a newly created file
+    def test_api_details_new_file(self):
+        temp_file = 'test_images/cathedral-copy.jpg'
+        try:
+            copy_file('test_images/cathedral.jpg', temp_file)
+            rv = self.app.get('/api/details/?src=' + temp_file)
+            self.assert_json_response_code(rv, API_CODES.SUCCESS)
+            img = json.loads(rv.data.decode('utf8'))['data']
+            self.assertGreater(img['id'], 0)
+            self.assertEqual(img['src'], temp_file)
+            self.assertGreater(img['width'], 0)
+            # v4.1 Newly found files were being returned differently, they should be standard format
+            self.assertNotIn('history', img)
+        finally:
+            delete_file(temp_file)
 
     # v2.6.4 Image details for a non-image file
     def test_api_details_non_image(self):

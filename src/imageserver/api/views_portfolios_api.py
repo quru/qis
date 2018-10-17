@@ -52,7 +52,6 @@ from imageserver.portfolios.util import delete_portfolio_export
 from imageserver.session_manager import get_session_user
 from imageserver.template_attrs import TemplateAttrs
 from imageserver.util import (
-    _object_to_dict_ignore_defaults,
     object_to_dict, object_to_dict_list,
     parse_boolean, parse_int, parse_iso_date, parse_iso_datetime,
     validate_number, validate_string,
@@ -61,7 +60,7 @@ from imageserver.util import (
 
 # These APIs allow public access, but the user object contains
 # information that only admins should see, so filter them out.
-_ignore_fields = _object_to_dict_ignore_defaults + [
+_omit_fields = [
     'user', 'owner'
 ]
 
@@ -89,7 +88,7 @@ class PortfolioAPI(MethodView):
             )
             folio_list = [_prep_folio_object(f) for f in folio_list]
             return make_api_success_response(
-                object_to_dict_list(folio_list, _ignore_fields)
+                object_to_dict_list(folio_list, _omit_fields)
             )
         else:
             # Get single portfolio
@@ -102,7 +101,7 @@ class PortfolioAPI(MethodView):
             )
             folio = _prep_folio_object(folio)
             return make_api_success_response(
-                object_to_dict(folio, _ignore_fields)
+                object_to_dict(folio, _omit_fields)
             )
 
     @add_api_error_handler
@@ -131,7 +130,7 @@ class PortfolioAPI(MethodView):
             folio = data_engine.get_portfolio(folio.id, load_images=True, load_history=True)
             folio = _prep_folio_object(folio)
             return make_api_success_response(
-                object_to_dict(folio, _ignore_fields)
+                object_to_dict(folio, _omit_fields)
             )
         finally:
             db_session.close()
@@ -184,7 +183,7 @@ class PortfolioAPI(MethodView):
             folio = data_engine.get_portfolio(folio.id, load_images=True, load_history=True)
             folio = _prep_folio_object(folio)
             return make_api_success_response(
-                object_to_dict(folio, _ignore_fields)
+                object_to_dict(folio, _omit_fields)
             )
         finally:
             db_session.close()
@@ -286,7 +285,7 @@ class PortfolioContentAPI(MethodView):
             )
             image_list = [_prep_folioimage_object(fi) for fi in folio.images]
             return make_api_success_response(
-                object_to_dict_list(image_list, _ignore_fields)
+                object_to_dict_list(image_list, _omit_fields)
             )
         else:
             # Get a single portfolio-image
@@ -303,7 +302,7 @@ class PortfolioContentAPI(MethodView):
                     folio_image.portfolio, FolioPermission.ACCESS_VIEW, get_session_user()
                 )
                 return make_api_success_response(object_to_dict(
-                    _prep_folioimage_object(folio_image), _ignore_fields + ['portfolio']
+                    _prep_folioimage_object(folio_image), _omit_fields + ['portfolio']
                 ))
             finally:
                 db_session.close()
@@ -365,7 +364,7 @@ class PortfolioContentAPI(MethodView):
                 _commit=True
             )
             return make_api_success_response(object_to_dict(
-                _prep_folioimage_object(db_folio_image), _ignore_fields + ['portfolio']
+                _prep_folioimage_object(db_folio_image), _omit_fields + ['portfolio']
             ))
         finally:
             db_session.close()
@@ -422,7 +421,7 @@ class PortfolioContentAPI(MethodView):
                     _commit=True
                 )
             return make_api_success_response(object_to_dict(
-                _prep_folioimage_object(folio_image), _ignore_fields + ['portfolio']
+                _prep_folioimage_object(folio_image), _omit_fields + ['portfolio']
             ))
         finally:
             db_session.close()
@@ -548,7 +547,7 @@ class PortfolioReorderAPI(MethodView):
             folio = data_engine.get_portfolio(folio_id, load_images=True, _db_session=db_session)
             image_list = [_prep_folioimage_object(fi) for fi in folio.images]
             return make_api_success_response(
-                object_to_dict_list(image_list, _ignore_fields + ['portfolio'])
+                object_to_dict_list(image_list, _omit_fields + ['portfolio'])
             )
         finally:
             db_session.close()
@@ -588,7 +587,7 @@ class PortfolioExportAPI(MethodView):
             # List portfolio exports
             exports_list = [_prep_folioexport_object(folio, fe) for fe in folio.downloads]
             return make_api_success_response(
-                object_to_dict_list(exports_list, _ignore_fields)
+                object_to_dict_list(exports_list, _omit_fields)
             )
         else:
             # Get a single portfolio-export
@@ -600,7 +599,7 @@ class PortfolioExportAPI(MethodView):
                     'export ID %d does not belong to portfolio ID %d' % (export_id, folio_id)
                 )
             return make_api_success_response(object_to_dict(
-                _prep_folioexport_object(folio, folio_export), _ignore_fields
+                _prep_folioexport_object(folio, folio_export), _omit_fields
             ))
 
     @add_api_error_handler
@@ -655,7 +654,7 @@ class PortfolioExportAPI(MethodView):
             folio_export.task_id = export_task.id
             data_engine.save_object(folio_export, _db_session=db_session, _commit=True)
             return make_api_success_response(object_to_dict(
-                _prep_folioexport_object(folio, folio_export), _ignore_fields + ['portfolio']
+                _prep_folioexport_object(folio, folio_export), _omit_fields + ['portfolio']
             ), task_accepted=True)
         finally:
             db_session.close()

@@ -15,9 +15,12 @@ API changes in more detail:
   characters: `%<>&.?:/`
 * Return status 404 instead of 200 when a file or folder is deleted a second time
   (since the file/folder no longer exists the second time around)
-* The `image` object was being returned in 3 different ways and has now been
+* The `image` object was being returned as 3 different structures and has now been
   standardised. As well as the standard fields it now always includes the calculated
   fields: `url`, `download`, `supported`, and `filename`.
+* The `image` object was sometimes being returned with the audit trail `history`
+  field present if (and only if) the file was newly detected on the server.
+  This was not documented or intended and no longer happens.
 * The `user` and `owner` objects are no longer returned from the Portfolios
   functions. These were potentially leaking names and email addresses to
   users who should not have access to user information. The remaining `user_id`

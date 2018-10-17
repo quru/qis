@@ -65,6 +65,16 @@ from imageserver.util import (
 )
 
 
+# v4.1 None of the APIs here are specced to return the audit trail in the image
+# object, but for newly discovered files a new audit trail is started and is
+# therefore present on the image object. We need to filter it out.
+# If this changes in future, do not allow public users to see the 'user' object
+# inside the history records, as it can contain personal information.
+_omit_fields = [
+    'history', 'user'
+]
+
+
 # API login - generates a token to use the API outside of the web site
 @blueprint.route('/token', methods=['POST'], strict_slashes=False)
 @blueprint.route(url_version_prefix + '/token', methods=['POST'], strict_slashes=False)
@@ -193,7 +203,7 @@ def imagelist():
                     db_entry.filename = f['filename']
                     db_entry.supported = False
                 # Return images in full (standard) image dict format
-                entry = object_to_dict(db_entry)
+                entry = object_to_dict(db_entry, _omit_fields)
             else:
                 # Return images in short dict format
                 entry = {
@@ -250,7 +260,7 @@ def imagedetails():
     )
 
     return make_api_success_response(object_to_dict(
-        _prep_image_object(db_image)
+        _prep_image_object(db_image), _omit_fields
     ))
 
 
@@ -339,7 +349,7 @@ def upload():
                         )
                     # This loop success
                     ret_dict[original_filepath] = object_to_dict(
-                        _prep_image_object(db_image, can_download)
+                        _prep_image_object(db_image, can_download), _omit_fields
                     )
             else:
                 logger.warning('Upload received blank filename, ignoring file')
