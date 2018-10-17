@@ -47,7 +47,7 @@ from .flask_app import app, logger, permissions_engine
 from .flask_util import internal_url_for, external_url_for
 from .models import FolderPermission, SystemPermissions
 from .session_manager import get_session_user, logged_in
-from .util import get_file_extension, filepath_filename
+from .util import get_file_extension, filepath_filename, unicode_to_utf8
 
 
 @app.template_filter('datetimeformat')
@@ -252,9 +252,21 @@ def log_security_error(error, request):
                 request.url,
                 user.username if user else '<anonymous>',
                 ip,
-                str(error)
+                unicode_to_utf8(str(error))
             )
         )
         return True
     else:
         return False
+
+
+def safe_error_str(error):
+    """
+    Converts an exception or a string to a utf8 string that has any known
+    sensitive text (such as secrets from the app config) redacted.
+    """
+    if not isinstance(error, str):
+        error = str(error)
+    error = unicode_to_utf8(error)
+    # TODO implement me
+    return str(error)

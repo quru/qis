@@ -145,7 +145,7 @@ def create_api_error_dict(exc, logger=None):
     """
     err_no = API_CODES.INTERNAL_ERROR
     exc_name = ''
-    exc_val = '(none)' if exc is None else unicode_to_utf8(str(exc))
+    exc_detail = '' if exc is None else unicode_to_utf8(str(exc))
 
     # Try first for our own exceptions
     if isinstance(exc, errors.ParameterError):
@@ -166,23 +166,25 @@ def create_api_error_dict(exc, logger=None):
         # It's a Flask/Werkzeug HTTP exception
         err_no = exc.code
         exc_name = exc.name
-        exc_val = exc.description
+        exc_detail = exc.description
 
     # Log interesting errors
     if logger is not None:
         if err_no == API_CODES.INVALID_PARAM:
-            logger.error('API Parameter error (' + exc_val + ')')
+            logger.error('API Parameter error (' + exc_detail + ')')
         elif err_no == API_CODES.UNAUTHORISED:
-            logger.error('API Security error (' + exc_val + ')')
+            logger.error('API Security error (' + exc_detail + ')')
         elif err_no == API_CODES.INTERNAL_ERROR:
-            logger.error('API ' + traceback.format_exc())
+            logger.error('API Unhandled error: ' + traceback.format_exc())
 
     if not exc_name:
         exc_name = API_MESSAGES.get(err_no, 'Unknown Error')
+    if exc_detail:
+        exc_detail = ' (' + exc_detail + ')'
 
     return create_api_dict(
         err_no,
-        exc_name + ' (' + exc_val + ')',
+        exc_name + exc_detail,
         getattr(exc, 'api_data', None)
     )
 
