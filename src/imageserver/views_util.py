@@ -4,7 +4,7 @@
 # Document:      views_util.py
 # Date started:  10 Aug 2011
 # By:            Matt Fozard
-# Purpose:       Custom template tags and filters
+# Purpose:       Custom template tags, filters, and decorators
 # Requires:
 # Copyright:     Quru Ltd (www.quru.com)
 # Licence:
@@ -29,22 +29,26 @@
 # =========  ====  ============================================================
 # 10Aug2011  Matt  Created from the filters in views_pages.py
 # 01Apr2015  Matt  Added markdown filter
+# 17Oct2018  Matt  Moved view decorators in here from flask_util
 #
 
+import time
 from calendar import timegm
 from collections import OrderedDict
 from datetime import datetime
-import time
+from functools import wraps
 
 import markdown
+from flask import make_response, redirect, request, session
 from jinja2 import Markup
-from werkzeug.urls import url_quote_plus
+from werkzeug.urls import url_encode, url_quote_plus
 
 from . import __about__
 from . import imaging
-from .errors import SecurityError
+from .api_util import make_api_error_response
+from .errors import AuthenticationError, SecurityError
 from .flask_app import app, logger, permissions_engine
-from .flask_util import internal_url_for, external_url_for
+from .flask_util import get_port, internal_url_for, external_url_for
 from .models import FolderPermission, SystemPermissions
 from .session_manager import get_session_user, logged_in
 from .util import get_file_extension, filepath_filename, unicode_to_utf8
@@ -270,3 +274,148 @@ def safe_error_str(error):
     error = unicode_to_utf8(error)
     # TODO implement me
     return str(error)
+
+
+def login_point(from_web):
+    """
+    Defines a decorator specifically for the login page that enforces the
+    INTERNAL_BROWSING_PORT and INTERNAL_BROWSING_SSL settings, but does not
+    require the user to yet be logged in.
+    """
+    def wrapper(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            res = _check_internal_request(request, session, from_web, False)
+            return res if res else f(*args, **kwargs)
+        return decorated_function
+    return wrapper
+
+
+def login_required(f):
+    """
+    Defines a decorator that can be applied to a view function to require
+    that the user must be logged in. The user is redirected to the login page
+    if they are not logged in.
+
+    This decorator enforces INTERNAL_BROWSING_PORT and INTERNAL_BROWSING_SSL,
+    if they are set.
+    """
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        res = _check_internal_request(request, session, True, True)
+        return res if res else f(*args, **kwargs)
+    return decorated_function
+
+
+def ssl_required(f):
+    """
+    Defines a decorator that can be applied to a view function to require that
+    HTTPS is in force. The user is redirected to the same URL path on HTTPS if
+    the connection is standard HTTP.
+    """
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        res = _check_ssl_request(request, True)
+        return res if res else f(*args, **kwargs)
+    return decorated_function
+
+
+def api_permission_required(f, require_login=True, required_flag=None):
+    """
+    Defines a decorator that can be applied to a view function to optionally
+    require that the user be logged in (true by default) and optionally require
+    the specified system permissions flag.
+
+    An API JSON response is returned if the user is not logged in or does not
+    have the required permission flag.
+
+    This decorator also enforces INTERNAL_BROWSING_PORT and INTERNAL_BROWSING_SSL,
+    if they are set.
+    """
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        res = _check_internal_request(request, session, False, require_login, required_flag)
+        return res if res else f(*args, **kwargs)
+    return decorated_function
+
+
+def _check_internal_request(request, session, from_web, require_login,
+                            required_permission_flag=None):
+    """
+    A low-level component implementing request scheme, port, session and
+    optional system permission checking for an "internal" web request.
+    Incorporates _check_port and _check_ssl_request.
+    Returns a Flask redirect or response if there is a problem, or None on success.
+    Responses are returned as HTML when from_web is True, or as JSON when False.
+    """
+    # Check the port first
+    if app.config['INTERNAL_BROWSING_PORT']:
+        port_response = _check_port(request, app.config['INTERNAL_BROWSING_PORT'], from_web)
+        if port_response:
+            return port_response
+    # Check SSL second, so that if we need to redirect to HTTPS
+    # we know we're already on the correct port number
+    if app.config['INTERNAL_BROWSING_SSL']:
+        ssl_response = _check_ssl_request(request, from_web)
+        if ssl_response:
+            return ssl_response
+    # Check the session is logged in
+    if require_login:
+        if not logged_in():
+            if from_web:
+                from_path = request.path
+                if len(request.args) > 0:
+                    from_path += '?' + url_encode(request.args)
+                # Go to login page, redirecting to original destination on success
+                return redirect(internal_url_for('login', next=from_path))
+            else:
+                # Return an error
+                return make_api_error_response(AuthenticationError(
+                    'You must be logged in to access this function'
+                ), logger)
+        # Check admin permission
+        if required_permission_flag:
+            try:
+                permissions_engine.ensure_permitted(
+                    required_permission_flag, get_session_user()
+                )
+            except SecurityError as e:
+                # Return an error
+                if from_web:
+                    return make_response(str(e), 403)
+                else:
+                    return make_api_error_response(e, logger)
+    # OK
+    return None
+
+
+def _check_port(request, required_port, from_web):
+    """
+    A low-level component implementing a request checker that tests the port
+    number in use and returns a Flask redirect if required
+    (or a JSON error response if not from_web), but otherwise returns None.
+    """
+    if get_port(request) != required_port:
+        msg = 'This URL is not available on port %d' % get_port(request)
+        if from_web:
+            return make_response(msg, 401)
+        else:
+            return make_api_error_response(AuthenticationError(msg), logger)
+    return None
+
+
+def _check_ssl_request(request, from_web):
+    """
+    A low-level component implementing a request checker that tests for HTTPS
+    and returns a Flask redirect if required (or a JSON error response if not
+    from_web), but otherwise returns None.
+    """
+    if not request.is_secure:
+        if from_web:
+            to_url = request.url.replace('http:', 'https:', 1)
+            return redirect(to_url)
+        else:
+            return make_api_error_response(AuthenticationError(
+                'HTTPS must be used to access this function'
+            ), logger)
+    return None

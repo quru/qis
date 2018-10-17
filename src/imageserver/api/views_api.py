@@ -54,7 +54,7 @@ from imageserver.flask_app import (
     cache_engine, data_engine, image_engine, permissions_engine, task_engine
 )
 from imageserver.flask_ext import TimedTokenBasicAuthentication
-from imageserver.flask_util import api_permission_required, external_url_for, login_point
+from imageserver.flask_util import external_url_for
 from imageserver.models import FolderPermission, Image, User
 from imageserver.session_manager import get_session_user
 from imageserver.user_auth import authenticate_user
@@ -63,6 +63,7 @@ from imageserver.util import (
     object_to_dict, parse_boolean, parse_int,
     validate_number, validate_string
 )
+from imageserver.views_util import api_permission_required, login_point
 
 
 # v4.1 None of the APIs here are specced to return the audit trail in the image

@@ -43,7 +43,6 @@ from imageserver.errors import DoesNotExistError, ParameterError
 from imageserver.filesystem_manager import delete_dir, get_portfolio_directory
 from imageserver.filesystem_sync import auto_sync_file
 from imageserver.flask_app import data_engine, permissions_engine, task_engine
-from imageserver.flask_util import api_permission_required
 from imageserver.models import (
     Image, FolderPermission, Group, SystemPermissions, Task,
     Folio, FolioExport, FolioImage, FolioPermission, FolioHistory
@@ -57,6 +56,7 @@ from imageserver.util import (
     validate_number, validate_string,
     secure_filename, secure_url_fragment, AttrObject
 )
+from imageserver.views_util import api_permission_required
 
 # These APIs allow public access, but the user object contains
 # information that only admins should see, so filter them out.

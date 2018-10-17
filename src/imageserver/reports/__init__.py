@@ -32,8 +32,8 @@
 from flask.blueprints import Blueprint
 from flask import request, session
 
-from imageserver.flask_util import _check_internal_request
 from imageserver.models import SystemPermissions
+from imageserver.views_util import _check_internal_request
 
 # Define the admin blueprint
 blueprint = Blueprint('reports', __name__, static_folder='static', template_folder='templates')

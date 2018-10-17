@@ -43,7 +43,6 @@ from imageserver.api_util import add_api_error_handler, add_parameter_error_hand
 from imageserver.api_util import make_api_success_response
 from imageserver.errors import DoesNotExistError, ParameterError, SecurityError
 from imageserver.flask_app import data_engine, image_engine, permissions_engine
-from imageserver.flask_util import api_permission_required, _check_internal_request
 from imageserver.models import Group, ImageHistory, ImageTemplate, User
 from imageserver.models import FolderPermission, Property, SystemPermissions
 from imageserver.session_manager import get_session_user, get_session_user_id
@@ -53,6 +52,7 @@ from imageserver.util import get_string_changes, generate_password
 from imageserver.util import object_to_dict, object_to_dict_list
 from imageserver.util import parse_boolean, parse_int
 from imageserver.util import validate_number, validate_string
+from imageserver.views_util import api_permission_required, _check_internal_request
 
 
 class ImageAPI(MethodView):

@@ -44,10 +44,10 @@ from imageserver.filesystem_sync import delete_file, move_file
 from imageserver.filesystem_sync import create_folder, auto_sync_folder
 from imageserver.flask_app import logger
 from imageserver.flask_app import data_engine, image_engine, permissions_engine, task_engine
-from imageserver.flask_util import api_permission_required
 from imageserver.models import Folder, FolderPermission, Image, Task
 from imageserver.session_manager import get_session_user
 from imageserver.util import object_to_dict, validate_string
+from imageserver.views_util import api_permission_required
 
 
 class ImageFileAPI(MethodView):

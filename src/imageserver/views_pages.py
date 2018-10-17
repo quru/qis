@@ -45,7 +45,6 @@ from .filesystem_sync import auto_sync_file, auto_sync_folder
 from .flask_app import app, logger
 from .flask_app import cache_engine, data_engine, image_engine, permissions_engine, task_engine
 from .flask_util import external_url_for, internal_url_for
-from .flask_util import login_point, login_required
 from .image_attrs import ImageAttrs
 from .template_attrs import TemplateAttrs
 from .models import Folder, FolderPermission, Image, ImageHistory, User
@@ -55,7 +54,7 @@ from .user_auth import authenticate_user
 from .util import filepath_filename, filepath_parent
 from .util import get_timezone_code, parse_boolean
 from .util import filepath_normalize, strip_seps
-from .views_util import log_security_error
+from .views_util import log_security_error, login_point, login_required
 
 
 # The index page

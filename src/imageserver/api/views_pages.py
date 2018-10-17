@@ -30,8 +30,8 @@
 #
 
 from imageserver.api import blueprint
-from imageserver.flask_util import login_required
 from imageserver.views_pages import _standard_help_page
+from imageserver.views_util import login_required
 
 
 # The API help page

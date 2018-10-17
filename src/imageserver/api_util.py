@@ -35,7 +35,7 @@ import traceback
 from flask import jsonify, request
 from werkzeug.exceptions import HTTPException
 
-from . import errors
+from . import errors, views_util
 from .util import unicode_to_utf8
 
 
@@ -180,7 +180,7 @@ def create_api_error_dict(exc, logger=None):
     if not exc_name:
         exc_name = API_MESSAGES.get(err_no, 'Unknown Error')
     if exc_detail:
-        exc_detail = ' (' + exc_detail + ')'
+        exc_detail = ' (' + views_util.safe_error_str(exc_detail) + ')'
 
     return create_api_dict(
         err_no,
