@@ -229,6 +229,7 @@ class StatsServerTests(main_tests.FlaskTestCase):
 
     def test_stats_engine(self):
         # Setup
+        t_start = datetime.utcnow()
         self.reset_stats_server()
         # Test constants
         IMG = 'test_images/cathedral.jpg'
@@ -240,7 +241,6 @@ class StatsServerTests(main_tests.FlaskTestCase):
         IMG_VIEWS_COPY = 1
         IMG_DOWNLOADS = 1
         try:
-            t_start = datetime.utcnow()
             copy_file(IMG, IMG_COPY)
             # View some images
             for _ in range(IMG_VIEWS):
