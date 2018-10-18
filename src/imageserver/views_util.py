@@ -272,21 +272,32 @@ def log_security_error(error, request):
         return False
 
 
+# Cache of find/replace strings for safe_error_str()
 _safe_error_str_replacements = None
+# String wrapper used by safe_error_str()
+class _safe_str(str):
+    pass
+
 
 def safe_error_str(error):
     """
     Converts an exception or a string into a utf8 string that has any known
     sensitive text (such as secrets from the app config) redacted.
     """
-    global _safe_error_str_replacements
+    if not error:
+        return ''
     # Populate the find/replace dict first time around (after the app config has been loaded)
+    global _safe_error_str_replacements
     if _safe_error_str_replacements is None:
         _safe_error_str_replacements = {
             sval: ('<' + skey + '>') for skey, sval in app.config.items()
             if (skey in _unsafe_settings_exact or _unsafe_settings_re.search(skey))
             and isinstance(sval, str) and sval
         }.items()
+    # Small optimisation - because this function is called from several places,
+    # don't repeat all the processing if it has already been done before
+    if isinstance(error, _safe_str):
+        return error
     # Get the error as a utf8 string
     if not isinstance(error, str):
         error = str(error)
@@ -294,7 +305,7 @@ def safe_error_str(error):
     # And replace anything sensitive
     for fnd, rpl in _safe_error_str_replacements:
         error = error.replace(fnd, rpl)
-    return error
+    return _safe_str(error)
 
 
 def login_point(from_web):
