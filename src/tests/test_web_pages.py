@@ -455,6 +455,23 @@ class WebPageTests(WebPageTestCase):
         self.assertIn('not found', rv_data)
         self.assertIn('value of the DEMO_IMAGE_PATH setting', rv_data)
 
+    # v4.1 #11 Make an attempt to filter out secrets from error messages
+    def test_error_message_redaction(self):
+        import imageserver.views_util
+        imageserver.views_util._safe_error_str_replacements = None
+        self.login('admin', 'admin')
+        # The IMAGES_BASE_DIR setting is just one thing that could be sensitive
+        flask_app.config['IMAGES_BASE_DIR'] = '/some/sensitive/path'
+        dummy_error = 'Permission denied for ' + flask_app.config['IMAGES_BASE_DIR']
+        with unittest.mock.patch('imageserver.views_pages.get_file_info') as mockfileio:
+            mockfileio.side_effect = IOError(dummy_error)
+            rv = self.app.get('/details/?src=test_images/cathedral.jpg')
+            err_msg = rv.data.decode('utf8')
+            self.assertIn('Permission denied for', err_msg)
+            # The setting value should have been replaced with the setting name
+            self.assertNotIn(flask_app.config['IMAGES_BASE_DIR'], err_msg)
+            self.assertIn('IMAGES_BASE_DIR', err_msg)
+
 
 # v4 Test pages that have per-edition changes
 class WebPageEditionTests(WebPageTestCase):

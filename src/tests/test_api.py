@@ -37,6 +37,7 @@ import json
 import os
 import pickle
 import time
+import unittest
 
 from werkzeug.urls import url_quote_plus
 
@@ -1779,3 +1780,20 @@ class ImageServerAPITests(main_tests.BaseTestCase):
         self.assert_json_response_code(rv, 301)
         obj = json.loads(rv.data.decode('utf8'))
         self.assertTrue(obj['data'].endswith('/users/'))
+
+    # v4.1 #11 Make an attempt to filter out secrets from error messages
+    def test_error_message_redaction(self):
+        import imageserver.views_util
+        imageserver.views_util._safe_error_str_replacements = None
+        # The IMAGES_BASE_DIR setting is just one thing that could be sensitive
+        flask_app.config['IMAGES_BASE_DIR'] = '/some/sensitive/path'
+        dummy_error = 'Permission denied for ' + flask_app.config['IMAGES_BASE_DIR']
+        with unittest.mock.patch('imageserver.api.views_api.auto_sync_file') as mockfileio:
+            mockfileio.side_effect = OSError(dummy_error)
+            rv = self.app.get('/api/details/?src=test_images/cathedral.jpg')
+            self.assert_json_response_code(rv, API_CODES.INTERNAL_ERROR)
+            obj = json.loads(rv.data.decode('utf8'))
+            self.assertIn('Permission denied for', obj['message'])
+            # The setting value should have been replaced with the setting name
+            self.assertNotIn(flask_app.config['IMAGES_BASE_DIR'], obj['message'])
+            self.assertIn('IMAGES_BASE_DIR', obj['message'])

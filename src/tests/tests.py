@@ -676,12 +676,12 @@ class ImageServerMiscTests(BaseTestCase):
 
     # #1864 Ensure unicode garbage URLs return 404 (thanks script kiddies)
     def test_unicode_404_src(self):
-        rv = self.app.get('/image?src=swëdish/dørset.jpg')
+        rv = self.app.get('/image?src=swëdish/dørset.jpg')
         self.assertEqual(rv.status_code, 404)
-        self.assertIn('swëdish/dørset.jpg', rv.data.decode('utf8'))
-        rv = self.app.get('/original?src=swëdish/dørset.jpg')
+        self.assertIn('swëdish/dørset.jpg', rv.data.decode('utf8'))
+        rv = self.app.get('/original?src=swëdish/dørset.jpg')
         self.assertEqual(rv.status_code, 404)
-        self.assertIn('swëdish/dørset.jpg', rv.data.decode('utf8'))
+        self.assertIn('swëdish/dørset.jpg', rv.data.decode('utf8'))
 
     # #2517 Test that a/b.jpg is /a/b.jpg is /a//b.jpg
     # #2517 Test that /a/b/c.jpg is /a//b/c.jpg is /a///b/c.jpg
@@ -2295,6 +2295,24 @@ class ImageServerMiscTests(BaseTestCase):
             if u: dm.delete_object(u)
             u2 = dm.get_user(username='JangoFett')
             if u2: dm.delete_object(u2)
+
+    # v4.1 #11 Make an attempt to filter out secrets from error messages
+    def test_error_message_redaction(self):
+        import imageserver.views_util
+        imageserver.views_util._safe_error_str_replacements = None
+        # The XREF setting is just one thing that could be sensitive, should not appear in errors
+        flask_app.config['XREF_TRACKING_URL'] = 'https://my.internal.service/'
+        dummy_error = 'Failed to invoke URL ' + flask_app.config['XREF_TRACKING_URL']
+        for api in ['/image', '/original']:
+            with mock.patch('imageserver.views.invoke_http_async') as mockhttp:
+                mockhttp.side_effect = Exception(dummy_error)
+                rv = self.app.get(api + '?src=test_images/cathedral.jpg&xref=1')
+                self.assertEqual(rv.status_code, 500)
+                err_msg = rv.data.decode('utf8')
+                self.assertIn('Failed to invoke URL', err_msg)
+                # The setting value should have been replaced with the setting name
+                self.assertNotIn(flask_app.config['XREF_TRACKING_URL'], err_msg)
+                self.assertIn('XREF_TRACKING_URL', err_msg)
 
 
 class ImageServerCacheTests(BaseTestCase):

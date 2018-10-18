@@ -348,6 +348,11 @@ def on_unhandled_error(exc):
 
     # Most of the other errors are triggered by the /image and /original URLs
     # where Flask's default handler (returning brief HTML) already works well
+
+    # v4.1 #11 HTTPException contains a potentially sensitive description
+    for attr in ('description', 'message'):
+        if hasattr(exc, attr):
+            setattr(exc, attr, views_util.safe_error_str(getattr(exc, attr)))
     return exc
 
 

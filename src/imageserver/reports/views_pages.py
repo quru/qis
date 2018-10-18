@@ -38,7 +38,7 @@ from imageserver.flask_app import app, data_engine
 from imageserver.reports import blueprint
 from imageserver.util import get_timezone_code, get_timezone_offset, to_iso_datetime
 from imageserver.util import parse_boolean, parse_int, parse_iso_datetime, parse_long
-from imageserver.views_util import log_security_error
+from imageserver.views_util import log_security_error, safe_error_str
 
 
 # The reports index page
@@ -77,7 +77,7 @@ def system_stats():
         log_security_error(e, request)
         if app.config['DEBUG']:
             raise
-        raise InternalServerError(str(e))
+        raise InternalServerError(safe_error_str(e))
 
 
 # The image stats graphing page
@@ -113,7 +113,7 @@ def image_stats():
         log_security_error(e, request)
         if app.config['DEBUG']:
             raise
-        raise InternalServerError(str(e))
+        raise InternalServerError(safe_error_str(e))
 
 
 # Top 10 image details
@@ -197,7 +197,7 @@ def topten():
         log_security_error(e, request)
         if app.config['DEBUG']:
             raise
-        raise InternalServerError(str(e))
+        raise InternalServerError(safe_error_str(e))
 
 
 def process_time_parameters(from_str, to_str):

@@ -37,7 +37,7 @@ from imageserver.flask_app import app, logger, data_engine, permissions_engine
 from imageserver.models import FolderPermission, FolioPermission
 from imageserver.portfolios import blueprint
 from imageserver.session_manager import get_session_user
-from imageserver.views_util import login_required, url_for_image_attrs
+from imageserver.views_util import login_required, safe_error_str, url_for_image_attrs
 
 from .util import get_portfolio_image_attrs
 
@@ -152,5 +152,5 @@ def portfolio_view(human_id):
         return render_template(
             'portfolio_view.html',
             title='Portfolio',
-            err_msg='This portfolio cannot be viewed: ' + str(e)
+            err_msg='This portfolio cannot be viewed: ' + safe_error_str(e)
         ), error_dict['status']

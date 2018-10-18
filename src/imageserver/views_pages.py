@@ -54,7 +54,7 @@ from .user_auth import authenticate_user
 from .util import filepath_filename, filepath_parent
 from .util import get_timezone_code, parse_boolean
 from .util import filepath_normalize, strip_seps
-from .views_util import log_security_error, login_point, login_required
+from .views_util import log_security_error, login_point, login_required, safe_error_str
 
 
 # The index page
@@ -118,7 +118,7 @@ def login():
         'login.html',
         username=username,
         next=next_url,
-        err_msg=login_error
+        err_msg=safe_error_str(login_error)
     )
 
 
@@ -432,7 +432,7 @@ def browse():
         return render_template(
             'list.html',
             directory_info=directory_info,
-            err_msg='This folder cannot be viewed: ' + str(e)
+            err_msg='This folder cannot be viewed: ' + safe_error_str(e)
         )
     finally:
         try:
@@ -662,7 +662,7 @@ def details():
             src=src,
             path=src_path,
             filename=src_filename,
-            err_msg='This file cannot be viewed: ' + str(e)
+            err_msg='This file cannot be viewed: ' + safe_error_str(e)
         )
 
 
@@ -703,7 +703,7 @@ def edit():
             'details_edit.html',
             embed=embed,
             src=src,
-            err_msg='The file details cannot be viewed: ' + str(e)
+            err_msg='The file details cannot be viewed: ' + safe_error_str(e)
         )
 
 
@@ -783,7 +783,7 @@ def folder_browse():
             msg=msg,
             name=filepath_filename(from_path),
             path=from_path,
-            err_msg='This folder cannot be viewed: ' + str(e)
+            err_msg='This folder cannot be viewed: ' + safe_error_str(e)
         )
     finally:
         try:
@@ -843,7 +843,7 @@ def playground():
             raise
         return render_template(
             'playground.html',
-            err_msg='The demo page is currently unavailable: ' + str(e)
+            err_msg='The demo page is currently unavailable: ' + safe_error_str(e)
         )
 
 

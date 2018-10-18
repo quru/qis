@@ -51,7 +51,7 @@ from .session_manager import logged_in as session_logged_in
 from .util import filepath_parent, invoke_http_async, validate_string
 from .util import parse_boolean, parse_colour, parse_float, parse_int, parse_tile_spec
 from .util import default_value, etag, unicode_to_utf8
-from .views_util import log_security_error
+from .views_util import log_security_error, safe_error_str
 
 
 # Requires "EnableSendfile On" in the Apache conf,
@@ -179,7 +179,7 @@ def image():
             if recache is not None:
                 recache = parse_boolean(recache)
         except (ValueError, TypeError) as e:
-            raise httpexc.BadRequest(str(e))
+            raise httpexc.BadRequest(safe_error_str(e))
 
         # Package and validate the parameters
         try:
@@ -199,7 +199,7 @@ def image():
                                      colorspace, strip, dpi, tile)
             image_engine.finalise_image_attrs(image_attrs)
         except ValueError as e:
-            raise httpexc.BadRequest(str(e))
+            raise httpexc.BadRequest(safe_error_str(e))
 
         # Get/create the database ID (from cache, validating path on create)
         image_id = data_engine.get_or_create_image_id(
@@ -258,7 +258,7 @@ def image():
                     image_wrapper.attrs().format()
                 )
             except ValueError as e:
-                raise httpexc.BadRequest(str(e))  # As for the pre-check
+                raise httpexc.BadRequest(safe_error_str(e))  # As for the pre-check
 
         # Success HTTP 200
         return make_image_response(image_wrapper, False, stats, attach, xref)
@@ -270,7 +270,7 @@ def image():
         raise httpexc.ServiceUnavailable()
     except ImageError as e:
         logger.warning('415 Invalid image file \'' + src + '\' : ' + str(e))
-        raise httpexc.UnsupportedMediaType(str(e))
+        raise httpexc.UnsupportedMediaType(safe_error_str(e))
     except SecurityError as e:
         if app.config['DEBUG']:
             raise
@@ -282,12 +282,12 @@ def image():
         if image_attrs.database_id() > 0 or path_exists(image_attrs.filename(), require_file=True):
             image_engine.reset_image(image_attrs)
         logger.warning('404 Not found: ' + str(e))
-        raise httpexc.NotFound(str(e))
+        raise httpexc.NotFound(safe_error_str(e))
     except Exception as e:
         if app.config['DEBUG']:
             raise
         logger.error('500 Error for ' + request.url + '\n' + str(e))
-        raise httpexc.InternalServerError(str(e))
+        raise httpexc.InternalServerError(safe_error_str(e))
 
 
 # Raw image serving - return the original unaltered image
@@ -314,7 +314,7 @@ def original():
             image_attrs = ImageAttrs(src)
             image_attrs.validate()
         except ValueError as e:
-            raise httpexc.BadRequest(str(e))
+            raise httpexc.BadRequest(safe_error_str(e))
 
         # Get/create the database ID (from cache, validating path on create)
         image_id = data_engine.get_or_create_image_id(
@@ -363,7 +363,7 @@ def original():
         raise httpexc.ServiceUnavailable()
     except ImageError as e:
         logger.warning('415 Invalid image file \'' + src + '\' : ' + str(e))
-        raise httpexc.UnsupportedMediaType(str(e))
+        raise httpexc.UnsupportedMediaType(safe_error_str(e))
     except SecurityError as e:
         if app.config['DEBUG']:
             raise
@@ -380,7 +380,7 @@ def original():
         if app.config['DEBUG']:
             raise
         logger.error('500 Error for ' + request.url + '\n' + str(e))
-        raise httpexc.InternalServerError(str(e))
+        raise httpexc.InternalServerError(safe_error_str(e))
 
 
 def erez_params_compat(src):

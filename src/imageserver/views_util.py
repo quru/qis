@@ -32,6 +32,7 @@
 # 17Oct2018  Matt  Moved view decorators in here from flask_util
 #
 
+import re
 import time
 from calendar import timegm
 from collections import OrderedDict
@@ -52,6 +53,13 @@ from .flask_util import get_port, internal_url_for, external_url_for
 from .models import FolderPermission, SystemPermissions
 from .session_manager import get_session_user, logged_in
 from .util import get_file_extension, filepath_filename, unicode_to_utf8
+
+
+# Settings that should not be output in error messages
+_unsafe_settings_re = re.compile(
+    'API|TOKEN|KEY|SECRET|PASS|SIGNATURE|CONNECTION|_DIR|_USER', flags=re.IGNORECASE
+)
+_unsafe_settings_exact = ('LDAP_SERVER', 'XREF_TRACKING_URL')
 
 
 @app.template_filter('datetimeformat')
@@ -264,16 +272,29 @@ def log_security_error(error, request):
         return False
 
 
+_safe_error_str_replacements = None
+
 def safe_error_str(error):
     """
-    Converts an exception or a string to a utf8 string that has any known
+    Converts an exception or a string into a utf8 string that has any known
     sensitive text (such as secrets from the app config) redacted.
     """
+    global _safe_error_str_replacements
+    # Populate the find/replace dict first time around (after the app config has been loaded)
+    if _safe_error_str_replacements is None:
+        _safe_error_str_replacements = {
+            sval: ('<' + skey + '>') for skey, sval in app.config.items()
+            if (skey in _unsafe_settings_exact or _unsafe_settings_re.search(skey))
+            and isinstance(sval, str) and sval
+        }.items()
+    # Get the error as a utf8 string
     if not isinstance(error, str):
         error = str(error)
     error = unicode_to_utf8(error)
-    # TODO implement me
-    return str(error)
+    # And replace anything sensitive
+    for fnd, rpl in _safe_error_str_replacements:
+        error = error.replace(fnd, rpl)
+    return error
 
 
 def login_point(from_web):

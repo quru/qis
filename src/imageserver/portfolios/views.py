@@ -41,7 +41,7 @@ from imageserver.flask_app import data_engine, permissions_engine
 from imageserver.models import FolioHistory, FolioPermission
 from imageserver.portfolios import blueprint
 from imageserver.session_manager import get_session_user
-from imageserver.views_util import log_security_error
+from imageserver.views_util import log_security_error, safe_error_str
 
 
 # Portfolio download as a zip file
@@ -104,9 +104,9 @@ def portfolio_download(human_id, filename):
         raise httpexc.Forbidden()
     except DoesNotExistError as e:
         logger.warning('404 Not found: ' + str(e))
-        raise httpexc.NotFound(str(e))
+        raise httpexc.NotFound(safe_error_str(e))
     except Exception as e:
         if app.config['DEBUG']:
             raise
         logger.error('500 Error for ' + request.url + '\n' + str(e))
-        raise httpexc.InternalServerError(str(e))
+        raise httpexc.InternalServerError(safe_error_str(e))

@@ -41,7 +41,7 @@ from imageserver.image_attrs import ImageAttrs
 from imageserver.template_attrs import TemplateAttrs
 from imageserver.models import Folder, Group, ImageTemplate, Property, User
 from imageserver.util import parse_int
-from imageserver.views_util import log_security_error
+from imageserver.views_util import log_security_error, safe_error_str
 
 
 # The admin index page
@@ -111,7 +111,7 @@ def template_edit(template_id):
 
     except Exception as e:
         log_security_error(e, request)
-        err_msg = str(e)
+        err_msg = safe_error_str(e)
     return render_template(
         'admin_template_edit.html',
         fields=fields,
@@ -158,7 +158,7 @@ def group_edit(group_id):
             group = data_engine.get_group(group_id=group_id, load_users=True)
     except Exception as e:
         log_security_error(e, request)
-        err_msg = str(e)
+        err_msg = safe_error_str(e)
     return render_template(
         'admin_group_edit.html',
         embed=embed,
@@ -212,7 +212,7 @@ def folder_permissions():
         )
     except Exception as e:
         log_security_error(e, request)
-        err_msg = str(e)
+        err_msg = safe_error_str(e)
     finally:
         try:
             return render_template(
@@ -277,7 +277,7 @@ def trace_permissions():
 
     except Exception as e:
         log_security_error(e, request)
-        err_msg = str(e)
+        err_msg = safe_error_str(e)
     finally:
         try:
             return render_template(
