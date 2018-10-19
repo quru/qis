@@ -56,7 +56,7 @@ cd ../..
 
 # Install all the wheels we made (into the virtualenv's lib directory)
 echo -e '\nInstalling all wheels into the build environment'
-find $WHEELS_DIR -type f -name '*.whl' -exec wheel install --force {} \;
+find $WHEELS_DIR -type f -name '*.whl' -exec pip install --upgrade --force-reinstall {} \;
 
 # Remove the pyc and pyo files
 rm `find $VENV_DIR -name '*.py[co]'`
