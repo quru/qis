@@ -1,11 +1,11 @@
 # v4.1.0-dev
 _Changes: Bug fix to creation of new user accounts using LDAP authentication,
 API behaviour made more consistent, fixed several scenarios where the API was
-returning HTML error messages instead of JSON, block malicious use of the
-'friendly' portfolio ID field, remove user information from the portfolios and
-tasks APIs, add new API function to retrieve portfolios by 'friendly' ID, fix
-"timed out waiting for image template data" warning from wrongly triggering in
-the log files, documentation corrections and improvements_
+returning HTML error messages instead of JSON, block dangerous characters from
+the 'friendly' portfolio ID field, remove user information from the portfolios
+and tasks APIs, add new API function to retrieve portfolios by 'friendly' ID,
+fix "timed out waiting for image template data" warning from wrongly triggering
+in the log files, documentation corrections and improvements_
 
 API changes in more detail:
 
@@ -27,6 +27,8 @@ API changes in more detail:
 * There is a new method to retrieve a portfolio by its `human_id` field
 * The `human_id` field on portfolios is no longer allowed to contain any of the
   characters: `%<>&.?:/`
+
+To upgrade:
 
 * Update the Python and web code (the `src` folder)
 * Restart the Apache service
