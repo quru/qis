@@ -562,56 +562,62 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
         db_internal_folio = dm.get_portfolio(human_id='internal')
         db_private_folio = dm.get_portfolio(human_id='private')
         public_api_url = '/api/portfolios/' + str(db_public_folio.id) + '/'
+        public_api_url2 = '/api/portfolios/?human_id=' + str(db_public_folio.human_id)
         public_view_url = '/portfolios/' + db_public_folio.human_id + '/'
         internal_api_url = '/api/portfolios/' + str(db_internal_folio.id) + '/'
+        internal_api_url2 = '/api/portfolios/?human_id=' + str(db_internal_folio.human_id)
         internal_view_url = '/portfolios/' + db_internal_folio.human_id + '/'
         private_api_url = '/api/portfolios/' + str(db_private_folio.id) + '/'
+        private_api_url2 = '/api/portfolios/?human_id=' + str(db_private_folio.human_id)
         private_view_url = '/portfolios/' + db_private_folio.human_id + '/'
         # On top of the standard test fixtures, create another private portfolio
         priv_user2 = main_tests.setup_user_account('janeaustin')
         self.create_portfolio('private2', priv_user2, FolioPermission.ACCESS_NONE, FolderPermission.ACCESS_NONE)
         db_private2_folio = dm.get_portfolio(human_id='private2')
         private2_api_url = '/api/portfolios/' + str(db_private2_folio.id) + '/'
+        private2_api_url2 = '/api/portfolios/?human_id=' + str(db_private2_folio.human_id)
         private2_view_url = '/portfolios/' + db_private2_folio.human_id + '/'
 
-        def view_pf(api_url, view_url, expect_success):
-            rv = self.app.get(api_url)
+        def view_pf(url, expect_json, expect_success):
+            rv = self.app.get(url)
             self.assertEqual(
                 rv.status_code,
                 API_CODES.SUCCESS if expect_success else API_CODES.UNAUTHORISED
             )
-            rv = self.app.get(view_url)
-            self.assertEqual(
-                rv.status_code,
-                API_CODES.SUCCESS if expect_success else API_CODES.UNAUTHORISED
+            self.assertIn(
+                'application/json' if expect_json else 'html',
+                rv.headers['Content-Type']
             )
 
         def run_test_cases(test_cases):
             for tc in test_cases:
-                view_pf(tc[0], tc[1], tc[2])
+                # Expects (API view URL by ID, API view URL by human ID, web view URL, should succeed)
+                view_pf(tc[0], True, tc[3])
+                view_pf(tc[1], True, tc[3])
+                view_pf(tc[2], False, tc[3])
 
         # Public user should be able to view public portfolio, not others
         test_cases = [
-            (public_api_url, public_view_url, True),
-            (internal_api_url, internal_view_url, False),
-            (private_api_url, private_view_url, False),
+            (public_api_url, public_api_url2, public_view_url, True),
+            (internal_api_url, internal_api_url2, internal_view_url, False),
+            (private_api_url, private_api_url2, private_view_url, False),
         ]
         run_test_cases(test_cases)
         # Internal user should be able to view internal + public portfolio, not private
         test_cases = [
-            (public_api_url, public_view_url, True),
-            (internal_api_url, internal_view_url, True),
-            (private_api_url, private_view_url, False),
+            (public_api_url, public_api_url2, public_view_url, True),
+            (internal_api_url, internal_api_url2, internal_view_url, True),
+            (private_api_url, private_api_url2, private_view_url, False),
         ]
         main_tests.setup_user_account('plainuser')
         self.login('plainuser', 'plainuser')
         run_test_cases(test_cases)
         # Portfolio owners should see their own + internal + public portfolios, not another private
         test_cases = [
-            (public_api_url, public_view_url, True),
-            (internal_api_url, internal_view_url, True),
-            (private_api_url, private_view_url, True),
-            (private2_api_url, private2_view_url, False),
+            (public_api_url, public_api_url2, public_view_url, True),
+            (internal_api_url, internal_api_url2, internal_view_url, True),
+            (private_api_url, private_api_url2, private_view_url, True),
+            (private2_api_url, private2_api_url2, private2_view_url, False),
         ]
         self.login('foliouser', 'foliouser')
         run_test_cases(test_cases)

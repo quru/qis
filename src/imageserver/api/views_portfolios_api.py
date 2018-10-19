@@ -81,7 +81,9 @@ class PortfolioAPI(MethodView):
     """
     @add_api_error_handler
     def get(self, folio_id=None):
-        if folio_id is None:
+        # v4.1 Added support for /api/portfolios/?human_id=<human id>
+        human_id = request.args.get('human_id', '')
+        if not folio_id and not human_id:
             # List portfolios that the user can view
             folio_list = data_engine.list_portfolios(
                 get_session_user(),
@@ -92,10 +94,12 @@ class PortfolioAPI(MethodView):
                 object_to_dict_list(folio_list, _omit_fields)
             )
         else:
-            # Get single portfolio
-            folio = data_engine.get_portfolio(folio_id, load_images=True, load_history=True)
+            # Get single portfolio by either ID or v4.1 by human ID
+            folio = data_engine.get_portfolio(
+                folio_id, human_id, load_images=True, load_history=True
+            )
             if folio is None:
-                raise DoesNotExistError(str(folio_id))
+                raise DoesNotExistError(human_id or str(folio_id))
             # Check permissions
             permissions_engine.ensure_portfolio_permitted(
                 folio, FolioPermission.ACCESS_VIEW, get_session_user()

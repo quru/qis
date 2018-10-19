@@ -251,7 +251,9 @@ Binary image data, with a content type that is determined by the image format
 requested (or otherwise the default image format). On error, returns a non-200
 status code and HTML text containing an error message.
 
-### Examples
+### Example
+
+Convert the file `myfile.jpg` to a `png` thumbnail and save it to disk:
 
     $ curl -o myfile.png 'https://images.example.com/image?src=myfolder/myfile.jpg&width=200&format=png'
 
@@ -280,7 +282,9 @@ available parameters.
 Binary image data, with a content type that is determined by the file's image format.
 On error, returns a non-200 status code and HTML text containing an error message.
 
-### Examples
+### Example
+
+Download the original copy of `myfile.jpg` and save it to disk:
 
     $ curl -o myfile.jpg 'https://images.example.com/original?src=myfolder/myfile.jpg'
 
@@ -304,7 +308,7 @@ instead use the [portfolio details](#api_folio_details) API function. If the
 caller is not logged in, the portfolio must be publicly viewable.
 
 ### URL
-* `/portfolios/[portfolio friendly ID]/`
+* `/portfolios/[portfolio friendly id]/`
 
 ### Supported methods
 * `GET`
@@ -332,7 +336,7 @@ API function for how to do this. If the caller is not logged in, the portfolio
 must be publicly downloadable.
 
 ### URL
-* `/portfolios/[portfolio friendly ID]/downloads/[zip filename].zip`
+* `/portfolios/[portfolio friendly id]/downloads/[zip filename].zip`
 
 ### Supported methods
 * `GET`
@@ -365,7 +369,7 @@ non-public portfolios, a token is required however.
 Retrieves the ordered list of the files within a folder path, returning the filename,
 whether the file is a supported image type, and if so, a URL to display the image,
 and optionally some additional image attributes. For unsupported file types, the
-image URL and other image attributes will be zero or empty.
+image URL and all other image attributes will be zero or empty.
 
 To avoid performance issues, this function returns a maximum of 1,000 results.
 To read the full set of results you can use the `start` and `limit` parameters
@@ -380,9 +384,9 @@ less than `limit` results.
 
 ### Parameters
 * `path` - Mandatory, text - Specifies the folder path to list
-* `attributes` - Optional, boolean - When `true`, adds the unique ID, title,
-  description, width and height fields from the image database to the returned
-  objects. Set to `false` for improved performance if these fields are not required.
+* `attributes` - Optional, boolean - When `true`, adds all the image fields from
+  the image database to the returned objects. Set to `false` for improved performance
+  if these fields are not required.
 * `start` - Optional, integer - The zero-based result number to start from,
   default `0`.
 * `limit` - Optional, integer - The maximum number of results to return,
@@ -400,6 +404,8 @@ If the array length equals `limit`, you can get the next page of results by maki
 a second call with the `start` parameter set.
 
 ### Examples
+
+List the first 3 files in `myfolder`:
 
     $ curl 'https://images.example.com/api/v1/list/?path=myfolder&limit=3'
     {
@@ -424,6 +430,8 @@ a second call with the `start` parameter set.
       "status": 200
     }
 
+List the next 2 files in `myfolder`:
+
     $ curl 'https://images.example.com/api/v1/list/?path=myfolder&start=3&limit=2'
     {
       "data": [
@@ -441,6 +449,9 @@ a second call with the `start` parameter set.
       "message": "OK",
       "status": 200
     }
+
+List the files in `myfolder` with all image fields, and apply the _Thumbnail_
+template inside the returned `url` for each image:
 
     $ curl 'https://images.example.com/api/v1/list/?path=myfolder&attributes=1&tmp=Thumbnail'
     {
@@ -586,6 +597,8 @@ An array of 0 or more objects ordered by portfolio name.
 
 ### Example
 
+List all portfolios viewable by the current user:
+
 	$ curl 'https://images.example.com/api/v1/portfolios/'
 	{
 	  "data": [
@@ -662,13 +675,16 @@ Retrieves the full details of a portfolio, including its ordered image list,
 audit trail and list of published (and non-expired) zip files available for download.
 
 ### URL
+* `/api/v1/portfolios/`
 * `/api/v1/portfolios/[portfolio id]/`
 
 ### Supported methods
 * `GET`
 
 ### Parameters
-* None
+* For `GET` without a numeric portfolio ID (first URL):
+	* `human_id` - Mandatory, text - The unique "friendly" ID of the portfolio to retrieve
+* None for `GET` with a numeric portfolio ID (second URL)
 
 ### Permissions required
 * View permission for the requested portfolio ID
@@ -676,7 +692,9 @@ audit trail and list of published (and non-expired) zip files available for down
 ### Returns
 The full portfolio as a JSON object.
 
-### Example
+### Examples
+
+Retrieve portfolio with numeric ID `3`:
 
     $ curl 'https://images.example.com/api/v1/portfolios/3/'
     {
@@ -864,6 +882,11 @@ The full portfolio as a JSON object.
       "status": 200
     }
 
+Or to retrieve the same portfolio by its human-readable "friendly" ID:
+
+    $ curl 'https://images.example.com/api/v1/portfolios/?human_id=the-spring-collection'
+    ...
+
 <a name="api_private"></a>
 # Protected web services
 
@@ -983,6 +1006,8 @@ returned data object is `null`.
 
 ### Examples
 
+Upload file `myimage.jpg` into the `test_images` folder, but not if it already exists:
+
     $ curl -X POST -u <token>:unused -F files=@myimage.jpg -F path=test_images -F overwrite=false 'https://images.example.com/api/v1/upload/'
     {
       "data": {
@@ -1012,7 +1037,7 @@ returned data object is `null`.
       "status": 200
     }
 
-Running the same command a second time:
+Then running the same command a second time:
 
     $ curl -X POST -u <token>:unused -F files=@myimage.jpg -F path=test_images -F overwrite=false 'https://images.example.com/api/v1/upload/'
     {
@@ -1076,6 +1101,7 @@ make changes to the portfolio or [publish it](#api_folios_publish) as a zip file
 
 ### URL
 * `/api/v1/portfolios/` for `GET` (list portfolios) and `POST` (create portfolio)
+* `/api/v1/portfolios/` for `GET` (single portfolio by `human_id`)
 * `/api/v1/portfolios/[portfolio id]/` for `GET`, `PUT`, and `DELETE`
 
 ### Supported methods
@@ -1085,7 +1111,9 @@ make changes to the portfolio or [publish it](#api_folios_publish) as a zip file
 * `DELETE`
 
 ### Parameters
-* None for `GET` or `DELETE`
+* None for `GET` by numeric ID or for `DELETE`
+* For `GET` by "friendly" ID:
+	* `human_id` - Mandatory, text - The unique "friendly" ID to retrieve
 * For `POST` and `PUT`:
 	* `human_id` - Optional, text - A unique "friendly" ID that will be used to
 	  identify the portfolio in the [view](#api_folio_view) and [download](#api_folio_download)
@@ -1118,11 +1146,13 @@ any of these characters: `% < > & . ? : /`.
 A list of abbreviated portfolio objects (for the list URL), a single portfolio
 object (for most other URLs), or nothing (after a delete).
 
-If the `human_id` parameter is left blank when creating a portfolio, a generated
-ID will be present in the returned object. Each portfolio object includes a URL
-for viewing the portfolio.
+If the `human_id` parameter is left blank when creating a portfolio, an automatically
+generated ID will be present in the returned object. Each portfolio object includes
+a URL for viewing the portfolio.
 
-### Example
+### Examples
+
+To create a new portfolio:
 
 	$ curl -X POST -u <token>:unused -F 'human_id=the-spring-collection' \
 	       -F 'name=Spring Collection 2018' -F 'description=The 2018 Spring Collection' \
@@ -1167,6 +1197,16 @@ for viewing the portfolio.
 	  "message": "OK",
 	  "status": 200
 	}
+
+To retrieve the portfolio by numeric ID:
+
+    $ curl 'https://images.example.com/api/v1/portfolios/3/'
+    ...
+
+Or to retrieve the portfolio by its human-readable "friendly" ID:
+
+    $ curl 'https://images.example.com/api/v1/portfolios/?human_id=the-spring-collection'
+    ...
 
 <a name="api_folios_content"></a>
 ## portfolio content
@@ -1274,7 +1314,8 @@ Add an image to a portfolio:
       "status": 200
     }
 
-Reorder the portfolio:
+Reorder the portfolio by moving image `84` to index `2` (third place because the
+index number is 0-based):
 
     $ curl -X PUT -u <token>:unused -F 'index=2' 'https://images.example.com/api/v1/portfolios/3/images/84/position/'
     {
@@ -1554,6 +1595,8 @@ The image `status` field has value `1` for active, or `0` for deleted.
 
 ### Examples
 
+Retrieve image details by image ID:
+
     $ curl -u <token>:unused 'https://images.example.com/api/v1/admin/images/141/'
     {
       "data": {
@@ -1580,6 +1623,8 @@ The image `status` field has value `1` for active, or `0` for deleted.
       "message": "OK",
       "status": 200
     }
+
+Update the title and description of the image:
 
     $ curl -X PUT -u <token>:unused -F 'title=my sample image' -F 'description=the updated description of my sample image' 'https://images.example.com/api/v1/admin/images/141/'
     {
@@ -1702,6 +1747,8 @@ more recent versions of the software.
 	  "status": 200
 	}
 
+Create a new template `grey-thumb` that creates 400x400 square greyscale images:
+
 	$ curl -X POST -u <token>:unused -F 'name=grey-thumb' \
 	       -F 'description=Defines a greyscale thumbnail with a black fill' \
 	       -F 'template={ "colorspace":{"value":"gray"}, "width":{"value":400}, "height":{"value":400}, "fill":{"value":"black"} }' \
@@ -1721,6 +1768,8 @@ more recent versions of the software.
 	  "message": "OK",
 	  "status": 200
 	}
+
+Delete the template that was just created:
 
 	$ curl -X DELETE -u <token>:unused 'https://images.example.com/api/v1/admin/templates/3/'
 	{
@@ -1765,6 +1814,8 @@ The user `status` field has value `1` for active, or `0` for deleted.
 
 ### Examples
 
+List all users:
+
 	$ curl -u <token>:unused 'https://images.example.com/api/v1/admin/users/'
 	{
 	  "data": [
@@ -1793,6 +1844,8 @@ The user `status` field has value `1` for active, or `0` for deleted.
 	  "status": 200
 	}
 
+Retrieve a single user:
+
 	$ curl -u <token>:unused 'https://images.example.com/api/v1/admin/users/2/'
 	{
 	  "data": {
@@ -1808,6 +1861,8 @@ The user `status` field has value `1` for active, or `0` for deleted.
 	  "message": "OK",
 	  "status": 200
 	}
+
+Update user details:
 
 	$ curl -X PUT -u <token>:unused -F 'first_name=Matthew' -F 'last_name=Fozard' -F 'username=mattfoo' -F 'email=matt@quru.com' -F 'auth_type=1' -F 'allow_api=true' 'https://images.example.com/api/v1/admin/users/2/'
 	{
@@ -1875,6 +1930,8 @@ or nothing (after a delete).
 
 ### Examples
 
+List all groups:
+
 	$ curl -u <token>:unused 'https://images.example.com/api/v1/admin/groups/'
 	{
 	  "data": [
@@ -1931,6 +1988,9 @@ or nothing (after a delete).
 	  "status": 200
 	}
 
+Create a new _Website editors_ group that grants access to reports and permission
+to change or delete all files and folders:
+
 	$ curl -X POST -u <token>:unused -F 'name=Website editors' -F 'description=Access to reports and to change any file or folder' -F 'group_type=2' -F 'access_folios=false' -F 'access_reports=true' -F 'access_admin_users=false' -F 'access_admin_files=true' -F 'access_admin_folios=false' -F 'access_admin_permissions=false' -F 'access_admin_all=false' 'https://images.example.com/api/v1/admin/groups/'
 	{
 	  "data": {
@@ -1953,7 +2013,9 @@ or nothing (after a delete).
 	  "message": "OK",
 	  "status": 200
 	}
-	
+
+Delete the group that was just created:
+
 	$ curl -X DELETE -u <token>:unused 'https://images.example.com/api/v1/admin/groups/7/'
 	{
 	  "data": null,
@@ -1963,8 +2025,8 @@ or nothing (after a delete).
 
 <a name="api_data_usergroups"></a>
 ## group membership
-Adds a user to a group or removes a user from a group. Use the [groups](#api_data_groups) API
-to list the members of a group.
+Adds a user to a group or removes a user from a group. 
+Use the [groups](#api_data_groups) API to list the members of a group.
 
 ### URL
 * `/api/v1/admin/groups/[group id]/members/` for `POST`
@@ -1988,6 +2050,8 @@ to list the members of a group.
 No return value.
 
 ### Examples
+
+List the members of the _Web editors_ group ID `4`:
 
 	$ curl -u <token>:unused 'https://images.example.com/api/v1/admin/groups/4/'
 	{
@@ -2032,14 +2096,18 @@ No return value.
 	  "message": "OK",
 	  "status": 200
 	}
-	
+
+Remove one of the members from the group:
+
 	$ curl -X DELETE -u <token>:unused 'https://images.example.com/api/v1/admin/groups/4/members/2/'
 	{
 	  "data": null,
 	  "message": "OK",
 	  "status": 200
 	}
-	
+
+Get the group again, showing the updated member list:
+
 	$ curl -u <token>:unused 'https://images.example.com/api/v1/admin/groups/4/'
 	{
 	  "data": {
@@ -2126,6 +2194,8 @@ A list of folder permission objects (for the list URL), a single folder permissi
 
 ### Examples
 
+List all defined folder permissions:
+
 	$ curl -u <token>:unused 'https://images.example.com/api/v1/admin/permissions/'
 	{
 	  "data": [
@@ -2197,7 +2267,7 @@ The image's updated database object.
 
 ### Examples
 
-To move image ID `141 myimage.jpg` to the `web` folder:
+To move image ID `141` _myimage.jpg_ to the `web` folder:
 
     $ curl -X PUT -u <token>:unused -F 'path=/web/myimage.jpg' 'https://images.example.com/api/v1/admin/filesystem/images/141/'
     {
@@ -2307,6 +2377,8 @@ in the returned task object's `id` field.
 
 ### Examples
 
+List the sub-folders of the `/search/path` folder:
+
 	$ curl -u <token>:unused 'https://images.example.com/api/v1/admin/filesystem/folders/?path=/search/path'
 	{
 	  "data": {
@@ -2343,6 +2415,8 @@ in the returned task object's `id` field.
 	  "status": 200
 	}
 
+Create a new folder `/test_images/mynewfolder`:
+
 	$ curl -X POST -u <token>:unused -F 'path=/test_images/mynewfolder/' 'https://images.example.com/api/v1/admin/filesystem/folders/'
 	{
 	  "data": {
@@ -2355,6 +2429,8 @@ in the returned task object's `id` field.
 	  "message": "OK",
 	  "status": 200
 	}
+
+Delete the folder that was just created:
 
 	$ curl -X DELETE -u <token>:unused 'https://images.example.com/api/v1/admin/filesystem/folders/3/'
 	{
@@ -2370,8 +2446,8 @@ in the returned task object's `id` field.
 	}
 
 If the operation takes more than 30 seconds, status `202` and an ongoing task
-object are returned. The task ID is the object's `id` field, and so `288` in this
-example:
+object are returned. In this case the task ID is the object's `id` field, so
+`288` in this example:
 
 	$ curl -X PUT -u <token>:unused -F 'path=/renamed-large-folder' 'https://images.example.com/api/v1/admin/filesystem/folders/23/'
 	{
@@ -2440,7 +2516,8 @@ Initiates or polls the status of a background task.
 * For `GET`, the user that owns the task
 
 ### Returns
-The task object, including its status.
+The task object including its status, or `null` if the task has completed and
+no longer exists.
 
 The following task status values exist:
 
@@ -2448,12 +2525,15 @@ The following task status values exist:
 * `1` - In progress
 * `2` - Complete, with the (task dependent) return value inside the `result` attribute
 
-Once complete, a task will remain in the database so that a duplicate task cannot run again
-for `keep_for` seconds (until `keep_until` time UTC is reached).
-If `keep_for` is `0` (and `keep_until` is `null`), the task will be deleted within a few seconds,
-after which a status `404` will be returned when that task is requested.
+Once complete, a task will remain in the database so that a duplicate task cannot
+run again for `keep_for` seconds (until `keep_until` time UTC is reached).
+If `keep_for` is `0` (and `keep_until` is `null`), the task will be deleted within
+a few seconds of completion, after which a status `404` will be returned when that
+task is requested.
 
 ### Example
+
+Get the task with ID `301`:
 
 	$ curl -u <token>:unused 'https://images.example.com/api/v1/admin/tasks/301/'
 	{
@@ -2488,7 +2568,7 @@ after which a status `404` will be returned when that task is requested.
 	  "status": 200
 	}
 
-Then after a few seconds:
+Then trying again after a few seconds:
 
 	$ curl -u <token>:unused 'https://images.example.com/api/v1/admin/tasks/301/'
 	{

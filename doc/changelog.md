@@ -3,16 +3,15 @@ _Changes: Bug fix to creation of new user accounts using LDAP authentication,
 API behaviour made more consistent, fixed several scenarios where the API was
 returning HTML error messages instead of JSON, block malicious use of the
 'friendly' portfolio ID field, remove user information from the portfolios and
-tasks APIs, fix "timed out waiting for image template data" warning triggering
-unnecessarily in the logs, documentation corrections and improvements_
+tasks APIs, add new API function to retrieve portfolios by 'friendly' ID, fix
+"timed out waiting for image template data" warning from wrongly triggering in
+the log files, documentation corrections and improvements_
 
 API changes in more detail:
 
 * 404 not found, 405 method not supported, 301 redirect (missing trailing slash)
   errors and many others now return JSON objects in the standard format instead
   of HTML error messages
-* The `human_id` field on portfolios is no longer allowed to contain any of the
-  characters: `%<>&.?:/`
 * Return status 404 instead of 200 when a file or folder is deleted a second time
   (since the file/folder no longer exists the second time around)
 * The `image` object was being returned as 3 different structures and has now been
@@ -25,6 +24,9 @@ API changes in more detail:
   functions. These were potentially leaking names and email addresses to
   users who should not have access to user information. The remaining `user_id`
   and `owner_id` fields can be used to look up user information if permitted.
+* There is a new method to retrieve a portfolio by its `human_id` field
+* The `human_id` field on portfolios is no longer allowed to contain any of the
+  characters: `%<>&.?:/`
 
 * Update the Python and web code (the `src` folder)
 * Restart the Apache service
