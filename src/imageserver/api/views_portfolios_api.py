@@ -549,6 +549,7 @@ class PortfolioReorderAPI(MethodView):
                 _commit=True
             )
             # Return the updated image list
+            db_session.expire(folio_image)
             folio = data_engine.get_portfolio(folio_id, load_images=True, _db_session=db_session)
             image_list = [_prep_folioimage_object(fi) for fi in folio.images]
             return make_api_success_response(

@@ -27,6 +27,8 @@ API changes in more detail:
 * There is a new method to retrieve a portfolio by its `human_id` field
 * The `human_id` field on portfolios is no longer allowed to contain any of the
   characters: `%<>&.?:/`
+* When reordering images in a portfolio, the `order_num` field now returns the
+  correct value for the image moved (it was already correct for the others)
 
 To upgrade:
 

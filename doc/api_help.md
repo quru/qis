@@ -1406,7 +1406,7 @@ index number is 0-based):
             "width": 1239
           },
           "image_id": 84,
-          "order_num": 0,
+          "order_num": 2,
           "parameters": {},
           "url": "https://images.example.com/image?src=products/p1-bags-a0002.jpg"
         }

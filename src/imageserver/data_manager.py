@@ -1537,8 +1537,8 @@ class DataManager(object):
         portfolio. If the value of index is below 0 or more than the length of
         the image list, it will be adjusted to the nearest valid value.
         Returns the updated folio_image object with the newly assigned 'order_num'
-        attribute, unattached to a database session (as this method closes its
-        own session).
+        attribute, unattached to a database session (as this method creates,
+        commits, and closes its own session).
         """
         db_session = self._db.Session()
         commited = False

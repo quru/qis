@@ -482,19 +482,33 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
             'index': 1
         })
         self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        jlist = json.loads(rv.data.decode('utf8'))['data']
         db_folio = dm.get_portfolio(human_id='public', load_images=True, load_history=True)
         self.assertEqual(db_folio.images[0].image.src, 'test_images/blue bells.jpg')
+        self.assertEqual(jlist[0]['image']['src'], 'test_images/blue bells.jpg')
         self.assertEqual(db_folio.images[1].image.src, 'test_images/tiger.svg')
+        self.assertEqual(jlist[1]['image']['src'], 'test_images/tiger.svg')
         self.assertEqual(db_folio.images[2].image.src, 'test_images/cathedral.jpg')
+        self.assertEqual(jlist[2]['image']['src'], 'test_images/cathedral.jpg')
+        # v4.1 #18 tiger.svg should now be at index 1 in both the JSON and the database
+        self.assertEqual(db_folio.images[1].order_num, 1)
+        self.assertEqual(jlist[1]['order_num'], 1)
         # Setting index after list end should use index len(list)-1
         rv = self.app.put(api_url, data={
             'index': 999
         })
         self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        jlist = json.loads(rv.data.decode('utf8'))['data']
         db_folio = dm.get_portfolio(human_id='public', load_images=True, load_history=True)
         self.assertEqual(db_folio.images[0].image.src, 'test_images/blue bells.jpg')
+        self.assertEqual(jlist[0]['image']['src'], 'test_images/blue bells.jpg')
         self.assertEqual(db_folio.images[1].image.src, 'test_images/cathedral.jpg')
+        self.assertEqual(jlist[1]['image']['src'], 'test_images/cathedral.jpg')
         self.assertEqual(db_folio.images[2].image.src, 'test_images/tiger.svg')
+        self.assertEqual(jlist[2]['image']['src'], 'test_images/tiger.svg')
+        # v4.1 #18 tiger.svg should now be at index 2 in both the JSON and the database
+        self.assertEqual(db_folio.images[2].order_num, 2)
+        self.assertEqual(jlist[2]['order_num'], 2)
         # After 3 successful moves we should have 3 more audit trail entries
         self.assertEqual(len(db_folio.history), start_history_len + 3)
         self.assertEqual(db_folio.history[-1].action, FolioHistory.ACTION_IMAGE_CHANGE)
