@@ -1,37 +1,41 @@
-.settings
-.coverage
-.eggs
+# OS/Editor files
+.DS_Store
 .project
 .pydevproject
-.Python
-.DS_Store
+.settings
 .vscode
-pip-selfcheck.json
-*.pyc
-*.pyo
-*.o
-*.so
-*.a
-*.swp
-*.egg
-*.egg-info/
+.#*
+*~
+
+# Virtualenv
+.Python
 bin
 bin-2
 bin-3
-build
+include
+lib/python*
+lib64
+
+# Python/Pip files
+.eggs
+pip-selfcheck.json
+*.egg
+*.egg-info/
+*.pyc
+*.pyo
+
+# Project files
 conf/*.py
-dist
 images/*
 !images/test_images
 images/test_images/.DS_Store
 images/test_images/*.d
-include
-lib/python*
-logs/*.log
-logs/*.log.*
+logs/*.log*
+
+# Build/Testing files
+.coverage
+build
+dist
 src/coverage.xml
 src/flake8.txt
 src/junit.xml
-.#*
-#*
-*~
