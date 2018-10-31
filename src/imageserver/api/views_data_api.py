@@ -27,6 +27,7 @@
 # Notable modifications:
 # Date       By    Details
 # =========  ====  ============================================================
+# 30Oct2018  Matt  v4.1 #12 No longer return deleted user records by default
 #
 
 import copy
@@ -53,7 +54,7 @@ from imageserver.template_attrs import TemplateAttrs
 from imageserver.util import get_string_changes, generate_password
 from imageserver.util import object_to_dict, object_to_dict_list
 from imageserver.util import parse_boolean, parse_int
-from imageserver.util import validate_number, validate_string
+from imageserver.util import validate_number, validate_string, validate_string_in
 from imageserver.views_util import _check_internal_request
 
 
@@ -273,7 +274,11 @@ class UserAPI(MethodView):
     def get(self, user_id=None):
         if user_id is None:
             # List users
-            ulist = data_engine.list_users(order_field=User.username)
+            status_filter = self._get_validated_status_arg(request)
+            ulist = data_engine.list_users(
+                status=status_filter,
+                order_field=User.username
+            )
             return make_api_success_response(object_to_dict_list(ulist))
         else:
             # Get single user
@@ -337,6 +342,14 @@ class UserAPI(MethodView):
         # Reset session caches
         reset_user_sessions(user)
         return make_api_success_response(object_to_dict(user))
+
+    @add_parameter_error_handler
+    def _get_validated_status_arg(self, request):
+        status = request.args.get('status', str(User.STATUS_ACTIVE)).lower()
+        validate_string_in(status, [
+            'any', '-1', str(User.STATUS_DELETED), str(User.STATUS_ACTIVE)
+        ])
+        return int(status) if status not in ('any', '-1') else None
 
     @add_parameter_error_handler
     def _get_validated_object_parameters(self, data_dict, require_password):

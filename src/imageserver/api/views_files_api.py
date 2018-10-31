@@ -27,6 +27,7 @@
 # Notable modifications:
 # Date       By    Details
 # =========  ====  ============================================================
+# 30Oct2018  Matt  v4.1 #12 No longer return deleted sub-folders by default
 #
 
 import pickle
@@ -48,7 +49,7 @@ from imageserver.flask_app import logger
 from imageserver.flask_app import data_engine, image_engine, permissions_engine, task_engine
 from imageserver.models import Folder, FolderPermission, Image, Task
 from imageserver.session_manager import get_session_user
-from imageserver.util import object_to_dict, validate_string
+from imageserver.util import object_to_dict, validate_string, validate_string_in
 
 
 class ImageFileAPI(MethodView):
@@ -129,29 +130,34 @@ class FolderAPI(MethodView):
     """
     @add_api_error_handler
     def get(self, folder_id=None):
-        """ Gets a folder by path or ID, returning 1 level of family """
+        """ Gets a folder by path or ID, returning 1 level of children (sub-folders) """
         if folder_id is None:
-            # Get folder ID from path. We'll auto_sync so that this can
-            # pick up new paths too (and check for deleted).
+            # Get folder from path, using auto_sync to pick up new and deleted disk folders
             path = self._get_validated_path_arg(request)
             db_folder = auto_sync_folder(path, data_engine, task_engine)
             if db_folder is None:
                 raise DoesNotExistError(path)
-            # auto_sync doesn't load children so we'll fall through with ID
-            folder_id = db_folder.id
-        # Get folder (plus parent and childen) by ID
-        db_folder = data_engine.get_folder(
-            folder_id, load_parent=True, load_children=True
-        )
-        if db_folder is None:
-            raise DoesNotExistError(str(folder_id))
-        # View permission is required
-        # For now, we'll ignore view permission on parent+children
+        else:
+            # Get folder from ID
+            db_folder = data_engine.get_folder(folder_id)
+            if db_folder is None:
+                raise DoesNotExistError(str(folder_id))
+        # View permission is required (ignoring view permission on parent+children)
         permissions_engine.ensure_folder_permitted(
             db_folder,
             FolderPermission.ACCESS_VIEW,
             get_session_user()
         )
+        # Get the folder again, this time with parent and children
+        # (children possibly faked - see the get_folder() docs - which is why
+        # we can't use db_folder mk2 normally, only serialize it and exit)
+        status_filter = self._get_validated_status_arg(request)
+        db_folder = data_engine.get_folder(
+            db_folder.id, load_parent=True,
+            load_children=True, children_status=status_filter
+        )
+        if db_folder is None:
+            raise DoesNotExistError(str(folder_id))
         return make_api_success_response(object_to_dict(db_folder))
 
     @add_api_error_handler
@@ -222,6 +228,14 @@ class FolderAPI(MethodView):
             return make_api_success_response(task_accepted=True)
         else:
             return self._task_response(task, 30)
+
+    @add_parameter_error_handler
+    def _get_validated_status_arg(self, request):
+        status = request.args.get('status', str(Folder.STATUS_ACTIVE)).lower()
+        validate_string_in(status, [
+            'any', '-1', str(Folder.STATUS_DELETED), str(Folder.STATUS_ACTIVE)
+        ])
+        return int(status) if status not in ('any', '-1') else None
 
     @add_parameter_error_handler
     def _get_validated_path_arg(self, request):

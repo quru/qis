@@ -3,9 +3,9 @@ _Changes: Bug fix to creation of new user accounts using LDAP authentication,
 API behaviour made more consistent, fixed several scenarios where the API was
 returning HTML error messages instead of JSON, block dangerous characters from
 the 'friendly' portfolio ID field, remove user information from the portfolios
-and tasks APIs, add new API function to retrieve portfolios by 'friendly' ID,
-fix "timed out waiting for image template data" warning from wrongly triggering
-in the log files, documentation corrections and improvements_
+API, add new API function to retrieve portfolios by 'friendly' ID, fix "timed
+out waiting for image template data" warning from wrongly triggering in the log
+files, documentation corrections and improvements_
 
 API changes in more detail:
 
@@ -29,6 +29,10 @@ API changes in more detail:
   characters: `%<>&.?:/`
 * When reordering images in a portfolio, the `order_num` field now returns the
   correct value for the image moved (it was already correct for the others)
+* The user list and folder list functions no longer return deleted records by
+  default. Both now take a new `status` parameter that can be used to request
+  deleted records or to restore the old behaviour. The image list function is
+  unchanged, it has never returned deleted records.
 
 To upgrade:
 

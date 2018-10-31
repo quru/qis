@@ -1828,7 +1828,12 @@ Lists all user accounts, or gets, creates, updates, or deletes a single user acc
 * `DELETE`
 
 ### Query parameters
-* None
+* For `GET` (list users):
+  * `status` - Optional, integer - A filter for whether to return active and/or
+    deleted users, default `1`, with possible values:
+    * `-1` or `any` - return both active and deleted users
+    * `0` - return only deleted users
+    * `1` - return only active users (default)
 
 ### POST and PUT data fields
 * `first_name` - Mandatory, text - The user's first name
@@ -1837,20 +1842,21 @@ Lists all user accounts, or gets, creates, updates, or deletes a single user acc
 * `username` - Mandatory, text - A unique username for the account
 * `password` - Mandatory for `POST`, optional for `PUT`, text - The account password
 * `auth_type` - Mandatory, integer - Should be set to `1`
-* `allow_api` - Mandatory, boolean - Whether this account should be allowed to request
-	an API authentication token
+* `allow_api` - Mandatory, boolean - Whether this account should be allowed to
+  request an API authentication token
 
 ### Permissions required
 * The current user can `GET` and `PUT` their own user account
 * But otherwise user administration permission is required
 
 ### Returns
-A list of user objects (for the list users URL), or a single user object (for all other URLs).
-The user `status` field has value `1` for active, or `0` for deleted.
+A list of user objects (for the list users URL), or a single user object
+(for all other URLs). The user's `status` field has value `1` for active,
+or `0` for deleted.
 
 ### Examples
 
-List all users:
+List all active users:
 
 	$ curl -u <token>:unused 'https://images.example.com/api/v1/admin/users/'
 	{
@@ -1879,6 +1885,11 @@ List all users:
 	  "message": "OK",
 	  "status": 200
 	}
+
+List all deleted users:
+
+	$ curl -u <token>:unused 'https://images.example.com/api/v1/admin/users/?status=0'
+	...
 
 Retrieve a single user:
 
@@ -2361,12 +2372,14 @@ Then to delete the file:
 
 <a name="api_disk_folders"></a>
 ## disk folders
-Finds a folder by path or database ID.
-Or creates, moves, renames, or deletes a disk folder, and updates the associated metadata.
+Finds a folder by path or database ID, also listing its sub-folders.
+Or creates, moves, renames, or deletes a disk folder (and all the files within),
+updating the associated metadata.
 
-Moving, renaming or deleting a folder is a recursive operation that also affects all the
-sub-folders and files it contains, and can therefore take a long time. In the same way note
-that if you rename a folder, this changes the paths of all the images contained within.
+Moving, renaming or deleting a folder is a recursive operation that also affects
+all the sub-folders and files it contains, and can therefore take a long time.
+In the same way note that if you rename a folder, this changes the paths of all
+the images contained within.
 
 ### URL
 * `/api/v1/admin/filesystem/folders/` for `GET` (by path) and `POST`
@@ -2379,14 +2392,19 @@ that if you rename a folder, this changes the paths of all the images contained 
 * `DELETE`
 
 ### Query parameters
-* None for `GET` by ID
 * For `GET` by path:
-	* `path` - Mandatory, text - the path of a disk folder to retrieve.
+  * `path` - Mandatory, text - the path of a disk folder to retrieve.
+* For `GET` by path or by ID:
+  * `status` - Optional, integer - A filter for whether to return present and/or
+    deleted sub-folders, default `1`, with possible values:
+    * `-1` or `any` - return both present and deleted sub-folders
+    * `0` - return only deleted sub-folders
+    * `1` - return only present sub-folders (default)
 
 ### POST and PUT data fields
-* `path` - Mandatory, text - the new path for the disk folder. If the parent part of the
-	folder path changes, the folder will be moved. If only the folder's own name changes,
-	the folder will be renamed.
+* `path` - Mandatory, text - the new path for the disk folder. If the parent part
+  of the folder path changes, the folder will be moved. If only the folder's own
+  name changes, the folder will be renamed.
 
 ### Permissions required
 * Either file administration permission or
@@ -2399,7 +2417,7 @@ that if you rename a folder, this changes the paths of all the images contained 
 
 ### Returns
 For `GET`, returns the folder's database object including one level of sub-folders
-in the `children` attribute. The folder `status` field has value `1` for active,
+in the `children` attribute. Each folder's `status` field has value `1` for active,
 or `0` for deleted.
 
 For `POST`, returns the new folder's database object.
@@ -2423,7 +2441,7 @@ List the sub-folders of the `/search/path` folder:
 	        "name": "/search/path/child1",
 	        "parent_id": 44,
 	        "path": "/search/path/child1",
-	        "status": 0
+	        "status": 1
 	      },
 	      {
 	        "id": 45,

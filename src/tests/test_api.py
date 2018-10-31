@@ -457,6 +457,43 @@ class ImageServerAPITests(main_tests.BaseTestCase):
         # We should never send out the password
         assert 'password' not in obj['data']
 
+    # v4.1 #12 User list API - New status filter, only return active users by default
+    def test_data_api_users_status_filter(self):
+        self.login('admin', 'admin')
+        # Create some users
+        k1 = main_tests.setup_user_account('kryten1', 'none')
+        k2 = main_tests.setup_user_account('kryten2', 'none')
+        k3 = main_tests.setup_user_account('kryten3', 'none')
+        k4 = main_tests.setup_user_account('kryten4', 'none')
+        # Delete some of them
+        rv = self.app.delete('/api/admin/users/' + str(k1.id) + '/')
+        self.assert_json_response_code(rv, API_CODES.SUCCESS)
+        rv = self.app.delete('/api/admin/users/' + str(k2.id) + '/')
+        self.assert_json_response_code(rv, API_CODES.SUCCESS)
+        # List users - default filter should be active only
+        rv = self.app.get('/api/admin/users/')
+        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        obj = json.loads(rv.data.decode('utf8'))
+        self.assertGreater(len(obj['data']), 0)
+        self.assertTrue(all([
+            (user['status'] == User.STATUS_ACTIVE) for user in obj['data']
+        ]))
+        # List users with filter 0
+        rv = self.app.get('/api/admin/users/?status=0')
+        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        obj = json.loads(rv.data.decode('utf8'))
+        self.assertGreater(len(obj['data']), 0)
+        self.assertTrue(all([
+            (user['status'] == User.STATUS_DELETED) for user in obj['data']
+        ]))
+        # List users with filter any
+        rv = self.app.get('/api/admin/users/?status=any')
+        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+        obj = json.loads(rv.data.decode('utf8'))
+        statuses = [user['status'] for user in obj['data']]
+        self.assertIn(User.STATUS_ACTIVE, statuses)
+        self.assertIn(User.STATUS_DELETED, statuses)
+
     # Database admin API - groups
     def test_data_api_groups(self):
         # Not logged in - getting group details should fail
@@ -1066,7 +1103,7 @@ class ImageServerAPITests(main_tests.BaseTestCase):
             self.login('kryten', 'kryten')
             # v1.40 Viewable folder should be readable
             rv = self.app.get('/api/admin/filesystem/folders/?path=test_images')
-            assert rv.status_code == API_CODES.SUCCESS, str(rv)
+            assert rv.status_code == API_CODES.SUCCESS, str(rv.data)
             # Other ops should still fail
             active_folder = dm.get_folder(folder_path='test_images')
             assert active_folder is not None
@@ -1221,6 +1258,48 @@ class ImageServerAPITests(main_tests.BaseTestCase):
                 delete_dir(temp_folder + fpath)
         finally:
             delete_dir(temp_folder, recursive=True)
+
+    # v4.1 #12 Folder list API - New status filter, only return active folders by default
+    def test_file_api_folders_status_filter(self):
+        self.login('admin', 'admin')
+        tf1 = '/test_folder_1'
+        tf2 = '/test_folder_2'
+        try:
+            # Create some test folders
+            rv = self.app.post('/api/admin/filesystem/folders/', data={'path': tf1})
+            self.assert_json_response_code(rv, API_CODES.SUCCESS)
+            rv = self.app.post('/api/admin/filesystem/folders/', data={'path': tf2})
+            self.assert_json_response_code(rv, API_CODES.SUCCESS)
+            tf2jobj = json.loads(rv.data.decode('utf8'))['data']
+            # Delete one of them
+            rv = self.app.delete('/api/admin/filesystem/folders/' + str(tf2jobj['id']) + '/')
+            self.assert_json_response_code(rv, API_CODES.SUCCESS)
+            # List folders - default filter should be active only
+            rv = self.app.get('/api/admin/filesystem/folders/?path=/')
+            self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+            obj = json.loads(rv.data.decode('utf8'))
+            self.assertGreater(len(obj['data']['children']), 0)
+            self.assertTrue(all([
+                (folder['status'] == Folder.STATUS_ACTIVE) for folder in obj['data']['children']
+            ]))
+            # List folders with filter 0
+            rv = self.app.get('/api/admin/filesystem/folders/?path=/&status=0')
+            self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+            obj = json.loads(rv.data.decode('utf8'))
+            self.assertGreater(len(obj['data']['children']), 0)
+            self.assertTrue(all([
+                (folder['status'] == Folder.STATUS_DELETED) for folder in obj['data']['children']
+            ]))
+            # List folders with filter any
+            rv = self.app.get('/api/admin/filesystem/folders/?path=/&status=any')
+            self.assertEqual(rv.status_code, API_CODES.SUCCESS)
+            obj = json.loads(rv.data.decode('utf8'))
+            statuses = [folder['status'] for folder in obj['data']['children']]
+            self.assertIn(Folder.STATUS_ACTIVE, statuses)
+            self.assertIn(Folder.STATUS_DELETED, statuses)
+        finally:
+            delete_dir(tf1)
+            delete_dir(tf2)
 
     # Task admin API
     def test_tasks_api(self):

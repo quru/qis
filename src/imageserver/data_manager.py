@@ -309,11 +309,19 @@ class DataManager(object):
                 db_session.close()
 
     @db_operation
-    def get_folder(self, folder_id=0, folder_path=None,
-                   load_parent=False, load_children=False, _db_session=None):
+    def get_folder(self, folder_id=0, folder_path=None, load_parent=False,
+                   load_children=False, children_status=None, _db_session=None):
         """
-        Returns the Folder object with the given ID or path,
-        or None if there is no match in the database.
+        Returns the Folder object with the given ID or path, or None if there is
+        no match in the database. Set load_children to True to eager-load 1 level
+        of sub-folders in the returned folder.children attribute.
+
+        When load_children is True you may filter the returned children by status
+        (leaving children_status as None returns all children). If you do this,
+        beware that the returned folder.children collection WILL NOT reflect the
+        state of the database. In this case the folder object will be returned
+        detached from the database session so that the truncated collection cannot
+        accidentally be saved back to the database.
         """
         db_session = _db_session or self._db.Session()
         try:
@@ -322,12 +330,22 @@ class DataManager(object):
             q = db_session.query(Folder)
             if load_parent:
                 q = q.options(eagerload('parent'))
-            if load_children:
+            if load_children and children_status is None:
                 q = q.options(eagerload('children'))
-            if folder_id:
-                return q.get(folder_id)
-            else:
-                return q.filter(Folder.path == self._normalize_folder_path(folder_path)).first()
+            folder = (
+                q.get(folder_id) if folder_id else
+                q.filter(Folder.path == self._normalize_folder_path(folder_path)).first()
+            )
+            if folder and load_children and children_status is not None:
+                # I could not find any way of persuading SQLAlchemy to do this with the
+                # ORM (even using a filter + contains_eager), so here's my sledgehammer
+                folder.children = db_session.query(Folder).filter(
+                    Folder.parent_id == folder.id,
+                    Folder.status == children_status
+                ).order_by(Folder.name).all()
+                # Don't let the faked folder.children be persisted (see function docstring)
+                db_session.expunge(folder)
+            return folder
         finally:
             if not _db_session:
                 db_session.close()
