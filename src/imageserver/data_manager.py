@@ -1099,16 +1099,17 @@ class DataManager(object):
         try:
             db_folder = db_session.merge(folder)
 
-            # First recurse to delete any sub-folders
+            # First recurse to delete any (as yet undeleted) sub-folders
             for sub_folder in db_folder.children:
-                self.delete_folder(
-                    sub_folder,
-                    purge=purge,
-                    history_user=history_user,
-                    history_info=history_info,
-                    _db_session=db_session,
-                    _commit=False
-                )
+                if purge or sub_folder.status != Folder.STATUS_DELETED:
+                    self.delete_folder(
+                        sub_folder,
+                        purge=purge,
+                        history_user=history_user,
+                        history_info=history_info,
+                        _db_session=db_session,
+                        _commit=False
+                    )
 
             # Then delete the files in this folder.
             # This would be more efficient as a single delete, but there are also

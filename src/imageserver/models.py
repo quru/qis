@@ -286,7 +286,7 @@ class Folder(Base, BaseMixin, IDEqualityMixin):
     children = relationship(
         'Folder',
         join_depth=1,
-        backref=backref('parent', remote_side=lambda: Folder.__table__.c.id),
+        backref=backref('parent', remote_side=lambda: Folder.id),
         order_by=lambda: Folder.name
     )
 
