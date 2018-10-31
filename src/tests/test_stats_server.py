@@ -278,7 +278,7 @@ class StatsServerTests(main_tests.FlaskTestCase):
             # Wait for new stats to flush
             lres = []
             waited = 0
-            while not lres and waited < 75:
+            while not lres and waited < 65:
                 time.sleep(2)
                 waited += 2
                 t_end = datetime.utcnow()
@@ -299,6 +299,9 @@ class StatsServerTests(main_tests.FlaskTestCase):
             self.assertLess(res.max_request_seconds, res.request_seconds)
             self.assertGreater(res.cpu_pc, 0)
             self.assertGreater(res.memory_pc, 0)
+            # The image stats flush after the system stats, so give them a bit longer
+            time.sleep(2)
+            t_end = datetime.utcnow()
             # See if the image stats line up with the views
             lres = dm.search_image_stats(t_start, t_end, db_image.id)
             self.assertEqual(len(lres), 1)
