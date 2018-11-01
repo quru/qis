@@ -69,7 +69,6 @@
 #
 
 import pickle
-import random
 import time
 import threading
 

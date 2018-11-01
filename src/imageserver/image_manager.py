@@ -891,35 +891,44 @@ class ImageManager(object):
         Generates and caches the base image required for an image tile.
         This is the same set of image attributes requested, minus the tile spec.
 
-        See the internal comments, but this function is designed to handle
-        multiple threads wanting the same base image (i.e. several tiles
-        requested at once) the first time around. After that, it will return
-        None, because the cached base image should then be available and this
-        function should not be needed again.
+        This function expects multiple threads to want the same base image at once
+        (i.e. when several tiles for one image are requested together) the first
+        time around. After that, the cached base image should then be available
+        and this function should not be needed again unless the cached base image
+        gets ejected from cache.
 
         Returns an ImageWrapper containing the new base image, or None if the
-        image could not be generated or has been generated previously.
+        base image could not be generated.
         """
         assert image_attrs.tile_spec() is not None, 'Tile base requested for non-tile image'
         # Requires the cache (the whole base image mechanism requires it)
         if not self._cache.connected():
             self._logger.warning('Cache is not connected, not generating tile base')
             return None
-        # As a defensive measure we will prevent repeated calls for the same
-        # thing, though apart from the first time around, this shouldn't happen
-        # very often (and then only for cache ejections).
-        # Don't use an atomic flag here, as until the base image generation is
-        # complete we actually want to allow duplicate requests. The first one
-        # will generate the base image and the others will stack up waiting for it
-        # (see the image lock in get_image). So all threads get their base image
-        # but only 1 thread will have generated it = less load, more speed.
+        # See the func docstring. As a defensive measure we'll use a flag to say
+        # when the base image should already exist. Then if it doesn't exist we
+        # know there is a problem somewhere. While the flag isn't set we will allow
+        # simultaneous requests to fall through, and rely on the image lock in
+        # get_image() to ensure that only 1 of the threads generates it while the
+        # others just wait for it to become available.
         base_image_attrs = copy.copy(image_attrs)
         base_image_attrs._tile = None
         gen_flag = 'TILE_BASE_' + base_image_attrs.get_cache_key()
         if self._cache.raw_get(gen_flag) is not None:
-            # Warn as this indicates faulty base image detection
+            # Another thread seems to have generated the base image since we
+            # looked for it, so it should be in the cache now
+            base_img_data = self._cache.get(base_image_attrs.get_cache_key())
+            if base_img_data is not None:
+                self._logger.debug('Tile base found 2nd time looking for ' + str(image_attrs))
+                # Check that the object is an image and not a cached error message
+                if (isinstance(base_img_data, str) and
+                    base_img_data.startswith(ImageManager.IMAGE_ERROR_HEADER)):
+                    return None
+                else:
+                    return ImageWrapper(base_img_data, base_image_attrs, True)
+            # Either the base image detection is faulty or the base image wasn't cached
             self._logger.warning(
-                'Tile base generation already performed for ' + str(image_attrs)
+                'Tile base already generated but wasn\'t found for ' + str(image_attrs)
             )
             return None
         # Generate the base image
