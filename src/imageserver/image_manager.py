@@ -508,11 +508,8 @@ class ImageManager(object):
 
         # If there was an imaging error (just now or previously cached),
         # raise the exception now
-        if (isinstance(ret_image_data, str) and
-            ret_image_data.startswith(ImageManager.IMAGE_ERROR_HEADER)
-        ):
-            msg = ret_image_data[len(ImageManager.IMAGE_ERROR_HEADER):]
-            raise ImageError(msg)
+        if self._is_image_error(ret_image_data):
+            raise ImageError(self._get_image_error(ret_image_data))
 
         # v1.17 Get/set the image's last modification time
         modified_time = self.get_image_modified_time(image_attrs)
@@ -750,6 +747,23 @@ class ImageManager(object):
             'F' + str(iformat) + ',I' + str(fill) + ',E' + str(tile_spec)
         )
 
+    def _is_image_error(self, img_data):
+        """
+        Returns whether the provided image data is actually an error message.
+        """
+        return (
+            isinstance(img_data, str) and
+            img_data.startswith(ImageManager.IMAGE_ERROR_HEADER)
+        )
+
+    def _get_image_error(self, img_data):
+        """
+        When _is_image_error(data) returns True, returns the string error message.
+        """
+        if self._is_image_error(img_data):
+            return img_data[len(ImageManager.IMAGE_ERROR_HEADER):]
+        return None
+
     def _get_base_image(self, target_attrs):
         """
         Returns an ImageWrapper containing an existing image that may be used
@@ -790,8 +804,7 @@ class ImageManager(object):
                 base_data = self._cache.get(result_key)
                 if base_data is not None:
                     # Check that the object is an image and not a cached error message
-                    if (isinstance(base_data, str) and
-                        base_data.startswith(ImageManager.IMAGE_ERROR_HEADER)):
+                    if self._is_image_error(base_data):
                         continue
                     # Success
                     return ImageWrapper(base_data, result_attrs, True)
@@ -920,12 +933,9 @@ class ImageManager(object):
             base_img_data = self._cache.get(base_image_attrs.get_cache_key())
             if base_img_data is not None:
                 self._logger.debug('Tile base found 2nd time looking for ' + str(image_attrs))
-                # Check that the object is an image and not a cached error message
-                if (isinstance(base_img_data, str) and
-                    base_img_data.startswith(ImageManager.IMAGE_ERROR_HEADER)):
+                if self._is_image_error(base_img_data):  # Cached error message?
                     return None
-                else:
-                    return ImageWrapper(base_img_data, base_image_attrs, True)
+                return ImageWrapper(base_img_data, base_image_attrs, True)
             # Either the base image detection is faulty or the base image wasn't cached
             self._logger.warning(
                 'Tile base already generated but wasn\'t found for ' + str(image_attrs)
