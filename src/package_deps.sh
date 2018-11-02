@@ -13,8 +13,6 @@
 PYTHON_BIN=$1
 DIST_DIR=$(pwd)/dist
 BUILD_DIR=$(pwd)/build
-WHEELS_DIR=$BUILD_DIR/wheels
-CACHE_DIR=$BUILD_DIR/cache
 VENV_DIR=$BUILD_DIR/venv
 
 if [ "$PYTHON_BIN" = "" ]; then
@@ -27,38 +25,19 @@ if ! [ -x "$(command -v $PYTHON_BIN)" ]; then
 	exit 1
 fi
 
-echo -e '\nCleaning build environment'
-rm -rf $BUILD_DIR
-
 echo -e '\nCreating new build environment'
+rm -rf $BUILD_DIR
 mkdir $BUILD_DIR
-mkdir $WHEELS_DIR
-mkdir $CACHE_DIR
 virtualenv --python=$PYTHON_BIN $VENV_DIR
 . $VENV_DIR/bin/activate
 
 echo -e '\nUpgrading pip and setuptools'
 pip install --upgrade pip setuptools wheel
 
-# Download and cache the sdists for everything
-echo -e '\nDownloading requirements'
-pip download --dest $CACHE_DIR -r doc/requirements.txt
+echo -e '\nInstalling requirements'
+pip install --upgrade -r doc/requirements.txt
 
-# Extract the sdists and build them into (bdist_wheel) wheels
-echo -e '\nBuilding wheels of the requirements'
-cd $CACHE_DIR
-cp *.whl $WHEELS_DIR
-find . -type f -name '*.zip' -exec unzip -o {} \;
-find . -type f -name '*.tar.gz' -exec tar -zxf {} \;
-find . -type f -name '*.tar.bz2' -exec tar -jxf {} \;
-find . -type f -name 'setup.py' -execdir python -c "import setuptools; exec(open('setup.py').read(), {'__file__': './setup.py', '__name__': '__main__'})" bdist_wheel --dist-dir $WHEELS_DIR \;
-cd ../..
-
-# Install all the wheels we made (into the virtualenv's lib directory)
-echo -e '\nInstalling all wheels into the build environment'
-find $WHEELS_DIR -type f -name '*.whl' -exec pip install --upgrade --force-reinstall {} \;
-
-# Remove the pyc and pyo files
+echo -e '\nRemoving pyc and pyo files'
 rm `find $VENV_DIR -name '*.py[co]'`
 
 # Package the virtualenv's lib directory for distribution
