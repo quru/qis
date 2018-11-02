@@ -16,6 +16,7 @@
 	=========  ====  ============================================================
 	13Dec2012  Matt  Handle deleted images (show available info, stats)
 	16Jan2013  Matt  Add permissions checking for menu items
+	02Nov2018  Matt  Swap out Google Maps for OpenStreetMap
 -->
 {% endblock %}
 
@@ -30,10 +31,6 @@
     {% else %}
     <script src="{{ url_for('static', filename='js/details.min.js') }}" type="text/javascript"></script>
     {% endif%}
-
-    {% if geo_info %}
-    <script src="http://maps.googleapis.com/maps/api/js?sensor=false" type="text/javascript"></script>
-    {% endif %}
 {% endblock %}
 
 {% set disabled_attrs='class="disabled" title="You do not have permission to use this function"'|safe %}
@@ -217,22 +214,11 @@
 	{% if geo_info %}
 		<div class="float">
 			<h3>Location</h3>
-			<div id="map" class="map"></div>
-			<script type="text/javascript">
-				function init_map() {
-					var centrePos = new google.maps.LatLng({{ geo_info.latitude }}, {{ geo_info.longitude }});
-					var map = new google.maps.Map($('map'), {
-						zoom: 14,
-						center: centrePos,
-						mapTypeId: google.maps.MapTypeId.ROADMAP
-					});
-					var marker = new google.maps.Marker({
-						position: centrePos,
-						map: map,
-						title: 'Position: {{ geo_info.latitude }}, {{ geo_info.longitude }}'
-					});
-				}
-			</script>
+			<iframe class="map" frameborder="0" scrolling="no"
+					marginheight="0" marginwidth="0"
+					src="https://www.openstreetmap.org/export/embed.html?bbox={{ geo_info.longitude - 0.5 }}%2C{{ geo_info.latitude - 0.5 }}%2C{{ geo_info.longitude + 0.5 }}%2C{{ geo_info.latitude + 0.5 }}&amp;layer=mapnik&amp;marker={{ geo_info.latitude }}%2C{{ geo_info.longitude }}"></iframe>
+			<br/>
+			<small><a href="https://www.openstreetmap.org/?mlat={{ geo_info.latitude }}&amp;mlon={{ geo_info.longitude }}#map=10/{{ geo_info.latitude }}/{{ geo_info.longitude }}">View larger map on OpenStreetMap</a></small>
 		</div>
 	{% endif %}
 

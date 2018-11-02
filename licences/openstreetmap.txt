@@ -1,0 +1,8 @@
+OpenStreetMap maps are (c) OpenStreetMap contributors
+https://www.openstreetmap.org/copyright
+
+OpenStreetMap data is available under the Open Database Licence:
+https://www.opendatacommons.org/licenses/odbl
+
+OpenStreetMap map tiles are available under the Creative Commons Attribution-ShareAlike 2.0 licence:
+https://www.openstreetmap.org/copyright

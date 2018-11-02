@@ -1,11 +1,12 @@
-# v4.1.0-dev
+# v4.1.0
 _Changes: Bug fix to creation of new user accounts using LDAP authentication,
 API behaviour made more consistent, fixed several scenarios where the API was
 returning HTML error messages instead of JSON, block dangerous characters from
 the 'friendly' portfolio ID field, remove user information from the portfolios
 API, add new API function to retrieve portfolios by 'friendly' ID, fix "timed
 out waiting for image template data" warning from wrongly triggering in the log
-files, documentation corrections and improvements_
+files, documentation corrections and improvements, replace Google Static Maps
+with OpenStreetMap (when viewing images with GPS tags)_
 
 API changes in more detail:
 

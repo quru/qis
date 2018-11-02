@@ -41,10 +41,6 @@ function onInit() {
 	addEventEx('file_rename', 'click', onRenameClick);
 	addEventEx('file_move', 'click', onMoveClick);
 	addEventEx('file_delete', 'click', onDeleteClick);
-	
-	// If there is a geo map, enable it
-	if (window.init_map)
-		init_map();
 }
 
 // When Reset menu clicked
