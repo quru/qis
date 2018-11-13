@@ -86,6 +86,7 @@ class DataManager(object):
     backed by a connection pool for performance.
     """
     LOG_SQL_TIMING = False
+    LATEST_MIGRATION_VERSION = 1  # Bump this up whenever you add a new migration
 
     def __init__(self, cache_manager, logger, db_uri, db_pool_size):
         try:
@@ -2066,6 +2067,9 @@ class DataManager(object):
                     self.save_object(Property(Property.FOLIO_PERMISSION_VERSION, '1'))
                     self.save_object(Property(Property.IMAGE_TEMPLATES_VERSION, '1'))
                     self.save_object(Property(Property.DEFAULT_TEMPLATE, 'default'))
+                    # If we're here, assume the database is new and doesn't need migrating
+                    self.save_object(Property(Property.DATABASE_MIGRATION_VERSION,
+                                     str(DataManager.LATEST_MIGRATION_VERSION)))
 
                 # Run schema migrations as necessary
                 self._upgrade_db()
@@ -2082,9 +2086,6 @@ class DataManager(object):
         Applies any database migrations required (other than create actions
         that _init_db already does) to bring the database schema up to date.
         """
-        # Bump this up whenever you add a new migration
-        FINAL_MIGRATION_VERSION = 1
-
         db_session = self._db.Session()
         done = False
         try:
@@ -2092,14 +2093,12 @@ class DataManager(object):
             db_ver = db_session.query(Property).get(Property.DATABASE_MIGRATION_VERSION)
             ver = int(db_ver.value) if db_ver else 0
 
-            if ver < FINAL_MIGRATION_VERSION:
+            if ver < DataManager.LATEST_MIGRATION_VERSION:
                 # Run migrations
                 self._migrations(ver, db_session)
                 # Set the database new internal version
-                db_session.merge(Property(
-                    Property.DATABASE_MIGRATION_VERSION,
-                    str(FINAL_MIGRATION_VERSION)
-                ))
+                db_session.merge(Property(Property.DATABASE_MIGRATION_VERSION,
+                                 str(DataManager.LATEST_MIGRATION_VERSION)))
             done = True
         except Exception as e:
             self._logger.error('Error upgrading database: ' + str(e))
@@ -2113,6 +2112,7 @@ class DataManager(object):
     def _migrations(self, current_number, db_session):
         """
         Back end to _upgrade_db, performs the actual database migrations.
+        Increment LATEST_MIGRATION_VERSION whenever you add a new migration here.
         """
         if current_number < 1:
             # v2.7 migration number 1 adds portfolios
