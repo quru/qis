@@ -381,7 +381,7 @@ class WebPageTests(WebPageTestCase):
         self.assertIn('//localhost/', page_text)
         # Image help - subs buildings
         self.assertNotIn('buildings', page_text)
-        self.assertIn('test_images', page_text)
+        self.assertIn('samples', page_text)
         # Image help - subs quru.png
         self.assertNotIn('quru.png', page_text)
         self.assertIn('quru110.png', page_text)
@@ -390,7 +390,7 @@ class WebPageTests(WebPageTestCase):
         self.assertIn('quru470.png', page_text)
         # Image help - subs logos
         self.assertNotIn('logos', page_text)
-        self.assertIn('test_images', page_text)
+        self.assertIn('samples', page_text)
         # Image help - subs the server-specific settings placeholder text
         self.assertNotIn('View this page from within QIS to see the current '
                          'image settings for your server.', page_text)

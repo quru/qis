@@ -135,9 +135,9 @@ def logout():
 def image_help():
     embed = request.args.get('embed', '')
 
-    help_image_attrs = ImageAttrs('test_images/cathedral.jpg')
-    logo_image_attrs = ImageAttrs('test_images/quru110.png')
-    logo_pad_image_attrs = ImageAttrs('test_images/quru470.png')
+    help_image_attrs = ImageAttrs('samples/cathedral.jpg')
+    logo_image_attrs = ImageAttrs('samples/quru110.png')
+    logo_pad_image_attrs = ImageAttrs('samples/quru470.png')
 
     default_template = image_engine.get_default_template()
     available_formats = image_engine.get_image_formats(supported_only=True)
@@ -294,7 +294,7 @@ def upload_complete():
 @app.route('/simpleview/')
 @login_required
 def simple_view_index():
-    demo_image_attrs = ImageAttrs('test_images/cathedral.jpg')
+    demo_image_attrs = ImageAttrs('samples/cathedral.jpg')
     return render_template(
         'simple_view.html',
         image_src=demo_image_attrs.filename()
@@ -312,7 +312,7 @@ def simple_view_help():
 @app.route('/canvasview/')
 @login_required
 def canvas_view_index():
-    demo_image_attrs = ImageAttrs('test_images/cathedral.jpg')
+    demo_image_attrs = ImageAttrs('samples/cathedral.jpg')
     return render_template(
         'canvas_view.html',
         image_src=demo_image_attrs.filename()
@@ -331,9 +331,9 @@ def canvas_view_help():
 @login_required
 def gallery_view_index():
     demo_image_srcs = [
-        'test_images/cathedral.jpg',
-        'test_images/dorset.jpg',
-        'test_images/thames.jpg'
+        'samples/cathedral.jpg',
+        'samples/dorset.jpg',
+        'samples/thames.jpg'
     ]
     return render_template(
         'gallery_view.html',
@@ -352,7 +352,7 @@ def gallery_view_help():
 @app.route('/slideshow/')
 @login_required
 def slideshow_view_index():
-    demo_image_attrs = ImageAttrs('test_images/cathedral.jpg')
+    demo_image_attrs = ImageAttrs('samples/cathedral.jpg')
     return render_template(
         'slideshow_view.html',
         image_src=demo_image_attrs.filename()

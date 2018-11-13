@@ -27,8 +27,9 @@ pip-selfcheck.json
 # Project files
 conf/*.py
 images/*
+!images/samples
+images/samples/*.d
 !images/test_images
-images/test_images/.DS_Store
 images/test_images/*.d
 logs/*.log*
 

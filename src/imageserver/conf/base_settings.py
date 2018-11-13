@@ -143,7 +143,7 @@ DEMO_OVERLAY_IMAGE_PATH = ""
 #      image folder /images/2011-06-14 snaps/ for an IMAGES_BASE_DIR of /images
 IMAGE_UPLOAD_DIRS = [
     ("Today's images", "%Y-%m-%d"),
-    ("Test images", "test_images")
+    ("Sample images", "samples")
 ]
 
 # A template to suggest in the example HTML snippet for the uploaded image

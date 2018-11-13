@@ -1,18 +1,16 @@
 include conf/README
-recursive-include deploy *
-prune deploy/docker/ci-build-centos-7
-prune deploy/docker/ci-build-rhel-7
-prune deploy/docker/ci-build-ubuntu-16
-recursive-include doc *
-prune doc/v0
-prune doc/v1
-prune doc/v2
+graft deploy
+prune deploy/docker/ci-build-*
+graft doc
+prune doc/v*
 graft icc
-graft images/test_images
+graft images/samples
+prune images/test_images
 graft licences
 include logs/README
 recursive-include src/imageserver *.css *.js *.png *.gif *.bmp *.ico *.jpg *.jpeg *.sass *.scss *.html *.htm *.txt *.sh
 recursive-include src/wsgi *
+prune src/*.egg-info
 include README.md
 exclude MANIFEST.in
 global-exclude .DS_Store

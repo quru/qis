@@ -1,3 +1,6 @@
+# v4.1.1
+_Changes: Add "samples" image folder, remove "test_images" folder from the distribution_
+
 # v4.1.0
 _Changes: Bug fix to creation of new user accounts using LDAP authentication,
 API behaviour made more consistent, fixed several scenarios where the API was
