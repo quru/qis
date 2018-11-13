@@ -99,8 +99,8 @@ def tearDownModule():
 
 # Utility - resets the database and cache, and optionally starts the aux processes
 def init_tests(launch_aux=True):
-    reset_databases()  # Requires the cache for locking
-    cm.clear()         # So reset the cache second
+    cm.clear()
+    reset_databases()
     if launch_aux:
         launch_aux_processes()
         time.sleep(1)
