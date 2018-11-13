@@ -58,7 +58,7 @@ class ImageTemplateManager(object):
         self._db = data_manager
         self._logger = logger
         self._default_template_name = ''
-        self._data_version = -1
+        self._data_version = 0
         self._template_cache = KeyValueCache()
         self._update_lock = threading.Lock()
         self._last_check = datetime.min
@@ -187,7 +187,9 @@ class ImageTemplateManager(object):
                         db_template.name, str(e)
                     )
                 )
-        self._logger.info('Loaded templates: ' + ', '.join(self._template_cache.keys()))
+        self._logger.info('Loaded templates: %s at version %d' % (
+            ', '.join(self._template_cache.keys()), self._data_version
+        ))
 
     def _check_data_version(self, _force=False):
         """
@@ -196,14 +198,16 @@ class ImageTemplateManager(object):
         Uses an internal lock for thread safety.
         """
         check_secs = ImageTemplateManager.TEMPLATE_CACHE_SYNC_INTERVAL
-        if _force or self._last_check < (datetime.utcnow() - timedelta(seconds=check_secs)):
+        if _force or (self._data_version == 0) or (
+            self._last_check < (datetime.utcnow() - timedelta(seconds=check_secs))
+        ):
             # Check for newer data version
             if self._update_lock.acquire(0):  # 0 = nonblocking
                 try:
                     old_ver = self._data_version
                     db_ver = self._db.get_object(Property, Property.IMAGE_TEMPLATES_VERSION)
                     if int(db_ver.value) != old_ver:
-                        action = 'initialising with' if old_ver == -1 else 'detected new'
+                        action = 'initialising with' if old_ver == 0 else 'detected new'
                         self._logger.info('Image templates %s version %s' % (action, db_ver.value))
                         self._useable.clear()
                         self._load_data()
@@ -218,7 +222,7 @@ class ImageTemplateManager(object):
                 # v4.1 It is safe to carry on if a check is in place but an update
                 # is not. If an update is in place then the template cache is empty
                 # and we should wait for it to load.
-                if not self._useable.is_set() or self._data_version == -1:
+                if not self._useable.is_set() or self._data_version == 0:
                     self._logger.debug('Another thread is loading image templates, waiting for it')
                     if not self._useable.wait(10.0):
                         self._logger.warning('Timed out waiting for image template data')
