@@ -38,10 +38,6 @@ setup(
         "markdown==2.6.11"
     ],
 
-    setup_requires=[
-        "wheel",
-    ],
-
     tests_require=[
         "coverage",
         "flake8"

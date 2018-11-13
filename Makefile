@@ -34,7 +34,7 @@ webpack:
 	src/compress_js.sh
 
 venv: ${VENV_PATH}/bin/activate setup.py doc/requirements.txt
-	${VENV_ACTIVATE} ; pip install --upgrade pip setuptools wheel
+	${VENV_ACTIVATE} ; pip install --upgrade pip setuptools
 	${VENV_ACTIVATE} ; pip install --upgrade -r doc/requirements.txt
 
 testing_env: ${VENV_PATH}/bin/flake8 ${VENV_PATH}/bin/coverage

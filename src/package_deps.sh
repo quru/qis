@@ -32,7 +32,7 @@ virtualenv --python=$PYTHON_BIN $VENV_DIR
 . $VENV_DIR/bin/activate
 
 echo -e '\nUpgrading pip and setuptools'
-pip install --upgrade pip setuptools wheel
+pip install --upgrade pip setuptools
 
 echo -e '\nInstalling requirements'
 pip install --upgrade -r doc/requirements.txt

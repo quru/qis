@@ -10,9 +10,6 @@ requests>=2.20,<3
 psutil==5.4.6
 markdown==2.6.11
 
-# Setup requires
-#wheel
-
 # Tests requires
 #coverage
 #flake8
