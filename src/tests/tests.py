@@ -130,29 +130,37 @@ def reset_databases():
     admin_user.set_password('admin')
     dm.save_object(admin_user)
     # Default the public and internal root folder permissions to allow View + Download
-    set_default_public_permission(FolderPermission.ACCESS_DOWNLOAD)
-    set_default_internal_permission(FolderPermission.ACCESS_DOWNLOAD)
+    set_default_public_permission(FolderPermission.ACCESS_DOWNLOAD, False)
+    set_default_internal_permission(FolderPermission.ACCESS_DOWNLOAD, False)
     # Set some standard image generation settings
-    reset_default_image_template()
+    reset_default_image_template(False)
+    # As we have wiped the data, invalidate the internal caches' data versions
+    pm._foliop_data_version = 0
+    pm._fp_data_version = 0
+    pm.reset()
+    im._templates._data_version = 0
+    im.reset_templates()
 
 
-def set_default_public_permission(access):
+def set_default_public_permission(access, clear_cache=True):
     default_fp = dm.get_object(FolderPermission, 1)
     assert default_fp.group_id == Group.ID_PUBLIC
     default_fp.access = access
     dm.save_object(default_fp)
-    pm.reset_folder_permissions()
+    if clear_cache:
+        pm.reset_folder_permissions()
 
 
-def set_default_internal_permission(access):
+def set_default_internal_permission(access, clear_cache=True):
     default_fp = dm.get_object(FolderPermission, 2)
     assert default_fp.group_id == Group.ID_EVERYONE
     default_fp.access = access
     dm.save_object(default_fp)
-    pm.reset_folder_permissions()
+    if clear_cache:
+        pm.reset_folder_permissions()
 
 
-def reset_default_image_template():
+def reset_default_image_template(clear_cache=True):
     default_it = dm.get_image_template(tempname='Default')
     # Use reasonably standard image defaults
     image_defaults = [
@@ -166,8 +174,8 @@ def reset_default_image_template():
     for (key, value) in image_defaults:
         default_it.template[key] = {'value': value}
     dm.save_object(default_it)
-    # Clear template cache
-    im.reset_templates()
+    if clear_cache:
+        im.reset_templates()
 
 
 # Utility - selects or switches the Pillow / ImageMagick imaging back end
