@@ -143,7 +143,7 @@ var Lasso = new Class({
 
 	move : function(event){
 		if(!this.active) return false;
-		if (this.isTouch) event.stop();
+		if (this.isTouch && event.stop) event.stop();
 		
 		this.removeDOMSelection(); // clear as fast as possible!
 		

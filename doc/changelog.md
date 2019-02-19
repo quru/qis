@@ -1,3 +1,7 @@
+# Unreleased
+_Changes: Fix bug preventing the cropping tool working on touchscreen devices
+(publisher and playground)_
+
 # v4.1.1
 _Changes: Add "samples" image folder, remove "test_images" folder from the distribution_
 
