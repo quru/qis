@@ -461,7 +461,10 @@ If you will be taking your QIS user accounts from an LDAP service you will need:
 QIS has a large number of configuration settings, but you only need to set a few
 to get going. One of these is the `SECRET_KEY` value, which as the name suggests,
 should be a value unique to your site and must be kept a secret. You can generate
-a secret key with the `pwgen` utility:
+a secret key with Python or with the `pwgen` utility:
+
+	$ python3 -c 'import os; print(os.urandom(16))'
+	b"na\x87\x9d\xe7\x90Ja5i\xb3\xbf'P%\xe0"
 
 	$ pwgen -s 32 1
 	zOWp8lBL1IMVEl9uWzPn2PD2ddtZTPRv

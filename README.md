@@ -235,7 +235,7 @@ Where:
 
 * `INSTALL_DIR` is the full path to the project directory on your machine
 * `SECRET_KEY` is a random value that you can generate by running
-  `python -c 'import os; print(os.urandom(16))'`. You must change this value and
+  `python3 -c 'import os; print(os.urandom(16))'`. You must change this value and
   keep it secret when running in production.
 * `MEMCACHED_SERVERS` is a list of Memcached servers to use,
   usually only 1 in development
