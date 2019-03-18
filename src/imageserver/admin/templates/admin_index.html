@@ -22,12 +22,14 @@
 {% block body %}
 	<div class="center">
 		<h1>
-			<img src="{{ url_for('static', filename='images/logo.gif') }}" />
+			<img src="{{ url_for('static', filename='images/logo.png') }}" />&nbsp;
 			Administration
 		</h1>
 		<div class="tall left centercol">
 			<ul>
+				<li><a href="{{ url_for('admin.template_list') }}">Image templates</a></li>
 				{% if is_permitted(SystemPermission.PERMIT_ADMIN_USERS) %}
+				<li class="spacer">&nbsp;</li>
 				<li><a href="{{ url_for('admin.user_list') }}">Users</a></li>
 				<li><a href="{{ url_for('admin.group_list') }}">Groups</a></li>
 				{% endif %}
