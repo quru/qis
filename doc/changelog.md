@@ -1,6 +1,11 @@
-# Unreleased
+# v4.1.2
 _Changes: Fix bug preventing the cropping tool working on touchscreen devices
-(publisher and playground)_
+(publisher and playground), replace application logo to match quruimageserver.com_
+
+To upgrade:
+
+* Update the Python and web code (the `src` folder)
+* Restart the Apache service
 
 # v4.1.1
 _Changes: Add "samples" image folder, remove "test_images" folder from the distribution_

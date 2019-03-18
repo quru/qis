@@ -33,13 +33,13 @@ __uri__ = "https://quru.com/qis/"
 __source_uri__ = "https://github.com/quru/qis"
 __platforms__ = ["Linux", "Unix", "Mac OSX"]
 
-__version__ = "4.1.1"
+__version__ = "4.1.2"
 
 __author__ = "Quru Ltd"
 __email__ = "info@quru.com"
 
 __license__ = "GNU Affero General Public License"
-__copyright__ = "Copyright \xa9 2011 - 2018 Quru Ltd"
+__copyright__ = "Copyright \xa9 2011 - 2019 Quru Ltd"
 
 
 # Support running this from the command line to get version info
