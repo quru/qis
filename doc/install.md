@@ -616,8 +616,9 @@ at one of the various log files.
 ## Upgrading to the Premium Edition
 
 QIS can be upgraded to the Premium Edition with its enhanced imaging engine by
-[contacting Quru](https://quru.com/qis/). We will send you an extra file compiled
-for your operating system and platform, which you can install by running:
+[contacting Quru](https://www.quruimageserver.com/). We will send you an extra
+file compiled for your operating system and platform, which you can install by
+running:
 
 	$ sudo -u qis pip3 install --prefix /opt/qis qismagick-4.0.0-cp35-cp35m-linux_x86_64.whl
 	$ sudo systemctl restart httpd.service

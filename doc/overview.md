@@ -25,7 +25,7 @@ API to use the image server as a back-end for creating automated imaging workflo
 ## Editions
 
 Quru offers the image server in 2 editions - the fully open source Standard Edition,
-and the Premium Edition that requires an [annual subscription](https://quru.com/qis/).
+and the Premium Edition that requires an [annual subscription](https://www.quruimageserver.com/).
 
 The Standard Edition uses the Python-Pillow imaging library, which is well suited
 to basic image resizing and cropping, and offers good performance when colour

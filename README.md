@@ -326,7 +326,7 @@ no major new features.
 QIS v4 is the first release to be fully open source. It adds an image processing
 module built on the [Pillow](https://github.com/python-pillow/Pillow) library and
 becomes the new QIS Standard Edition. An optional more fully featured image processing
-module, built on the ImageMagick package, is [available from Quru](https://quru.com/qis/)
+module, built on the ImageMagick package, is [available from Quru](https://www.quruimageserver.com/)
 and becomes QIS Premium Edition.
 
 ## Standard and Premium editions
@@ -337,9 +337,9 @@ performance when colour accuracy is not critical (see the
 [`IMAGE_RESIZE_GAMMA_CORRECT`](doc/tuning.md#pillow) setting) and when only
 support for the most common file types is required.
 
-The optional [upgrade to the Premium Edition](https://quru.com/qis/) swaps Pillow
-for a proprietary interface to the ImageMagick, Ghostscript and LibRaw packages,
-bringing these advantages:
+The optional [upgrade to the Premium Edition](https://www.quruimageserver.com/)
+swaps Pillow for a proprietary interface to the ImageMagick, Ghostscript and
+LibRaw packages, bringing these advantages:
 
 * Support for image conversion to and from PDF files
 * Support for reading various digital camera RAW file formats
