@@ -379,8 +379,8 @@ class WebPageTests(WebPageTestCase):
         # Image help - subs //images.example.com/
         self.assertNotIn('//images.example.com/', page_text)
         self.assertIn('//localhost/', page_text)
-        # Image help - subs buildings
-        self.assertNotIn('buildings', page_text)
+        # Image help - subs products
+        self.assertNotIn('products', page_text)
         self.assertIn('samples', page_text)
         # Image help - subs quru.png
         self.assertNotIn('quru.png', page_text)

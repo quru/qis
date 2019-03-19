@@ -1,0 +1,7 @@
+Tagging an image with GPS coordinates:
+
+$ exiftool -gpslongitude=-0.1179891  -gpslatitude=51.5110045  -gpslongituderef=W -gpslatituderef=N coffee.jpg
+
+Setting the make, model, aperture, ISO and focal length:
+
+$ exiftool -make=Nikon -model=D7100 -fnumber=3 -aperturevalue=3 -iso=320 -focallength=60.0mm coffee.jpg

@@ -135,7 +135,7 @@ def logout():
 def image_help():
     embed = request.args.get('embed', '')
 
-    help_image_attrs = ImageAttrs('samples/cathedral.jpg')
+    help_image_attrs = ImageAttrs('samples/coffee.jpg')
     logo_image_attrs = ImageAttrs('samples/quru110.png')
     logo_pad_image_attrs = ImageAttrs('samples/quru470.png')
 
@@ -164,8 +164,8 @@ def image_help():
         'image_help.html',
         embed=embed,
         extra_subs={
-            'cathedral.jpg': help_image_attrs.filename(with_path=False),
-            'buildings': help_image_attrs.folder_path(),
+            'coffee.jpg': help_image_attrs.filename(with_path=False),
+            'products': help_image_attrs.folder_path(),
             'quru.png': logo_image_attrs.filename(with_path=False),
             'quru-padded.png': logo_pad_image_attrs.filename(with_path=False),
             'logos': logo_image_attrs.folder_path(),
@@ -294,7 +294,7 @@ def upload_complete():
 @app.route('/simpleview/')
 @login_required
 def simple_view_index():
-    demo_image_attrs = ImageAttrs('samples/cathedral.jpg')
+    demo_image_attrs = ImageAttrs('samples/coffee.jpg')
     return render_template(
         'simple_view.html',
         image_src=demo_image_attrs.filename()
@@ -312,7 +312,7 @@ def simple_view_help():
 @app.route('/canvasview/')
 @login_required
 def canvas_view_index():
-    demo_image_attrs = ImageAttrs('samples/cathedral.jpg')
+    demo_image_attrs = ImageAttrs('samples/mercedes.jpg')
     return render_template(
         'canvas_view.html',
         image_src=demo_image_attrs.filename()
@@ -331,9 +331,12 @@ def canvas_view_help():
 @login_required
 def gallery_view_index():
     demo_image_srcs = [
-        'samples/cathedral.jpg',
-        'samples/dorset.jpg',
-        'samples/thames.jpg'
+        'samples/coffee.jpg',
+        'samples/acrylic.jpg',
+        'samples/cityscape.jpg',
+        'samples/mercedes.jpg',
+        'samples/mountains.jpg',
+        'samples/penguin.jpg'
     ]
     return render_template(
         'gallery_view.html',
@@ -352,7 +355,7 @@ def gallery_view_help():
 @app.route('/slideshow/')
 @login_required
 def slideshow_view_index():
-    demo_image_attrs = ImageAttrs('samples/cathedral.jpg')
+    demo_image_attrs = ImageAttrs('samples/coffee.jpg')
     return render_template(
         'slideshow_view.html',
         image_src=demo_image_attrs.filename()

@@ -53,12 +53,13 @@
 	Click on a thumbnail image to launch a full-screen viewer.
 	<p>
 		<img class="clickable border" src="{{ url_for('image', src=image_src, width=200, height=200) }}"
-		     alt="Winchester cathedral"
-		     title="Winchester cathedral
-	This image shows the western face of the cathedral, on a sunny day in 2010"/>
+		     alt="Mercedes Benz 280SL"
+			 title="Mercedes Benz 280SL
+			 Photo by Markus Spiske on Unsplash"/>
 		&nbsp;
 		<img class="clickable border" src="{{ url_for('image', src=image_src, width=200, height=200, flip='v') }}"
-		     alt="Winchester cathedral, vertically flipped"
-		     title="Winchester cathedral, curiously upside down"/>
+		     alt="Mercedes Benz 280SL, vertically flipped"
+			 title="Mercedes Benz 280SL, vertically flipped
+			 Photo by Markus Spiske on Unsplash"/>
 	</p>
 {% endblock %}

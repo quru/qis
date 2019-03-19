@@ -42,16 +42,16 @@ available in the Premium Edition, they are ignored in the Basic Edition.
 <a name="example"></a>
 ## A simple example
 
-This example assumes you have already uploaded an image named `cathedral.jpg` into the folder `buildings`.
+This example assumes you have already uploaded an image named `coffee.jpg` into the folder `products`.
 
 You can now access this image at the location:  
-[`http://images.example.com/image?src=buildings/cathedral.jpg`](http://images.example.com/image?src=buildings/cathedral.jpg)
+[`http://images.example.com/image?src=products/coffee.jpg`](http://images.example.com/image?src=products/coffee.jpg)
 
 More often, you will want to show the image in a web page.  
 The following HTML code added to a web page will display a thumbnail version, 200 pixels wide:
 
-<code class="imagecode">&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&width=200"></code>
-![](//images.example.com/image?src=buildings/cathedral.jpg&stats=0&width=200)
+<code class="imagecode">&lt;img src="//images.example.com/image?src=products/coffee.jpg&width=200"></code>
+![](//images.example.com/image?src=products/coffee.jpg&stats=0&width=200)
 
 This example demonstrates the [width](#option_width) option. A resized copy of the image has been
 generated for you, and the original file remains unchanged. This and many other image options can
@@ -120,13 +120,13 @@ JPEG instead of baseline, use the special image format `pjpg` (or `pjpeg`).
 
 The image as a very highly compressed `jpg` file:
 
-<code class="imagecode">&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&width=200&quality=10**&format=jpg**"></code>
-![](//images.example.com/image?src=buildings/cathedral.jpg&stats=0&width=200&quality=10&format=jpg)
+<code class="imagecode">&lt;img src="//images.example.com/image?src=products/coffee.jpg&width=200&quality=10**&format=jpg**"></code>
+![](//images.example.com/image?src=products/coffee.jpg&stats=0&width=200&quality=10&format=jpg)
 
 The image as a `png` file (a lossless format):
 
-<code class="imagecode">&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&width=200&quality=10**&format=png**"></code>
-![](//images.example.com/image?src=buildings/cathedral.jpg&stats=0&width=200&quality=10&format=png)
+<code class="imagecode">&lt;img src="//images.example.com/image?src=products/coffee.jpg&width=200&quality=10**&format=png**"></code>
+![](//images.example.com/image?src=products/coffee.jpg&stats=0&width=200&quality=10&format=png)
 
 <a name="option_quality"></a>
 ### quality
@@ -154,15 +154,15 @@ for whether you want to optimise for file size or processing speed. As a startin
 images. The default value is 79. For a more in-depth description of this value, see the
 [ImageMagick documentation](http://www.imagemagick.org/script/command-line-options.php#quality).
 
-The image as a quality 5 <code>jpg</code> file, size 1.5 KB:
+The image as a quality 5 <code>jpg</code> file, size 1.2 KB:
 
-<code class="imagecode">&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&width=200&format=jpg**&quality=5**"></code>
-![](//images.example.com/image?src=buildings/cathedral.jpg&stats=0&width=200&format=jpg&quality=5)
+<code class="imagecode">&lt;img src="//images.example.com/image?src=products/coffee.jpg&width=200&format=jpg**&quality=5**"></code>
+![](//images.example.com/image?src=products/coffee.jpg&stats=0&width=200&format=jpg&quality=5)
 
-The image as a quality 70 <code>jpg</code> file, size 8.3 KB:
+The image as a quality 80 <code>jpg</code> file, size 6.6 KB:
 
-<code class="imagecode">&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&width=200&format=jpg**&quality=70**"></code>
-![](//images.example.com/image?src=buildings/cathedral.jpg&stats=0&width=200&format=jpg&quality=70)
+<code class="imagecode">&lt;img src="//images.example.com/image?src=products/coffee.jpg&width=200&format=jpg**&quality=80**"></code>
+![](//images.example.com/image?src=products/coffee.jpg&stats=0&width=200&format=jpg&quality=80)
 
 <a name="option_width"></a><a name="option_height"></a>
 ### width / height
@@ -181,18 +181,18 @@ size can be controlled by the image server's setting for a [public image width a
 
 A width of 200 and an automatic height:
 
-<code class="imagecode">&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&format=jpg**&width=200**"></code>
-![](//images.example.com/image?src=buildings/cathedral.jpg&stats=0&format=jpg&width=200)
+<code class="imagecode">&lt;img src="//images.example.com/image?src=products/coffee.jpg&format=jpg**&width=200**"></code>
+![](//images.example.com/image?src=products/coffee.jpg&stats=0&format=jpg&width=200)
 
 A height of 100 and an automatic width:
 
-<code class="imagecode">&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&format=jpg**&height=100**"></code>
-![](//images.example.com/image?src=buildings/cathedral.jpg&stats=0&format=jpg&height=100)
+<code class="imagecode">&lt;img src="//images.example.com/image?src=products/coffee.jpg&format=jpg**&height=100**"></code>
+![](//images.example.com/image?src=products/coffee.jpg&stats=0&format=jpg&height=100)
 
 A width and height of 200, padded with grey (note: white is the default fill colour):
 
-<code class="imagecode">&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&format=jpg**&width=200&height=200**&fill=grey"></code>
-![](//images.example.com/image?src=buildings/cathedral.jpg&stats=0&format=jpg&width=200&height=200&fill=grey)
+<code class="imagecode">&lt;img src="//images.example.com/image?src=products/coffee.jpg&format=jpg**&width=200&height=200**&fill=grey"></code>
+![](//images.example.com/image?src=products/coffee.jpg&stats=0&format=jpg&width=200&height=200&fill=grey)
 
 <a name="option_autosizefit"></a>
 ### autosizefit
@@ -204,18 +204,18 @@ Valid values are true or false, 1 or 0.
 
 Without autosizefit, requesting a width and height of 200 returns an image of exactly 200x200:
 
-<code class="imagecode">&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&format=jpg&fill=red**&width=200&height=200**"></code>
-![](//images.example.com/image?src=buildings/cathedral.jpg&stats=0&format=jpg&fill=red&width=200&height=200)
+<code class="imagecode">&lt;img src="//images.example.com/image?src=products/coffee.jpg&format=jpg&fill=red**&width=200&height=200**"></code>
+![](//images.example.com/image?src=products/coffee.jpg&stats=0&format=jpg&fill=red&width=200&height=200)
 
 With autosizefit, the returned image size is now 200x150, so that there is no vertical padding:
 
-<code class="imagecode">&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&format=jpg&fill=red**&width=200&height=200&autosizefit=1**"></code>
-![](//images.example.com/image?src=buildings/cathedral.jpg&stats=0&format=jpg&fill=red&width=200&height=200&autosizefit=1)
+<code class="imagecode">&lt;img src="//images.example.com/image?src=products/coffee.jpg&format=jpg&fill=red**&width=200&height=200&autosizefit=1**"></code>
+![](//images.example.com/image?src=products/coffee.jpg&stats=0&format=jpg&fill=red&width=200&height=200&autosizefit=1)
 
 Or for a portrait version of the same image, 150x200, so that there is no horizontal padding:
 
-<code class="imagecode">&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&format=jpg&angle=90&fill=red**&width=200&height=200&autosizefit=1**"></code>
-![](//images.example.com/image?src=buildings/cathedral.jpg&stats=0&format=jpg&angle=90&fill=red&width=200&height=200&autosizefit=1)
+<code class="imagecode">&lt;img src="//images.example.com/image?src=products/coffee.jpg&format=jpg&angle=90&fill=red**&width=200&height=200&autosizefit=1**"></code>
+![](//images.example.com/image?src=products/coffee.jpg&stats=0&format=jpg&angle=90&fill=red&width=200&height=200&autosizefit=1)
 
 <a name="option_halign"></a><a name="option_valign"></a>
 ### halign / valign ![Premium Edition](images/icon-premium-16.png)
@@ -242,14 +242,14 @@ If you do not specify alignment values, the inner image will be centred.
 ![Premium Edition](images/icon-premium-16.png) A padded image with the right edge of
 the inner image aligned to the right:
 
-<code class="imagecode">&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&format=jpg&left=0.235&right=0.8&fill=auto**&width=200&height=150&halign=R1**"></code>
-![](//images.example.com/image?src=buildings/cathedral.jpg&stats=0&format=jpg&left=0.235&right=0.8&fill=auto&width=200&height=150&halign=R1)
+<code class="imagecode">&lt;img src="//images.example.com/image?src=products/coffee.jpg&format=jpg&left=0.24&right=0.96&fill=auto**&width=200&height=150&halign=R1**"></code>
+![](//images.example.com/image?src=products/coffee.jpg&stats=0&format=jpg&left=0.24&right=0.96&fill=auto&width=200&height=150&halign=R1)
 
 ![Premium Edition](images/icon-premium-16.png) A padded image with the left edge of
 the inner image aligned to the left:
 
-<code class="imagecode">&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&format=jpg&left=0.235&right=0.8&fill=auto**&width=200&height=150&halign=L0**"></code>
-![](//images.example.com/image?src=buildings/cathedral.jpg&stats=0&format=jpg&left=0.235&right=0.8&fill=auto&width=200&height=150&halign=L0)
+<code class="imagecode">&lt;img src="//images.example.com/image?src=products/coffee.jpg&format=jpg&left=0.24&right=0.96&fill=auto**&width=200&height=150&halign=L0**"></code>
+![](//images.example.com/image?src=products/coffee.jpg&stats=0&format=jpg&left=0.24&right=0.96&fill=auto&width=200&height=150&halign=L0)
 
 <a name="option_angle"></a>
 ### angle (rotation)
@@ -261,18 +261,18 @@ for the image, this is applied after the rotation.
 
 Rotation clockwise by 9.95&deg; (with the default white fill colour):
 
-<code class="imagecode">&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&format=jpg&width=200**&angle=9.95**"></code>
-![](//images.example.com/image?src=buildings/cathedral.jpg&stats=0&format=jpg&width=200&angle=9.95)
+<code class="imagecode">&lt;img src="//images.example.com/image?src=products/coffee.jpg&format=jpg&width=200**&angle=9.95**"></code>
+![](//images.example.com/image?src=products/coffee.jpg&stats=0&format=jpg&width=200&angle=9.95)
 
 Rotation anti-clockwise by 90&deg;:
 
-<code class="imagecode">&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&format=jpg&width=150**&angle=-90**"></code>
-![](//images.example.com/image?src=buildings/cathedral.jpg&stats=0&format=jpg&width=150&angle=-90)
+<code class="imagecode">&lt;img src="//images.example.com/image?src=products/coffee.jpg&format=jpg&width=150**&angle=-90**"></code>
+![](//images.example.com/image?src=products/coffee.jpg&stats=0&format=jpg&width=150&angle=-90)
 
 Rotation by 180&deg;:
 
-<code class="imagecode">&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&format=jpg&width=200**&angle=180**"></code>
-![](//images.example.com/image?src=buildings/cathedral.jpg&stats=0&format=jpg&width=200&angle=180)
+<code class="imagecode">&lt;img src="//images.example.com/image?src=products/coffee.jpg&format=jpg&width=200**&angle=180**"></code>
+![](//images.example.com/image?src=products/coffee.jpg&stats=0&format=jpg&width=200&angle=180)
 
 <a name="option_flip"></a>
 ### flip
@@ -281,8 +281,8 @@ Valid values are v or h.
 
 Vertical flip. Note this is not the same as rotating by 180 degrees:
 
-<code class="imagecode">&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&format=jpg&width=200**&flip=v**"></code>
-![](//images.example.com/image?src=buildings/cathedral.jpg&stats=0&format=jpg&width=200&flip=v)
+<code class="imagecode">&lt;img src="//images.example.com/image?src=products/coffee.jpg&format=jpg&width=200**&flip=v**"></code>
+![](//images.example.com/image?src=products/coffee.jpg&stats=0&format=jpg&width=200&flip=v)
 
 <a name="option_top"></a><a name="option_left"></a><a name="option_bottom"></a><a name="option_right"></a>
 ### top / left / bottom / right
@@ -295,19 +295,19 @@ entire bottom half of the image.
 
 The base image without any cropping:
 
-<code class="imagecode">&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&format=jpg&width=200"></code>
-![](//images.example.com/image?src=buildings/cathedral.jpg&stats=0&format=jpg&width=200)
+<code class="imagecode">&lt;img src="//images.example.com/image?src=products/coffee.jpg&format=jpg&width=200"></code>
+![](//images.example.com/image?src=products/coffee.jpg&stats=0&format=jpg&width=200)
 
 A custom crop that removes the left and right edges. Note that the height has been constrained
-in this example, since the new shape of the image would be very tall at the same width:
+in this example, since the new shape of the image would be taller at the same width:
 
-<code class="imagecode">&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&format=jpg&height=150**&left=0.235&right=0.8**"></code>
-![](//images.example.com/image?src=buildings/cathedral.jpg&stats=0&format=jpg&height=150&left=0.235&right=0.8)
+<code class="imagecode">&lt;img src="//images.example.com/image?src=products/coffee.jpg&format=jpg&height=150**&left=0.4&right=0.8**"></code>
+![](//images.example.com/image?src=products/coffee.jpg&stats=0&format=jpg&height=150&left=0.4&right=0.8)
 
 The top right quarter of the image:
 
-<code class="imagecode">&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&format=jpg&width=200**&left=0.5&top=0&right=1&bottom=0.5**"></code>
-![](//images.example.com/image?src=buildings/cathedral.jpg&stats=0&format=jpg&width=200&left=0.5&top=0&right=1&bottom=0.5)
+<code class="imagecode">&lt;img src="//images.example.com/image?src=products/coffee.jpg&format=jpg&width=200**&left=0.5&top=0&right=1&bottom=0.5**"></code>
+![](//images.example.com/image?src=products/coffee.jpg&stats=0&format=jpg&width=200&left=0.5&top=0&right=1&bottom=0.5)
 
 <a name="option_autocropfit"></a>
 ### autocropfit
@@ -319,13 +319,13 @@ and height. Valid values are true or false, 1 or 0.
 
 Without autocropfit, this cropped image does not fit exactly into a 200x200 area:
 
-<code class="imagecode">&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&format=jpg&width=200&height=200&fill=red&left=0.32&top=0.15&right=0.72&bottom=0.9"></code>
-![](//images.example.com/image?src=buildings/cathedral.jpg&stats=0&format=jpg&width=200&height=200&fill=red&left=0.32&top=0.15&right=0.72&bottom=0.9)
+<code class="imagecode">&lt;img src="//images.example.com/image?src=products/coffee.jpg&format=jpg&width=200&height=200&fill=red&left=0.32&top=0.15&right=0.72&bottom=0.9"></code>
+![](//images.example.com/image?src=products/coffee.jpg&stats=0&format=jpg&width=200&height=200&fill=red&left=0.32&top=0.15&right=0.72&bottom=0.9)
 
 With autocropfit, the cropping area has now been expanded horizontally so that the resulting image fits the area:
 
-<code class="imagecode">&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&format=jpg&width=200&height=200&fill=red&left=0.32&top=0.15&right=0.72&bottom=0.9**&autocropfit=1**"></code>
-![](//images.example.com/image?src=buildings/cathedral.jpg&stats=0&format=jpg&width=200&height=200&fill=red&left=0.32&top=0.15&right=0.72&bottom=0.9&autocropfit=1)
+<code class="imagecode">&lt;img src="//images.example.com/image?src=products/coffee.jpg&format=jpg&width=200&height=200&fill=red&left=0.32&top=0.15&right=0.72&bottom=0.9**&autocropfit=1**"></code>
+![](//images.example.com/image?src=products/coffee.jpg&stats=0&format=jpg&width=200&height=200&fill=red&left=0.32&top=0.15&right=0.72&bottom=0.9&autocropfit=1)
 
 <a name="option_fill"></a>
 ### fill
@@ -346,13 +346,13 @@ around the edges.
 
 The image resized as a square, using a dark grey fill colour:
 
-<code class="imagecode">&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&format=jpg**&width=200&height=200&fill=333333**"></code>
-![](//images.example.com/image?src=buildings/cathedral.jpg&stats=0&format=jpg&width=200&height=200&fill=333333)
+<code class="imagecode">&lt;img src="//images.example.com/image?src=products/coffee.jpg&format=jpg**&width=200&height=200&fill=333333**"></code>
+![](//images.example.com/image?src=products/coffee.jpg&stats=0&format=jpg&width=200&height=200&fill=333333)
 
 ![Premium Edition](images/icon-premium-16.png) The image rotated 20&deg;, using an automatic fill colour:
 
-<code class="imagecode">&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&format=jpg&width=200**&angle=20&fill=auto**"></code>
-![](//images.example.com/image?src=buildings/cathedral.jpg&stats=0&format=jpg&width=200&angle=20&fill=auto)
+<code class="imagecode">&lt;img src="//images.example.com/image?src=products/coffee.jpg&format=jpg&width=200**&angle=20&fill=auto**"></code>
+![](//images.example.com/image?src=products/coffee.jpg&stats=0&format=jpg&width=200&angle=20&fill=auto)
 
 <a name="option_sharpen"></a>
 ### sharpen ![Premium Edition](images/icon-premium-16.png)
@@ -361,25 +361,25 @@ Applies a routine to either sharpen or blur the image. Valid values are -500 (he
 
 ![Premium Edition](images/icon-premium-16.png) A resized portion of the sample image without sharpening:
 
-<code class="imagecode">&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&format=jpg&width=200&bottom=0.6&left=0.27&right=0.77"></code>
-![](//images.example.com/image?src=buildings/cathedral.jpg&stats=0&format=jpg&width=200&bottom=0.6&left=0.27&right=0.77)
+<code class="imagecode">&lt;img src="//images.example.com/image?src=products/coffee.jpg&format=jpg&width=200&bottom=0.6&left=0.27&right=0.77"></code>
+![](//images.example.com/image?src=products/coffee.jpg&stats=0&format=jpg&width=200&bottom=0.6&left=0.27&right=0.77)
 
 ![Premium Edition](images/icon-premium-16.png) With a small amount of sharpening applied,
 the edges in the image appear more distinct, but the image appears brighter and some detail
 has been lost:
 
-<code class="imagecode">&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&format=jpg&width=200&bottom=0.6&left=0.27&right=0.77**&sharpen=50**"></code>
-![](//images.example.com/image?src=buildings/cathedral.jpg&stats=0&format=jpg&width=200&bottom=0.6&left=0.27&right=0.77&sharpen=50)
+<code class="imagecode">&lt;img src="//images.example.com/image?src=products/coffee.jpg&format=jpg&width=200&bottom=0.6&left=0.27&right=0.77**&sharpen=50**"></code>
+![](//images.example.com/image?src=products/coffee.jpg&stats=0&format=jpg&width=200&bottom=0.6&left=0.27&right=0.77&sharpen=50)
 
 ![Premium Edition](images/icon-premium-16.png) Maximum sharpening produces an interesting special effect:
 
-<code class="imagecode">&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&format=jpg&width=200&bottom=0.6&left=0.27&right=0.77**&sharpen=500**"></code>
-![](//images.example.com/image?src=buildings/cathedral.jpg&stats=0&format=jpg&width=200&bottom=0.6&left=0.27&right=0.77&sharpen=500)
+<code class="imagecode">&lt;img src="//images.example.com/image?src=products/coffee.jpg&format=jpg&width=200&bottom=0.6&left=0.27&right=0.77**&sharpen=500**"></code>
+![](//images.example.com/image?src=products/coffee.jpg&stats=0&format=jpg&width=200&bottom=0.6&left=0.27&right=0.77&sharpen=500)
 
 ![Premium Edition](images/icon-premium-16.png) The image with blur applied produces an out-of-focus effect:
 
-<code class="imagecode">&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&format=jpg&width=200&bottom=0.6&left=0.27&right=0.77**&sharpen=-200**"></code>
-![](//images.example.com/image?src=buildings/cathedral.jpg&stats=0&format=jpg&width=200&bottom=0.6&left=0.27&right=0.77&sharpen=-200)
+<code class="imagecode">&lt;img src="//images.example.com/image?src=products/coffee.jpg&format=jpg&width=200&bottom=0.6&left=0.27&right=0.77**&sharpen=-300**"></code>
+![](//images.example.com/image?src=products/coffee.jpg&stats=0&format=jpg&width=200&bottom=0.6&left=0.27&right=0.77&sharpen=-300)
 
 <a name="option_strip"></a>
 ### strip
@@ -397,19 +397,21 @@ or with images that have an important embedded [colour profile](#option_icc). St
 image usually causes little visual change, but removing the colour profile from a CMYK image may cause
 it to be displayed or printed incorrectly.
 
-This image is 15.3 KB in size, and includes an EXIF data block with several items, including:
+This image is 6.6 KB in size, and includes an EXIF data block with several items, including:
 
-	Make: Nokia             Model: 3720c
-	Exposure Mode: Auto     White Balance: Auto
-	Colour profile: sRGB    Zoom ratio: 1
+	Make: Nikon             Model: D7100
+	ISO:  320               Focal length: 60.0mm
+	Copyright notice        GPS location tags
 
-<code class="imagecode">&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&width=200&quality=75**&strip=0**"></code>
-![](//images.example.com/image?src=buildings/cathedral.jpg&stats=0&width=200&quality=75&strip=0)
+<code class="imagecode">&lt;img src="//images.example.com/image?src=products/coffee.jpg&width=200&quality=75**&strip=0**"></code>
+![](//images.example.com/image?src=products/coffee.jpg&stats=0&width=200&quality=75&strip=0)
 
-This image, very nearly identical, is only 8.5 KB in size since it contains no embedded information:
+This image, without the EXIF data, is only 6.1 KB in size:
 
-<code class="imagecode">&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&width=200&quality=75**&strip=1**"></code>
-![](//images.example.com/image?src=buildings/cathedral.jpg&stats=0&width=200&quality=75&strip=1)
+<code class="imagecode">&lt;img src="//images.example.com/image?src=products/coffee.jpg&width=200&quality=75**&strip=1**"></code>
+![](//images.example.com/image?src=products/coffee.jpg&stats=0&width=200&quality=75&strip=1)
+
+The size reduction can be more dramatic for images that contain a colour profile.
 
 <a name="option_dpi"></a>
 ### dpi
@@ -448,8 +450,8 @@ images instead.
 
 ![Premium Edition](images/icon-premium-16.png) Adding a logo to an image:
 
-<code class="imagecode">&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&width=200**&overlay=logos/quru.png**"></code>
-![](//images.example.com/image?src=buildings/cathedral.jpg&stats=0&width=200&overlay=logos/quru.png)
+<code class="imagecode">&lt;img src="//images.example.com/image?src=products/coffee.jpg&width=200**&overlay=logos/quru.png**"></code>
+![](//images.example.com/image?src=products/coffee.jpg&stats=0&width=200&overlay=logos/quru.png)
 
 <a name="option_ovsize"></a>
 ### ovsize ![Premium Edition](images/icon-premium-16.png)
@@ -467,8 +469,8 @@ that match or exceed your largest main image.
 ![Premium Edition](images/icon-premium-16.png) Setting the logo width to &frac14;
 of the main image width:
 
-<code class="imagecode">&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&width=200**&overlay=logos/quru.png&ovsize=0.25**"></code>
-![](//images.example.com/image?src=buildings/cathedral.jpg&stats=0&width=200&overlay=logos/quru.png&ovsize=0.25)
+<code class="imagecode">&lt;img src="//images.example.com/image?src=products/coffee.jpg&width=200**&overlay=logos/quru.png&ovsize=0.25**"></code>
+![](//images.example.com/image?src=products/coffee.jpg&stats=0&width=200&overlay=logos/quru.png&ovsize=0.25)
 
 <a name="option_ovpos"></a>
 ### ovpos ![Premium Edition](images/icon-premium-16.png)
@@ -484,8 +486,8 @@ overlay image itself. This is demonstrated in the example below.
 ![Premium Edition](images/icon-premium-16.png) A logo containing an integral border,
 aligned to the North West:
 
-<code class="imagecode">&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&width=200**&overlay=logos/quru-padded.png&ovsize=0.4&ovpos=NW**"></code>
-![](//images.example.com/image?src=buildings/cathedral.jpg&stats=0&width=200&overlay=logos/quru-padded.png&ovsize=0.4&ovpos=NW)
+<code class="imagecode">&lt;img src="//images.example.com/image?src=products/coffee.jpg&width=200**&overlay=logos/quru-padded.png&ovsize=0.4&ovpos=NW**"></code>
+![](//images.example.com/image?src=products/coffee.jpg&stats=0&width=200&overlay=logos/quru-padded.png&ovsize=0.4&ovpos=NW)
 
 <a name="option_ovopacity"></a>
 ### ovopacity ![Premium Edition](images/icon-premium-16.png)
@@ -497,8 +499,8 @@ where 0.0 is fully transparent and 1.0 is fully opaque. If you do not specify a 
 ![Premium Edition](images/icon-premium-16.png) Setting the logo to be semi-transparent,
 useful as a watermark effect:
 
-<code class="imagecode">&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&width=200**&overlay=logos/quru.png&ovopacity=0.3**"></code>
-![](//images.example.com/image?src=buildings/cathedral.jpg&stats=0&width=200&overlay=logos/quru.png&ovopacity=0.3)
+<code class="imagecode">&lt;img src="//images.example.com/image?src=products/coffee.jpg&width=200**&overlay=logos/quru.png&ovopacity=0.3**"></code>
+![](//images.example.com/image?src=products/coffee.jpg&stats=0&width=200&overlay=logos/quru.png&ovopacity=0.3)
 
 <a name="option_icc"></a><a name="option_intent"></a>
 ### icc (colour profile) / intent ![Premium Edition](images/icon-premium-16.png)
@@ -531,8 +533,8 @@ in general for CMYK images.
 ![Premium Edition](images/icon-premium-16.png) The sample image, with a
 greyscale conversion applied with 'perceptual' intent:
 
-<code class="imagecode">&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&width=200**&icc=greyscale&intent=perceptual**"></code>
-![](//images.example.com/image?src=buildings/cathedral.jpg&stats=0&width=200&icc=greyscale&intent=perceptual)
+<code class="imagecode">&lt;img src="//images.example.com/image?src=products/coffee.jpg&width=200**&icc=greyscale&intent=perceptual**"></code>
+![](//images.example.com/image?src=products/coffee.jpg&stats=0&width=200&icc=greyscale&intent=perceptual)
 
 <a name="option_bpc"></a>
 ### bpc (black point compensation) ![Premium Edition](images/icon-premium-16.png)
@@ -545,14 +547,14 @@ Valid values are true or false, 1 or 0.
 ![Premium Edition](images/icon-premium-16.png) A print-based colour profile applied
 with 'relative' intent and without black point compensation:
 
-<code class="imagecode">&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&width=200**&icc=UncoatedFOGRA29&intent=relative&bpc=0**&colorspace=rgb"></code>
-![](//images.example.com/image?src=buildings/cathedral.jpg&stats=0&width=200&icc=UncoatedFOGRA29&intent=relative&bpc=0&colorspace=rgb)
+<code class="imagecode">&lt;img src="//images.example.com/image?src=products/coffee.jpg&width=200**&icc=UncoatedFOGRA29&intent=relative&bpc=0**&colorspace=rgb"></code>
+![](//images.example.com/image?src=products/coffee.jpg&stats=0&width=200&icc=UncoatedFOGRA29&intent=relative&bpc=0&colorspace=rgb)
 
 ![Premium Edition](images/icon-premium-16.png) With black point compensation,
 the image has a tone that more closely matches the original:
 
-<code class="imagecode">&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&width=200**&icc=UncoatedFOGRA29&intent=relative&bpc=1**&colorspace=rgb"></code>
-![](//images.example.com/image?src=buildings/cathedral.jpg&stats=0&width=200&icc=UncoatedFOGRA29&intent=relative&bpc=1&colorspace=rgb)
+<code class="imagecode">&lt;img src="//images.example.com/image?src=products/coffee.jpg&width=200**&icc=UncoatedFOGRA29&intent=relative&bpc=1**&colorspace=rgb"></code>
+![](//images.example.com/image?src=products/coffee.jpg&stats=0&width=200&icc=UncoatedFOGRA29&intent=relative&bpc=1&colorspace=rgb)
 
 <a name="option_colorspace"></a>
 ### colorspace ![Premium Edition](images/icon-premium-16.png)
@@ -578,14 +580,14 @@ embedded colour profile last.
 
 The unaltered RGB sample image:
 
-<code class="imagecode">&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&width=200"></code>
-![](//images.example.com/image?src=buildings/cathedral.jpg&stats=0&width=200)
+<code class="imagecode">&lt;img src="//images.example.com/image?src=products/coffee.jpg&width=200"></code>
+![](//images.example.com/image?src=products/coffee.jpg&stats=0&width=200)
 
 ![Premium Edition](images/icon-premium-16.png) The sample image with a CMYK print
 colour profile applied, converted back to RGB for display purposes:
 
-<code class="imagecode">&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&width=200&icc=USSheetfedUncoated&intent=relative**&colorspace=rgb**"></code>
-![](//images.example.com/image?src=buildings/cathedral.jpg&stats=0&width=200&icc=USSheetfedUncoated&intent=relative&colorspace=rgb)
+<code class="imagecode">&lt;img src="//images.example.com/image?src=products/coffee.jpg&width=200&icc=USSheetfedUncoated&intent=relative**&colorspace=rgb**"></code>
+![](//images.example.com/image?src=products/coffee.jpg&stats=0&width=200&icc=USSheetfedUncoated&intent=relative&colorspace=rgb)
 
 <a name="option_tile"></a>
 ### tile
@@ -616,17 +618,17 @@ trim the final size of each image.
 This example shows tiles 1 and 4, with a grid size of 4:
 
 <code class="imagecode">
-&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&width=200**&tile=1:4**">  
-&lt;img src="//images.example.com/image?src=buildings/cathedral.jpg&width=200**&tile=4:4**">
+&lt;img src="//images.example.com/image?src=products/coffee.jpg&width=200**&tile=1:4**">  
+&lt;img src="//images.example.com/image?src=products/coffee.jpg&width=200**&tile=4:4**">
 </code>
 <table>
 	<tr>
-		<td><img src="//images.example.com/image?src=buildings/cathedral.jpg&stats=0&width=200&tile=1:4" /></td>
+		<td><img src="//images.example.com/image?src=products/coffee.jpg&stats=0&width=200&tile=1:4" /></td>
 		<td></td>
 	</tr>
 	<tr>
 		<td></td>
-		<td><img src="//images.example.com/image?src=buildings/cathedral.jpg&stats=0&width=200&tile=4:4" /></td>
+		<td><img src="//images.example.com/image?src=products/coffee.jpg&stats=0&width=200&tile=4:4" /></td>
 	</tr>
 </table>
 
@@ -641,7 +643,7 @@ Valid values are true or false, 1 or 0.
 
 The following link downloads the sample image as a `png` file:  
 <code>
-[http://images.example.com/image?src=buildings/cathedral.jpg&format=png**&attach=1**](http://images.example.com/image?src=buildings/cathedral.jpg&format=png&attach=1)
+[http://images.example.com/image?src=products/coffee.jpg&format=png**&attach=1**](http://images.example.com/image?src=products/coffee.jpg&format=png&attach=1)
 </code>
 
 <a name="option_xref"></a>
@@ -713,18 +715,18 @@ system's default template is **not** applied, your chosen template replaces it.
 
 A 200x200 size `jpg` image with typical options for inclusion on a web site:
 
-<code class="imagecode">&lt;img class="border" src="//images.example.com/image?src=buildings/cathedral.jpg**&format=jpg&quality=80&colorspace=rgb&width=200&height=200&strip=1**"></code>
-<img class="border" src="//images.example.com/image?src=buildings/cathedral.jpg&stats=0&format=jpg&quality=80&colorspace=rgb&width=200&height=200&strip=1" />
+<code class="imagecode">&lt;img class="border" src="//images.example.com/image?src=products/coffee.jpg**&format=jpg&quality=80&colorspace=rgb&width=200&height=200&strip=1**"></code>
+<img class="border" src="//images.example.com/image?src=products/coffee.jpg&stats=0&format=jpg&quality=80&colorspace=rgb&width=200&height=200&strip=1" />
 
 The same image and options, defined instead using the sample template `SmallJpeg`:
 
-<code class="imagecode">&lt;img class="border" src="//images.example.com/image?src=buildings/cathedral.jpg**&tmp=smalljpeg**"></code>
-<img class="border" src="//images.example.com/image?src=buildings/cathedral.jpg&stats=0&tmp=smalljpeg" />
+<code class="imagecode">&lt;img class="border" src="//images.example.com/image?src=products/coffee.jpg**&tmp=smalljpeg**"></code>
+<img class="border" src="//images.example.com/image?src=products/coffee.jpg&stats=0&tmp=smalljpeg" />
 
 Options in addition to the template name are either added to or replace those in the template:
 
-<code class="imagecode">&lt;img class="border" src="//images.example.com/image?src=buildings/cathedral.jpg**&tmp=smalljpeg&angle=90&quality=10**"></code>
-<img class="border" src="//images.example.com/image?src=buildings/cathedral.jpg&stats=0&tmp=smalljpeg&angle=90&quality=10" />
+<code class="imagecode">&lt;img class="border" src="//images.example.com/image?src=products/coffee.jpg**&tmp=smalljpeg&angle=90&quality=10**"></code>
+<img class="border" src="//images.example.com/image?src=products/coffee.jpg&stats=0&tmp=smalljpeg&angle=90&quality=10" />
 
 <a name="notes"></a>
 ## Usage notes
@@ -775,7 +777,7 @@ resize the result to a 200 pixel width.
 At the beginning of this guide, it was shown that you can access an image by providing no 
 options other than its filename:  
 <code>
-[http://images.example.com/image?src=buildings/cathedral.jpg](http://images.example.com/image?src=buildings/cathedral.jpg)
+[http://images.example.com/image?src=products/coffee.jpg](http://images.example.com/image?src=products/coffee.jpg)
 </code>
 
 You might think that this would return the original unaltered image, but in fact it probably
@@ -784,7 +786,7 @@ image might be quite different from the original.
 
 In order to obtain the full size original image you must instead use a different URL:  
 <code>
-[http://images.example.com/**original**?src=buildings/cathedral.jpg](http://images.example.com/original?src=buildings/cathedral.jpg)
+[http://images.example.com/**original**?src=products/coffee.jpg](http://images.example.com/original?src=products/coffee.jpg)
 </code>
 
 This command takes the mandatory [src](#option_src) parameter. It optionally accepts the
@@ -809,10 +811,10 @@ Getting responsive images in QIS is easy using the [width](#option_width) and
 
 You can either use the `<img srcset=...>` HTML tag:
 
-	<img src="https://images.example.com/image?src=buildings/cathedral.jpg&width=800"
-	  srcset="https://images.example.com/image?src=buildings/cathedral.jpg&width=480 480w,
-	          https://images.example.com/image?src=buildings/cathedral.jpg&width=800 800w,
-	          https://images.example.com/image?src=buildings/cathedral.jpg&width=1200 1200w"
+	<img src="https://images.example.com/image?src=products/coffee.jpg&width=800"
+	  srcset="https://images.example.com/image?src=products/coffee.jpg&width=480 480w,
+	          https://images.example.com/image?src=products/coffee.jpg&width=800 800w,
+	          https://images.example.com/image?src=products/coffee.jpg&width=1200 1200w"
 	   sizes="100vw">
 
 Or you can use responsive CSS with background images:
@@ -820,19 +822,19 @@ Or you can use responsive CSS with background images:
     .my-image {
         width: 480px;
 		height: 360px;
-        background-image: url("https://images.example.com/image?src=buildings/cathedral.jpg&width=480");
+        background-image: url("https://images.example.com/image?src=products/coffee.jpg&width=480");
     }
     @media screen and (min-width: 481px) and (max-width: 800px) {
         .my-image {
             width: 800px;
 			height: 600px;
-            background-image: url("https://images.example.com/image?src=buildings/cathedral.jpg&width=800");
+            background-image: url("https://images.example.com/image?src=products/coffee.jpg&width=800");
         }
     }
     @media screen and (min-width: 801px) {
         .my-image {
             width: 1200;
 			height: 900px;
-            background-image: url("https://images.example.com/image?src=buildings/cathedral.jpg&width=1200");
+            background-image: url("https://images.example.com/image?src=products/coffee.jpg&width=1200");
         }
     }
