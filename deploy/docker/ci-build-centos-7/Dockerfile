@@ -2,7 +2,7 @@
 #
 # CentOS build and testing environment.
 #
-FROM centos:7.5.1804
+FROM centos:7.6.1810
 
 LABEL maintainer="matt@quru.com" \
       description="QIS build and test environment on CentOS"

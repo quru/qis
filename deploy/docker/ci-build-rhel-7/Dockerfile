@@ -2,7 +2,7 @@
 #
 # RHEL build and testing environment.
 #
-FROM registry.access.redhat.com/rhel7:7.5 AS registered_system
+FROM registry.access.redhat.com/rhel7:7.6 AS registered_system
 
 # RH subscription variables. Pass these in as build arguments.
 ARG RH_SUBS_USER
