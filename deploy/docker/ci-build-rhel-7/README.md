@@ -29,12 +29,17 @@ by running `subscription-manager unregister` before deleting the old image.
 
 ### To run with a build server
 
+Build the image with build arg `AUTHORIZED_KEY` containing the SSH public key of
+your build server. Then:
+
     $ sudo docker run -d -p 9022:22 quru/qis-ci-build-rhel-7
-    $ ssh -p 9022 build@localhost
-    # Add the SSH key of your build server into .ssh/authorized_keys
+    # Open port 9022/tcp on the firewall of your docker host
+    # Set your build server to connect as build@<docker host> on port 9022
+
+    # Optional - customise the container
+    $ sudo docker exec -ti <container ID> /bin/bash
+    # Add more SSH public keys into .ssh/authorized_keys
     [build@0ce64dbed542 ~]$ vi .ssh/authorized_keys
     # Install any packages required by your build server, e.g.
     [build@0ce64dbed542 ~]$ sudo yum install -y java
     [build@0ce64dbed542 ~]$ exit
-    # Open port 9022/tcp on the firewall of your docker host
-    # Set your build server to connect as build@<docker host> on port 9022
