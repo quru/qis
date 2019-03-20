@@ -1,4 +1,4 @@
-PYTHON_BIN := $(shell which python3 || which python3.6 || which python3.5 || which python3.4)
+PYTHON_BIN := $(shell which python3 || which python3.7 || which python3.6 || which python3.5 || which python3.4)
 PYTHON_VER := $(shell ${PYTHON_BIN} -c 'import platform; print(platform.python_version()[:3])')
 PYTHON := python${PYTHON_VER}
 VENV_PATH := .
