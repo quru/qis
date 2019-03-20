@@ -33,7 +33,7 @@ RUN pip3 install --upgrade pip setuptools virtualenv
 # Add libmagickwand env vars
 RUN echo "export C_INCLUDE_PATH=$C_INCLUDE_PATH:/usr/include/x86_64-linux-gnu/ImageMagick-6:/usr/include/ImageMagick-6" >> /etc/profile.d/libmagickwand-dev.sh
 RUN echo "export LIBRARY_PATH=$LIBRARY_PATH:/usr/lib/x86_64-linux-gnu" >> /etc/profile.d/libmagickwand-dev.sh
-RUN echo "export PATH=$PATH:/usr/lib/x86_64-linux-gnu/ImageMagick-6.9.7/bin-Q16" >> /etc/profile.d/libmagickwand-dev.sh
+RUN echo "export PATH=$PATH:/usr/lib/x86_64-linux-gnu/ImageMagick-6.9.7/bin-q16" >> /etc/profile.d/libmagickwand-dev.sh
 RUN chmod a+x /etc/profile.d/libmagickwand-dev.sh
 
 # Create a user for building and running stuff
