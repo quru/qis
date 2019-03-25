@@ -21,7 +21,7 @@
 
 * OpenLDAP 2.4.21 or above
 
-### ImageMagick
+### ImageMagick (premium edition)
 
 * ImageMagick is a minefield
 	* See http://legacy.imagemagick.org/script/changelog.php
@@ -48,7 +48,7 @@
 	* 6.9.5-3 - 6.9.5-8 fixes further buffer overflows
 	* 6.9.7-1 - 6.9.8-0 seems OK
 
-### PDF conversion
+### PDF conversion (premium edition)
 
 * Ghostscript 8.62 works but...
 	* 9.04 or above for downscaling support (much higher quality results), but...

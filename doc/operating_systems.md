@@ -8,11 +8,12 @@ and occasionally includes runs of unstable code changes.
 
 * Ubuntu 14.04 LTS - ImageMagick 6.7.7-10 - OK
 * Ubuntu 16.04 LTS - ImageMagick 6.8.9-9 - OK
+* Ubuntu 18.04 LTS - ImageMagick 6.9.7-4 - OK
 * Red Hat Enterprise Linux 6.5 - ImageMagick 6.5.4-7 - OK
 * Red Hat Enterprise Linux 6.7 to 6.8 - ImageMagick 6.7.2-7 - OK
-* Red Hat Enterprise Linux 7.3 - ImageMagick 6.7.8-9 - buggy colour management - see below
- 
-### Red Hat Enterprise Linux 7.3
+* Red Hat Enterprise Linux 7.x - ImageMagick 6.7.8-9 - buggy colour management - see below
+
+### Red Hat Enterprise Linux 7.x
 
 ImageMagick 6.7.8-9 handles colorspace conversions and colour profiles incorrectly.
 To fix this you need to install a more recent version of ImageMagick.
