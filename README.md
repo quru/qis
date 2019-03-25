@@ -14,6 +14,8 @@ Quru also offers a Premium Edition of QIS. This consists of a more fully feature
 image processing engine, plus the option of obtaining professional services and
 commercial support, for a modestly priced annual subscription.
 
+[Try it now on your own server, on Docker, or on Amazon Web Services](doc/running.md)
+
 ## An example - HTML5 responsive images
 
 With QIS it is a breeze to serve HTML5 [responsive images](https://responsiveimages.org/)
@@ -111,211 +113,16 @@ Web interface - image details
 Web interface - image publishing  
 ![Image publisher](doc/images/mgmt_publish_800.jpg)
 
-## Architecture
+## Installation and running
 
-QIS depends on the following open source tools and applications:
-
-* Linux operating system
-* Python 3.4 or above - to run the QIS application code
-* Apache 2.4 - the web server
-* mod_wsgi Apache module - to run the QIS Python application inside Apache
-* Memcached - for caching generated images and frequently accessed data
-* PostgreSQL 9.2 or above - to store image and folder data, users, groups,
-  folder permissions and statistics
-
-And additionally for the Premium Edition:
-
-* ImageMagick - image processing library
-* Ghostscript - PDF processing library
-
-For how these should be installed and configured,
-see the [install guide](doc/install.md) and the [tuning guide](doc/tuning.md).
-
-For low or predictable loads, you can install all of these on one server. QIS
-in production has served 5 million images per day from a single server, albeit
-a fairly powerful one (8 cores and 32GB RAM, mostly scaling and cropping digital
-camera photographs, with 90% of requests served from cache).
-
-For high or variable loads, you may want to separate out the system into web and
-storage tiers. Web servers scale better as multiple small servers (rather than
-one large server), and image processing is typically CPU intensive, therefore it
-is primarily the web tier that should be scaled out. As an example:
-
-![Example web and storage tiers](doc/images/arch_scaling.jpg)
-
-This system can be scaled up and down on-demand (elastic scaling) by adding or
-removing web servers at any time. Memcached can run either on a separate server
-if the network is fast, on one "primary" web server, or configured as a cluster
-across all the permanent web servers. QIS enables
-[consistent hashing](https://en.wikipedia.org/wiki/Consistent_hashing) when
-using a Memcached cluster, but you should avoid adding/removing servers to/from
-the cluster because of the re-distribution of keys that will occur.
-
-The storage tier is harder to scale. Although in general QIS does not use the
-PostgreSQL database heavily, storing the Postgres data files on a fast disk
-or SSD is advantageous. The v9.x releases of Postgres have seen some significant
-performance improvements, so always use the latest version available. PostgreSQL
-can also be clustered and replicated.
-
-## Installation
-
-### Deploying to a server
-
-See the [install guide](doc/install.md) for how to deploy QIS from a release on GitHub.
-
-### Running in Docker
-
-For a much simpler deployment, QIS can be deployed on Docker. There is a `docker-compose`
-script that will set up and run almost everything for you. The only extra setup required
-is a volume on the host in which to store the persistent data, and a couple of
-environment variables.
-
-If you are familiar with Docker commands, see the
-[docker-compose](deploy/docker/docker-compose.yml) script and the
-[application server image notes](deploy/docker/qis-as/README.md) for more information.
-
-You can find pre-built QIS images on the [Docker Hub](https://hub.docker.com/u/quru/).
+See the [installation and running guide](doc/running.md) for how to run QIS on your
+own server, on Docker, or on Amazon Web Services.
 
 ## Development
 
-To run QIS in a development environment, you will need a Memcached and a PostgreSQL
-service, Python 3.4 or above, and the Python development tools `pip`, `wheel`, and
-`virtualenv`. Development is possible on Linux or on Mac OS X.
-
-### Operating system packages
-
-See the [install guide](doc/install.md) for the operating system packages needed.
-
-The following development packages (here on a Fedora-based system) are also
-required in order to build and install the application's Python dependencies:
-
-	$ sudo yum install -y gcc gcc-c++ git curl wget make tar zip unzip which \
-	                   java-1.8.0-openjdk-headless \
-	                   postgresql-devel openldap-devel openssl-devel libmemcached-devel \
-	                   python35u-devel python35u-pip
-
-### Starting development
-
-Get the code, create a Python 3 virtualenv and install the Python dependencies:
-
-	$ git clone https://github.com/quru/qis.git
-	$ cd qis
-	$ make venv
-
-Create 2 empty Postgres databases, `qis-cache` and `qis-mgmt`.
-
-In the `conf` folder, create a file `local_settings.py` and add your local settings:
-
-    # Set the project directory
-    INSTALL_DIR = "/Users/matt/development/qis/"
-
-    DOCS_BASE_DIR = INSTALL_DIR + "doc/"
-    ICC_BASE_DIR = INSTALL_DIR + "icc/"
-    IMAGES_BASE_DIR = INSTALL_DIR + "images/"
-    LOGGING_BASE_DIR = INSTALL_DIR + "logs/"
-
-    # Don't require HTTPS when developing
-    INTERNAL_BROWSING_SSL = False
-    SESSION_COOKIE_SECURE = INTERNAL_BROWSING_SSL
-
-    # Don't collect anonymous usage stats
-    USAGE_DATA_URL = ""
-
-    # Use random bytes for the session secret key (and change this value in production!)
-    SECRET_KEY = b'>8F\xa7\xeab\x1f\x85\xc8\xc0\xab\xfd-\xb0\x85T'
-
-    # Connection address of the Memcached service
-    MEMCACHED_SERVERS = ["localhost:11211"]
-
-    # Connection address and login credentials for the Postgres databases
-    CACHE_DATABASE_CONNECTION = "postgresql+psycopg2://pguser:pgpwd@localhost:5432/qis-cache"
-    MGMT_DATABASE_CONNECTION = "postgresql+psycopg2://pguser:pgpwd@localhost:5432/qis-mgmt"
-
-Where:
-
-* `INSTALL_DIR` is the full path to the project directory on your machine
-* `SECRET_KEY` is a random value that you can generate by running
-  `python3 -c 'import os; print(os.urandom(16))'`. You must change this value and
-  keep it secret when running in production.
-* `MEMCACHED_SERVERS` is a list of Memcached servers to use,
-  usually only 1 in development
-* `CACHE_DATABASE_CONNECTION` and `MGMT_DATABASE_CONNECTION` provide the Postgres
-  usernames and passwords (`pguser:pgpwd` above), service host name and port, and
-  database name
-  * If Postgres is running locally and authentication is `trust` you can specify
-    just the database name: `postgresql+psycopg2:///qis-mgmt`
-
-To see the default values for these settings and the other settings that you can
-override, see the [default settings file](src/imageserver/conf/base_settings.py).
-
-### Running the development server
-
-To run the development server in debug mode with verbose logging, run:
-
-    $ make runserver
-    ...
-    [checks/installs Python libraries]
-    ...
-    * Serving Flask app "imageserver.flask_app" (lazy loading)
-    * Environment: development
-    * Debug mode: on
-    * Running on http://127.0.0.1:5000/ (Press CTRL+C to quit)
-    * Restarting with stat
-    2018-06-25 17:10:29,831 qis_76290  INFO     Quru Image Server v4.0.0 engine startup
-    2018-06-25 17:10:29,834 qis_76290  INFO     Using settings base_settings + local_settings.py
-    2018-06-25 17:10:29,834 qis_76290  INFO     *** Debug mode ENABLED ***
-    2018-06-25 17:10:29,879 qis_76290  INFO     Cache control database opened.
-    2018-06-25 17:10:29,970 qis_76290  INFO     Management + stats database opened
-    2018-06-25 17:10:29,970 qis_76290  INFO     Housekeeping task scheduler started
-    2018-06-25 17:10:30,019 qis_76290  INFO     Loaded imaging library: Pillow version: 5.1.0
-
-On first run, the required database tables and default data will be created
-automatically. Watch the output for the creation of the `admin` user account,
-and make a note of the password. If you miss the output, you can also find the
-`admin` user account details in `logs/qis.log`.
-
-In debug mode, the development server restarts automatically when you save a change
-to a Python file. The un-minified versions of JavaScript files are served up,
-and you can edit the JavaScript files and just refresh your browser to bring in
-the changes. When your changes are complete, to minify the JavaScript files for
-deployment, run:
-
-    $ make webpack
-
-To simulate a production environment and run the development server without debug
-mode, run:
-
-    $ export FLASK_ENV=production
-    $ make runserver
-    ...
-    [checks/installs Python libraries]
-    ...
-    * Serving Flask app "imageserver.flask_app" (lazy loading)
-    * Environment: production
-      WARNING: Do not use the development server in a production environment.
-      Use a production WSGI server instead.
-    * Debug mode: off
-    * Running on http://0.0.0.0:5000/ (Press CTRL+C to quit)
-
-### Building the QIS packages
-
-To run QIS in production, you will need files:
-
-* `QIS-4.x.x.tar.gz` - the main QIS Python web application
-* `QIS-libs.tar.gz` - the application's Python dependencies,
-  including compiled C extensions as platform-specific binaries
-
-To generate these files from the development project, run:
-
-    $ make distribute
-    ...
-    [build script output]
-    ...
-    $ ls -l dist/
-    -rw-r--r--  1 matt  staff  56083009 27 Jun 11:08 QIS-4.0.0.tar.gz
-    -rw-r--r--  1 matt  staff   9450227 27 Jun 11:08 QIS-libs.tar.gz
-
-With these files prepared you should then follow the [install guide](doc/install.md).
+If you are a developer wanting to make code changes to the application, see the
+[development guide](doc/development.md) for how to set up the project and run
+the application in development mode.
 
 ## Important recent changes
 

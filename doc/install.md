@@ -6,9 +6,9 @@ and be familiar with using the command line interface and some common utilities.
 If you want to read about what QIS does before installing it, read the
 [application introduction and overview](overview.md).
 
-As an alternative to manually installing everything as described here, QIS can
-also be run inside Docker using the supplied Dockerfiles and
-[docker-compose](../deploy/docker/docker-compose.yml) script.
+As an alternative to manually installing everything as described here,
+pre-installed QIS packages can also be run [using Docker](running.md#docker)
+or on [Amazon Web Services (AWS)](running.md#aws).
 
 ## Overview
 
@@ -111,7 +111,7 @@ for more information. Typically though the following settings are updated:
   (e.g. `512MB`)
 * `effective_cache_size` - the value of `shared_buffers` plus however much server
   RAM you expect to be free after all other applications are running
-* `checkpoint_segments` - set to `16`
+* `checkpoint_segments` - set to `16` (note this setting was removed in Postgres 9.6)
 * `checkpoint_completion_target` - set to `0.9`
 
 If Apache will be installed on a different server, enable TCP/IP connections to
