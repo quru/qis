@@ -240,53 +240,65 @@ or Docker for Windows this is not necessary.
 * On your Docker host, create a directory to contain the docker-compose files
   and the permanent QIS data:
 
-    $ mkdir -p qis/data
-    $ cd qis
-    $ wget https://raw.githubusercontent.com/quru/qis/master/deploy/docker/docker-compose.yml
-    ...
-    $ ls -l
-    total 8
-    drwxr-xr-x  2 matt  users    64 27 Mar 11:26 data
-    -rw-r--r--  1 matt  users  1452 27 Mar 11:26 docker-compose.yml
+```
+  $ mkdir -p qis/data
+  $ cd qis
+  $ wget https://raw.githubusercontent.com/quru/qis/master/deploy/docker/docker-compose.yml
+  ...
+  $ ls -l
+  total 8
+  drwxr-xr-x  2 matt  users    64 27 Mar 11:26 data
+  -rw-r--r--  1 matt  users  1452 27 Mar 11:26 docker-compose.yml
+```
 
 * In the same directory, create a new file `.env` with contents:
 
-    QIS_HOSTNAME=images.example.com
-    QIS_DATA_DIR=./data
+```
+  QIS_HOSTNAME=images.example.com
+  QIS_DATA_DIR=./data
+```
 
 * Set the value of `QIS_HOSTNAME` above to the host name of your Docker host
 * Thanks to docker-compose [issue #3513](https://github.com/docker/compose/issues/3513)
   the `build` lines in the docker-compose file need to be removed. You can do this
   quickly by running:
 
-    $ sed -i '/build:/d' docker-compose.yml       (on Linux)
-    or
-    $ sed -i '' '/build:/d' docker-compose.yml    (on Mac)
+```
+  $ sed -i '/build:/d' docker-compose.yml       (on Linux)
+  or
+  $ sed -i '' '/build:/d' docker-compose.yml    (on Mac)
+```
 
 * You can then download the QIS Docker images from [Docker Hub](https://cloud.docker.com/u/quru/):
 
-    $ $ docker-compose pull
-    Pulling qis_db    ... done
-    Pulling qis_cache ... done
-    Pulling qis_as    ... done
+```
+  $ docker-compose pull
+  Pulling qis_db    ... done
+  Pulling qis_cache ... done
+  Pulling qis_as    ... done
+```
 
 * Optional - if you would rather build the images yourself than download them,
   you can do so by using the Dockerfiles from the sub-folders at
   https://github.com/quru/qis/tree/master/deploy/docker
 * You can then launch QIS:
 
-    $ docker-compose up -d
-    Creating network "qis_default" with the default driver
-    Creating qis_qis_cache_1 ... done
-    Creating qis_qis_db_1    ... done
-    Creating qis_qis_as_1    ... done
+```
+  $ docker-compose up -d
+  Creating network "qis_default" with the default driver
+  Creating qis_qis_cache_1 ... done
+  Creating qis_qis_db_1    ... done
+  Creating qis_qis_as_1    ... done
+```
 
 * Go to `http://<HOST NAME>/` in your web browser and you should get back
   a "Quru Image Server" web page
 * On your Docker host, find out what the generated admin password is:
 
-    $ grep 'admin user' data/logs/qis/qis.log
-    2019-03-27 11:49:08,982 qis_31  INFO  Created default admin user with password PCKJ9XXnTB
+```
+  $ grep 'admin user' data/logs/qis/qis.log
+  2019-03-27 11:49:08,982 qis_31  INFO  Created default admin user with password PCKJ9XXnTB
+```
 
 * Then on the QIS web page, click Sign In
 * Your web browser will show a security warning because the pre-installed HTTPS
