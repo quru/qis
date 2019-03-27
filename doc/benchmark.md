@@ -18,10 +18,12 @@ test from.
 
 ## Setup
 
-The script requests images from the `test_images` folder on the server, so this
-needs to be restored if it has been removed. In the folder permissions, you need
-to enable _View and download_ permission for the `test_images` folder and the
-`Public` group.
+The script requests images from a `test_images` folder on the server. This folder
+is no longer provided in the QIS releases but you can download it from GitHub at:  
+https://github.com/quru/qis/tree/master/images/test_images
+
+In the folder permissions, you need to enable _View and download_ permission for
+the `test_images` folder and the `Public` group.
 
 To suppress HTTP 503 errors and allow the test script to clear cached images
 as it goes, add the `BENCHMARKING` setting to your `local_settings.py` file.

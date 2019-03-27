@@ -1,38 +1,16 @@
 # Running QIS
 
 * [On your own server](#diy)
-* [On Docker](#docker)
 * [On Amazon Web Services (AWS)](#aws)
+* [On Docker](#docker)
 * [Multi-server deployments](#architecture)
 
 <a name="diy"></a>
 ## Manual installation
 
-If you have your own server, and the thought of installing operating system
-packages and editing configuration files makes you happy, you can install QIS
-and its components manually by following the [installation guide](install.md).
-
-<a name="docker"></a>
-## Running in Docker
-
-For a much simpler deployment, QIS can be deployed on Docker. Quru provides 3
-Docker images and a `docker-compose` script that will set up and run everything
-for you on a single host.
-
-### Instructions - Docker
-
-TODO
-
-### Customising the deployment
-
-TODO
-
-If you are familiar with Docker commands, see the
-[docker-compose](../deploy/docker/docker-compose.yml) script and the
-[application server image notes](../deploy/docker/qis-as/README.md) for more information.
-
-You can find pre-built QIS images on the [Docker Hub](https://cloud.docker.com/u/quru/),
-or you can build them locally from the files in GitHub by running `docker-compose build`.
+If you have your own server, and the thought of installing lot of operating
+system packages makes you happy, you can install QIS and its components manually
+by following the [installation guide](install.md).
 
 <a name="aws"></a>
 ## Running on Amazon Web Services (EC2)
@@ -43,11 +21,223 @@ in the EU West (Ireland) region.
 
 ### Instructions - AWS
 
+* Register if you need to and log into AWS at https://aws.amazon.com/
+* Go to the EC2 service
+* At the top of the screen, select the _EU West (Ireland)_ region
+* Choose Create Instance / Launch Instance
+* At _Step 1: Choose an AMI_ click the _Community AMIs_ filter and search for
+  `qis` or the exact AMI number as shown above
+* The QIS AMI should be shown, click Select
+* At _Step 2: Choose an Instance Type_ choose:
+  * `t2.micro` if you just want a lightweight image server or a quick trial
+  * `t2.medium` for a very capable image server
+    (the AMI is pre-configured for this size - 2 CPU, 4GB RAM)
+  * Something larger if you're getting serious (increase the cache size and number
+    of workers after launch, see below)
+* At _Step 3: Configure Instance Details_ the defaults will work but can be customised
+* At _Step 4: Add Storage_ allow enough disk space for your image library
+* At _Step 5: Add Tags_ a name tag can be useful but is not required
+* At _Step 6: Configure Security Group_ create or select a security group that allows:
+  * SSH TCP port 22 (optionally restrict the source to your own IP address)
+  * HTTP TCP port 80 from anywhere
+  * HTTPS TCP port 443 from anywhere
+* Click Review and Launch, then (if OK), Launch
+
+The server will take a minute or so to be created.
+
+* Go to _Instances_ on the EC2 menu
+* Select the QIS server
+* When the instance state is _running_ (green icon) look for its _Public IP_
+  e.g. `34.245.143.41`, copy the value, and paste it into the address bar in
+  your web browser
+* The Quru Image Server web page will load
+* Click Sign In
+* Your web browser will show a security warning because the pre-installed HTTPS
+  certificate is only a testing/dummy certificate, but in this particular case
+  it is safe to ignore the warning and continue
+* Log into QIS with username `admin` and password `qisadmin`
+* Click Administrator in the top menu, then Edit Account
+* Enter a new password into the Password and Confirm Password boxes,
+  then click Apply to set the new password for the `admin` user
+* You can now browse the sample images and explore the admin console
+* You might want to [review the management functions](overview.md#repository),
+  [set up access permissions](overview.md#access), or just try requesting some
+  images directly:
+  * `https://<IP ADDRESS>/image?src=/samples/penguin.jpg&width=400`
+  * `https://<IP ADDRESS>/image?src=/samples/penguin.jpg&width=400&left=0.2&top=0.3&right=0.8&bottom=0.8`
+
+### Completing the deployment
+
+If you want to use the server in production, a number of additional steps are
+required to complete the setup. These require the use of the command line interface
+and knowledge of how to change configuration files on a Linux server, so it would
+be nice to automate all of this one day.
+
+#### Assign a public host name
+
+To reach the server on a proper host name instead of its IP address, you need to
+create a public DNS entry for the server. You can use Amazon's Route 53 service
+to do this or the DNS service associated with your own domain name. If using your
+own DNS you need to give the server a static IP address that doesn't change.
+In AWS, go to _Elastic IPs_ on the EC2 menu, create a new elastic IP address and
+assign it to the QIS server. Finally create a DNS entry that links your server's
+public host name to its IP address.
+
+With the public DNS in place, log into the server:
+
+    $ ssh -i <your-ec2-key-file> ubuntu@<public-ip-address>
+
+Set the host name (here `images.example.com`) in the web server and QIS.  
+Edit `/etc/apache2/sites-enabled/qis.conf` and set the `ServerName` value:
+
+    ServerName images.example.com
+
+Edit `/etc/apache2/sites-enabled/qis_ssl.conf` and set the `ServerName` value:
+
+    ServerName images.example.com
+
+Edit `/opt/qis/conf/local_settings.py` and set the `PUBLIC_HOST_NAME` value:
+
+    PUBLIC_HOST_NAME="images.example.com"
+
+Finally restart the web server:
+
+    $ sudo systemctl restart apache2
+
+And check that your image server is now reachable on its public host name, 
+e.g. `http://images.example.com/`.
+
+#### Install a proper TLS / HTTPS certificate
+
+Once your public host name is set up, to serve images over HTTPS and access the
+admin console without a security warning a proper TLS certificate needs to be
+installed. You can obtain a free and automatically renewing TLS certificate by
+[installing the Certbot package](https://certbot.eff.org/lets-encrypt/ubuntubionic-apache).
+
+Or if you have your own TLS certificates you will need to copy them onto the server
+into:
+
+    /etc/ssl/certs/      (the cert or pem files) and
+    /etc/ssl/private/    (the key file)
+
+Then edit `/etc/apache2/sites-enabled/qis_ssl.conf` and set:
+
+    SSLCertificateFile      /etc/ssl/certs/<YOUR CERT FILE>
+    SSLCertificateKeyFile   /etc/ssl/private/<YOUR KEY FILE>
+
+Finally check that the new configuration is OK and if so restart the web server:
+
+    $ sudo apache2ctl configtest
+    Syntax OK
+    $ sudo systemctl restart apache2
+
+Your image server should now be reachable on HTTPS without security warnings
+(with a green padlock in the web browser), e.g. `https://images.example.com/`.
+
+#### Setting the in-memory cache size
+
+If you did not deploy a `t2.medium` instance (or a server with 4GB of memory)
+then you will need to adjust the memory limit of the Memcached service up or down.
+
+The Memcached limit needs to be set to a value so that when Memcached is full the
+server is not using swap space and still has enough spare memory to run everything
+else (Apache, Postgres, QIS image processing, and the operating system when all
+are on a single server). This is some value that is always less than the server's
+total memory.
+
+The default Memcached limit in the AMI is 2GB. To change it, edit the file
+`/etc/memcached.conf` and change the line:
+
+    -m <NEW VALUE IN MB>
+
+Then restart the Memcached service:
+
+    $ sudo systemctl restart memcached
+
+#### Setting the number of worker processes
+
+If you did not deploy a `t2.medium` instance (or a server with 2 CPUs)
+then you might want to adjust the number of QIS worker processes up or down.
+
+Each worker process can handle up to 15 simultaneous image requests. This is how
+many images can be generated at once, it is not a limit on the number of users
+that can use your web site, which is much much higher. Once an image has been
+fetched or generated it is passed over to Apache to serve to the user and the
+worker process becomes free again.
+
+If there are too few workers the server may be under-utilised, too many and the
+server may become overloaded. A guideline is to use 1 worker process per server
+CPU core, minus a couple if Postgres and Memcached are on the same server, but
+no lower than 2.
+
+QIS has separate settings for HTTP and HTTPS traffic, but it is expected that
+most images will be served via just one of these. The default number of workers
+in the AMI is 2. To change this, edit `/etc/apache2/sites-enabled/qis.conf`
+for HTTP and `/etc/apache2/sites-enabled/qis_ssl.conf` for HTTPS, and change the
+line:
+
+    WSGIDaemonProcess ... processes=<NEW NUMBER> ...
+
+Check that the new configuration is OK and if so restart the web server:
+
+    $ sudo apache2ctl configtest
+    Syntax OK
+    $ sudo systemctl restart apache2
+
+#### Setting up QIS
+
+Aside from the public host name already set above, only one setting needs to be
+changed initially, which is a "secret key" value to use for securing login
+sessions. You can generate a new secret key by running:
+
+    $ pwgen -s 32 1
+    vTSMt2JZqQB8QKmPUhQy4SNm3wA8OWD3
+
+Edit the QIS local settings file `/opt/qis/conf/local_settings.py` and set:
+
+    SECRET_KEY="vTSMt2JZqQB8QKmPUhQy4SNm3wA8OWD3"
+
+using your own value in place of this example.
+
+If QIS is being deployed across multiple servers with a load balancer, set the
+same value for SECRET_KEY on all servers, so that the same login session will
+work across all of the servers.
+
+For the full list of available settings, see the file `/opt/qis/src/imageserver/conf/base_settings.py`.
+Do not edit `base_settings.py` directly because this file will be overwritten if
+you upgrade QIS. To change a setting, copy it into `local_settings.py` and set
+the new value there.
+
+After changing the settings restart the web server:
+
+    $ sudo systemctl restart apache2
+
+#### Advanced setup
+
+For more advanced setup and tuning information, see the [install guide](install.md)
+and the [tuning guide](tuning.md).
+
+<a name="docker"></a>
+## Running in Docker
+
+Quru provides 3 Docker images and a `docker-compose` script that will set up and
+run everything for you on a single host. Persistent files (your images, the QIS
+database, and log files) are stored in a permanent directory on the host.
+
+### Instructions - Docker
+
 TODO
 
-### Customising the deployment
+### Completing the deployment
 
 TODO
+
+If you are familiar with Docker commands, see the
+[docker-compose](../deploy/docker/docker-compose.yml) script and the
+[application server image notes](../deploy/docker/qis-as/README.md) for more information.
+
+You can find pre-built QIS images on the [Docker Hub](https://cloud.docker.com/u/quru/),
+or you can build them locally from the files in GitHub by running `docker-compose build`.
 
 <a name="architecture"></a>
 ## Deployment architecture for high traffic / high loads

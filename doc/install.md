@@ -283,6 +283,9 @@ Installation instructions are provided by the certificate suppliers, but general
 involve copying the files onto your server and setting the locations to them in the
 file `/etc/httpd/conf.d/qis-ssl.conf`.
 
+The [Certbot package](https://certbot.eff.org/) can be installed to automate the
+installation and renewal of Let's Encrypt TLS certificates.
+
 ### Optional - Set the cross-domain policy
 
 Web browsers allow images, JavaScript and CSS files to be loaded from any domain.
