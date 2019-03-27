@@ -3,7 +3,7 @@
 * [On your own server](#diy)
 * [On Amazon Web Services (AWS)](#aws)
 * [On Docker](#docker)
-* [Multi-server deployments](#architecture)
+* [Architecture for high availability or high loads](#architecture)
 
 <a name="diy"></a>
 ## Manual installation
@@ -50,8 +50,7 @@ The server will take a minute or so to be created.
 * When the instance state is _running_ (green icon) look for its _Public IP_
   e.g. `34.245.143.41`, copy the value, and paste it into the address bar in
   your web browser
-* The Quru Image Server web page will load
-* Click Sign In
+* When the "Quru Image Server" web page has loaded, click Sign In
 * Your web browser will show a security warning because the pre-installed HTTPS
   certificate is only a testing/dummy certificate, but in this particular case
   it is safe to ignore the warning and continue
@@ -114,7 +113,7 @@ admin console without a security warning a proper TLS certificate needs to be
 installed. You can obtain a free and automatically renewing TLS certificate by
 [installing the Certbot package](https://certbot.eff.org/lets-encrypt/ubuntubionic-apache).
 
-Or if you have your own TLS certificates you will need to copy them onto the server
+Or if you have your own TLS certificate you will need to copy it onto the server
 into:
 
     /etc/ssl/certs/      (the cert or pem files) and
@@ -132,7 +131,7 @@ Finally check that the new configuration is OK and if so restart the web server:
     $ sudo systemctl restart apache2
 
 Your image server should now be reachable on HTTPS without security warnings
-(with a green padlock in the web browser), e.g. `https://images.example.com/`.
+(showing a green padlock in the web browser), e.g. `https://images.example.com/`.
 
 #### Setting the in-memory cache size
 
@@ -222,25 +221,173 @@ and the [tuning guide](tuning.md).
 
 Quru provides 3 Docker images and a `docker-compose` script that will set up and
 run everything for you on a single host. Persistent files (your images, the QIS
-database, and log files) are stored in a permanent directory on the host.
+database, and log files) are stored in a permanent directory on the host. Running
+QIS in a multi-host environment with Kubernetes or Docker Swarm is beyond the
+scope of this guide.
 
 ### Instructions - Docker
 
-TODO
+Note: When using Docker for Linux, you will likely need to prefix the `docker`
+and `docker-compose` commands below with `sudo`. When using Docker for Mac
+or Docker for Windows this is not necessary.
+
+* Firstly install Docker and `docker-compose`, and get to be familiar with how
+  images run as containers, how docker-compose scripts work, and how volumes can
+  be mounted inside containers
+* On your Docker host, shut down any web servers or services that are already
+  running on ports 80 or 443
+* On your Docker host, create a directory to contain the docker-compose files
+  and the permanent QIS data:
+
+    $ mkdir -p qis/data
+    $ cd qis
+    $ wget https://raw.githubusercontent.com/quru/qis/master/deploy/docker/docker-compose.yml
+    ...
+    $ ls -l
+    total 8
+    drwxr-xr-x  2 matt  users    64 27 Mar 11:26 data
+    -rw-r--r--  1 matt  users  1452 27 Mar 11:26 docker-compose.yml
+
+* In the same directory, create a new file `.env` with contents:
+
+    QIS_HOSTNAME=images.example.com
+    QIS_DATA_DIR=./data
+
+* Set the value of `QIS_HOSTNAME` above to the host name of your Docker host
+* Thanks to docker-compose [issue #3513](https://github.com/docker/compose/issues/3513)
+  the `build` lines in the docker-compose file need to be removed. You can do this
+  quickly by running:
+
+    $ sed -i '/build:/d' docker-compose.yml       (on Linux)
+    or
+    $ sed -i '' '/build:/d' docker-compose.yml    (on Mac)
+
+* You can then download the QIS Docker images from [Docker Hub](https://cloud.docker.com/u/quru/):
+
+    $ $ docker-compose pull
+    Pulling qis_db    ... done
+    Pulling qis_cache ... done
+    Pulling qis_as    ... done
+
+* Optional - if you would rather build the images yourself than download them,
+  you can do so by using the Dockerfiles from the sub-folders at
+  https://github.com/quru/qis/tree/master/deploy/docker
+* You can then launch QIS:
+
+    $ docker-compose up -d
+    Creating network "qis_default" with the default driver
+    Creating qis_qis_cache_1 ... done
+    Creating qis_qis_db_1    ... done
+    Creating qis_qis_as_1    ... done
+
+* Go to `http://<HOST NAME>/` in your web browser and you should get back
+  a "Quru Image Server" web page
+* On your Docker host, find out what the generated admin password is:
+
+    $ grep 'admin user' data/logs/qis/qis.log
+    2019-03-27 11:49:08,982 qis_31  INFO  Created default admin user with password PCKJ9XXnTB
+
+* Then on the QIS web page, click Sign In
+* Your web browser will show a security warning because the pre-installed HTTPS
+  certificate is only a testing/dummy certificate, but in this particular case
+  it is safe to ignore the warning and continue
+* Log into QIS with username `admin` and password from above
+* You can now browse the sample images and explore the admin console
+* You might want to [review the management functions](overview.md#repository),
+  [set up access permissions](overview.md#access), or just try requesting some
+  images directly:
+  * `https://<HOST NAME>/image?src=/samples/penguin.jpg&width=400`
+  * `https://<HOST NAME>/image?src=/samples/penguin.jpg&width=400&left=0.2&top=0.3&right=0.8&bottom=0.8`
 
 ### Completing the deployment
 
-TODO
+If you want to use the server in production, a number of additional steps are
+required to complete the setup. These will require you to customise the docker-compose
+file and override configuration files inside the Docker images.
 
-If you are familiar with Docker commands, see the
-[docker-compose](../deploy/docker/docker-compose.yml) script and the
-[application server image notes](../deploy/docker/qis-as/README.md) for more information.
+#### Install a proper TLS / HTTPS certificate
 
-You can find pre-built QIS images on the [Docker Hub](https://cloud.docker.com/u/quru/),
-or you can build them locally from the files in GitHub by running `docker-compose build`.
+To serve images over HTTPS and access the admin console without a security warning
+a proper TLS certificate needs to be installed. You can obtain a free and automatically
+renewing TLS certificate by
+[adding the Certbot package](https://certbot.eff.org/lets-encrypt/ubuntubionic-apache)
+into the `qis-as` image or into the container at runtime.
+
+If you have your own TLS certificate you can make it available to the `qis-as`
+service by placing the files on your Docker host and defining a new 
+[Docker secret](https://docs.docker.com/compose/compose-file/#secrets) for each
+file. Add the secrets to the `qis-as` service in the docker-compose file.
+
+With the secrets in place you will need to replace the file
+`/etc/apache2/sites-enabled/qis_ssl.conf` in the `qis-as` service with a copy
+that has these lines changed:
+
+    SSLCertificateFile      /run/secrets/<CERT FILE SECRET>
+    SSLCertificateKeyFile   /run/secrets/<KEY FILE SECRET>
+
+You can do this by adding a new volume to the `qis-as` service in the
+docker-compose file that overwrites the original file in the container.
+
+If all goes to plan your image server should now be reachable on HTTPS without
+any security warnings (showing a green padlock in the web browser).
+
+#### Setting the in-memory cache size
+
+The docker-compose file limits the in-memory cache size to 512MB. If you want to
+change this, edit `docker-compose.yml` and change the lines for the `qis-cache`
+service:
+
+    mem_limit: 512M
+    environment:
+      - MEMCACHED_SIZE=512
+
+Then restart the service:
+
+    $ docker-compose up -d
+
+#### Setting the number of worker processes
+
+Each worker process can handle up to 15 simultaneous image requests. This is how
+many images can be generated at once, it is not a limit on the number of users
+that can use your web site, which is much much higher. Once an image has been
+fetched or generated it is passed over to Apache to serve to the user and the
+worker process becomes free again.
+
+If there are too few workers the server may be under-utilised, too many and the
+server may become overloaded. A guideline is to use 1 worker process per allocated
+CPU core.
+
+The docker-compose file sets the number of HTTP and HTTPS workers to 2 each.
+If you want to change this, edit `docker-compose.yml` and change the lines for
+the `qis-as` service:
+
+    environment:
+      - HTTP_PROCESSES=2
+      - HTTPS_PROCESSES=2
+
+Then restart the service:
+
+    $ docker-compose up -d
+
+#### Setting up QIS
+
+A full list of settings can be found in the `qis-as` image in the file
+`/opt/qis/src/imageserver/conf/base_settings.py`, but the Docker image contains
+a file `/opt/qis/conf/local_settings.py` that applies the local configuration.
+
+It should therefore be possible to apply custom settings by mounting a custom
+`local_settings.py` file in the docker-compose file. However at present some of
+the settings in `local_settings.py` are always overwritten by the Docker scripts
+on startup. [Issue #26](https://github.com/quru/qis/issues/26) has been raised
+to fix this.
+
+#### Advanced setup
+
+For more advanced setup and tuning information, see the [install guide](install.md)
+and the [tuning guide](tuning.md).
 
 <a name="architecture"></a>
-## Deployment architecture for high traffic / high loads
+## Deployment architecture for high availability or high loads
 
 QIS depends on the following open source tools and applications:
 
@@ -285,3 +432,6 @@ PostgreSQL database heavily, storing the Postgres data files on a fast disk
 or SSD is advantageous. The v9.x releases of Postgres have seen some significant
 performance improvements, so always use the latest version available. PostgreSQL
 can also be clustered and replicated.
+
+The above architecture can be deployed using servers, or using containers managed
+by Docker Swarm, Docker Enterprise Edition, Kubernetes or OpenShift etc.
