@@ -30,7 +30,7 @@ services:
       - PG_USER=qis
       - PG_PASSWORD=qisdbpass
       - PG_SHARED_BUFFERS=256MB
-      - PG_EFFECTIVE_CACHE_SIZE=256MB
+      - PG_EFFECTIVE_CACHE_SIZE=512MB
 
   qis_cache:
     build: memcached

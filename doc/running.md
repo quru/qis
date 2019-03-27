@@ -30,10 +30,11 @@ in the EU West (Ireland) region.
 * The QIS AMI should be shown, click Select
 * At _Step 2: Choose an Instance Type_ choose:
   * `t2.micro` if you just want a lightweight image server or a quick trial
+    (reduce the cache size after launch, see below)
   * `t2.medium` for a very capable image server
     (the AMI is pre-configured for this size - 2 CPU, 4GB RAM)
-  * Something larger if you're getting serious (increase the cache size and number
-    of workers after launch, see below)
+  * Something larger if you're getting serious
+    (increase the cache size and number of workers after launch, see below)
 * At _Step 3: Configure Instance Details_ the defaults will work but can be customised
 * At _Step 4: Add Storage_ allow enough disk space for your image library
 * At _Step 5: Add Tags_ a name tag can be useful but is not required
