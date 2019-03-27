@@ -1,6 +1,10 @@
+# Unreleased
+_Changes: Add Ubuntu 18 support, new guide to running at AWS or on Docker_
+
 # v4.1.2
 _Changes: Fix bug preventing the cropping tool working on touchscreen devices
-(publisher and playground), replace application logo to match quruimageserver.com_
+(publisher and playground), replace application logo to match quruimageserver.com,
+add better sample images_
 
 To upgrade:
 
