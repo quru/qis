@@ -55,7 +55,14 @@ if [ ! -f "$FIRST_RUN_LOG_FILE" ]; then
 	
 	echo "Configured $SETTINGS_FILE at $(date)" > "$FIRST_RUN_LOG_FILE"
 
-	# First time around, bad things happen if this starts up before the database is created
+	# If a new images volume has been mounted and it's missing the sample images,
+	# copy the sample images into it
+	if [ ! -d "$QIS_HOME/images/samples" ]; then
+		cp -r $QIS_SAMPLES/* $QIS_HOME/images/
+	fi
+
+	# First time around, bad things happen if this starts up before the database
+	# is created (in the associated Postgres container)
 	echo "Waiting 30 seconds for the Postgres database to be created"
 	sleep 30s
 fi

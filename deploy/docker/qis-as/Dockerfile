@@ -32,6 +32,7 @@ RUN locale-gen en_GB.UTF-8 && update-locale LANG=en_GB.UTF-8 LC_ALL=en_GB.UTF-8
 ARG QIS_VERSION=4.1.2
 ARG QIS_USER=qis
 ARG QIS_INSTALL_DIR=/opt/qis
+ARG QIS_SAMPLES_DIR=/opt/qis-samples
 ARG WEB_USER=www-data
 
 # Ports
@@ -42,6 +43,7 @@ ENV HOSTNAME=images.example.com \
     DB_USER=qis \
     DB_PASSWORD=qispass \
     QIS_HOME=$QIS_INSTALL_DIR \
+    QIS_SAMPLES=$QIS_SAMPLES_DIR \
     HTTP_USER=$QIS_USER \
     HTTP_PROCESSES=2 \
     HTTP_THREADS=15 \
@@ -51,8 +53,8 @@ ENV HOSTNAME=images.example.com \
 # Create the application user
 RUN useradd --comment "Quru Image Server" --groups $WEB_USER --home $QIS_INSTALL_DIR --system --shell /sbin/nologin $QIS_USER
 
-# Create the app dir
-RUN mkdir -p $QIS_INSTALL_DIR
+# Create the app dirs
+RUN mkdir -p $QIS_INSTALL_DIR $QIS_SAMPLES_DIR
 
 # Install scripts
 COPY *.sh /
@@ -63,21 +65,26 @@ RUN cd /tmp && \
     curl -L "https://github.com/quru/qis/archive/v$QIS_VERSION.tar.gz" -o qis.tar.gz && \
     tar -zxvf qis.tar.gz && \
     cd qis-$QIS_VERSION && \
+    rm -rf src/tests src/*.sh src/runserver.py && \
+    rm -rf deploy/docker/ci-build-* && \
+    rm -rf doc/v* && \
+    rm -rf images/test* && \
     cp LICENSE README.md $QIS_INSTALL_DIR && \
     cp -r conf $QIS_INSTALL_DIR && \
+    cp -r deploy $QIS_INSTALL_DIR && \
     cp -r doc $QIS_INSTALL_DIR && \
     cp -r icc $QIS_INSTALL_DIR && \
     cp -r images $QIS_INSTALL_DIR && \
+    cp -r images/* $QIS_SAMPLES_DIR && \
     cp -r licences $QIS_INSTALL_DIR && \
     cp -r logs $QIS_INSTALL_DIR && \
-    rm -rf src/tests src/*.sh src/runserver.py && \
     cp -r src $QIS_INSTALL_DIR && \
     cp deploy/ubuntu16/wsgi.conf /etc/apache2/sites-available/qis-wsgi.conf && \
     cp deploy/ubuntu16/httpd.conf.sample /etc/apache2/sites-available/001-qis.conf && \
     cp deploy/ubuntu16/httpd-ssl.conf.sample /etc/apache2/sites-available/002-qis-ssl.conf && \
     cd - && \
     rm -rf /tmp/* && \
-    chown -R $QIS_USER:$QIS_USER $QIS_INSTALL_DIR
+    chown -R $QIS_USER:$QIS_USER $QIS_INSTALL_DIR $QIS_SAMPLES_DIR
 
 # Download and install Python libs
 WORKDIR $QIS_INSTALL_DIR

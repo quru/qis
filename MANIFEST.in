@@ -5,7 +5,7 @@ graft doc
 prune doc/v*
 graft icc
 graft images/samples
-prune images/test_images
+prune images/test*
 graft licences
 include logs/README
 recursive-include src/imageserver *.css *.js *.png *.gif *.bmp *.ico *.jpg *.jpeg *.sass *.scss *.html *.htm *.txt *.sh
