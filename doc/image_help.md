@@ -623,12 +623,12 @@ This example shows tiles 1 and 4, with a grid size of 4:
 </code>
 <table>
 	<tr>
-		<td><img src="//images.example.com/image?src=products/coffee.jpg&stats=0&width=200&tile=1:4" /></td>
+		<td><img src="/image?src=products/coffee.jpg&stats=0&width=200&tile=1:4" /></td>
 		<td></td>
 	</tr>
 	<tr>
 		<td></td>
-		<td><img src="//images.example.com/image?src=products/coffee.jpg&stats=0&width=200&tile=4:4" /></td>
+		<td><img src="/image?src=products/coffee.jpg&stats=0&width=200&tile=4:4" /></td>
 	</tr>
 </table>
 
@@ -716,17 +716,17 @@ system's default template is **not** applied, your chosen template replaces it.
 A 200x200 size `jpg` image with typical options for inclusion on a web site:
 
 <code class="imagecode">&lt;img class="border" src="//images.example.com/image?src=products/coffee.jpg**&format=jpg&quality=80&colorspace=rgb&width=200&height=200&strip=1**"></code>
-<img class="border" src="//images.example.com/image?src=products/coffee.jpg&stats=0&format=jpg&quality=80&colorspace=rgb&width=200&height=200&strip=1" />
+<img class="border" src="/image?src=products/coffee.jpg&stats=0&format=jpg&quality=80&colorspace=rgb&width=200&height=200&strip=1" />
 
 The same image and options, defined instead using the sample template `SmallJpeg`:
 
 <code class="imagecode">&lt;img class="border" src="//images.example.com/image?src=products/coffee.jpg**&tmp=smalljpeg**"></code>
-<img class="border" src="//images.example.com/image?src=products/coffee.jpg&stats=0&tmp=smalljpeg" />
+<img class="border" src="/image?src=products/coffee.jpg&stats=0&tmp=smalljpeg" />
 
 Options in addition to the template name are either added to or replace those in the template:
 
 <code class="imagecode">&lt;img class="border" src="//images.example.com/image?src=products/coffee.jpg**&tmp=smalljpeg&angle=90&quality=10**"></code>
-<img class="border" src="//images.example.com/image?src=products/coffee.jpg&stats=0&tmp=smalljpeg&angle=90&quality=10" />
+<img class="border" src="/image?src=products/coffee.jpg&stats=0&tmp=smalljpeg&angle=90&quality=10" />
 
 <a name="notes"></a>
 ## Usage notes
