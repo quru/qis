@@ -244,7 +244,7 @@ def upload_usage_stats(**kwargs):
         h.update(bytes(str(payload['stats']['bytes']), 'utf8'))
         payload['hash'] = h.hexdigest()
         sent = requests.post(
-            report_url,
+            report_url + '?' + host_id,
             data=json.dumps(payload),
             timeout=10
         )
