@@ -219,6 +219,7 @@ def upload_usage_stats(**kwargs):
         from_time = to_time - timedelta(days=1)
 
         host_id = get_computer_id()
+        app.log.info('Uploading usage statistics for host ID %s' % host_id)
         sysdata = app.data_engine.summarise_system_stats(from_time, to_time)
         stats = {
             'requests': int(sysdata[0]) if sysdata[0] else 0,
@@ -248,10 +249,7 @@ def upload_usage_stats(**kwargs):
             data=json.dumps(payload),
             timeout=10
         )
-        app.log.info(
-            'Usage statistics upload returned status %d '
-            'for host ID %s' % (sent.status_code, host_id)
-        )
+        app.log.info('Usage statistics upload returned status %d' % sent.status_code)
 
 
 def purge_system_stats(**kwargs):
