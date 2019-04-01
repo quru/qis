@@ -1617,7 +1617,7 @@ class DataManager(object):
         db_session = self._db.Session()
         try:
             db_cluster_id = self.get_object(Property, Property.CLUSTER_ID)
-            if db_cluster_id is None:
+            if db_cluster_id is None or not db_cluster_id.value.strip():
                 db_cluster_id = Property(Property.CLUSTER_ID, str(uuid.uuid4()))
                 self.save_object(db_cluster_id, _db_session=db_session, _commit=True)
             return db_cluster_id.value
