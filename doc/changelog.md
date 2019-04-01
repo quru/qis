@@ -1,5 +1,6 @@
 # Unreleased
-_Changes: Add Ubuntu 18 support, new guide to running at AWS or on Docker_
+_Changes: Add Ubuntu 18 support, new guide to running at AWS or on Docker,
+internals - replace generated host ID with a random UUID_
 
 # v4.1.2
 _Changes: Fix bug preventing the cropping tool working on touchscreen devices

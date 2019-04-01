@@ -52,7 +52,7 @@ from .session_manager import get_session_user, get_session_user_id
 from .session_manager import log_in, log_out, logged_in
 from .user_auth import authenticate_user
 from .util import filepath_filename, filepath_parent
-from .util import get_computer_id, get_timezone_code, parse_boolean
+from .util import get_timezone_code, parse_boolean
 from .util import filepath_normalize, strip_seps
 from .views_util import log_security_error, login_point, login_required, safe_error_str
 
@@ -189,7 +189,7 @@ def about():
     available_iccs.sort()
     return render_template(
         'about.html',
-        server_host_id=get_computer_id(),
+        server_host_id=data_engine.get_cluster_id_property(),
         formats=available_formats,
         other_formats=[f for f in all_formats if f not in available_formats],
         templates=available_templates,

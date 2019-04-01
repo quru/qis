@@ -211,14 +211,14 @@ def upload_usage_stats(**kwargs):
     import json
     from .__about__ import __tag__, __version__
     from .flask_app import app
-    from .util import get_computer_id, to_iso_datetime
+    from .util import to_iso_datetime
 
     report_url = app.config.get('USAGE_DATA_URL')
     if report_url:
         to_time = datetime.utcnow()
         from_time = to_time - timedelta(days=1)
 
-        host_id = get_computer_id()
+        host_id = app.data_engine.get_cluster_id_property()
         app.log.info('Uploading usage statistics for host ID %s' % host_id)
         sysdata = app.data_engine.summarise_system_stats(from_time, to_time)
         stats = {

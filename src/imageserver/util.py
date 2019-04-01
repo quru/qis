@@ -119,25 +119,6 @@ def get_computer_hostname():
     return socket.gethostname()
 
 
-def get_computer_id():
-    """
-    Returns a fairly unique identifier for this computer, based on a hash of
-    its host name and one of its network interface MAC addresses. This means
-    of course that the ID will change if the host name or network interfaces
-    change. If you do require uniqueness, go elsewhere.
-    """
-    mac = uuid.getnode()
-    # https://docs.python.org/2/library/uuid.html#uuid.getnode
-    # If all attempts to obtain the hardware address fail, we choose a random
-    # 48-bit number with its eighth bit set to 1 as recommended in RFC 4122
-    if (mac >> 40) % 2:
-        mac = 123456789012345  # We don't want a random number
-    h = hashlib.sha1(bytes('cid', 'utf8'))
-    h.update(bytes(repr(mac), 'utf8'))
-    h.update(bytes(get_computer_hostname(), 'utf8'))
-    return h.hexdigest()
-
-
 def this_is_computer(net_name):
     """
     Returns whether a computer network name or IP address appears to be this

@@ -399,9 +399,9 @@ class ImageServerBackgroundTaskTests(BaseTestCase):
         from imageserver.tasks import upload_usage_stats
 
         flask_app.config['USAGE_DATA_URL'] = 'http://dummy.url/'
+        host_id_1 = ''
         with mock.patch('requests.post') as mockpost:
-            upload_usage_stats(logger=lm, data_manager=dm, settings=flask_app.config)
-
+            upload_usage_stats()
             mockpost.assert_called_once_with(mock.ANY, data=mock.ANY, timeout=mock.ANY)
             mock_args = mockpost.call_args
             stats = json.loads(mock_args[1]['data'])
@@ -410,6 +410,17 @@ class ImageServerBackgroundTaskTests(BaseTestCase):
             self.assertIn('stats', stats)
             self.assertIn('time', stats)
             self.assertIn('hash', stats)
+            host_id_1 = stats['host_id']
+
+        # v4.1.3 Host ID should be generated and stay the same
+        self.assertGreater(len(host_id_1), 0)
+        with mock.patch('requests.post') as mockpost:
+            upload_usage_stats()
+            mockpost.assert_called_once_with(mock.ANY, data=mock.ANY, timeout=mock.ANY)
+            mock_args = mockpost.call_args
+            stats = json.loads(mock_args[1]['data'])
+            host_id_2 = stats['host_id']
+            self.assertEqual(host_id_1, host_id_2)
 
     # Similar to test_db_auto_population, but with the emphasis
     # on auto-detecting external changes to the file system

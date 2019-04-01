@@ -40,6 +40,7 @@ from datetime import datetime, timedelta
 from functools import wraps
 import os.path
 import time
+import uuid
 import zlib
 
 import sqlalchemy
@@ -1609,6 +1610,21 @@ class DataManager(object):
                 db_session.close()
 
     @db_operation
+    def get_cluster_id_property(self):
+        """
+        Returns (or creates and returns) the value of the "Cluster ID" system property.
+        """
+        db_session = self._db.Session()
+        try:
+            db_cluster_id = self.get_object(Property, Property.CLUSTER_ID)
+            if db_cluster_id is None:
+                db_cluster_id = Property(Property.CLUSTER_ID, str(uuid.uuid4()))
+                self.save_object(db_cluster_id, _db_session=db_session, _commit=True)
+            return db_cluster_id.value
+        finally:
+            db_session.close()
+
+    @db_operation
     def increment_property(self, key, _db_session=None, _commit=True):
         """
         Increments a system property, which must support casting to a number,
@@ -2063,6 +2079,7 @@ class DataManager(object):
                     self._logger.info('Created default image templates')
 
                 if create_properties:
+                    self.save_object(Property(Property.CLUSTER_ID, str(uuid.uuid4())))
                     self.save_object(Property(Property.FOLDER_PERMISSION_VERSION, '1'))
                     self.save_object(Property(Property.FOLIO_PERMISSION_VERSION, '1'))
                     self.save_object(Property(Property.IMAGE_TEMPLATES_VERSION, '1'))
