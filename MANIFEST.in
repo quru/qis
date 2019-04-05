@@ -8,7 +8,7 @@ graft images/samples
 prune images/test*
 graft licences
 include logs/README
-recursive-include src/imageserver *.css *.js *.png *.gif *.bmp *.ico *.jpg *.jpeg *.sass *.scss *.html *.htm *.txt *.sh
+recursive-include src/imageserver *.css *.js *.png *.gif *.bmp *.ico *.jpg *.jpeg *.svg *.sass *.scss *.html *.htm *.txt *.sh
 recursive-include src/wsgi *
 prune src/*.egg-info
 include README.md
