@@ -16,7 +16,7 @@ by following the [installation guide](install.md).
 ## Running on Amazon Web Services (EC2)
 
 Quru provides an Amazon Machine Image (AMI) that can be used to run a pre-installed
-copy of QIS on Amazon's EC2 service. The current AMI is `ami-00aa34ce1a15fa91e`
+copy of QIS on Amazon's EC2 service. The current AMI is `ami-08091a8119cdd2f25`
 in the EU West (Ireland) region.
 
 ### Instructions - AWS
