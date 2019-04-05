@@ -1,6 +1,12 @@
-# Unreleased
+# v4.1.3
 _Changes: Add Ubuntu 18 support, new guide to running at AWS or on Docker,
-internals - replace generated host ID with a random UUID_
+internals - replace generated host ID with a random UUID, improvements for
+creating demo instances at AWS_
+
+To upgrade:
+
+* Update the Python and web code (the `src` folder)
+* Restart the Apache service
 
 # v4.1.2
 _Changes: Fix bug preventing the cropping tool working on touchscreen devices
