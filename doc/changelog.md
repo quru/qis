@@ -1,3 +1,6 @@
+# Unreleased
+_Changes: Allow cross-origin file uploads by default_
+
 # v4.1.3
 _Changes: Add Ubuntu 18 support, new guide to running at AWS or on Docker,
 internals - replace generated host ID with a random UUID, improvements for
