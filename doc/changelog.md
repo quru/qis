@@ -1,5 +1,5 @@
 # Unreleased
-_Changes: Allow cross-origin file uploads by default_
+_Changes: Allow cross-origin file uploads by default, only use TLS 1.2+ by default_
 
 # v4.1.3
 _Changes: Add Ubuntu 18 support, new guide to running at AWS or on Docker,
