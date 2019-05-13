@@ -13,6 +13,12 @@ available in the Premium Edition, they are ignored in the Basic Edition.
 
 * [About JSON](#json)
 * [Using the API](#usage)
+    * [From JavaScript](#usage_js)
+    * [Logging in](#usage_logging_in)
+    * [From curl](#usage_curl)
+    * [Call methods](#usage_call_methods)
+    * [Return values](#usage_return_values)
+    * [Obtaining a web session](#usage_web_session)
 * [Public image services](#api_image_group)
     * [image - retrieve a processed image](#api_image)
     * [original - retrieve an unmodified image file](#api_original)
@@ -62,10 +68,11 @@ of calling JSON web services via XHR (also known as Ajax).
 <a name="usage"></a>
 ## Using the API
 
+<a name="usage_js"></a>
 ### Calling an API function from a web page
 
 The following JavaScript snippet illustrates how to call a public API function
-from a web browser.
+(without a login) from a web page:
 
     // URL of the API function
     var url = 'https://images.example.com/api/v1/list/';
@@ -94,7 +101,18 @@ from a web browser.
     
     request.send();
 
-Or to send data to a protected web service:
+<a name="usage_logging_in"></a>
+### Logging in
+
+To call a protected API function or to retrieve a non-public image, you must first
+either log in to the image server at
+[https://images.example.com/login/](https://images.example.com/login/)
+or [obtain an API token](#api_token). Obtain a token on the server side so that
+the username and password never leave the server, then pass the token through to
+where it is needed. If you embed the token into a web page, use HTTPS to serve
+the page so that the token remains private.
+
+Then to call a protected API function:
 
     // URL of the API function
     var url = 'https://images.example.com/api/v1/admin/filesystem/folders/';
@@ -110,7 +128,7 @@ Or to send data to a protected web service:
     var data = 'path=/my-new-folder';
     request.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded; charset=utf-8');
     
-    // Authentication token - call the "token" API function first to get this
+    // Authentication token - call the "token" API function from your application, then pass it through to the web page
     var token = 'abcdef0123456789abcdef0123456789';
     request.setRequestHeader("Authorization", "Basic " + btoa(token + ":"));
     
@@ -127,6 +145,11 @@ Or to send data to a protected web service:
     
     request.send(data);
 
+To log in as if the user has been through `https://images.example.com/login/`,
+but without displaying the page and performing the login process manually, you
+can [convert an API token into a web session](#usage_web_session).
+
+<a name="usage_curl"></a>
 ### Calling an API function with curl
 
 [curl](https://curl.haxx.se/) is a popular command line utility that allows you
@@ -147,6 +170,7 @@ The curl equivalent of the second JavaScript example is:
     $ export AUTH_TOKEN=abcdef0123456789abcdef0123456789
     $ curl -X POST -u $AUTH_TOKEN: -F 'path=/my-new-folder' 'https://images.example.com/api/v1/admin/filesystem/folders/'
 
+<a name="usage_call_methods"></a>
 ### Call methods
 
 The following types of method are supported in general.
@@ -175,6 +199,7 @@ form. A future release may add support for JSON-encoded data, but even in back-e
 code it is simple to form-encode data using a library such as `libcurl` or
 [python-requests](http://docs.python-requests.org/en/master/user/quickstart/#more-complicated-post-requests).
 
+<a name="usage_return_values"></a>
 ### Return values
 
 Every API call returns JSON text containing the requested data within a wrapper
@@ -220,6 +245,46 @@ The following status codes may be returned:
 	<tr class="odd"><td>503</td><td>The server is too busy (wait a short time and try again)</td></tr>
 </table><br>
 
+<a name="usage_web_session"></a>
+### Obtaining a web session
+
+To display private images within an HTML page in a web browser:
+
+    <img src="https://images.example.com/image?src=some-private-folder/myfile.jpg">
+
+Or when working with an HTTP client that supports cookies, it is more convenient
+to log into QIS and obtain a web session cookie so that an API token does not need
+to be provided with every request.
+
+Web browser security restrictions dictate that your application on one domain
+name cannot create a session cookie for QIS on a different domain name. Therefore
+the session cookie must come from QIS itself. There are 2 options...
+
+#### With a manual login
+
+To have the user log in to QIS manually, your application can navigate to the
+QIS login page and specify a different URL to return to upon success:
+
+    https://images.example.com/login/?next=https://your.application/
+
+This method is simple but has obvious drawbacks in terms of the user experience.
+
+#### With an API token
+
+To log the user in seamlessly, you must first [obtain an API token](#api_token).
+This can be done within your application on the server side so that the token
+is pre-generated in advance of being required. Then in your web application
+include the following HTML:
+
+    <iframe style="display:none" src="https://images.example.com/api/v1/tokenlogin/?token=your-api-token" width="10" height="10" sandbox></iframe>
+
+Assuming the value of `your-api-token` is valid (and not expired), the image
+server will return a small web page along with a session cookie that the browser
+will accept automatically. By default the session will remain valid for as long as
+the web browser remains open, so you only need this HTML once (not on every page).
+
+The HTML code `display:none` keeps the response from QIS hidden, but you can
+remove this attribute to see the response when troubleshooting.
 
 <a name="api_image_group"></a>
 # Public image services
@@ -232,9 +297,9 @@ HTTP requests.
 
 For publicly accessible images, these services can be called from any anonymous
 HTTP client. For images with a [folder permission](#api_data_permissions) in place,
-either an [API token](#api_token) or a QIS web session (via the QIS login page)
-is required. The returned status codes are the same as those defined above for the
-JSON web services.
+either an [API token](#api_token) or a QIS [web session](#usage_web_session))
+is required. The returned status codes are the same as those defined above for
+the JSON web services.
 
 <a name="api_image"></a>
 ## image
@@ -309,9 +374,9 @@ returning a web page or a plain zip file without a JSON wrapper. For publicly
 accessible portfolios, the URLs can be used directly in web pages, emails, instant
 messages, or link sharing services.
 
-For non-public portfolios, either an [API token](#api_token) or a QIS web session
-(via the QIS login page) is required. The returned status codes are the same as
-those defined above for the JSON web services.
+For non-public portfolios, either an [API token](#api_token) or a QIS
+[web session](#usage_web_session) is required. The returned status codes are the
+same as those defined above for the JSON web services.
 
 <a name="api_folio_view"></a>
 ## view portfolio
@@ -372,9 +437,10 @@ On error, returns a non-200 status code and HTML text containing an error messag
 # Public web services
 
 For publicly accessible images and portfolios, these web services can be called
-from an anonymous (not logged in) session without requiring an [API authentication token](#api_token).
-For images with a [folder permission](#api_data_permissions) in place or for
-non-public portfolios, a token is required however.
+from an anonymous (not logged in) session without requiring an
+[authentication token](#api_token). For images with a
+[folder permission](#api_data_permissions) in place or for non-public portfolios,
+a token or a QIS [web session](#usage_web_session) is required however.
 
 <a name="api_list"></a>
 ## list
@@ -906,7 +972,7 @@ Or to retrieve the same portfolio by its human-readable "friendly" ID:
 All other web services require the caller to be logged in so that permissions
 can be checked and a username recorded in the audit trail. To log in using the
 API, obtain an [API authentication token](#api_token) and then provide this token
-along with every function call.
+along with every function call, or [convert it to a web session](#usage_web_session).
 
 <a name="api_token"></a>
 ## token
@@ -924,6 +990,10 @@ not pass around the token where it can be seen (e.g. on the end of a URL).
 
 The token's expiry time is configured by the `API_TOKEN_EXPIRY_TIME` system setting.
 The default lifetime is 1 hour.
+
+From a web browser or a client that supports cookies, you can convert the token
+into a cookie-based web session, as if the user had logged in from the image server's
+login page. See [obtaining a web session](#usage_web_session) for more details.
 
 ### URL
 * `/api/v1/token/`
@@ -1598,8 +1668,9 @@ Publish the portfolio with all images resized to 500x500:
 <a name="api_admin"></a>
 # Administration web services
 
-These web services provide file system, user, group, data management, and system maintenance
-facilities. All require an [API authentication token](#api_token) to be provided.
+These web services provide file system, user, group, data management, and system
+maintenance facilities. All require a logged-in web session or an
+[API authentication token](#api_token) to be provided.
 
 <a name="api_data_images"></a>
 ## image data

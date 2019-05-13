@@ -107,6 +107,7 @@ def login():
             if app.config['DEBUG']:
                 raise
             login_error = 'Sorry, an error occurred. Please try again later.'
+            log_out()
     else:
         # If already logged in, go to the default page
         if logged_in():

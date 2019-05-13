@@ -794,8 +794,8 @@ This command takes the mandatory [src](#option_src) parameter. It optionally acc
 the [xref](#option_xref) parameter for usage tracking,
 and the [stats](#option_stats) parameter. All other options are ignored.
 
-Users must have the *download* permission to use the `original` URL.
-This allows you to restrict access to the full images by whether users are public or logged-in,
+Users must have the *download* permission to use the `original` URL. This allows
+you to restrict access to the full images by whether users are public or logged-in,
 and/or by folder.
 
 <a name="responsive"></a>
