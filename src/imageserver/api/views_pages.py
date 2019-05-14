@@ -30,7 +30,7 @@
 # 13May2019  Matt  Added token_login - web session login from API token
 #
 
-from flask import request, render_template
+from flask import redirect, request, render_template
 
 import imageserver.flask_ext as flask_ext
 import imageserver.session_manager as session_manager
@@ -54,6 +54,7 @@ def api_help():
 def token_login():
     err_msg = ''
     token = request.args.get('token', '')
+    next_url = request.args.get('next', '')
     try:
         if token:
             token_auth_class = app.config['API_AUTHENTICATION_CLASS']
@@ -86,7 +87,10 @@ def token_login():
         err_msg = 'Sorry, an error occurred. Please try again later.'
         session_manager.log_out()
 
-    return render_template(
-        'token_login.html',
-        err_msg=safe_error_str(err_msg)
-    )
+    if next_url and not err_msg:
+        return redirect(next_url)
+    else:
+        return render_template(
+            'token_login.html',
+            err_msg=safe_error_str(err_msg)
+        )

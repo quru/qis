@@ -1931,3 +1931,18 @@ class WebPageTests(main_tests.BaseTestCase):
             # Should still be logged out
             rv = self.app.get('/upload/')
             self.assertEqual(rv.status_code, 302)
+
+    def test_token_to_web_redirect(self):
+        # Get an API token
+        main_tests.setup_user_account('tokenuser', allow_api=True)
+        token = self.api_login('tokenuser', 'tokenuser')
+        # Test we get a redirect if we pass the 'next' parameter
+        rv = self.app.get('/api/tokenlogin/?token=' + token + '&next=https://www.quru.com/')
+        self.assertEqual(rv.status_code, 302)
+        self.assertIn('https://www.quru.com/', rv.location)
+
+    def test_token_to_web_redirect_invalid_token(self):
+        # For bad tokens we'll return an error rather than continue with the redirect
+        rv = self.app.get('/api/tokenlogin/?token=not-a-valid-token&next=https://www.quru.com/')
+        self.assertEqual(rv.status_code, 200)
+        self.assertIn('Invalid or expired token', rv.data.decode('utf8'))

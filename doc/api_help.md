@@ -248,7 +248,7 @@ The following status codes may be returned:
 <a name="usage_web_session"></a>
 ### Obtaining a web session
 
-To display private images within an HTML page in a web browser:
+When you need to display private images within an HTML page in a web browser:
 
     <img src="https://images.example.com/image?src=some-private-folder/myfile.jpg">
 
@@ -273,18 +273,29 @@ This method is simple but has obvious drawbacks in terms of the user experience.
 
 To log the user in seamlessly, you must first [obtain an API token](#api_token).
 This can be done within your application on the server side so that the token
-is pre-generated in advance of being required. Then in your web application
-include the following HTML:
+is pre-generated in advance of being required. Then in your web application,
+as part of the login process, issue a redirect to:
 
-    <iframe style="display:none" src="https://images.example.com/api/v1/tokenlogin/?token=your-api-token" width="10" height="10" sandbox></iframe>
+    https://images.example.com/api/v1/tokenlogin/?token=YOUR-API-TOKEN&next=https://your.application/
 
-Assuming the value of `your-api-token` is valid (and not expired), the image
-server will return a small web page along with a session cookie that the browser
-will accept automatically. By default the session will remain valid for as long as
-the web browser remains open, so you only need this HTML once (not on every page).
+Assuming the value of `YOUR-API-TOKEN` is valid (and not expired), the image
+server will set its own session cookie in the web browser and then issue its own
+redirect back to your application. By default the session will remain valid for
+as long as the web browser remains open, so you only need to do this once per
+login.
 
-The HTML code `display:none` keeps the response from QIS hidden, but you can
-remove this attribute to see the response when troubleshooting.
+In some web browsers (**not supported by Safari** at the time of writing) you can
+achieve the same without redirecting to the image server by include the following
+hidden HTML in your web page:
+
+    <iframe style="display:none" src="https://images.example.com/api/v1/tokenlogin/?token=YOUR-API-TOKEN" width="10" height="10" sandbox></iframe>
+
+Though note that the `iframe` content needs to have loaded before you try to
+request any private images or call the QIS API.
+
+This "hidden iframe" technique falls foul of Safari's default policy of blocking
+"3rd party cookies". This policy can be relaxed in Safari's settings, and also
+does not apply if the user has previously visited the image server directly.
 
 <a name="api_image_group"></a>
 # Public image services
