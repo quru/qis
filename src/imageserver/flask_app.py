@@ -54,9 +54,13 @@ def extend_app(app):
     flask_ext.enhance_json_encoder(app)
     # We'll measure request times for our stats
     flask_ext.time_requests(app, True)
-    # In development, allow any origin. In production this is set in the web server config.
+    # In development, set CORS headers. In production this is set in the web server config.
     if app.config['DEBUG']:
-        flask_ext.add_cors_headers(app, '*')
+        flask_ext.add_cors_headers(
+            app, '*',
+            'Origin, Authorization, If-None-Match, Cache-Control, X-Requested-With, X-Csrf-Token',
+            'Content-Length, X-From-Cache, X-Time-Taken'
+        )
     # We need HTTP authentication for the API
     flask_ext.install_http_authentication(app, app.config['API_AUTHENTICATION_CLASS'])
     # And CSRF protection for the web pages (this needs to be after the http auth)

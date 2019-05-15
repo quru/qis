@@ -91,7 +91,7 @@ def time_requests(app, add_http_header=False):
             return response
 
 
-def add_cors_headers(app, allowed_origin):
+def add_cors_headers(app, allowed_origin, allowed_headers, expose_headers):
     """
     Adds basic CORS HTTP headers to all responses.
     In production this can also be done by the web server (Apache, nginx).
@@ -99,6 +99,8 @@ def add_cors_headers(app, allowed_origin):
     @app.after_request
     def add_headers(response):
         response.headers['Access-Control-Allow-Origin'] = allowed_origin
+        response.headers['Access-Control-Allow-Headers'] = allowed_headers
+        response.headers['Access-Control-Expose-Headers'] = expose_headers
         return response
 
 
