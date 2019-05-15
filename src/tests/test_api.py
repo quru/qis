@@ -1885,17 +1885,17 @@ class WebPageTests(main_tests.BaseTestCase):
         token = self.api_login('tokenuser', 'tokenuser')
         # Should still have an anonymous web session
         rv = self.app.get('/upload/')
-        self.assertEqual(rv.status_code, 302)
+        self.assertEqual(rv.status_code, 302)  # Redirect to login
         # Load the token-to-web-login page
         rv = self.app.get('/api/tokenlogin/?token=' + token)
-        self.assertEqual(rv.status_code, 200)
+        self.assertEqual(rv.status_code, API_CODES.SUCCESS)
         # Should now have a logged-in web session
         rv = self.app.get('/upload/')
         self.assertEqual(rv.status_code, 200)
 
     def test_token_to_web_no_token(self):
         rv = self.app.get('/api/tokenlogin/')
-        self.assertEqual(rv.status_code, 200)
+        self.assertEqual(rv.status_code, API_CODES.INVALID_PARAM)
         self.assertIn('No token value supplied', rv.data.decode('utf8'))
         # Should still be logged out
         rv = self.app.get('/upload/')
@@ -1903,7 +1903,7 @@ class WebPageTests(main_tests.BaseTestCase):
 
     def test_token_to_web_invalid_token(self):
         rv = self.app.get('/api/tokenlogin/?token=not-a-valid-token')
-        self.assertEqual(rv.status_code, 200)
+        self.assertEqual(rv.status_code, API_CODES.UNAUTHORISED)  # Match /api/token/ with bad credentials
         self.assertIn('Invalid or expired token', rv.data.decode('utf8'))
         # Should still be logged out
         rv = self.app.get('/upload/')
@@ -1911,7 +1911,7 @@ class WebPageTests(main_tests.BaseTestCase):
 
     def test_token_to_web_post(self):
         rv = self.app.post('/api/tokenlogin/')
-        self.assertEqual(rv.status_code, 405)
+        self.assertEqual(rv.status_code, API_CODES.METHOD_UNSUPPORTED)
 
     def test_token_to_web_deleted_user(self):
         for i in range(2):
@@ -1922,12 +1922,14 @@ class WebPageTests(main_tests.BaseTestCase):
                 # Soft delete
                 user.status = User.STATUS_DELETED
                 dm.save_object(user)
+                rv = self.app.get('/api/tokenlogin/?token=' + token)
+                self.assertEqual(rv.status_code, API_CODES.UNAUTHORISED)
+                self.assertIn('tokenuser is disabled/deleted', rv.data.decode('utf8'))
             else:
                 # Hard delete - also tests a valid token containing a bad user ID
                 dm.delete_object(user)
-            rv = self.app.get('/api/tokenlogin/?token=' + token)
-            self.assertEqual(rv.status_code, 200)
-            self.assertIn('an error occurred', rv.data.decode('utf8'))
+                rv = self.app.get('/api/tokenlogin/?token=' + token)
+                self.assertEqual(rv.status_code, API_CODES.INTERNAL_ERROR)
             # Should still be logged out
             rv = self.app.get('/upload/')
             self.assertEqual(rv.status_code, 302)
@@ -1944,5 +1946,5 @@ class WebPageTests(main_tests.BaseTestCase):
     def test_token_to_web_redirect_invalid_token(self):
         # For bad tokens we'll return an error rather than continue with the redirect
         rv = self.app.get('/api/tokenlogin/?token=not-a-valid-token&next=https://www.quru.com/')
-        self.assertEqual(rv.status_code, 200)
+        self.assertEqual(rv.status_code, API_CODES.UNAUTHORISED)  # Match /api/token/ with bad credentials
         self.assertIn('Invalid or expired token', rv.data.decode('utf8'))

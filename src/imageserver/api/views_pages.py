@@ -35,6 +35,8 @@ from flask import redirect, request, render_template
 import imageserver.flask_ext as flask_ext
 import imageserver.session_manager as session_manager
 from imageserver.api import blueprint, url_version_prefix
+from imageserver.api_util import API_CODES
+from imageserver.errors import SecurityError
 from imageserver.flask_app import app, logger
 from imageserver.views_pages import _standard_help_page
 from imageserver.views_util import login_point, login_required, log_security_error, safe_error_str
@@ -52,6 +54,7 @@ def api_help():
 @blueprint.route(url_version_prefix + '/tokenlogin/', methods=['GET'])
 @login_point(from_web=True)
 def token_login():
+    status = API_CODES.SUCCESS
     err_msg = ''
     token = request.args.get('token', '')
     next_url = request.args.get('next', '')
@@ -75,22 +78,32 @@ def token_login():
                     )
                 session_manager.log_in(auth_user)
             else:
+                status = API_CODES.UNAUTHORISED
                 err_msg = 'Invalid or expired token'
         else:
+            status = API_CODES.INVALID_PARAM
             err_msg = 'No token value supplied'
 
-    except Exception as e:
-        if not log_security_error(e, request):
-            logger.error('Error performing API token to web login: ' + str(e))
+    except SecurityError as se:
         if app.config['DEBUG']:
             raise
+        log_security_error(se, request)
+        status = API_CODES.UNAUTHORISED
+        err_msg = str(se)
+    except Exception as e:
+        if app.config['DEBUG']:
+            raise
+        logger.error('Error performing API token to web login: ' + str(e))
+        status = API_CODES.INTERNAL_ERROR
         err_msg = 'Sorry, an error occurred. Please try again later.'
-        session_manager.log_out()
+    finally:
+        if status != API_CODES.SUCCESS:
+            session_manager.log_out()
 
-    if next_url and not err_msg:
+    if next_url and status == API_CODES.SUCCESS:
         return redirect(next_url)
     else:
         return render_template(
             'token_login.html',
             err_msg=safe_error_str(err_msg)
-        )
+        ), status
