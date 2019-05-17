@@ -1,0 +1,29 @@
+{% extends "base_blank.html" %}
+
+{% block copyright %}
+<!-- 
+	Document:      token_login.html
+	Date started:  10 May 2019
+	By:            Matt Fozard
+	Purpose:       Quru Image Server auto-login from API token
+	Requires:      
+	Copyright:     Quru Ltd (www.quru.com)
+	
+	Last Changed:  $Date$ $Rev$ by $Author$
+	
+	Notable modifications:
+	Date       By    Details
+	=========  ====  ============================================================
+-->
+{% endblock %}
+
+{% block title %}Token login{% endblock %}
+
+{% block body %}
+	<h2>{{ about.__title__ }}</h2>
+	{% if err_msg %}
+		<div class="error">{{ err_msg|newlines }}</div>
+	{% else %}
+		You are now logged in
+	{% endif %}
+{% endblock %}

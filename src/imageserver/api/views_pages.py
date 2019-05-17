@@ -27,11 +27,19 @@
 # Notable modifications:
 # Date       By    Details
 # =========  ====  ============================================================
+# 13May2019  Matt  Added token_login - web session login from API token
 #
 
-from imageserver.api import blueprint
+from flask import redirect, request, render_template
+
+import imageserver.flask_ext as flask_ext
+import imageserver.session_manager as session_manager
+from imageserver.api import blueprint, url_version_prefix
+from imageserver.api_util import API_CODES
+from imageserver.errors import SecurityError
+from imageserver.flask_app import app, logger
 from imageserver.views_pages import _standard_help_page
-from imageserver.views_util import login_required
+from imageserver.views_util import login_point, login_required, log_security_error, safe_error_str
 
 
 # The API help page
@@ -39,3 +47,63 @@ from imageserver.views_util import login_required
 @login_required
 def api_help():
     return _standard_help_page('api_help.html')
+
+
+# API token to web session converter page
+@blueprint.route('/tokenlogin/', methods=['GET'])
+@blueprint.route(url_version_prefix + '/tokenlogin/', methods=['GET'])
+@login_point(from_web=True)
+def token_login():
+    status = API_CODES.SUCCESS
+    err_msg = ''
+    token = request.args.get('token', '')
+    next_url = request.args.get('next', '')
+    try:
+        if token:
+            token_auth_class = app.config['API_AUTHENTICATION_CLASS']
+            auth_cls = getattr(flask_ext, token_auth_class, None)
+            if not auth_cls:
+                raise ValueError('Class flask_ext.%s was not found' % token_auth_class)
+            auth_module = auth_cls(app)
+            auth_object = auth_module.decode_auth_token(token)
+            if auth_object:
+                # The token is valid - set as logged in on the API
+                auth_module.set_authenticated(auth_object)
+                # Now set as logged in on the web session too
+                auth_user = session_manager.get_session_user()
+                if not auth_user:
+                    raise ValueError(
+                        'Internal error - no session user returned - has BaseHttpAuthentication '
+                        'or session_manager been changed?'
+                    )
+                session_manager.log_in(auth_user)
+            else:
+                status = API_CODES.UNAUTHORISED
+                err_msg = 'Invalid or expired token'
+        else:
+            status = API_CODES.INVALID_PARAM
+            err_msg = 'No token value supplied'
+
+    except SecurityError as se:
+        if app.config['DEBUG']:
+            raise
+        log_security_error(se, request)
+        status = API_CODES.UNAUTHORISED
+        err_msg = str(se)
+    except Exception as e:
+        if app.config['DEBUG']:
+            raise
+        logger.error('Error performing API token to web login: ' + str(e))
+        status = API_CODES.INTERNAL_ERROR
+        err_msg = 'Sorry, an error occurred. Please try again later.'
+    finally:
+        if status != API_CODES.SUCCESS:
+            session_manager.log_out()
+
+    if next_url and status == API_CODES.SUCCESS:
+        return redirect(next_url)
+    else:
+        return render_template(
+            'token_login.html',
+            err_msg=safe_error_str(err_msg)
+        ), status

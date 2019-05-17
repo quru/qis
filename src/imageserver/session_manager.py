@@ -117,6 +117,7 @@ def log_out():
     if uid > 0:
         _cache_clear_session_user(uid)
     flask.g.user = None
+    flask.g.http_auth = None
     flask.session.clear()
 
 
