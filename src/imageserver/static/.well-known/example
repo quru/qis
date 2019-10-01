@@ -1,0 +1,11 @@
+Place in this directory optional metadata files conforming to RFC 8615 at:
+https://tools.ietf.org/html/rfc8615
+
+A list of registered file types can be found at:
+https://www.iana.org/assignments/well-known-uris/well-known-uris.xhtml
+
+Common examples:
+
+acme-challenge - for automated TLS certificate management with Let's Encrypt
+dnt
+dnt-policy.txt - for publishing a Do Not Track policy

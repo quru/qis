@@ -64,6 +64,7 @@
         Allow from all
     </Directory>
 
+    Alias /.well-known/    /opt/qis/src/imageserver/static/.well-known/
     Alias /robots.txt      /opt/qis/src/imageserver/static/robots.txt
     Alias /favicon.ico     /opt/qis/src/imageserver/static/favicon.ico
     Alias /static/         /opt/qis/src/imageserver/static/

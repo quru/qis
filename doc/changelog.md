@@ -1,6 +1,7 @@
 # Unreleased
 _Changes: Allow cross-origin file uploads by default, only use TLS 1.2+ by default,
-add forwarded-for header to Apache access logs, add web session background login API_
+add forwarded-for header to Apache access logs, add web session background login API,
+add `.well-known` directory and URL mapping_
 
 # v4.1.3
 _Changes: Add Ubuntu 18 support, new guide to running at AWS or on Docker,
