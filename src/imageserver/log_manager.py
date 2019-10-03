@@ -34,6 +34,7 @@
 # 04Jan2013  Matt  Move run_server to a static method, do not call from client constructor
 
 import logging.handlers
+import time
 
 from imageserver.auxiliary import log_server
 from imageserver.util import this_is_computer
@@ -150,3 +151,4 @@ class LogManager(object):
         """
         if server_host and (server_port > 0) and this_is_computer(server_host):
             log_server.run_server_process(log_filename, debug_mode)
+            time.sleep(1)  # Yuck, but we don't want to lose the first logs
