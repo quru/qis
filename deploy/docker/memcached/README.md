@@ -25,4 +25,5 @@ To bind to the host's port 11211 with a 1GB cache size:
 
 ### To run with QIS
 
-Use the application's `docker-compose.yml` to run this container in combination with the others.
+Use the application's `docker-compose.yml` to run this container in combination
+with the others. See `doc/running.md`.

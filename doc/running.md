@@ -237,28 +237,51 @@ or Docker for Windows this is not necessary.
   be mounted inside containers
 * On your Docker host, shut down any web servers or services that are already
   running on ports 80 or 443
-* On your Docker host, create a directory to contain the docker-compose files
-  and the permanent QIS data:
+* On your Docker host, create and change into a directory to contain the
+  docker-compose files and the permanent QIS data:
 
 ```
   $ mkdir -p qis/data
   $ cd qis
-  $ wget https://raw.githubusercontent.com/quru/qis/master/deploy/docker/docker-compose.yml
-  ...
-  $ ls -l
-  total 8
-  drwxr-xr-x  2 matt  users    64 27 Mar 11:26 data
-  -rw-r--r--  1 matt  users  1452 27 Mar 11:26 docker-compose.yml
 ```
 
-* In the same directory, create a new file `.env` with contents:
+* If your Docker host is a Linux machine, due to a long-running
+  [Docker "feature"](https://github.com/moby/moby/issues/2259), the permanent
+  data directories need to be owned by the same user IDs that will access them
+  at runtime from inside the Docker containers. These user IDs do not need to
+  (but can) already exist on your Docker host. This step is not required when
+  using Docker for Mac or Docker for Windows.
+
+```
+  # The Postgres user (in the qis-postgres image) is UID 105 and GID 109
+  # The QIS user (in the qis-as image) is UID 999 and GID 999
+
+  $ mkdir data/data && sudo chown 105:109 data/data
+  $ mkdir data/images && sudo chown 999:999 data/images
+  $ mkdir -p data/logs/qis && sudo chown 999:999 data/logs/qis
+```
+
+* Create a new file called `.env` with the following content. Set the value of
+  `QIS_HOSTNAME` to the host name of your Docker host:
 
 ```
   QIS_HOSTNAME=images.example.com
   QIS_DATA_DIR=./data
 ```
 
-* Set the value of `QIS_HOSTNAME` above to the host name of your Docker host
+* Download the docker-compose launch script:
+
+```  
+  $ wget https://raw.githubusercontent.com/quru/qis/master/deploy/docker/docker-compose.yml
+  ...
+
+  $ ls -al
+  ...
+  -rw-r--r--  1 matt  users    43 27 Mar 11:26 .env
+  drwxr-xr-x  5 matt  users    64 27 Mar 11:26 data
+  -rw-r--r--  1 matt  users  1452 27 Mar 11:26 docker-compose.yml
+```
+
 * Thanks to docker-compose [issue #3513](https://github.com/docker/compose/issues/3513)
   the `build` lines in the docker-compose file need to be removed. You can do this
   quickly by running:
@@ -289,6 +312,19 @@ or Docker for Windows this is not necessary.
   Creating qis_qis_cache_1 ... done
   Creating qis_qis_db_1    ... done
   Creating qis_qis_as_1    ... done
+```
+
+* On first launch, allow several seconds for the database to be created.
+  To check that everything is "up", run:
+
+```
+  $ docker-compose ps
+
+          Name               Command        State                          Ports
+  ------------------------------------------------------------------------------------------------
+  docker_qis_as_1      /run-qis.sh         Up (healthy)   0.0.0.0:443->443/tcp, 0.0.0.0:80->80/tcp
+  docker_qis_cache_1   /run-memcached.sh   Up             11211/tcp
+  docker_qis_db_1      /run-postgres.sh    Up (healthy)   5432/tcp
 ```
 
 * Go to `http://<HOST NAME>/` in your web browser and you should get back

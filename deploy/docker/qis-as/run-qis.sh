@@ -58,7 +58,7 @@ if [ ! -f "$FIRST_RUN_LOG_FILE" ]; then
 	# If a new images volume has been mounted and it's missing the sample images,
 	# copy the sample images into it
 	if [ ! -d "$QIS_HOME/images/samples" ]; then
-		cp -r $QIS_SAMPLES/* $QIS_HOME/images/
+		cp -p -r $QIS_SAMPLES/* $QIS_HOME/images/
 	fi
 
 	# First time around, bad things happen if this starts up before the database

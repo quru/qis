@@ -51,7 +51,8 @@ ENV HOSTNAME=images.example.com \
     HTTPS_THREADS=15
 
 # Create the application user
-RUN useradd --comment "Quru Image Server" --groups $WEB_USER --home $QIS_INSTALL_DIR --system --shell /sbin/nologin $QIS_USER
+RUN groupadd --gid 999 --system $QIS_USER
+RUN useradd --comment "Quru Image Server" -g $QIS_USER --groups $WEB_USER --uid 999 --home $QIS_INSTALL_DIR --system --shell /sbin/nologin $QIS_USER
 
 # Create the app dirs
 RUN mkdir -p $QIS_INSTALL_DIR $QIS_SAMPLES_DIR
