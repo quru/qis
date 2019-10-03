@@ -375,7 +375,7 @@ class ImageServerBackgroundTaskTests(BaseTestCase):
             temp_env['FLASK_ENV'] = 'production'
             rs_path = 'src/runserver.py' if os.path.exists('src/runserver.py') else 'runserver.py'
             inner_server = subprocess.Popen('python ' + rs_path, cwd='.', shell=True, env=temp_env)
-            time.sleep(2)
+            time.sleep(5)
             # Set the xref base URL so that we will generate image A if we pass 50 as width
             flask_app.config['XREF_TRACKING_URL'] = \
                 'http://127.0.0.1:5000' + \
@@ -384,7 +384,7 @@ class ImageServerBackgroundTaskTests(BaseTestCase):
             rv = self.app.get('/image?src=test_images/dorset.jpg&xref=50')
             assert rv.status_code == 200
             # Wait a little for the background xref handling thread to complete
-            time.sleep(3)
+            time.sleep(2)
             # Now the test image A should have been created
             cache_img = cm.get(test_image_attrs.get_cache_key())
             assert cache_img is not None, 'Failed to find ' + test_image_attrs.get_cache_key() + '. xref URL did not appear to be invoked.'
