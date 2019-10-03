@@ -29,7 +29,7 @@ RUN apt-get update && \
 RUN locale-gen en_GB.UTF-8 && update-locale LANG=en_GB.UTF-8 LC_ALL=en_GB.UTF-8
 
 # Build variables
-ARG QIS_VERSION=4.1.3
+ARG QIS_VERSION=4.1.4
 ARG QIS_USER=qis
 ARG QIS_INSTALL_DIR=/opt/qis
 ARG QIS_SAMPLES_DIR=/opt/qis-samples

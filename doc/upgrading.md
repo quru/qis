@@ -11,6 +11,41 @@ web server:
 Occasionally however a more involved upgrade is required. These releases are
 flagged in the [change log](changelog.md) and will be documented here.
 
+## v4.1.4
+
+Release 4.1.4 includes a number of changes to the Apache configuration. To
+upgrade an existing configuration, use a text editor to change both of the QIS
+Apache configuration files:
+
+	$ cd /etc/httpd/conf.d/               # CentOS / Red Hat
+	$ cd /etc/apache2/sites-available/    # Debian / Ubuntu
+	$ vi qis.conf
+	$ vi qis-ssl.conf
+
+In the `Alias` section, add a new directory mapping for the new `.well-known` URL:
+
+    Alias /.well-known/    /opt/qis/src/imageserver/static/.well-known/
+
+To modernise the TLS/HTTPS configuration (disables TLS 1.0 and 1.1), change these
+2 `SSL` entries to:
+
+    SSLProtocol             all -SSLv2 -SSLv3 -TLSv1 -TLSv1.1
+    SSLCipherSuite          ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256
+
+To log clients' real IP addresses when behind a proxy server or load balancer,
+change `LogFormat` to:
+
+    LogFormat "%h %{X-Forwarded-For}i %t \"%r\" %>s %B %{X-Time-Taken}o %D %{X-From-Cache}o \"%{User-Agent}i\" \"%{Referer}i\"" imaging
+
+To allow file uploads and API requests from browsers coming from any origin
+**with a valid API token** (this is the new default), set the `Header` lines:
+
+    # Allow other domains to query the data API (required for canvas/zoom image viewer)
+    Header set Access-Control-Allow-Origin "*"
+    Header set Access-Control-Allow-Headers "Origin, Authorization, If-None-Match, Cache-Control, X-Requested-With, X-Csrf-Token"
+    # Allow other domains to see the returned image headers
+    Header set Access-Control-Expose-Headers "Content-Length, X-From-Cache, X-Time-Taken"
+
 ## v2.x to v3.0
 
 Version 3 supports only Python 3. There are no changes to the QIS database or

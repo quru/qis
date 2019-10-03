@@ -1,7 +1,13 @@
-# Unreleased
+# v4.1.4
 _Changes: Allow cross-origin file uploads by default, only use TLS 1.2+ by default,
-add forwarded-for header to Apache access logs, add web session background login API,
-add `.well-known` directory and URL mapping_
+record the forwarded-for header in the Apache access logs, add web session background
+login API, add `.well-known` directory and URL mapping_
+
+To upgrade:
+
+* Update the Python and web code (the `src` folder)
+* Apply the updated Apache configuration - see [upgrading.md](upgrading.md)
+* Restart the Apache service
 
 # v4.1.3
 _Changes: Add Ubuntu 18 support, new guide to running at AWS or on Docker,
