@@ -98,9 +98,10 @@ Install the package:
 
 	$ sudo yum -y install postgresql-server
 
-Initialise a new Postgres database collection:
+Initialise a new Postgres database collection, replacing `en_GB` with your own
+locale as required:
 
-	$ sudo -u postgres initdb -D /var/lib/pgsql/data --auth-host=md5 --auth-local=peer
+	$ sudo -u postgres initdb -D /var/lib/pgsql/data --locale=en_GB.UTF-8 --auth-host=md5 --auth-local=peer
 
 Set the Postgres tuning options in `/var/lib/pgsql/data/postgresql.conf`.
 This is an advanced topic, see the tuning guide and the
@@ -132,8 +133,8 @@ If the service fails to start, see the _Raising the system limits_ section below
 But assuming success, create a QIS database user and new empty database:
 
 	$ sudo -u postgres psql -c "CREATE ROLE qis WITH LOGIN PASSWORD 'password'"
-	$ sudo -u postgres createdb --encoding=UTF8 --locale=en_GB.UTF8 --owner=qis qis-cache
-	$ sudo -u postgres createdb --encoding=UTF8 --locale=en_GB.UTF8 --owner=qis qis-mgmt
+	$ sudo -u postgres createdb --owner=qis qis-cache
+	$ sudo -u postgres createdb --owner=qis qis-mgmt
 
 The `qis` user's password should be set to a secure value.
 
@@ -193,7 +194,7 @@ Create the QIS base directory and extract the files:
 
 The installation should look like this:
 
-	$ ls -l /opt/qis/
+	$ ls -al /opt/qis/
 	total 40
 	drwxr-xr-x.  2 qis qis    45 Feb  5 12:19 conf
 	drwxr-xr-x. 10 qis qis   123 Feb  5 12:19 deploy
@@ -201,6 +202,7 @@ The installation should look like this:
 	drwxr-xr-x.  2 qis qis  4096 Feb  5 12:19 icc
 	drwxr-xr-x.  9 qis qis   109 Feb  5 12:19 images
 	drwxr-xr-x.  3 qis qis    23 Feb  5 12:18 lib
+	drwxr-xr-x.  3 qis qis    23 Feb  5 12:18 lib64 -> lib
 	drwxr-xr-x.  2 qis qis  4096 Feb  5 12:19 licences
 	drwxr-xr-x.  2 qis qis    35 Feb  5 12:19 logs
 	-rw-r--r--.  1 qis qis   465 Feb  5 12:19 PKG-INFO
@@ -215,8 +217,9 @@ Install the packages:
 
 	$ sudo yum -y install httpd mod_ssl logrotate python35u-mod_wsgi
 
-Set the language and character set (where `UTF8` is preferred) for the Apache
-process by adding a few lines to the file `/etc/sysconfig/httpd`:
+Set the language and character set (where `UTF-8` is preferred) for the Apache
+process by editing the file `/etc/sysconfig/httpd` and replacing any existing
+values for:
 
 	LANG=en_GB.UTF-8
 	LC_ALL=en_GB.UTF-8
@@ -466,7 +469,7 @@ to get going. One of these is the `SECRET_KEY` value, which as the name suggests
 should be a value unique to your site and must be kept a secret. You can generate
 a secret key with Python or with the `pwgen` utility:
 
-	$ python3 -c 'import os; print(os.urandom(16))'
+	$ python3.5 -c 'import os; print(os.urandom(16))'
 	b"na\x87\x9d\xe7\x90Ja5i\xb3\xbf'P%\xe0"
 
 	$ pwgen -s 32 1
@@ -475,7 +478,7 @@ a secret key with Python or with the `pwgen` utility:
 Create a new text file `/opt/qis/conf/local_settings.py` and add these lines:
 
 	PUBLIC_HOST_NAME = "images.example.com"
-	SECRET_KEY = "zOWp8lBL1IMVEl9uWzPn2PD2ddtZTPRv"
+	SECRET_KEY = b"na\x87\x9d\xe7\x90Ja5i\xb3\xbf'P%\xe0"
 
 Where the host name is the same value you used when setting up Apache, and the
 secret key the value you just generated. If you want to run multiple web servers
