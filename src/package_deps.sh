@@ -29,6 +29,7 @@ echo -e '\nCreating new build environment'
 rm -rf $BUILD_DIR
 mkdir $BUILD_DIR
 virtualenv --python=$PYTHON_BIN $VENV_DIR
+[ -d $VENV_DIR/lib64 ] || ln -s lib $VENV_DIR/lib64
 . $VENV_DIR/bin/activate
 
 echo -e '\nUpgrading pip and setuptools'
@@ -44,4 +45,4 @@ rm `find $VENV_DIR -name '*.py[co]'`
 echo -e '\nTarballing the virtualenv lib folder'
 [ -d $DIST_DIR ] || mkdir $DIST_DIR
 cd $BUILD_DIR
-tar -C $VENV_DIR -czf $DIST_DIR/QIS-libs.tar.gz lib
+tar -C $VENV_DIR -czf $DIST_DIR/QIS-libs.tar.gz lib lib64
