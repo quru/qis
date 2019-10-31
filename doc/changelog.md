@@ -1,3 +1,7 @@
+# Unreleased
+_Changes: Bump Pillow to v6.2.1 (fixes CVE-2019-16865 - denial of service with
+specially crafted image files)_
+
 # v4.1.4
 _Changes: Allow cross-origin file uploads by default, only use TLS 1.2+ by default,
 record the forwarded-for header in the Apache access logs, add web session background
