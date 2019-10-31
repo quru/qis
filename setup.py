@@ -26,7 +26,7 @@ setup(
     test_suite="tests",
 
     install_requires=[
-        "Pillow==6.2.0",
+        "Pillow==6.2.1",
         "itsdangerous<1",
         "Flask==1.0.2",
         "python-ldap==3.1.0",
