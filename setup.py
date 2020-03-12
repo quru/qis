@@ -34,7 +34,7 @@ setup(
         "psycopg2==2.7.5",
         "SQLAlchemy==1.2.8",
         "requests>=2.20,<3",
-        "psutil==5.4.6",
+        "psutil==5.6.6",
         "markdown==2.6.11"
     ],
 
