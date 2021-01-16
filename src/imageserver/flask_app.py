@@ -366,7 +366,7 @@ def on_request_complete(response):
     Global handler for the post-request / before-response event.
     """
     if (
-        response.status_code == 301 and
+        (response.status_code == 301 or response.status_code == 308) and
         request.path.startswith('/api/') and
         'html' in response.mimetype
     ):
@@ -375,8 +375,8 @@ def on_request_complete(response):
         # not by our application code. Therefore to correct the response type we
         # have to catch it here and replace the old response with a new one.
         new_url = response.headers.get('Location', '', type=str)
-        jr = jsonify(api_util.create_api_dict(301, 'Moved Permanently', new_url))
-        jr.status_code = 301
+        jr = jsonify(api_util.create_api_dict(response.status_code, 'Moved Permanently', new_url))
+        jr.status_code = response.status_code
         jr.headers.add('Location', new_url)
         return jr
 

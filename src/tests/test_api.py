@@ -1852,11 +1852,14 @@ class ImageServerAPITests(main_tests.BaseTestCase):
         finally:
             flask_app.config['MAX_CONTENT_LENGTH'] = old_MAX_CONTENT_LENGTH
 
-    # v4.1 #10 Missing slashes redirect should return JSON not an HTML 301
+    # v4.1 #10 Missing slashes redirect should return JSON not an HTML 301/308
     def test_missing_slash(self):
         self.login('admin', 'admin')
         rv = self.app.get('/api/admin/users')  # Should have a trailing /
-        self.assert_json_response_code(rv, 301)
+        if rv.status_code == 308:
+            self.assert_json_response_code(rv, 308)  # Werkzeug 1.x
+        else:
+            self.assert_json_response_code(rv, 301)  # Werkzeug 0.x
         obj = json.loads(rv.data.decode('utf8'))
         self.assertTrue(obj['data'].endswith('/users/'))
 

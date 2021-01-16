@@ -45,7 +45,7 @@ from jinja2.exceptions import TemplateNotFound
 import flask
 from flask.json import JSONEncoder
 from flask.wrappers import Request
-from werkzeug.contrib.fixers import ProxyFix
+from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.utils import cached_property
 
 import markdown

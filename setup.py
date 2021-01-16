@@ -28,6 +28,7 @@ setup(
     install_requires=[
         "Pillow==6.2.2",
         "itsdangerous<1",
+        "werkzeug>=1.0.0,<1.1",
         "Flask==1.0.2",
         "python-ldap==3.1.0",
         "pylibmc==1.5.2",

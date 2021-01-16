@@ -15,6 +15,7 @@ bin-3
 include
 lib/python*
 lib64
+pyvenv.cfg
 
 # Python/Pip files
 .eggs

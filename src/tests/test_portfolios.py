@@ -290,7 +290,7 @@ class PortfoliosAPITests(main_tests.BaseTestCase):
             '\u00e2 te\u00dft \u2014 of \u00e7har\u0292'  # unicode is allowed in URLs these days
         ]
         for hid in test_ids:
-            hid_encoded = urllib.parse.quote(hid, safe='/+')  # Flask doesn't encode +
+            hid_encoded = urllib.parse.quote(hid)
             api_url = '/api/portfolios/'
             rv = self.app.post(api_url, data={
                 'human_id': hid,
