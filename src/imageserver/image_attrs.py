@@ -32,7 +32,7 @@
 # 09Mar2018  Matt  Added to_web_dict() and url_for_image_attrs() utility
 #
 
-import collections
+import collections.abc
 import re
 import threading
 
@@ -128,7 +128,7 @@ class ChoiceValidator(AttributeValidator):
 
     @property
     def choices(self):
-        return self._choices() if isinstance(self._choices, collections.Callable) else self._choices
+        return self._choices() if isinstance(self._choices, collections.abc.Callable) else self._choices
 
     def __call__(self, value):
         if value not in self.choices:

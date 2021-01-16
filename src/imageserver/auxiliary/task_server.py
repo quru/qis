@@ -171,7 +171,7 @@ def _run_server(debug_mode):
         last_cleanup = datetime.utcnow()
         while not shutdown_ev.is_set():
             # Check for completed threads
-            threads[:] = [t for t in threads if t.isAlive()]
+            threads[:] = [t for t in threads if t.is_alive()]
 
             # If we have capacity
             if len(threads) < num_threads:
