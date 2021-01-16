@@ -26,7 +26,7 @@ setup(
     test_suite="tests",
 
     install_requires=[
-        "Pillow==6.2.2",
+        "Pillow>=8,<9",
         "itsdangerous<1",
         "werkzeug>=1.0.0,<1.1",
         "Flask==1.0.2",
