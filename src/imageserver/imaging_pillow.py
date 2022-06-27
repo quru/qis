@@ -690,7 +690,7 @@ class PillowBackend(object):
     def _auto_crop_fit(self, image, top_px, left_px, bottom_px, right_px,
                        target_width, target_height):
         """
-        For the given image, cropped to the specified rectangle, and targetting
+        For the given image, cropped to the specified rectangle, and targeting
         an output size of target_width x target_height, widens the cropping rectangle
         either vertically or horizontally as far as possible, in order to reduce areas
         that would otherwise become background fill colour in the output image.

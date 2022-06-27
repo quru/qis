@@ -87,7 +87,7 @@ class JUnitXmlResult(unittest.TestResult):
         """Create a JUnitXmlResult.
 
         :param stream: A stream to write results to. Note that due to the
-            nature of JUnit XML output, nnothing will be written to the stream
+            nature of JUnit XML output, nothing will be written to the stream
             until stopTestRun() is called.
         """
         self.__super = super(JUnitXmlResult, self)

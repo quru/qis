@@ -2383,7 +2383,7 @@ ImgUtils.getImageSrc = function(el) {
 	return null;
 }
 
-/**** Private heleper functions ****/
+/**** Private helper functions ****/
 
 function _img_fs_zoom_click(imgEl, options, events) {
 	// Get image src or element background image

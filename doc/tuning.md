@@ -251,7 +251,7 @@ is described with examples at http://www.ericbrasseur.org/gamma.html
 
 By default QIS enables gamma correction so that resized images look correct,
 however the way this is currently implemented in QIS is very expensive in terms
-of performance. For a large speed-up at the expense of colour accurancy, you
+of performance. For a large speed-up at the expense of colour accuracy, you
 can disable gamma correction by adding this line to your QIS `local_settings.py`
 file:
 
