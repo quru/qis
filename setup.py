@@ -30,7 +30,7 @@ setup(
         "itsdangerous<1",
         "werkzeug>=1.0.0,<1.1",
         "Flask==1.0.2",
-        "python-ldap==3.1.0",
+        "python-ldap==3.4.0",
         "pylibmc==1.5.2",
         "psycopg2==2.7.5",
         "SQLAlchemy==1.2.8",
